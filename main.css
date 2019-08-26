@@ -73,6 +73,12 @@ nav p:hover{
     border-bottom: 3px solid #076;
     color: #098;
     font-weight: bolder;
+    text-shadow:
+       1px 1px 0 white,
+      -1px -1px 0 #098,  
+       1px -1px 0 #098,
+      -1px 1px 0 #098,
+       1px 1px 0 #098;
 }
 
 nav img{
@@ -104,7 +110,7 @@ nav p{
     width: 120px;
 }
 
-#intro h1{
+h1{
     color: white;
     text-align: center;
     font-family: 'orbitron';
@@ -133,9 +139,11 @@ nav p{
     text-align: center;
     padding-bottom: 20px;
     color: #700;
+    flex-wrap: wrap;
 }
 
 .cafe, .restaurant, .pastry{
+    flex: 1;
     padding: 80px;
     margin: 20px;
     text-align: center;
@@ -144,11 +152,12 @@ nav p{
     font-size: 22px;
     font-weight: bolder; 
     color: white;
-    flex: 1;
-    max-width: 400px;
     border: 2px double #068;
     border-radius: 10px;
     box-shadow: 15px 15px 1px transparent;
+    text-align: center; 
+    position: relative;
+    cursor: pointer; 
 }
 
 .cafe:hover, .restaurant:hover, .pastry:hover{
@@ -181,11 +190,6 @@ nav p{
     }
 
 
-.cafe, .restaurant, .pastry {
-    text-align: center; 
-    position: relative;
-    cursor: pointer;    
-}
 .cafe .details, .restaurant .details, .pastry .details {
     width: 95%;
     height: 95%;    
@@ -210,6 +214,7 @@ nav p{
     transform: translate(-50%, -50%) rotateY(0deg);
     opacity: 1;
 }
+    
 
 footer p{
     text-align: center;
@@ -217,4 +222,100 @@ footer p{
     font-family: 'Quintessential';
     font-size: 24px;
     margin: 0px;
+}
+
+/*=======================================*/
+/*=======================================*/
+
+@media (max-width: 1000px) and (min-width: 701px){
+    
+    nav a{
+        display: none;
+    }
+    
+    #intro{
+        margin: auto;
+        height: 370px;
+        max-width: 700px;
+    }
+    
+    #intro h1{
+        font-size: 32px;
+        margin: 20px auto;
+        max-width:100%;
+    }
+    
+    #intro img{
+        margin: auto;
+        max-width: 700px;
+    }
+    
+    h1{
+        font-size: 28px;
+    }
+    
+    #info{
+        flex-direction: column;
+        max-width: 400px;
+    }
+    
+}
+
+/*=======================================*/
+/*=======================================*/
+
+@media (max-width: 700px){
+    
+    nav a{
+        display: none;
+    }
+    
+    .logo{
+        width: 75px;
+    }
+    
+    .logoburger{
+        width: 50px;
+    }
+    
+    #intro{
+        margin: auto;
+        height: 175px;
+        max-width: 310px;
+    }
+    
+    #intro img{
+        margin: auto;
+        max-width: 310px;
+    }
+    
+    h1{
+        font-size: 15px;
+    }
+    
+    #info{
+        flex-direction: column;
+        max-width: 300px;
+    }
+    
+    .cafe, .restaurant, .pastry{
+        max-width: 250px;
+        text-align: center;
+        font-size: 15px;
+    }
+    
+    #consult{
+        font-size: 15px;
+        max-width: 250px;
+        text-align: center;
+        padding: 8px;
+    }
+    
+    footer img{
+        width: 50px;
+    }
+    
+    footer p{
+        font-size: 15px;
+    }
 }
