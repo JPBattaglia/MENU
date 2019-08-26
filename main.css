@@ -1,0 +1,209 @@
+html{
+    min-height:100%;
+    overflow:auto;
+}
+
+.animated {
+        background-color: #ffdead;
+        background-position: left top;
+        margin-bottom:30px;
+        -webkit-animation-duration: 3s;animation-duration: 3s;
+        -webkit-animation-fill-mode: both;animation-fill-mode: both;
+        }
+
+        @-webkit-keyframes fadeOut {
+          100% {opacity: 1;}
+          0% {opacity: 0;}
+         }
+
+        @keyframes fadeOut {
+          100% {opacity: 1;}
+          0% {opacity: 0;}
+         }
+
+.fadeOut {
+        -webkit-animation-name: fadeOut;
+        animation-name: fadeOut;
+         }
+
+body{
+    background: -moz-linear-gradient(-45deg, #600 25%, #044, #044 100%);
+    background: -webkit-linear-gradient(-45deg, #600 25%,#044, #044 100%);
+    background: linear-gradient(135deg, #800, #400 40%, #034, #044 100%);
+    filter: progid:DXImageTransform.Microsoft.gradient( startColorstr='#800', endColorstr='#054',GradientType=1 );
+    }
+}
+
+#stage{
+    position:absolute;
+    margin:auto;
+    max-width: 1000px;
+    z-index: -1;
+}
+
+#stage img:nth-of-type(1) {
+    animation-name: fader;
+    animation-delay: 3s;
+    animation-duration: 2s;
+    z-index: 20;
+}
+
+#stage img:nth-of-type(2) {
+    z-index: 10;
+}
+
+#stage img:nth-of-type(n+3) {
+    display: none;
+}
+
+  @keyframes fader {
+    from { opacity: 1.0; }
+    to   { opacity: 0.0; }
+}
+
+
+
+nav{
+    background-color: #400;
+    border-bottom: 1px solid black;
+    width: 100%;
+}
+
+nav p:hover{
+    border-bottom: 3px solid #076;
+    color: #098;
+    font-weight: bolder;
+}
+
+nav img{
+    width: 60px;
+    margin: 10px 0px 10px 15px;
+}
+
+nav p{
+    float:right;
+    letter-spacing: 2px;
+    color: white;
+    padding: 5px 2px;
+    margin: 25px 30px;
+    font-family: 'Orbitron';
+}
+
+.logo{
+    width: 120px;
+}
+
+#intro h1{
+    color: white;
+    text-align: center;
+    font-family: 'orbitron';
+    padding: 10px 0;
+    font-weight: bolder;
+    
+}
+
+#intro{
+    max-width: 1000px;
+    height: 600px;
+    margin: auto;
+}
+
+#intro img{
+    max-width: 1000px;
+    margin: auto;
+    position:absolute;
+    border-radius: 10px;
+}
+
+#info{
+    display:flex;
+    max-width:1000px;
+    margin: auto;
+    text-align: center;
+    padding-bottom: 20px;
+    color: #700;
+}
+
+.cafe, .restaurant, .pastry{
+    padding: 80px;
+    margin: 20px;
+    text-align: center;
+    background-color: #600;
+    font-family: 'orbitron';
+    font-size: 22px;
+    font-weight: bolder; 
+    color: white;
+    flex: 1;
+    max-width: 400px;
+    border: 2px double #068;
+    border-radius: 10px;
+    box-shadow: 15px 15px 1px transparent;
+}
+
+.cafe:hover, .restaurant:hover, .pastry:hover{
+    border: 2px solid red;
+    cursor: pointer;
+    box-shadow: 15px 15px 1px black;
+}
+
+#consult{
+    margin: 50px auto;
+    color:#ffeecc;
+    padding: 10px 30px;
+    background: repeating-linear-gradient(to top, #022, #058, #0d888f 100%);
+    width: 360px;
+    border-radius: 30px;
+    font-family: 'Orbitron';
+    font-weight: bolder;
+    font-size: 20px;
+    text-decoration: none;
+    border: .5px solid #0b7075;
+    box-shadow: 
+        2px 8px 10px #000,
+        -2px 8px 10px #000;
+    text-shadow:
+       1px 1px 0 black,
+      -1px -1px 0 #000,  
+       1px -1px 0 #000,
+      -1px 1px 0 #000,
+       1px 1px 0 #000;
+    }
+
+
+.cafe, .restaurant, .pastry {
+    text-align: center; 
+    position: relative;
+    cursor: pointer;    
+}
+.cafe .details, .restaurant .details, .pastry .details {
+    width: 95%;
+    height: 95%;    
+    padding: 10% 8%;
+    position: absolute;
+    content: "";
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%) rotateY(90deg);
+    transform-origin: 50%; 
+    opacity: 0;
+    transition: all 0.4s ease-in;
+    font-size: 14px;
+    border-radius: 8px;
+    background: -moz-linear-gradient(-45deg, #056 5%,#800 100%);
+    background: -webkit-linear-gradient(-45deg, #056 5%,#800 100%);
+    background: linear-gradient(135deg, #056 5%,#800 100%);
+    filter: progid:DXImageTransform.Microsoft.gradient( startColorstr='#056', endColorstr='#800',GradientType=1 );
+    
+}
+.cafe:hover .details, .restaurant:hover .details, .pastry:hover .details {
+    transform: translate(-50%, -50%) rotateY(0deg);
+    opacity: 1;
+}
+
+footer p{
+    text-align: center;
+    color: #080;
+    font-family: 'Quintessential';
+    font-size: 24px;
+    margin: 0px;
+}

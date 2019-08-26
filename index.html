@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+
+<html>
+    <head>
+        <link rel="stylesheet" href="https://www.w3schools.com/w3css/4/w3.css">    
+        <meta property="og:title" content="Batt Bros" />
+        <meta property="og:image:type" content="image/png" />
+        <meta property="og:image:width" content="400" />
+        <meta property="og:image:height" content="300" />
+        <meta property="og:image" content="https://i.ibb.co/S33jms1/MTLogo.png" />
+        <meta property="og:image:secure_url" content="https://i.ibb.co/S33jms1/MTLogo.png" />
+        <meta name="keywords" content="Web Development">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <meta charset="utf-8">
+        <meta http-equiv="X-UA-Compatible" content="IE=edge">
+        <title>MENU - Home</title>
+        <meta name="description" content="Online Presence Management">
+        <link rel="stylesheet" href="main.css">
+        <link rel="shortcut icon" type="image/png" href="MENU=.png">
+        <link href="https://fonts.googleapis.com/css?family=Federant|Akronim|Kaushan+Script|Fugaz+One|Righteous|Orbitron|Kanit|Quintessential" rel="stylesheet"> 
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+    </head>
+    
+    <body id="animated-example" class="animated fadeOut">
+        
+
+        <nav><img src="MENU=1.png"><img class="logo" src="MENU.png">
+            
+            <a href="services.html"><p>SERVICES</p></a> 
+            
+            <a href="contact.html"><p>CONTACT</p></a>
+            
+            <a href="portfolio.html"><p>PORTFOLIO</p></a>
+        </nav>
+        
+        <div id="intro">   
+            <h1>Need Online Presence Management?</h1>
+            
+            <div id="stage">
+                <img src="WebDesign.jpg">
+                <img src="cafepic.jpg">
+                <img src="Tutti.png">
+                <img src="Bakery.jpg">
+                <img src="Waiter.png">
+            </div>
+
+            <script type="text/javascript">
+               window.addEventListener("DOMContentLoaded", function(e) {
+
+                var stage = document.getElementById("stage");
+                var fadeComplete = function(e) { stage.appendChild(arr[0]); };
+                var arr = stage.getElementsByTagName("img");
+                for(var i=0; i < arr.length; i++) {
+                  arr[i].addEventListener("animationend", fadeComplete, false);
+                }
+              }, false);
+            </script>
+        </div>
+        
+        <div id="info">
+            <div class="cafe">Cafe <div class = "details">
+                <p>Every Coffee Shop Has Its Own 
+                    Feel And Atmosphere. We Try To Showcase That Uniqueness.</p>
+            </div></div>
+            
+            <div class="restaurant">Restaurant <div class = "details">
+                <p>All Dining Establishments Need  A Digital Presence These Days. We Can Provide And Manage That For You.</p>
+            </div></div>
+            
+            <div class="pastry">Pastry <div class = "details">
+                <p>Shops Can Potentially Increase Output With Ecommerce. We Can Set It All Up So You Can Focus On Your Craft.</p>
+            </div></div>
+        </div>
+        
+        <div id="consult">Request Free Consultation</div>
+        
+        <footer>
+            <p>&copy; <img id="menumade" src="MENU.png"> made 2019</p>
+        </footer>
+        
+    </body>
