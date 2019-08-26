@@ -32,7 +32,74 @@ body{
     background: linear-gradient(135deg, #800, #400 40%, #034, #044 100%);
     filter: progid:DXImageTransform.Microsoft.gradient( startColorstr='#800', endColorstr='#054',GradientType=1 );
     }
+
+.sidenav {
+    height: 100%;
+    width: 0;
+    position: fixed;
+    z-index: 1;
+    top: 0;
+    right: 0;
+    background: linear-gradient(to right, #800, #500, #800 100%);
+    background-repeat: repeat;
+    background-size: 100% 103%;
+    overflow-x: hidden;
+    transition: .8s;
+    padding-top: 150px;
+    font-family: 'federant';
+    font-weight: bold;
 }
+
+.sidenav a {
+    padding: 45px 10px;
+    font-size: 25px;
+    color: white;
+    display: block;
+    transition: 1s;
+    max-width: 100%;
+    text-align: center;
+    text-shadow:
+       1px 1px 0 red,
+      -1px -1px 0 #800,  
+       1px -1px 0 #800,
+      -1px 1px 0 #800,
+       1px 1px 0 #800;
+    text-decoration: none;
+}
+
+.sidenav a:hover {
+    color: red;
+    text-shadow:
+       1px 1px 0 tan,
+      -1px -1px 0 white,  
+       1px -1px 0 white,
+      -1px 1px 0 white,
+       1px 1px 0 white;
+}
+
+.sidenav .closebtn {
+    margin: 0px;
+    padding: 5px 20px 28px 22px;
+    position: absolute;
+    top: 0px;
+    right: 0px;
+    font-size: 40px;
+    text-decoration: none;
+}
+
+.navicon {
+    width: 35px;
+    height: 40px;
+    margin-right: 20px;
+}
+
+.navicon1 {
+    width: 30px;
+    height: 4px;
+    margin: 5px;
+    background: white;
+}
+
 
 #stage{
     position:absolute;
