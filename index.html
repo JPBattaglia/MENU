@@ -23,6 +23,33 @@
     
     <body id="animated-example" class="animated fadeOut">
         
+        <script>window.addEventListener("beforeunload", function () {
+  document.body.classList.add("animate-out");
+            });</script>
+
+
+        <div id="mySidenav" class="sidenav">
+          <a href="javascript:void(0)" class="closebtn" onclick="closeNav()">&#9747;</a>
+          <a style= "text-decoration: underline" href="index.html">About</a>
+          <a href="services.html">Services</a>
+          <a href="contact.html">Contact</a>
+        </div>
+
+        <span style="float:right;margin-top: 15px;cursor:pointer" onclick="openNav()"><img class=navicon src="MenuLeft.png">
+        </span>
+
+        <script>
+            
+            
+            
+        function openNav() {
+            document.getElementById("mySidenav").style.width = "150px";
+        }
+
+        function closeNav() {
+            document.getElementById("mySidenav").style.width = "0";
+        }
+        </script>
 
         <nav><img class= "logoburger" src="MENU=1.png"><img class="logo" src="MENU.png">
             
@@ -33,8 +60,9 @@
             <a href="portfolio.html"><p>PORTFOLIO</p></a>
         </nav>
         
+        <h1>Need Online Presence Management?</h1>
+        
         <div id="intro">   
-            <h1>Need Online Presence Management?</h1>
             
             <div id="stage">
                 <img src="WebDesign.jpg">
@@ -61,15 +89,18 @@
             <div class="cafe">Cafe <div class = "details">
                 <p>Every Coffee Shop Has Its Own 
                     Feel And Atmosphere. We Try To Showcase That Uniqueness.</p>
-            </div></div>
+            </div>
+            </div>
             
             <div class="restaurant">Restaurant <div class = "details">
                 <p>All Dining Establishments Need  A Digital Presence These Days. We Can Provide And Manage That For You.</p>
-            </div></div>
+            </div>
+            </div>
             
             <div class="pastry">Pastry <div class = "details">
                 <p>Shops Can Potentially Increase Output With Ecommerce. We Can Set It All Up So You Can Focus On Your Craft.</p>
-            </div></div>
+            </div>
+            </div>
         </div>
         
         <div id="consult">Request Free Consultation</div>
