@@ -80,6 +80,17 @@ nav img{
     margin: 10px 0px 10px 15px;
 }
 
+.logoburger{
+    -webkit-transition: width 2s, height 2s, 
+    -webkit-transform 1.5s; /* Safari */
+    transition: width 2s, height 2s, transform 1.5s;
+}
+
+.logoburger:hover{
+    -webkit-transform: rotate(360deg); /* Safari */
+    transform: rotate(360deg);
+}
+
 nav p{
     float:right;
     letter-spacing: 2px;
