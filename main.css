@@ -4,7 +4,7 @@ html{
 }
 
 .animated {
-        background-color: #ffdead;
+        background-color: #034;
         background-position: left top;
         margin-bottom:30px;
         -webkit-animation-duration: 3s;animation-duration: 3s;
@@ -40,7 +40,7 @@ body{
     z-index: 1;
     top: 0;
     right: 0;
-    background: linear-gradient(to right, #045, #034, #045 100%);
+    background: linear-gradient(to right, #057, #045, #034, #045, #057 100%);
     background-repeat: repeat;
     background-size: 100% 103%;
     overflow-x: hidden;
@@ -91,6 +91,7 @@ body{
     width: 35px;
     height: 40px;
     margin-right: 20px;
+    z-index: 1;
 }
 
 .navicon1 {
@@ -208,7 +209,6 @@ h1{
     padding: 80px;
     margin: 20px;
     text-align: center;
-    background-color: #600;
     font-family: 'orbitron';
     font-size: 22px;
     font-weight: bolder; 
@@ -279,6 +279,22 @@ h1{
       -1px 1px 0 #000,
        1px 1px 0 #000;
     }
+
+#Btn:hover{
+    border: .5px solid #030;
+    cursor: pointer;
+    font-weight: bolder;
+    color: #089;
+    text-shadow:
+       1px 1px 0 white,
+      -1px -1px 0 black,  
+       1px -1px 0 black,
+      -1px 1px 0 black,
+       1px 1px 0 black;
+    box-shadow: 
+        2px 8px 10px #057,
+        -2px 8px 10px #057;
+}
 
 .modalDialog {
     margin: auto;
@@ -465,7 +481,7 @@ input[type=submit]:hover {
 
 footer p{
     text-align: center;
-    color: #080;
+    color: #0bb;
     font-family: 'Quintessential';
     font-size: 24px;
     margin: 0px;
@@ -561,14 +577,14 @@ footer p{
     
     .consult{
     margin: 0 auto;
-    width: 275px;
+    width: 250px;
 }
 
 #Btn{
     font-size: 15px;
-    width: 275px;
+    width: 250px;
     margin: 20px auto 50px;
-    padding: 5px 10px; 
+    padding: 5px; 
 }
 
     
