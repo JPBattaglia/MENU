@@ -333,10 +333,10 @@ h1{
 
 .modalDialog > div {
         text-align: center;
-        width: 380px;
+        width: 500px;
         position: relative;
-        margin: 50px auto;
-        padding: 1px 30px 1px 30px;
+        margin: 100px auto;
+        padding: 1px 20px 1px 20px;
         border-radius: 20px;
         background: -moz-radial-gradient(black, #400);
         background: -webkit-radial-gradient( #200, #600);
@@ -364,7 +364,7 @@ textarea, input{
     text-align: center;
     font-size: 18px;
     font-weight:bolder;
-    max-width: 200px;
+    max-width: 300px;
 }
 
 select{
@@ -609,6 +609,19 @@ footer p{
     footer p{
         font-size: 15px;
     }
+    
+    .modalDialog > div {
+        text-align: center;
+        width: 300px;
+        position: relative;
+        margin: 20px auto;
+        padding: 1px 20px 1px 20px;
+        border-radius: 20px;
+        background: -moz-radial-gradient(black, #400);
+        background: -webkit-radial-gradient( #200, #600);
+        border: #066 double 2px;
+        max-width:100%;
+        }
 }
 
 @media (min-width: 1000px){
