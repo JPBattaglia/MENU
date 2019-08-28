@@ -183,7 +183,7 @@ h1{
 
 #intro{
     max-width: 1000px;
-    height: 550px;
+    height: 510px;
     margin: auto;
 }
 
@@ -206,24 +206,38 @@ h1{
 
 .cafe, .restaurant, .pastry{
     flex: 1;
-    padding: 80px;
-    margin: 20px;
+    padding: 50px;
+    margin: 25px;
     text-align: center;
     font-family: 'orbitron';
     font-size: 22px;
     font-weight: bolder; 
     color: white;
-    border: 2px double #068;
-    border-radius: 10px;
-    box-shadow: 15px 15px 1px transparent;
-    text-align: center; 
+    border: 2px solid #068;
+    border-radius: 30px;
+    box-shadow: 15px 15px 1px transparent; 
     position: relative;
-    cursor: pointer; 
+}
+
+.restaurant img{
+    width:100px;
+    padding: 10px;
+}
+
+.cafe img{
+    width: 80px;
+    height: 80px;
+    padding: 10px;
+}
+
+.pastry img{
+    width: 75px;
+    padding: 10px;
 }
 
 .cafe:hover, .restaurant:hover, .pastry:hover{
     border: 2px solid red;
-    cursor: pointer;
+    cursor:crosshair;
     box-shadow: 15px 15px 1px black;
 }
 
@@ -240,7 +254,7 @@ h1{
     opacity: 0;
     transition: all 0.4s ease-in;
     font-size: 14px;
-    border-radius: 5px;
+    border-radius: 24px;
     background: -moz-linear-gradient(-45deg, #056 5%,#800 100%);
     background: -webkit-linear-gradient(-45deg, #056 5%,#800 100%);
     background: linear-gradient(135deg, #056 5%,#800 100%);
@@ -319,23 +333,19 @@ h1{
 
 .modalDialog > div {
         text-align: center;
-        width: 385px;
+        width: 380px;
         position: relative;
-        margin: 10px auto;
-        padding: 1px 100px 1px 100px;
+        margin: 50px auto;
+        padding: 1px 30px 1px 30px;
         border-radius: 20px;
         background: -moz-radial-gradient(black, #400);
         background: -webkit-radial-gradient( #200, #500);
         border: #066 solid 1px;
         max-width:100%;
         }
-    
-    #modalImg{
-        opacity: 1;
-        }
 
 label{
-    font-size: 25px;
+    font-size: 20px;
     text-align: center;
     font-family:'federant', serif;
     color:white;
@@ -425,7 +435,7 @@ input[type=submit]:hover {
     margin-bottom: 20px;
     text-align: center;
     border: 1px solid white;
-    background-color: #700;
+    background-color: #900;
     border-radius: 25px;
     text-shadow:
        1px 1px 0 black,
@@ -520,6 +530,10 @@ footer p{
     #info{
         flex-direction: column;
         max-width: 400px;
+    }
+    
+    #cafe, #restaurant, #pastry{
+        height: 300px;
     }
     
 }
