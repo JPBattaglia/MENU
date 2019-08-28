@@ -339,8 +339,8 @@ h1{
         padding: 1px 30px 1px 30px;
         border-radius: 20px;
         background: -moz-radial-gradient(black, #400);
-        background: -webkit-radial-gradient( #200, #500);
-        border: #066 solid 1px;
+        background: -webkit-radial-gradient( #200, #600);
+        border: #066 double 2px;
         max-width:100%;
         }
 
@@ -396,8 +396,8 @@ input[type=text], select, textarea {
     text-align: center;
     width: 100%; /* Full width */
     padding: 5px; /* Some padding */  
-    border: 1.5px solid red; /* Gray border */
-    border-radius: 20px; /* Rounded borders */
+    border: 6px double #600; /* Gray border */
+    border-radius: 30px; /* Rounded borders */
     box-sizing: border-box; /* Make sure that padding and width stays in place */
     margin-top: 10px; /* Add a top margin */
     margin-bottom: 30px; /* Bottom margin */
@@ -585,7 +585,7 @@ footer p{
     }
     
     .cafe .details, .restaurant .details, .pastry .details{
-        padding: 3px 10px;
+        padding: 50px 10px;
         border-radius: 15px;
     }
     
