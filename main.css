@@ -244,7 +244,7 @@ h1{
 .cafe .details, .restaurant .details, .pastry .details {
     width: 95%;
     height: 95%;    
-    padding: 5% 8%;
+    padding: 5px;
     position: absolute;
     content: "";
     top: 50%;
@@ -530,7 +530,11 @@ footer p{
     #info{
         flex-direction: column;
         max-width: 60%;
-    }    
+    }
+    
+    .cafe .details, .restaurant .details, .pastry .details{
+        padding: 20px 10px;
+    }
 }
 
 /*=======================================*/
