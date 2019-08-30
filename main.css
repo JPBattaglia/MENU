@@ -575,7 +575,7 @@ footer p{
     }
     
     .cafe, .restaurant, .pastry{
-        min-width: 310px;
+        min-width: 280px;
         text-align: center;
         font-size: 15px;
         margin: 0px auto;
