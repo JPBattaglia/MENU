@@ -206,14 +206,14 @@ h1{
 
 .cafe, .restaurant, .pastry{
     flex: 1;
-    padding: 50px;
+    padding: 30px;
     margin: 25px;
     text-align: center;
     font-family: 'orbitron';
     font-size: 22px;
     font-weight: bolder; 
     color: white;
-    border: 2px solid #068;
+    border: 2px solid transparent;
     border-radius: 30px;
     box-shadow: 15px 15px 1px transparent; 
     position: relative;
@@ -236,15 +236,15 @@ h1{
 }
 
 .cafe:hover, .restaurant:hover, .pastry:hover{
-    border: 2px solid red;
-    cursor:crosshair;
-    box-shadow: 15px 15px 1px black;
+    border: 2px solid #068;
+    cursor: pointer;
+    box-shadow: 15px 15px 5px #023;
 }
 
 .cafe .details, .restaurant .details, .pastry .details {
     width: 95%;
     height: 95%;    
-    padding: 15% 8%;
+    padding: 5% 8%;
     position: absolute;
     content: "";
     top: 50%;
@@ -252,8 +252,8 @@ h1{
     transform: translate(-50%, -50%) rotateY(90deg);
     transform-origin: 50%; 
     opacity: 0;
-    transition: all 0.4s ease-in;
-    font-size: 14px;
+    transition: all 0.6s ease-in;
+    font-size: 18px;
     border-radius: 24px;
     background: -moz-linear-gradient(-45deg, #056 5%,#800 100%);
     background: -webkit-linear-gradient(-45deg, #056 5%,#800 100%);
@@ -529,13 +529,8 @@ footer p{
     
     #info{
         flex-direction: column;
-        max-width: 400px;
-    }
-    
-    #cafe, #restaurant, #pastry{
-        height: 300px;
-    }
-    
+        max-width: 60%;
+    }    
 }
 
 /*=======================================*/
@@ -572,21 +567,22 @@ footer p{
     
     #info{
         flex-direction: column;
-        max-width: 300px;
+        max-width: 310px;
     }
     
     .cafe, .restaurant, .pastry{
-        max-width: 300px;
+        min-width: 310px;
         text-align: center;
         font-size: 15px;
-        padding: 75px;
-        margin: 20px auto;
+        margin: 0px auto;
         border-radius: 20px;
+        padding: 30px;
     }
     
     .cafe .details, .restaurant .details, .pastry .details{
-        padding: 50px 10px;
+        padding: 5px 10px;
         border-radius: 15px;
+        font-size: 17px;
     }
     
     .consult{
