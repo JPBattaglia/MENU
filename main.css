@@ -179,6 +179,7 @@ h1{
     font-family: 'Orbitron';
     padding: 20px 0;
     font-weight: bolder; 
+    margin: 0px;
 }
 
 #intro{
@@ -272,7 +273,7 @@ h1{
 }
 
 #Btn{
-    margin: 50px auto;
+    margin: 0px auto 30px;
     color:#ffeecc;
     padding: 10px 30px;
     background: repeating-linear-gradient(to top, #022, #058, #0d888f 100%);
@@ -529,6 +530,7 @@ footer p{
     
     h1{
         font-size: 28px;
+        margin: 0px;
     }
     
     #info{
@@ -572,6 +574,7 @@ footer p{
     
     h1{
         font-size: 18px;
+        margin: 0px;
     }
     
     #info{
@@ -602,7 +605,7 @@ footer p{
 #Btn{
     font-size: 15px;
     width: 250px;
-    margin: 20px auto 50px;
+    margin: 0px auto 25px;
     padding: 5px; 
 }
 
