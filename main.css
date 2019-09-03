@@ -404,6 +404,10 @@ input[type=text], select, textarea {
     resize: vertical; /* Allow the user to vertically resize the textarea (not horizontally) */
 }
 
+textarea {
+    border-radius: 20px;
+}
+
 /* Style the submit button with a specific background color etc */
 input[type=submit] {
     margin: auto;
