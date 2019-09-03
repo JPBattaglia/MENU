@@ -132,8 +132,8 @@ body{
 
 
 nav{
-    background-color: #500;
-    border-bottom: 1px solid black;
+    background-color: #034;
+    border-bottom: 3px solid #800;
     width: 100%;
 
 }
@@ -556,13 +556,14 @@ footer p{
     
     #intro{
         margin: auto;
-        height: 175px;
+        height: 200px;
         max-width: 310px;
     }
     
     #intro img{
         margin: auto;
         max-width: 310px;
+        height: 200px;
     }
     
     h1{
