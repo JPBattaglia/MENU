@@ -563,6 +563,11 @@ footer p{
         display: none;
     }
     
+    .navicon{
+        width: 35px;
+        height: 30px;
+    }
+    
     .logo{
         width: 75px;
     }
