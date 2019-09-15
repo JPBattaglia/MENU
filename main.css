@@ -500,7 +500,10 @@ input[type=submit]:hover {
       -1px 1px 0 red,
        1px 1px 0 red;
 }
-    
+  
+footer img{
+    width: 65px;
+}
 
 footer p{
     text-align: center;
