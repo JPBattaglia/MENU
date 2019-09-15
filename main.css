@@ -139,9 +139,15 @@ nav{
 }
 
 nav p:hover{
-    border-bottom: 3px solid #076;
-    color: #098;
+    border-bottom: 3px solid #079;
+    color: #f00;
     font-weight: bolder;
+    text-shadow:
+       1px 2px 0 #000,
+      -1px -1px 0 #000,  
+       1px -1px 0 #000,
+      -1px 1px 0 #000,
+       1px 1px 0 #000;
 }
 
 nav img{
@@ -193,6 +199,7 @@ h1{
     margin: auto;
     position:absolute;
     border-radius: 10px;
+    border: 3px solid #057;
 }
 
 #info{
@@ -226,8 +233,8 @@ h1{
 }
 
 .cafe img{
-    width: 80px;
-    height: 80px;
+    width: 95px;
+    height: 85px;
     padding: 10px;
 }
 
@@ -268,7 +275,7 @@ h1{
 }
 
 .consult{
-    margin: auto;
+    margin: 20px auto 0;
     max-width: 400px;
 }
 
@@ -296,7 +303,7 @@ h1{
     }
 
 #Btn:hover{
-    border: .5px solid #030;
+    border: .5px solid #060;
     cursor: pointer;
     font-weight: bolder;
     color: #089;
@@ -307,8 +314,8 @@ h1{
       -1px 1px 0 black,
        1px 1px 0 black;
     box-shadow: 
-        2px 8px 10px #057,
-        -2px 8px 10px #057;
+        2px 6px 10px #057,
+        -2px 6px 10px #057;
 }
 
 .modalDialog {
@@ -592,21 +599,21 @@ footer p{
     }
     
     .cafe .details, .restaurant .details, .pastry .details{
-        padding: 5px 10px;
+        padding: 5px 8px;
         border-radius: 15px;
         font-size: 17px;
     }
     
     .consult{
-    margin: 0 auto;
-    width: 250px;
+        margin: 20px auto 0;
+        width: 250px;
 }
 
 #Btn{
-    font-size: 15px;
-    width: 250px;
-    margin: 0px auto 25px;
-    padding: 5px; 
+        font-size: 15px;
+        width: 250px;
+        margin: 0px auto 25px;
+        padding: 5px; 
 }
 
     
