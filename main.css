@@ -625,15 +625,12 @@ footer p{
         font-size: 15px;
     }
     
-    .modalDialog{
-        top: 60px;
-    }
     
     .modalDialog > div {
         text-align: center;
         width: 300px;
         position: relative;
-        margin: 50px auto;
+        margin: 5auto;
         padding: 1px 20px 1px 20px;
         border-radius: 20px;
         background: -moz-radial-gradient(black, #400);
@@ -643,7 +640,7 @@ footer p{
         }
     
     input[type=text], select, textarea {
-        margin: 5px 0;
+        margin: 10px 0;
     }
 }
 
