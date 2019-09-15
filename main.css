@@ -564,8 +564,9 @@ footer p{
     }
     
     .navicon{
-        width: 35px;
+        width: 33px;
         height: 26px;
+        margin-right: 10px;
     }
     
     .logo{
