@@ -641,6 +641,10 @@ footer p{
         border: #066 double 2px;
         max-width:100%;
         }
+    
+    input[type=text], select, textarea {
+        margin: 5px 0;
+    }
 }
 
 @media (min-width: 1000px){
