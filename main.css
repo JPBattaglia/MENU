@@ -618,12 +618,12 @@ footer p{
         width: 250px;
 }
 
-#Btn{
+    #Btn{
         font-size: 15px;
         width: 250px;
         margin: 0px auto 25px;
         padding: 5px; 
-}
+    }
 
     
     footer img{
@@ -639,7 +639,7 @@ footer p{
         text-align: center;
         width: 300px;
         position: relative;
-        margin: 5auto;
+        margin: 75px auto;
         padding: 1px 20px 1px 20px;
         border-radius: 20px;
         background: -moz-radial-gradient(black, #400);
