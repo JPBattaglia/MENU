@@ -352,6 +352,20 @@ h1{
         max-width:100%;
         }
 
+label{
+    font-size: 20px;
+    text-align: center;
+    font-family:'federant', serif;
+    color:white;
+    list-style-type: none;
+    text-shadow:
+       1px 1px 0 red,
+      -1px -1px 0 red,  
+       1px -1px 0 red,
+      -1px 1px 0 red,
+       1px 1px 0 red;
+}
+
 textarea, input{
     font-family: 'federant', serif;
     color:red;
@@ -394,7 +408,7 @@ input[type=text], select, textarea {
     border-radius: 30px; /* Rounded borders */
     box-sizing: border-box; /* Make sure that padding and width stays in place */
     margin-top: 10px; /* Add a top margin */
-    margin-bottom: 30px; /* Bottom margin */
+    margin-bottom: 20px; /* Bottom margin */
     resize: vertical; /* Allow the user to vertically resize the textarea (not horizontally) */
 }
 
@@ -541,7 +555,7 @@ footer p{
 
 @media (max-width: 700px){
     
-    nav a{
+    nav a, label{
         display: none;
     }
     
@@ -611,11 +625,15 @@ footer p{
         font-size: 15px;
     }
     
+    .modalDialog{
+        top: 60px;
+    }
+    
     .modalDialog > div {
         text-align: center;
         width: 300px;
         position: relative;
-        margin: 30px auto 0;
+        margin: 20px auto;
         padding: 1px 20px 1px 20px;
         border-radius: 20px;
         background: -moz-radial-gradient(black, #400);
