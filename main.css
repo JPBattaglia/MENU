@@ -629,6 +629,11 @@ footer p{
         margin: 0px auto 25px;
         padding: 5px; 
     }
+    
+    .restaurant img{
+        width: 97px;
+        height: 65px;
+    }
 
     
     footer img{
