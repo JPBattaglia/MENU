@@ -183,9 +183,9 @@ h1{
     color: white;
     text-align: center;
     font-family: 'Orbitron';
-    padding: 20px 0;
+    padding: 20px 0px 50px;
     font-weight: bolder; 
-    margin: 0px;
+    margin: 0px auto;
 }
 
 #intro{
@@ -228,8 +228,10 @@ h1{
 }
 
 .restaurant img{
-    width:100px;
+    width:130px;
+    height: 60px;
     padding: 8px;
+    margin: 23px auto 0;
 }
 
 .cafe img{
@@ -239,8 +241,10 @@ h1{
 }
 
 .pastry img{
-    width: 80px;
-    padding: 10px;
+    width: 65px;
+    height: 78px;
+    padding: 10px 8px;
+    margin: 8px 0 0;
 }
 
 .cafe:hover, .restaurant:hover, .pastry:hover{
@@ -667,7 +671,7 @@ footer p{
     }
     
     #stuff{
-        height: 800px;
+        height: 480px;
     }
     
 }
