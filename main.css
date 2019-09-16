@@ -229,7 +229,7 @@ h1{
 
 .restaurant img{
     width:100px;
-    padding: 10px;
+    padding: 8px;
 }
 
 .cafe img{
@@ -239,7 +239,7 @@ h1{
 }
 
 .pastry img{
-    width: 75px;
+    width: 80px;
     padding: 10px;
 }
 
@@ -667,7 +667,7 @@ footer p{
     }
     
     #stuff{
-        height: 500px;
+        height: 800px;
     }
     
 }
