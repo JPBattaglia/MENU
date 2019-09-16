@@ -548,7 +548,8 @@ input[type=submit]:hover {
     
     #Btn{
         font-size: 12px;
-        width: 200px;
+        width: 160px;
+        margin-left: 50px;
     }
     
     #intro{
@@ -607,11 +608,12 @@ input[type=submit]:hover {
     
     .logo{
         width: 75px;
-        margin-left: 0;
+        margin: 20px 0;
     }
     
     .logoburger{
         width: 50px;
+        margin: 10px 10px;
     }
     
     #stage{
@@ -658,7 +660,7 @@ input[type=submit]:hover {
 
     #Btn{
         font-size: 10px;
-        width: 160px;
+        width: 140px;
         margin-left: 30px;
     }
     
