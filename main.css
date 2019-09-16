@@ -622,14 +622,14 @@ input[type=submit]:hover {
     
     #intro{
         margin: auto;
-        height: 320px;
+        height: 300px;
         max-width: 100%;
     }
     
     #intro img{
         margin: auto;
         max-width: 100%;
-        height: 255px;
+        height: 235px;
     }
     
     h1{
