@@ -595,7 +595,6 @@ input[type=submit]:hover {
     }
     
     nav{
-        z-index: 1;
         height: 65px;
     }
     
