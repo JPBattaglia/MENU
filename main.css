@@ -26,6 +26,19 @@ html{
         animation-name: fadeOut;
          }
 
+article{
+    position:absolute;
+    left: 0px;
+    top: 155px;
+    z-index:-1;
+    text-align: center;
+    }
+
+article img{
+    max-width: 85%;
+    margin: auto;
+    }
+
 body{
     background: -moz-linear-gradient(-45deg, #600 25%, #044, #044 100%);
     background: -webkit-linear-gradient(-45deg, #600 25%,#044, #044 100%);
@@ -563,7 +576,7 @@ footer p{
 
 @media (max-width: 700px){
     
-    nav a, label{
+    nav a, label, article{
         display: none;
     }
     
@@ -670,13 +683,7 @@ footer p{
         display: none;
     }
     
-    body{
-        background: url(MENUBCKGRND.png);
-        background-size: 100% 100%;
-    }
-    
     #stuff{
-        height: 480px;
+        height: 300px;
     }
-    
 }
