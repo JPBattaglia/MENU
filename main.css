@@ -201,6 +201,7 @@ h1{
     padding: 15px 0px 0px;
     font-weight: bolder; 
     margin: 0px auto;
+    border-top: 3px solid #057;
 }
 
 #intro{
@@ -212,7 +213,7 @@ h1{
 #intro img{
     width: 100%;
     margin: 80px auto;
-    height: 650px;
+    height: 655px;
     position:absolute;
     border: 3px solid #057;
 }
@@ -541,7 +542,7 @@ input[type=submit]:hover {
 /*=======================================*/
 /*=======================================*/
 
-@media (max-width: 1000px) and (min-width: 701px){
+@media (max-width: 1000px) and (min-width: 601px){
     
     article{
         display: none;
@@ -549,8 +550,12 @@ input[type=submit]:hover {
     
     #Btn{
         font-size: 12px;
-        width: 160px;
+        width: 150px;
         margin-left: 50px;
+    }
+    
+    .consult{
+        width: 70px;
     }
     
     #intro{
@@ -595,7 +600,7 @@ input[type=submit]:hover {
 /*=======================================*/
 /*=======================================*/
 
-@media (max-width: 700px){
+@media (max-width: 600px){
     
  label, article{
         display: none;
@@ -635,7 +640,7 @@ input[type=submit]:hover {
     #intro img{
         margin: auto;
         max-width: 100%;
-        height: 235px;
+        height: 240px;
     }
     
     h1{
@@ -667,8 +672,13 @@ input[type=submit]:hover {
 
     #Btn{
         font-size: 10px;
-        width: 140px;
+        width: 130px;
         margin-left: 20px;
+    }
+    
+    .consult{
+        width: 150px;
+        margin-top: 15px;
     }
     
     .restaurant img{
