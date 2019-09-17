@@ -581,8 +581,14 @@ input[type=submit]:hover {
         max-width: 100%;
     }
     
+    .cafe, .restaurant, .pastry{
+        min-width: 400px;
+        margin: auto;
+    }
+    
     .cafe .details, .restaurant .details, .pastry .details{
         padding: 20px 10px;
+        max-width: 100%;
     }
 }
 
