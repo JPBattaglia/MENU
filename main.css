@@ -640,7 +640,7 @@ input[type=submit]:hover {
     }
     
     h1{
-        font-size: 19px;
+        font-size: 18px;
         padding: 30px;
     }
     
@@ -670,7 +670,7 @@ input[type=submit]:hover {
         float: left;
         font-size: 10px;
         width: 120px;
-        margin-left: 50px;
+        margin-left: 30px;
     }
     
     .consult{
