@@ -198,7 +198,6 @@ h1{
     padding: 15px 0px 0px;
     font-weight: bolder; 
     margin: 0px auto;
-    border-top: 3px solid #057;
 }
 
 #intro{
@@ -629,7 +628,7 @@ input[type=submit]:hover {
     
     #intro{
         margin: auto;
-        height: 302px;
+        height: 305px;
         max-width: 100%;
     }
     
