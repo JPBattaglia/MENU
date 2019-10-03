@@ -19,6 +19,7 @@
         <link rel="shortcut icon" type="image/png" href="MENU=.png">
         <link href="https://fonts.googleapis.com/css?family=Federant|Akronim|Kaushan+Script|Fugaz+One|Righteous|Orbitron|Kanit|Quintessential" rel="stylesheet"> 
         <meta name="viewport" content="width=device-width, initial-scale=1">
+        <link rel="stylesheet" href="https://unpkg.com/aos@next/dist/aos.css" />
     </head>
     
     <body id="animated-example" class="animated fadeOut">
@@ -37,8 +38,6 @@
 
         <script>
             
-            
-            
         function openNav() {
             document.getElementById("mySidenav").style.width = "150px";
         }
@@ -49,24 +48,18 @@
         </script>
 
         <nav><div>
-            <img class=navicon onclick="openNav()" src="BURGERLOGOREDKENTUCKY.png">
+            <img data-aos="fade-left" data-aos-duration="3000" data-aos-anchor-placement="top-bottom"  class=navicon onclick="openNav()" src="BURGERLOGOREDKENTUCKY.png">
         </div>
             
-            <img class= "logoburger" src="MENU=1.png"><img class="logo" src="MENU.png">
+            <img data-aos="fade-right" data-aos-duration="3000" data-aos-anchor-placement="top-bottom" class= "logoburger" src="MENU=1.png"><img data-aos="fade-right" data-aos-duration="3000" data-aos-anchor-placement="top-bottom" class="logo" src="MENU.png">
             
-            <div class=consult><a href="#openModal99"><button id="Btn">Free Consultation</button></a></div>
+            <div data-aos="fade-down" data-aos-duration="3000" data-aos-anchor-placement="top-bottom" class=consult><a href="#openModal99"><button id="Btn">Free Consultation</button></a></div>
             
         </nav>
         
-        <article>
-        
-            <img src="MENUBCKGRNDO=.png">
-        
-        </article>
-        
         <div id="intro">   
             
-            <div id="stage">
+            <div data-aos="zoom-out-down" data-aos-duration="3000" data-aos-anchor-placement="top-bottom" id="stage">
                 <img src="WebDesign.jpg">
                 <img src="Cafepic.jpg">
                 <img src="Tutti.png">
@@ -89,23 +82,22 @@
         </div>
         
         
-        
         <div id="info">
-            
+        
             <h1>Online Presence Management</h1>
             
-            <div class="restaurant"><img src="ServNapkinTray.png"><br>Restaurant<div class = "details">
+            <div class="restaurant" data-aos="zoom-in-up" data-aos-duration="3000"><img src="ServNapkinTray.png"><br>Restaurant<div class = "details">
                 <p>All Dining Establishments Need  A Digital Presence These Days. We Can Provide And Manage It All For You.</p>
             </div>
             </div>
             
-            <div class="cafe"><img src="Cup.png"><br>Cafe<div class = "details">
+            <div class="cafe" data-aos="zoom-in-up" data-aos-duration="3000"><img src="Cup.png"><br>Cafe<div class = "details">
                 <p>Every Coffee Shop Has Its Own 
                     Feel And Atmosphere. We Try To Showcase That Uniqueness.</p>
             </div>
             </div>
             
-            <div class="pastry"><img src=Cupcake.png><br>Shop<div class = "details">
+            <div class="pastry" data-aos="zoom-in-up" data-aos-duration="3000"><img src=Cupcake.png><br>Shop<div class = "details">
                 <p>We Can Set Up An Automated Ecommerce Site For You So You Can Increase Sales And Just Focus On Your Craft.</p>
             </div>
             </div>
@@ -124,9 +116,14 @@
                  <textarea id="message" name="message" placeholder="Tell Us About Your Place" style="height:150px"></textarea><br>
                  <br><input type="submit" value="Submit"><br>
                 </form><br>
-                </div>
-        <div id=stuff></div></div>
+                    </div></div>
+        
         <div id="footer">
             <p>&copy; <img id="menumade" src="MENU.png"> made 2019</p></div>
+        
+        <script src="https://unpkg.com/aos@next/dist/aos.js"></script>
+  <script>
+    AOS.init();
+  </script>
         
     </body>
