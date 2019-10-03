@@ -629,7 +629,7 @@ input[type=submit]:hover {
     
     #intro{
         margin: auto;
-        height: 300px;
+        height: 302px;
         max-width: 100%;
     }
     
@@ -641,7 +641,7 @@ input[type=submit]:hover {
     
     h1{
         font-size: 20px;
-        margin: 0px;
+        padding: 30px;
     }
     
     #info{
