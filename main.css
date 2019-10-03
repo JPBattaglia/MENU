@@ -667,12 +667,14 @@ input[type=submit]:hover {
     
 
     #Btn{
+        float: left;
         font-size: 10px;
         width: 120px;
         margin-left: 50px;
     }
     
     .consult{
+        float: left;
         width: 135px;
         margin-top: 15px;
     }
