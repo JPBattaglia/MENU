@@ -27,15 +27,10 @@ html{
          }
 
 article{
-    position:absolute;
+    position: absolute;
     left: 0px;
     top: 155px;
-    z-index:-1;
     text-align: center;
-    }
-
-article img{
-    max-width: 85%;
     }
 
 body{
@@ -104,6 +99,7 @@ body{
     width: 44px;
     height: 35px;
     margin: 20px 20px 10px 0;
+    cursor: pointer;
 }
 
 .navicon1 {
@@ -226,7 +222,6 @@ h1{
     margin: auto;
     text-align: center;
     padding-bottom: 20px;
-    color: #700;
     flex-wrap: wrap;
     padding-bottom: 450px;
 }
@@ -244,7 +239,6 @@ h1{
     border-radius: 30px;
     box-shadow: 15px 15px 1px transparent; 
     position: relative;
-    z-index: 2;
 }
 
 .restaurant img{
@@ -369,8 +363,8 @@ h1{
         margin: 100px auto;
         padding: 1px 20px 1px 20px;
         border-radius: 20px;
-        background: -moz-radial-gradient(black, #400);
-        background: -webkit-radial-gradient( #200, #600);
+        background:url(MENUBCKGRND.png);
+        background-size: 100% 100%;
         border: #066 double 2px;
         max-width:100%;
         }
@@ -525,8 +519,8 @@ input[type=submit]:hover {
 }
 
 #footer{
-    background: #034;
     height: 50px;
+    
 }
 
 #footer img{
@@ -705,8 +699,8 @@ input[type=submit]:hover {
         margin: 75px auto;
         padding: 1px 20px 1px 20px;
         border-radius: 20px;
-        background: -moz-radial-gradient(black, #400);
-        background: -webkit-radial-gradient( #200, #600);
+        background:url(MENUBCKGRND.png);
+        background-size: 100% 100%;
         border: #066 double 2px;
         max-width:100%;
         }
@@ -714,6 +708,10 @@ input[type=submit]:hover {
     input[type=text], select, textarea {
         margin: 10px 0;
         width: 90%;
+    }
+    .sidenav .closebtn{
+        padding: 11px 15px 28px 22px;
+        font-size: 30px;
     }
 }
 
