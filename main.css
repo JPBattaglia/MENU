@@ -162,7 +162,7 @@ nav p:hover{
 
 
 .logoburger{
-    width: 65px;
+    width: 55px;
     margin: 10px 20px;
     float:left;
     -webkit-transition: width 2s, height 2s, 
@@ -186,7 +186,7 @@ nav p{
 
 .logo{
     float:left;
-    margin: 22px;
+    margin: 22px 0;
     width: 120px;
 }
 
@@ -211,7 +211,6 @@ h1{
     margin: 76px auto;
     height: 655px;
     position:absolute;
-    border: 3px solid #057;
 }
 
 #info{
@@ -614,11 +613,11 @@ input[type=submit]:hover {
     
     .logo{
         width: 75px;
-        margin: 20px 0;
+        margin: 25px 0;
     }
     
     .logoburger{
-        width: 50px;
+        width: 45px;
         margin: 10px 10px;
     }
     
