@@ -98,7 +98,7 @@ body{
     float: right;
     width: 44px;
     height: 35px;
-    margin: 20px 20px 10px 0;
+    margin: 28px 20px 10px 0;
     cursor: pointer;
 }
 
@@ -112,7 +112,7 @@ body{
 
 #stage{
     position:fixed;
-    margin: auto;
+    margin: 24px auto;
     width: 100%;
     z-index: -1;
 }
@@ -144,7 +144,7 @@ nav{
     background-color: #034;
     border-bottom: 3px solid #023;
     width: 100%;
-    height: 76px;
+    height: 100px;
     z-index: 10;
 
 }
@@ -163,7 +163,7 @@ nav p:hover{
 
 .logoburger{
     width: 55px;
-    margin: 10px 20px;
+    margin: 25px 20px;
     float:left;
     -webkit-transition: width 2s, height 2s, 
     -webkit-transform 1.5s; /* Safari */
@@ -186,7 +186,7 @@ nav p{
 
 .logo{
     float:left;
-    margin: 22px 0;
+    margin: 35px 0;
     width: 120px;
 }
 
@@ -217,7 +217,7 @@ h1{
     background: linear-gradient(135deg, #800, #400 40%, #034, #045 100%);
     display:flex;
     max-width:100%;
-    margin: auto;
+    margin: 26px auto;
     text-align: center;
     padding-bottom: 20px;
     flex-wrap: wrap;
@@ -291,8 +291,9 @@ h1{
 }
 
 .consult{
+    position: relative;
     max-width: 300px;
-    margin: 20px auto;
+    margin: 30px 40%;
     }
 
 #Btn{
@@ -318,7 +319,9 @@ h1{
     }
 
 #Btn:hover{
-    border: .5px solid #060;
+    transition: .5s;
+    padding: 5px 0 7px 0;
+    border: 1px solid #000;
     cursor: pointer;
     font-weight: bolder;
     color: #089;
@@ -388,6 +391,7 @@ textarea, input{
     font-size: 18px;
     font-weight:bolder;
     max-width: 300px;
+    opacity: .8;
 }
 
 select{
@@ -611,7 +615,7 @@ input[type=submit]:hover {
         float: right;
         width: 33px;
         height: 26px;
-        margin-right: 10px;
+        margin: 20px 10px;
     }
     
     .logo{
@@ -646,6 +650,7 @@ input[type=submit]:hover {
     }
     
     #info{
+        margin-top: 0px;
         flex-direction: column;
         max-width: 100%;
         padding-bottom: 120px;
@@ -677,7 +682,7 @@ input[type=submit]:hover {
     .consult{
         float: left;
         width: 135px;
-        margin-top: 15px;
+        margin-top: -50px;
     }
     
     .restaurant img{
@@ -711,6 +716,7 @@ input[type=submit]:hover {
     input[type=text], select, textarea {
         margin: 10px 0;
         width: 90%;
+        opacity: .8;
     }
     .sidenav .closebtn{
         padding: 11px 15px 28px 22px;
