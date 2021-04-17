@@ -100,6 +100,7 @@ body{
     height: 35px;
     margin: 28px 20px 10px 0;
     cursor: pointer;
+    filter: drop-shadow(2px 4px 1px #010);
 }
 
 .navicon1 {
@@ -188,6 +189,7 @@ nav p{
     float:left;
     margin: 35px 0;
     width: 120px;
+    filter: drop-shadow(2px 4px 1px #010);
 }
 
 h1{
@@ -244,12 +246,14 @@ h1{
     height: 60px;
     padding: 8px;
     margin: 23px auto 0;
+    filter: drop-shadow(2px 4px 1px #010);
 }
 
 .cafe img{
     width: 85px;
     height: 85px;
     padding: 10px;
+    filter: drop-shadow(2px 4px 1px #010);
 }
 
 .pastry img{
@@ -257,6 +261,7 @@ h1{
     height: 78px;
     padding: 10px 8px;
     margin: 8px 0 0;
+    filter: drop-shadow(2px 4px 1px #010);
 }
 
 .cafe:hover, .restaurant:hover, .pastry:hover{
@@ -297,6 +302,7 @@ h1{
     }
 
 #Btn{
+    transition: .5s;
     color:#ffeecc;
     padding: 5px 0px;
     background: repeating-linear-gradient(to top, #022, #058, #0d888f 100%);
@@ -320,7 +326,7 @@ h1{
 
 #Btn:hover{
     transition: .5s;
-    padding: 5px 0 7px 0;
+    padding: 5px 4px 8px 4px;
     border: 1px solid #000;
     cursor: pointer;
     font-weight: bolder;
