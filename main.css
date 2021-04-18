@@ -1,44 +1,54 @@
-html{
-    min-height:100%;
-    overflow:auto;
+html {
+    min-height: 100%;
+    overflow: auto;
 }
 
 .animated {
-        background-color: #034;
-        background-position: left top;
-        margin-bottom:30px;
-        -webkit-animation-duration: 3s;animation-duration: 3s;
-        -webkit-animation-fill-mode: both;animation-fill-mode: both;
-        }
+    background-color: #034;
+    background-position: left top;
+    margin-bottom: 30px;
+    -webkit-animation-duration: 3s;
+    animation-duration: 3s;
+    -webkit-animation-fill-mode: both;
+    animation-fill-mode: both;
+}
 
-        @-webkit-keyframes fadeOut {
-          100% {opacity: 1;}
-          0% {opacity: 0;}
-         }
+@-webkit-keyframes fadeOut {
+    100% {
+        opacity: 1;
+    }
+    0% {
+        opacity: 0;
+    }
+}
 
-        @keyframes fadeOut {
-          100% {opacity: 1;}
-          0% {opacity: 0;}
-         }
+@keyframes fadeOut {
+    100% {
+        opacity: 1;
+    }
+    0% {
+        opacity: 0;
+    }
+}
 
 .fadeOut {
-        -webkit-animation-name: fadeOut;
-        animation-name: fadeOut;
-         }
+    -webkit-animation-name: fadeOut;
+    animation-name: fadeOut;
+}
 
-article{
+article {
     position: absolute;
     left: 0px;
     top: 155px;
     text-align: center;
-    }
+}
 
-body{
+body {
     background: -moz-linear-gradient(-45deg, #600 25%, #044, #044 100%);
-    background: -webkit-linear-gradient(-45deg, #600 25%,#044, #044 100%);
+    background: -webkit-linear-gradient(-45deg, #600 25%, #044, #044 100%);
     background: linear-gradient(135deg, #800, #400 40%, #034, #045 100%);
-    filter: progid:DXImageTransform.Microsoft.gradient( startColorstr='#800', endColorstr='#045',GradientType=1 );
-    }
+    filter: progid: DXImageTransform.Microsoft.gradient( startColorstr='#800', endColorstr='#045', GradientType=1);
+}
 
 .sidenav {
     height: 100%;
@@ -65,23 +75,13 @@ body{
     transition: 1s;
     max-width: 100%;
     text-align: center;
-    text-shadow:
-       1px 1px 0 red,
-      -1px -1px 0 #800,  
-       1px -1px 0 #800,
-      -1px 1px 0 #800,
-       1px 1px 0 #800;
+    text-shadow: 1px 1px 0 red, -1px -1px 0 #800, 1px -1px 0 #800, -1px 1px 0 #800, 1px 1px 0 #800;
     text-decoration: none;
 }
 
 .sidenav a:hover {
     color: red;
-    text-shadow:
-       1px 1px 0 tan,
-      -1px -1px 0 white,  
-       1px -1px 0 white,
-      -1px 1px 0 white,
-       1px 1px 0 white;
+    text-shadow: 1px 1px 0 tan, -1px -1px 0 white, 1px -1px 0 white, -1px 1px 0 white, 1px 1px 0 white;
 }
 
 .sidenav .closebtn {
@@ -110,9 +110,8 @@ body{
     background: white;
 }
 
-
-#stage{
-    position:fixed;
+#stage {
+    position: fixed;
     margin: 24px auto;
     width: 100%;
     z-index: -1;
@@ -133,51 +132,47 @@ body{
     display: none;
 }
 
-  @keyframes fader {
-    from { opacity: 1.0; }
-    to   { opacity: 0.0; }
+@keyframes fader {
+    from {
+        opacity: 1.0;
+    }
+    to {
+        opacity: 0.0;
+    }
 }
 
-
-
-nav{
+nav {
     position: fixed;
     background-color: #034;
     border-bottom: 3px solid #023;
     width: 100%;
     height: 100px;
     z-index: 10;
-
 }
 
-nav p:hover{
+nav p:hover {
     border-bottom: 3px solid #079;
     font-weight: bolder;
-    text-shadow:
-       1px 1px 0 #f00,
-      -.5px -.5px 0 #fff,  
-       .5px -.5px 0 #fff,
-      -.5px .5px 0 #fff,
-       .5px .5px 0 #fff;
+    text-shadow: 1px 1px 0 #f00, -.5px -.5px 0 #fff, .5px -.5px 0 #fff, -.5px .5px 0 #fff, .5px .5px 0 #fff;
 }
 
-
-.logoburger{
+.logoburger {
     width: 55px;
     margin: 25px 20px;
-    float:left;
-    -webkit-transition: width 2s, height 2s, 
-    -webkit-transform 1.5s; /* Safari */
+    float: left;
+    -webkit-transition: width 2s, height 2s, -webkit-transform 1.5s;
+    /* Safari */
     transition: width 2s, height 2s, transform 1.5s;
 }
 
-.logoburger:hover{
-    -webkit-transform: rotate(360deg); /* Safari */
+.logoburger:hover {
+    -webkit-transform: rotate(360deg);
+    /* Safari */
     transform: rotate(360deg);
 }
 
-nav p{
-    float:right;
+nav p {
+    float: right;
     letter-spacing: 2px;
     color: white;
     padding: 5px 2px;
@@ -185,40 +180,40 @@ nav p{
     font-family: 'Orbitron';
 }
 
-.logo{
-    float:left;
+.logo {
+    float: left;
     margin: 35px 0;
     width: 120px;
     filter: drop-shadow(2px 4px 1px #010);
 }
 
-h1{
+h1 {
     width: 100%;
     color: white;
     text-align: center;
     font-family: 'Orbitron';
     padding: 15px 0px 0px;
-    font-weight: bolder; 
+    font-weight: bolder;
     margin: 0px auto;
 }
 
-#intro{
+#intro {
     width: 100%;
     height: 530px;
     margin-bottom: 200px;
 }
 
-#intro img{
+#intro img {
     width: 100%;
     margin: 76px auto;
     height: 655px;
-    position:absolute;
+    position: absolute;
 }
 
-#info{
+#info {
     background: linear-gradient(135deg, #800, #400 40%, #034, #045 100%);
-    display:flex;
-    max-width:100%;
+    display: flex;
+    max-width: 100%;
     margin: 26px auto;
     text-align: center;
     padding-bottom: 20px;
@@ -226,84 +221,93 @@ h1{
     padding-bottom: 450px;
 }
 
-.cafe, .restaurant, .pastry{
+.cafe,
+.restaurant,
+.pastry {
     flex: 1;
     padding: 30px;
     margin: 25px;
     text-align: center;
     font-family: 'orbitron';
     font-size: 22px;
-    font-weight: bolder; 
+    font-weight: bolder;
     color: white;
     border: 2px solid transparent;
     border-radius: 30px;
-    box-shadow: 15px 15px 1px transparent; 
+    box-shadow: 15px 15px 1px transparent;
     position: relative;
 }
 
-.restaurant img{
-    width:130px;
+.restaurant img {
+    width: 130px;
     height: 60px;
     padding: 8px;
     margin: 23px auto 0;
     filter: drop-shadow(2px 4px 1px #010);
 }
 
-.cafe img{
-    width: 85px;
-    height: 85px;
+.cafe img {
+    transform: skewY(10deg);
+    width: 82px;
+    height: 80px;
     padding: 10px;
     filter: drop-shadow(2px 4px 1px #010);
 }
 
-.pastry img{
-    width: 65px;
-    height: 78px;
+.pastry img {
+    width: 72px;
+    height: 75px;
     padding: 10px 8px;
     margin: 8px 0 0;
     filter: drop-shadow(2px 4px 1px #010);
 }
 
-.cafe:hover, .restaurant:hover, .pastry:hover{
+.cafe:hover,
+.restaurant:hover,
+.pastry:hover {
     border: 2px solid #068;
     cursor: pointer;
     box-shadow: 15px 15px 5px #023;
 }
 
-.cafe .details, .restaurant .details, .pastry .details {
+.cafe .details,
+.restaurant .details,
+.pastry .details {
     width: 95%;
-    height: 95%;    
+    height: 95%;
     padding: 5px;
     position: absolute;
     content: "";
     top: 50%;
     left: 50%;
     transform: translate(-50%, -50%) rotateY(90deg);
-    transform-origin: 50%; 
+    transform-origin: 50%;
     opacity: 0;
     transition: all 0.6s ease-in;
     font-size: 18px;
     border-radius: 24px;
-    background: -moz-linear-gradient(-45deg, #056 5%,#800 100%);
-    background: -webkit-linear-gradient(-45deg, #056 5%,#800 100%);
-    background: linear-gradient(135deg, #056 5%,#800 100%);
-    filter: progid:DXImageTransform.Microsoft.gradient( startColorstr='#056', endColorstr='#800',GradientType=1 );
-    
+    background: -moz-linear-gradient(-45deg, #056 5%, #800 100%);
+    background: -webkit-linear-gradient(-45deg, #056 5%, #800 100%);
+    background: linear-gradient(135deg, #056 5%, #800 100%);
+    filter: progid: DXImageTransform.Microsoft.gradient( startColorstr='#056', endColorstr='#800', GradientType=1);
 }
-.cafe:hover .details, .restaurant:hover .details, .pastry:hover .details {
+
+.cafe:hover .details,
+.restaurant:hover .details,
+.pastry:hover .details {
     transform: translate(-50%, -50%) rotateY(0deg);
     opacity: 1;
 }
 
-.consult{
+.consult {
     position: relative;
     max-width: 300px;
     margin: 30px 40%;
-    }
+}
 
-#Btn{
+#Btn {
     transition: .5s;
-    color:#ffeecc;
+    color: #ffeecc;
     padding: 5px 0px;
     background: repeating-linear-gradient(to top, #022, #058, #0d888f 100%);
     width: 300px;
@@ -313,135 +317,135 @@ h1{
     font-size: 18px;
     text-decoration: none;
     border: .5px solid #0b7075;
-    box-shadow: 
-        2px 8px 10px #000,
-        -2px 8px 10px #000;
-    text-shadow:
-       1px 1px 0 black,
-      -1px -1px 0 #000,  
-       1px -1px 0 #000,
-      -1px 1px 0 #000,
-       1px 1px 0 #000;
-    }
+    box-shadow: 2px 8px 10px #000, -2px 8px 10px #000;
+    text-shadow: 1px 1px 0 black, -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000;
+}
 
-#Btn:hover{
+#Btn:hover {
     transition: .5s;
     padding: 5px 4px 8px 4px;
     border: 1px solid #000;
     cursor: pointer;
     font-weight: bolder;
     color: #089;
-    text-shadow:
-       1px 1px 0 white,
-      -1px -1px 0 black,  
-       1px -1px 0 black,
-      -1px 1px 0 black,
-       1px 1px 0 black;
-    box-shadow: 
-        2px 6px 10px #057,
-        -2px 6px 10px #057;
+    text-shadow: 1px 1px 0 white, -1px -1px 0 black, 1px -1px 0 black, -1px 1px 0 black, 1px 1px 0 black;
+    box-shadow: 2px 6px 10px #057, -2px 6px 10px #057;
 }
 
 .modalDialog {
     margin: auto;
-	position:fixed;
-	top: 0px;
-	right: 0px;
-	bottom: 0px;
-	left: 0px;
-	background: rgba(0,0,0,0.8);
-	z-index: 99999;
-	opacity:0;
-	-webkit-transition: opacity 600ms ease-in;
-	-moz-transition: opacity 600ms ease-in;
-	transition: opacity 400ms ease-in;
-	pointer-events: none;
+    position: fixed;
+    top: 0px;
+    right: 0px;
+    bottom: 0px;
+    left: 0px;
+    background: rgba(0, 0, 0, 0.8);
+    z-index: 99999;
+    opacity: 0;
+    -webkit-transition: opacity 600ms ease-in;
+    -moz-transition: opacity 600ms ease-in;
+    transition: opacity 400ms ease-in;
+    pointer-events: none;
 }
 
 .modalDialog:target {
-	opacity: 1;
-	pointer-events: auto;
+    opacity: 1;
+    pointer-events: auto;
 }
 
-.modalDialog > div {
-        text-align: center;
-        width: 500px;
-        position: relative;
-        margin: 100px auto;
-        padding: 1px 20px 1px 20px;
-        border-radius: 20px;
-        background:url(MENUBCKGRND.png);
-        background-size: 100% 100%;
-        border: #066 double 2px;
-        max-width:100%;
-        }
+.modalDialog>div {
+    text-align: center;
+    width: 500px;
+    position: relative;
+    margin: 100px auto;
+    padding: 1px 20px 1px 20px;
+    border-radius: 20px;
+    background: url(MENUBCKGRND.png);
+    background-size: 100% 100%;
+    border: #066 double 2px;
+    max-width: 100%;
+}
 
-label{
+label {
     font-size: 20px;
     text-align: center;
-    font-family:'federant', serif;
-    color:white;
+    font-family: 'federant', serif;
+    color: white;
     list-style-type: none;
-    text-shadow:
-       1px 1px 0 red,
-      -1px -1px 0 red,  
-       1px -1px 0 red,
-      -1px 1px 0 red,
-       1px 1px 0 red;
+    text-shadow: 1px 1px 0 red, -1px -1px 0 red, 1px -1px 0 red, -1px 1px 0 red, 1px 1px 0 red;
 }
 
-textarea, input{
+textarea,
+input {
     font-family: 'federant', serif;
-    color:red;
+    color: red;
     text-align: center;
     font-size: 18px;
-    font-weight:bolder;
+    font-weight: bolder;
     max-width: 300px;
     opacity: .8;
 }
 
-select{
+select {
     font-family: 'federant', serif;
-    color:red;
+    color: red;
     text-align: center;
     font-size: 18px;
-    font-weight:bolder;
+    font-weight: bolder;
     max-width: 50%;
     box-sizing: border-box;
 }
 
-::placeholder { /* Chrome, Firefox, Opera, Safari 10.1+ */
+::placeholder {
+    /* Chrome, Firefox, Opera, Safari 10.1+ */
     color: skyblue;
-    opacity: 1; /* Firefox */
+    opacity: 1;
+    /* Firefox */
 }
 
-:-ms-input-placeholder { /* Internet Explorer 10-11 */
+:-ms-input-placeholder {
+    /* Internet Explorer 10-11 */
     color: red;
 }
 
-::-ms-input-placeholder { /* Microsoft Edge */
+::-ms-input-placeholder {
+    /* Microsoft Edge */
     color: red;
 }
+
 
 /* Style inputs with type="text", select elements and textareas */
-input[type=text], select, textarea {
+
+input[type=text],
+select,
+textarea {
     margin: auto;
     text-align: center;
-    width: 100%; /* Full width */
-    padding: 5px; /* Some padding */  
-    border: 6px double #600; /* Gray border */
-    border-radius: 30px; /* Rounded borders */
-    box-sizing: border-box; /* Make sure that padding and width stays in place */
-    margin-top: 10px; /* Add a top margin */
-    margin-bottom: 20px; /* Bottom margin */
-    resize: vertical; /* Allow the user to vertically resize the textarea (not horizontally) */
+    width: 100%;
+    /* Full width */
+    padding: 5px;
+    /* Some padding */
+    border: 6px double #600;
+    /* Gray border */
+    border-radius: 30px;
+    /* Rounded borders */
+    box-sizing: border-box;
+    /* Make sure that padding and width stays in place */
+    margin-top: 10px;
+    /* Add a top margin */
+    margin-bottom: 20px;
+    /* Bottom margin */
+    resize: vertical;
+    /* Allow the user to vertically resize the textarea (not horizontally) */
 }
 
 textarea {
     border-radius: 20px;
 }
 
+
 /* Style the submit button with a specific background color etc */
+
 input[type=submit] {
     margin: auto;
     margin-bottom: 20px;
@@ -454,19 +458,16 @@ input[type=submit] {
     cursor: pointer;
     border-radius: 25px;
     box-shadow: 0px 5px 25px black;
-    text-shadow:
-       1px 1px 0 black,
-      -1px -1px 0 black,  
-       1px -1px 0 black,
-      -1px 1px 0 black,
-       1px 1px 0 black;
+    text-shadow: 1px 1px 0 black, -1px -1px 0 black, 1px -1px 0 black, -1px 1px 0 black, 1px 1px 0 black;
     -webkit-transition: background-color 1s ease-out;
     -moz-transition: background-color 1s ease-out;
     -o-transition: background-color 1s ease-out;
     transition: background-color 1s ease-out;
 }
 
+
 /* When moving the mouse over the submit button, add a blue color */
+
 input[type=submit]:hover {
     margin: auto;
     margin-bottom: 20px;
@@ -474,59 +475,43 @@ input[type=submit]:hover {
     border: 1px solid #009999;
     color: #009999;
     border-radius: 25px;
-    text-shadow:
-       1px 1px 0 white,
-      -1px -1px 0 black,  
-       1px -1px 0 black,
-      -1px 1px 0 black,
-       1px 1px 0 black;
+    text-shadow: 1px 1px 0 white, -1px -1px 0 black, 1px -1px 0 black, -1px 1px 0 black, 1px 1px 0 black;
     box-shadow: 0px 5px 25px #009999;
 }
 
-
-.close { 
+.close {
     font-family: 'federant';
-	background: -webkit-radial-gradient( orange, red, #200);
-    max-width:100%;
+    background: -webkit-radial-gradient( orange, red, #200);
+    max-width: 100%;
     border: .5px hidden black;
-	color: white;
-	line-height: 29px;
-	position: absolute;
-	right: -12px;
-	text-align: center;
-	top: -10px;
-	width: 30px;
-	text-decoration: none;
-	font-weight: bold;
+    color: white;
+    line-height: 29px;
+    position: absolute;
+    right: -12px;
+    text-align: center;
+    top: -10px;
+    width: 30px;
+    text-decoration: none;
+    font-weight: bold;
     font-size: 20px;
-	-webkit-border-radius: 12px;
-	-moz-border-radius: 12px;
-	border-radius: 25px;
-	-moz-box-shadow: 1px 1px 3px #000;
-	-webkit-box-shadow: 1px 1px 3px #000;
-	box-shadow: 1px 1px 3px #000;
-    text-shadow:
-       1px 1px 0 black,
-      -1px -1px 0 black,  
-       1px -1px 0 black,
-      -1px 1px 0 black,
-       1px 1px 0 black;
+    -webkit-border-radius: 12px;
+    -moz-border-radius: 12px;
+    border-radius: 25px;
+    -moz-box-shadow: 1px 1px 3px #000;
+    -webkit-box-shadow: 1px 1px 3px #000;
+    box-shadow: 1px 1px 3px #000;
+    text-shadow: 1px 1px 0 black, -1px -1px 0 black, 1px -1px 0 black, -1px 1px 0 black, 1px 1px 0 black;
 }
 
-.close:hover { 
+.close:hover {
     background: black;
-    max-width:100%;
+    max-width: 100%;
     border: .5px solid red;
-	color: black;
-    text-shadow:
-       1px 1px 0 red,
-      -1px -1px 0 red,  
-       1px -1px 0 red,
-      -1px 1px 0 red,
-       1px 1px 0 red;
+    color: black;
+    text-shadow: 1px 1px 0 red, -1px -1px 0 red, 1px -1px 0 red, -1px 1px 0 red, 1px 1px 0 red;
 }
 
-#footer{
+#footer {
     position: fixed;
     width: 100%;
     margin: auto;
@@ -534,11 +519,11 @@ input[type=submit]:hover {
     z-index: -1;
 }
 
-#footer img{
+#footer img {
     width: 75px;
 }
 
-#footer p{
+#footer p {
     text-align: center;
     color: #0bb;
     font-family: 'Quintessential';
@@ -546,123 +531,115 @@ input[type=submit]:hover {
     margin: 0px;
 }
 
-/*=======================================*/
+
 /*=======================================*/
 
-@media (max-width: 1000px) and (min-width: 601px){
-    
-    article{
+
+/*=======================================*/
+
+@media (max-width: 1000px) and (min-width: 601px) {
+    article {
         display: none;
     }
-    
-    #Btn{
+    #Btn {
         font-size: 12px;
         width: 150px;
         margin-left: 50px;
     }
-    
-    .consult{
+    .consult {
         width: 70px;
     }
-    
-    #intro{
+    #intro {
         margin: auto;
         height: 535px;
         max-width: 100%;
     }
-    
-    #intro h1{
+    #intro h1 {
         font-size: 32px;
         margin: 20px auto;
-        max-width:100%;
+        max-width: 100%;
     }
-    
-    #intro img{
+    #intro img {
         margin: 76px auto;
         max-width: 100%;
         height: 460px;
     }
-    
-    h1{
+    h1 {
         font-size: 28px;
         margin: 0px;
     }
-    
-    #info{
+    #info {
         flex-direction: column;
         max-width: 100%;
     }
-    
-    .cafe, .restaurant, .pastry{
+    .cafe,
+    .restaurant,
+    .pastry {
         min-width: 400px;
         margin: auto;
     }
-    
-    .cafe .details, .restaurant .details, .pastry .details{
+    .cafe .details,
+    .restaurant .details,
+    .pastry .details {
         padding: 20px 10px;
         max-width: 100%;
     }
 }
 
-/*=======================================*/
+
 /*=======================================*/
 
-@media (max-width: 600px){
-    
- label, article{
+
+/*=======================================*/
+
+@media (max-width: 600px) {
+    label,
+    article {
         display: none;
     }
-    
-    nav{
+    nav {
         height: 65px;
     }
-    
-    .navicon{
+    .navicon {
         float: right;
         width: 33px;
         height: 26px;
         margin: 20px 10px;
     }
-    
-    .logo{
+    .logo {
         width: 75px;
         margin: 25px 0;
     }
-    
-    .logoburger{
+    .logoburger {
         width: 45px;
         margin: 10px 10px;
     }
-    
-    #stage{
+    #stage {
         margin-top: 65px;
     }
-    
-    #intro{
+    #intro {
         margin: auto;
         height: 305px;
         max-width: 100%;
     }
-    
-    #intro img{
+    #intro img {
         margin: auto;
         max-width: 100%;
         height: 240px;
     }
-    
-    h1{
+    h1 {
         font-size: 22px;
         padding: 30px;
     }
-    
-    #info{
+    #info {
         margin-top: 0px;
         flex-direction: column;
         max-width: 100%;
         padding-bottom: 120px;
     }
-    
-    .cafe, .restaurant, .pastry{
+    .cafe,
+    .restaurant,
+    .pastry {
         min-width: 280px;
         text-align: center;
         font-size: 15px;
@@ -670,67 +647,57 @@ input[type=submit]:hover {
         border-radius: 20px;
         padding: 30px;
     }
-    
-    .cafe .details, .restaurant .details, .pastry .details{
+    .cafe .details,
+    .restaurant .details,
+    .pastry .details {
         padding: 5px 8px;
         border-radius: 15px;
         font-size: 17px;
     }
-    
-
-    #Btn{
+    #Btn {
         float: left;
         font-size: 10px;
         width: 120px;
         margin-left: 30px;
     }
-    
-    .consult{
+    .consult {
         float: left;
         width: 135px;
         margin-top: -50px;
     }
-    
-    .restaurant img{
+    .restaurant img {
         width: 110px;
         height: 60px;
     }
-
-    
-    footer img{
+    footer img {
         width: 50px;
     }
-    
-    footer p{
+    footer p {
         font-size: 15px;
     }
-    
-    
-    .modalDialog > div {
+    .modalDialog>div {
         text-align: center;
         width: 300px;
         position: relative;
         margin: 75px auto;
         padding: 1px 20px 1px 20px;
         border-radius: 20px;
-        background:url(MENUBCKGRND.png);
+        background: url(MENUBCKGRND.png);
         background-size: 100% 100%;
         border: #066 double 2px;
-        max-width:100%;
-        }
-    
-    input[type=text], select, textarea {
+        max-width: 100%;
+    }
+    input[type=text],
+    select,
+    textarea {
         margin: 10px 0;
         width: 90%;
         opacity: .8;
     }
-    .sidenav .closebtn{
+    .sidenav .closebtn {
         padding: 11px 15px 28px 22px;
         font-size: 30px;
     }
 }
 
-@media (min-width: 1000px){
-
-
-}
+@media (min-width: 1000px) {}
