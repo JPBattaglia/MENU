@@ -63,7 +63,7 @@ body {
     overflow-x: hidden;
     transition: .8s;
     padding-top: 150px;
-    font-family: 'Orbitron';
+    font-family: 'Federant';
     font-weight: bold;
 }
 
@@ -142,6 +142,7 @@ body {
 }
 
 nav {
+    top:0;
     position: fixed;
     background-color: #034;
     border-bottom: 3px solid #023;
@@ -191,10 +192,35 @@ h1 {
     width: 100%;
     color: white;
     text-align: center;
-    font-family: 'Orbitron';
-    padding: 15px 0px 0px;
+    font-family: 'Federant';
+    padding: 15px 20px 0px 20px;
     font-weight: bolder;
     margin: 0px auto;
+    letter-spacing: 1px;
+}
+
+.pandemic{
+    width: 800px;
+    margin: 20px auto;
+}
+
+.pandemic h2{
+    color: #fff;
+    font-family: 'Federant';
+    font-size: 24px;
+    width: 300px;
+    padding-left: 30px;
+    text-shadow: 
+        2px 1px 2px #0c0;
+}
+
+.pandemic img{
+    float: right;
+    margin-top: -310px;
+    width: 800px;
+    height: 350px;
+    border: 2px solid #044;
+    border-radius: 20px;
 }
 
 #intro {
@@ -217,25 +243,33 @@ h1 {
     margin: 26px auto;
     text-align: center;
     padding-bottom: 20px;
-    flex-wrap: wrap;
-    padding-bottom: 450px;
+    flex-direction: column;
+    padding-bottom: 650px;
+}
+
+.services{
+    margin-top: 100px;
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    padding: 50px;
 }
 
 .cafe,
 .restaurant,
 .pastry {
-    flex: 1;
+    width: 75%;
     padding: 30px;
-    margin: 25px;
     text-align: center;
-    font-family: 'orbitron';
+    font-family: 'Federant';
     font-size: 22px;
     font-weight: bolder;
     color: white;
     border: 2px solid transparent;
     border-radius: 30px;
     box-shadow: 15px 15px 1px transparent;
-    position: relative;
 }
 
 .restaurant img {
@@ -247,7 +281,6 @@ h1 {
 }
 
 .cafe img {
-    transform: skewY(10deg);
     width: 82px;
     height: 80px;
     padding: 10px;
@@ -549,6 +582,21 @@ input[type=submit]:hover {
     .consult {
         width: 70px;
     }
+    
+    .pandemic{
+        width: 550px;
+    }
+    
+    .pandemic img{
+        width: 550px;
+        height: 200px;
+        margin-top: -200px;
+    }
+    .pandemic h2{
+        font-size: 19px;
+        padding: 20px;
+    }
+    
     #intro {
         margin: auto;
         height: 535px;
@@ -568,6 +616,11 @@ input[type=submit]:hover {
         font-size: 28px;
         margin: 0px;
     }
+    
+    .services{
+        flex-direction: column;
+    }
+    
     #info {
         flex-direction: column;
         max-width: 100%;
@@ -631,11 +684,33 @@ input[type=submit]:hover {
         font-size: 22px;
         padding: 30px;
     }
+    
+    .services{
+        margin-top: 50px;
+        flex-direction: column;
+        padding: 20px;
+    }
+    
+    .pandemic{
+        width: 300px;
+    }
+    
+    .pandemic img{
+        width: 300px;
+        height: 200px;
+        margin-top: -195px;
+    }
+    .pandemic h2{
+        font-size: 19px;
+        padding: 20px;
+        margin-top: -50px;
+    }
+    
     #info {
         margin-top: 0px;
         flex-direction: column;
         max-width: 100%;
-        padding-bottom: 120px;
+        padding-bottom: 720px;
     }
     .cafe,
     .restaurant,
