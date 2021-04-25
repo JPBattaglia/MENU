@@ -290,7 +290,6 @@ h1 {
 .cafe,
 .restaurant,
 .pastry {
-    background: linear-gradient(135deg, #056 5%, #800 100%);
     width: 75%;
     padding: 30px;
     text-align: center;
@@ -350,8 +349,8 @@ h1 {
     transition: all 0.6s ease-in;
     font-size: 18px;
     border-radius: 24px;
-    background: -moz-linear-gradient(-45deg, #056 5%, #800 100%);
-    background: -webkit-linear-gradient(-45deg, #056 5%, #800 100%);
+    background: -moz-linear-gradient(135deg, #056 5%, #800 100%);
+    background: -webkit-linear-gradient(135deg, #056 5%, #800 100%);
     background: linear-gradient(135deg, #056 5%, #800 100%);
     filter: progid: DXImageTransform.Microsoft.gradient( startColorstr='#056', endColorstr='#800', GradientType=1);
 }
@@ -601,7 +600,8 @@ input[type=submit]:hover {
 /*=======================================*/
 
 @media (max-width: 1000px) and (min-width: 601px) {
-    article, 
+    article,
+    .mobile,
     ul {
         display: none;
     }
@@ -676,6 +676,7 @@ input[type=submit]:hover {
 
 @media (max-width: 600px) {
     label,
+    .desktop,
     ul,
     article {
         display: none;
@@ -745,6 +746,7 @@ input[type=submit]:hover {
     .cafe,
     .restaurant,
     .pastry {
+        background: linear-gradient(135deg, #056 5%, #800 100%);
         text-align: center;
         font-size: 15px;
         margin: 20px auto;
@@ -823,7 +825,8 @@ input[type=submit]:hover {
 }
 
 @media (min-width: 1000px) {
-    .navicon{
+    .navicon,
+    .mobile{
         display: none;
     }
 }
