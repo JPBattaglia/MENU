@@ -118,7 +118,7 @@ ul, li{
 }
 
 ul{
-    margin-top: 20px;
+    margin-top: 30px;
 }
 
 li{
@@ -130,13 +130,17 @@ li{
 
 li a{
     text-decoration: none;
-    text-shadow: 1px 1px 0 red, -1px -1px 0 #800, 1px -1px 0 #800, -1px 1px 0 #800, 1px 1px 0 #800;
+    text-shadow: 1px 1px 0 #f00, -1px -1px 0 #f00, 1px -1px 0 #f00, -1px 1px 0 #f00, 1px 1px 0 #f00;
     text-decoration: none;
+    
 }
 
 li a:hover{
-    color: red;
-    text-shadow: 1px 1px 0 tan, -1px -1px 0 white, 1px -1px 0 white, -1px 1px 0 white, 1px 1px 0 white;
+    padding: 5px 0;
+    transition: .5s;
+    color: #0ff;
+    text-shadow: 1px 1px 0 black, -1px -1px 0 black, 1px -1px 0 black, -1px 1px 0 black, 1px 1px 0 black;
+    border-bottom: 8px double #0df;
 }
 
 #stage {
@@ -286,6 +290,7 @@ h1 {
 .cafe,
 .restaurant,
 .pastry {
+    background: linear-gradient(135deg, #056 5%, #800 100%);
     width: 75%;
     padding: 30px;
     text-align: center;
@@ -293,7 +298,7 @@ h1 {
     font-size: 22px;
     font-weight: bolder;
     color: white;
-    border: 2px solid transparent;
+    border: 2px double transparent;
     border-radius: 30px;
     box-shadow: 15px 15px 1px transparent;
 }
@@ -334,7 +339,7 @@ h1 {
 .pastry .details {
     width: 95%;
     height: 95%;
-    padding: 5px;
+    padding: 15px;
     position: absolute;
     content: "";
     top: 50%;
@@ -370,10 +375,13 @@ h1 {
     font-family: 'Orbitron';
     font-weight: bolder;
     font-size: 18px;
-    text-decoration: none;
     border: .5px solid #0b7075;
     box-shadow: 2px 8px 10px #000, -2px 8px 10px #000;
     text-shadow: 1px 1px 0 black, -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000;
+}
+
+#Btn a{
+    text-decoration: none;
 }
 
 #Btn:hover {
@@ -601,6 +609,7 @@ input[type=submit]:hover {
         font-size: 12px;
         width: 150px;
         margin-left: 20%;
+        margin-top: 30px;
     }
     .consult {
         width: 70px;
@@ -649,11 +658,12 @@ input[type=submit]:hover {
     .pastry {
         min-width: 400px;
         margin: auto;
+        margin-bottom: 20px;
     }
     .cafe .details,
     .restaurant .details,
     .pastry .details {
-        padding: 20px 10px;
+        padding: 25px 20px;
         max-width: 100%;
     }
 }
@@ -741,8 +751,9 @@ input[type=submit]:hover {
         width: 170px;
         border-radius: 100px;
         padding: 30px;
-        border: 2px solid #044;
+        border: 2px solid #068;
     }
+    
     .cafe .details,
     .restaurant .details,
     .pastry .details {
@@ -751,6 +762,7 @@ input[type=submit]:hover {
         font-size: 17px;
         width: 250px;
         height: 180px;
+        border: 2px solid #068;
     }
     
     .cafe:hover,
@@ -764,13 +776,9 @@ input[type=submit]:hover {
     #Btn {
         font-size: 8px;
         width: 100px;
-        margin-left: 40px;
+        margin-left: 12%;
     }
-    .consult {
-        float: left;
-        width: 135px;
-        margin-top: -50px;
-    }
+    
     .restaurant img {
         width: 110px;
         height: 60px;
