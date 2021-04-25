@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+
+<html>
+
+<head>
+    <link rel="stylesheet" href="https://www.w3schools.com/w3css/4/w3.css">
+    <meta property="og:title" content="MENU" />
+    <meta property="og:image:type" content="image/png" />
+    <meta property="og:image:width" content="400" />
+    <meta property="og:image:height" content="300" />
+    <meta property="og:image" content="https://i.ibb.co/RCjm4by/BattBros.png" />
+    <meta property="og:image:secure_url" content="https://i.ibb.co/RCjm4by/BattBros.png" />
+    <meta name="keywords" content="Web Development">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <title>MENU - Services</title>
+    <meta name="description" content="Online Presence Management">
+    <link rel="stylesheet" href="main.css">
+    <link rel="shortcut icon" type="image/png" href="MENU=.png">
+    <link href="https://fonts.googleapis.com/css?family=Federant|Akronim|Kaushan+Script|Fugaz+One|Righteous|Orbitron|Kanit|Quintessential" rel="stylesheet">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" href="https://unpkg.com/aos@next/dist/aos.css" />
+</head>
+
+<body id="animated-example" class="animated fadeOut">
+
+    <script>
+        window.addEventListener("beforeunload", function() {
+            document.body.classList.add("animate-out");
+        });
+    </script>
+
+
+    <div id="mySidenav" class="sidenav">
+        <a href="javascript:void(0)" class="closebtn" onclick="closeNav()">&#9747;</a>
+        <a href="index.html">About</a>
+        <a style="text-decoration: underline" href="services.html">Services</a>
+        <a href="contact.html">Contact</a>
+    </div>
+
+    <script>
+        function openNav() {
+            document.getElementById("mySidenav").style.width = "150px";
+        }
+
+        function closeNav() {
+            document.getElementById("mySidenav").style.width = "0";
+        }
+    </script>
+
+    <nav>
+        <div>
+            <img data-aos="fade-left" data-aos-duration="1000" data-aos-anchor-placement="top-bottom" class="navicon" onclick="openNav()" src="BURGERLOGOREDKENTUCKY.png">
+        </div>
+
+        <div data-aos="fade-right" data-aos-duration="1000" data-aos-anchor-placement="top-bottom">
+            <img class="logoburger" src="MENU=1.png">
+        </div>
+
+        <img data-aos="fade-right" data-aos-duration="800" data-aos-anchor-placement="top-bottom" class="logo" src="MENU.png">
+
+        <div data-aos="fade-down" data-aos-duration="800" data-aos-anchor-placement="top-bottom" class="consult"><a href="#openModal99"><button id="Btn">Free Consultation</button></a></div>
+
+    </nav>
+
+<div class="services">
+    
+        <div class="restaurant" data-aos="zoom-in-up" data-aos-duration="3000"><img src="ServNapkinTray.png"><br>Restaurant
+            <div class="details">
+                <p>All Dining Establishments Need A Digital Presence These Days. We Can Provide And Manage It All For You.</p>
+            </div>
+        </div>
+
+        <div class="pastry" data-aos="zoom-in-up" data-aos-duration="3000"><img src="retail.png"><br>Retail
+            <div class="details">
+                <p>We Can Set Up An Automated Ecommerce Site For You So You Can Increase Sales And Focus On Your Craft.</p>
+            </div>
+        </div>
+
+        <div class="cafe" data-aos="zoom-in-up" data-aos-duration="3000"><img src="Portfolio.png"><br>Personal
+            <div class="details">
+                <p>Every Portfolio Has Its Own Style And Feel. We Strive To Showcase That Uniqueness.</p>
+            </div>
+        </div>
+    </div>
+
+    <div id="openModal99" class="modalDialog">
+        <div>
+            <a href="#close" title="Close" class="close">&#9747;</a>
+            <form action="//formspree.io/thenino69@gmail.com" method="POST">
+
+                <br><label for="fname">Name:</label><br>
+                <input type="text" id="fname" name="fname" placeholder="Full Name"><br>
+                <label for="email_address">Email:</label><br>
+                <input type="text" id="email_address" name="email_address" placeholder="Email"><br>
+                <label for="message">Message:</label><br>
+                <textarea id="message" name="message" placeholder="Tell Us About Your Place" style="height:150px"></textarea><br>
+                <br><input type="submit" value="Submit"><br>
+            </form><br>
+        </div>
+    </div>
+
+    <div id="footer">
+        <p>&copy; <img id="menumade" src="MENU.png"> made 2019</p>
+    </div>
+
+    <script src="https://unpkg.com/aos@next/dist/aos.js"></script>
+    <script>
+        AOS.init();
+    </script>
+
+</body>
+
+</html>
