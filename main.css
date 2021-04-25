@@ -735,20 +735,32 @@ input[type=submit]:hover {
     .cafe,
     .restaurant,
     .pastry {
-        min-width: 280px;
         text-align: center;
         font-size: 15px;
-        margin: 0px auto;
-        border-radius: 20px;
+        margin: 20px auto;
+        width: 170px;
+        border-radius: 100px;
         padding: 30px;
+        border: 2px solid #044;
     }
     .cafe .details,
     .restaurant .details,
     .pastry .details {
-        padding: 5px 8px;
+        padding: 5px 18px;
         border-radius: 15px;
         font-size: 17px;
+        width: 250px;
+        height: 180px;
     }
+    
+    .cafe:hover,
+    .restaurant:hover,
+    .pastry:hover {
+        border: 2px solid #068;
+        cursor: pointer;
+        box-shadow: none;
+    }
+    
     #Btn {
         font-size: 8px;
         width: 100px;
