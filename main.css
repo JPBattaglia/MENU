@@ -110,6 +110,35 @@ body {
     background: white;
 }
 
+ul, li{
+    float:right;
+    display: block;
+    text-decoration: none;
+    color: white;
+}
+
+ul{
+    margin-top: 20px;
+}
+
+li{
+    margin: 0 40px;
+    font-family: 'federant';
+    font-size: 22px;
+    letter-spacing: 1px;
+}
+
+li a{
+    text-decoration: none;
+    text-shadow: 1px 1px 0 red, -1px -1px 0 #800, 1px -1px 0 #800, -1px 1px 0 #800, 1px 1px 0 #800;
+    text-decoration: none;
+}
+
+li a:hover{
+    color: red;
+    text-shadow: 1px 1px 0 tan, -1px -1px 0 white, 1px -1px 0 white, -1px 1px 0 white, 1px 1px 0 white;
+}
+
 #stage {
     position: fixed;
     margin: 24px auto;
@@ -329,18 +358,14 @@ h1 {
     opacity: 1;
 }
 
-.consult {
-    position: relative;
-    max-width: 300px;
-    margin: 30px 40%;
-}
 
 #Btn {
+    margin: 20px 0 0 20%;
     transition: .5s;
     color: #ffeecc;
     padding: 5px 0px;
     background: repeating-linear-gradient(to top, #022, #058, #0d888f 100%);
-    width: 300px;
+    width: 220px;
     border-radius: 30px;
     font-family: 'Orbitron';
     font-weight: bolder;
@@ -568,13 +593,14 @@ input[type=submit]:hover {
 /*=======================================*/
 
 @media (max-width: 1000px) and (min-width: 601px) {
-    article {
+    article, 
+    ul {
         display: none;
     }
     #Btn {
         font-size: 12px;
         width: 150px;
-        margin-left: 50px;
+        margin-left: 20%;
     }
     .consult {
         width: 70px;
@@ -640,6 +666,7 @@ input[type=submit]:hover {
 
 @media (max-width: 600px) {
     label,
+    ul,
     article {
         display: none;
     }
@@ -723,10 +750,9 @@ input[type=submit]:hover {
         font-size: 17px;
     }
     #Btn {
-        float: left;
-        font-size: 10px;
-        width: 120px;
-        margin-left: 30px;
+        font-size: 8px;
+        width: 100px;
+        margin-left: 40px;
     }
     .consult {
         float: left;
@@ -768,4 +794,16 @@ input[type=submit]:hover {
     }
 }
 
-@media (min-width: 1000px) {}
+@media (min-width: 1000px) and (max-width: 1200px) {
+    li{
+        margin: 0 20px;
+        font-size: 18px;
+        
+    }
+}
+
+@media (min-width: 1000px) {
+    .navicon{
+        display: none;
+    }
+}
