@@ -1,150 +1,888 @@
-<!DOCTYPE html>
+html {
+    min-height: 100%;
+    overflow: auto;
+}
 
-<html>
+.animated {
+    background-color: #034;
+    background-position: left top;
+    margin-bottom: 30px;
+    -webkit-animation-duration: 3s;
+    animation-duration: 3s;
+    -webkit-animation-fill-mode: both;
+    animation-fill-mode: both;
+}
 
-<head>
-    <link rel="stylesheet" href="https://www.w3schools.com/w3css/4/w3.css">
-    <meta property="og:title" content="MENU" />
-    <meta property="og:image:type" content="image/png" />
-    <meta property="og:image:width" content="400" />
-    <meta property="og:image:height" content="300" />
-    <meta property="og:image" content="https://i.ibb.co/RCjm4by/BattBros.png" />
-    <meta property="og:image:secure_url" content="https://i.ibb.co/RCjm4by/BattBros.png" />
-    <meta name="keywords" content="Web Development">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta charset="utf-8">
-    <meta http-equiv="X-UA-Compatible" content="IE=edge">
-    <title>MENU - Home</title>
-    <meta name="description" content="Online Presence Management">
-    <link rel="stylesheet" href="main.css">
-    <link rel="shortcut icon" type="image/png" href="MENU=.png">
-    <link href="https://fonts.googleapis.com/css?family=Federant|Akronim|Kaushan+Script|Fugaz+One|Righteous|Orbitron|Kanit|Quintessential" rel="stylesheet">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <link rel="stylesheet" href="https://unpkg.com/aos@next/dist/aos.css" />
-</head>
+@-webkit-keyframes fadeOut {
+    100% {
+        opacity: 1;
+    }
+    0% {
+        opacity: 0;
+    }
+}
 
-<body id="animated-example" class="animated fadeOut">
+@keyframes fadeOut {
+    100% {
+        opacity: 1;
+    }
+    0% {
+        opacity: 0;
+    }
+}
 
-    <script>
-        window.addEventListener("beforeunload", function() {
-            document.body.classList.add("animate-out");
-        });
-    </script>
+.fadeOut {
+    -webkit-animation-name: fadeOut;
+    animation-name: fadeOut;
+}
 
+article {
+    position: absolute;
+    left: 0px;
+    top: 155px;
+    text-align: center;
+}
 
-    <div id="mySidenav" class="sidenav">
-        <a href="javascript:void(0)" class="closebtn" onclick="closeNav()">&#9747;</a>
-        <a style="text-decoration: underline" href="index.html">Home</a>
-        <a href="services.html">Services</a>
-        <a href="contact.html">Contact</a>
-    </div>
+body {
+    background: -moz-linear-gradient(-45deg, #600 25%, #044, #044 100%);
+    background: -webkit-linear-gradient(-45deg, #600 25%, #044, #044 100%);
+    background: linear-gradient(135deg, #800, #400 40%, #034, #045 100%);
+    filter: progid: DXImageTransform.Microsoft.gradient( startColorstr='#800', endColorstr='#045', GradientType=1);
+}
 
-    <script>
-        function openNav() {
-            document.getElementById("mySidenav").style.width = "150px";
-        }
+.sidenav {
+    height: 100%;
+    width: 0;
+    position: fixed;
+    z-index: 100;
+    top: 0;
+    right: 0;
+    background: linear-gradient(to right, #057, #045, #034, #045, #057 100%);
+    background-repeat: repeat;
+    background-size: 100% 103%;
+    overflow-x: hidden;
+    transition: .8s;
+    padding-top: 150px;
+    font-family: 'Federant';
+    font-weight: bold;
+}
 
-        function closeNav() {
-            document.getElementById("mySidenav").style.width = "0";
-        }
-    </script>
+.sidenav a {
+    padding: 45px 10px;
+    font-size: 22px;
+    color: white;
+    display: block;
+    transition: 1s;
+    max-width: 100%;
+    text-align: center;
+    text-shadow: 1px 1px 0 red, -1px -1px 0 #800, 1px -1px 0 #800, -1px 1px 0 #800, 1px 1px 0 #800;
+    text-decoration: none;
+}
 
-    <nav>
-        <div data-aos="fade-left" data-aos-duration="1000" data-aos-anchor-placement="top-bottom" >
-            <img class="navicon" onclick="openNav()" src="BURGERLOGOREDKENTUCKY.png">
-        </div>
+.sidenav a:hover {
+    color: red;
+    text-shadow: 1px 1px 0 tan, -1px -1px 0 white, 1px -1px 0 white, -1px 1px 0 white, 1px 1px 0 white;
+}
 
-        <div data-aos="fade-right" data-aos-duration="1000" data-aos-anchor-placement="top-bottom">
-            <img class="logoburger" src="MENU=1.png">
-        </div>
+.sidenav .closebtn {
+    margin: 0px;
+    padding: 8px 28px 28px 22px;
+    position: absolute;
+    top: 0px;
+    right: 0px;
+    font-size: 40px;
+    text-decoration: none;
+}
 
-        <img data-aos="fade-right" data-aos-duration="800" data-aos-anchor-placement="top-bottom" class="logo" src="MENU.png">
+.navicon {
+    float: right;
+    width: 44px;
+    height: 35px;
+    margin: 28px 20px 10px 0;
+    cursor: pointer;
+    filter: drop-shadow(2px 4px 1px #010);
+}
 
-        <button id="Btn" data-aos="fade-down" data-aos-duration="800" data-aos-anchor-placement="top-bottom"><a href="#openModal99">Free Consultation</a></button>
-        
-        <ul>
-            
-            <li><a href="contact.html">Contact</a></li>
-            <li><a href="services.html">Services</a></li>
-            <li><a href="index.html">Home</a></li>
-        
-        </ul>
+.navicon1 {
+    width: 30px;
+    height: 4px;
+    margin: 5px;
+    background: white;
+}
 
-    </nav>
+ul, li{
+    float:right;
+    display: block;
+    text-decoration: none;
+    color: white;
+}
 
-    <div id="intro">
+ul{
+    margin-top: 30px;
+}
 
-        <div data-aos="zoom-out" data-aos-duration="2000" data-aos-anchor-placement="top-bottom" id="stage">
-            <img src="WebDesign.jpg">
-            <img src="Tutti.png">
-            <img src="Pinecrest.png">
-            <img src="Bakery.jpg">
-            <img src="Waiter.png">
-        </div>
+li{
+    margin: 0 40px;
+    font-family: 'federant';
+    font-size: 22px;
+    letter-spacing: 1px;
+}
 
-        <script type="text/javascript">
-            window.addEventListener("DOMContentLoaded", function(e) {
-
-                var stage = document.getElementById("stage");
-                var fadeComplete = function(e) {
-                    stage.appendChild(arr[0]);
-                };
-                var arr = stage.getElementsByTagName("img");
-                for (var i = 0; i < arr.length; i++) {
-                    arr[i].addEventListener("animationend", fadeComplete, false);
-                }
-            }, false);
-        </script>
-    </div>
-
-
-    <div id="info">
-
-        <h1 data-aos="fade-up" data-aos-duration="1000" data-aos-anchor-placement="top-bottom">Online Presence Management</h1><br><br>
-        
-        <div data-aos="fade-in" data-aos-duration="2000" data-aos-delay="500" data-aos-anchor-placement="top-bottom" class="desktop"><div class="presence">
-        <h2 data-aos="fade-right" data-aos-duration="2000" data-aos-delay="1000" data-aos-anchor-placement="top-bottom">Establishing and maintaining an online presence can be difficult but done correctly can also be incredibly lucrative.</h2>
-        </div></div>
-        
-        <div data-aos="zoom-in-up" data-aos-duration="2000" data-aos-delay="500" data-aos-anchor-placement="top-bottom" class="mobile"><div class="presence">
-        <h2 data-aos="zoom-in-up" data-aos-duration="2000" data-aos-delay="1000" data-aos-anchor-placement="top-center">Establishing and maintaining an online presence can be difficult but done correctly can also be incredibly lucrative.</h2>
-        </div></div>
-        
-        <div data-aos="fade-in" data-aos-duration="2000" data-aos-delay="500" data-aos-anchor-placement="top-bottom" class="desktop"><div class="pandemic">
-        <h2 data-aos="fade-left" data-aos-duration="2000" data-aos-delay="1000" data-aos-anchor-placement="top-bottom">After recent events, it is imperative now more than ever that a business have an online presence in order to be successful.</h2>
-        </div></div>
-        
-        <div data-aos="zoom-in-up" data-aos-duration="2000" data-aos-delay="1000" data-aos-anchor-placement="top-bottom" class="mobile"><div class="pandemic">
-        <h2 data-aos="zoom-in-up" data-aos-duration="2000" data-aos-delay="800" data-aos-anchor-placement="top-bottom">After recent events, it is imperative now more than ever that a business have an online presence in order to be successful.</h2>
-        </div></div>
-        
-    </div>
+li a{
+    text-decoration: none;
+    text-shadow: 1px 1px 0 #f00, -1px -1px 0 #f00, 1px -1px 0 #f00, -1px 1px 0 #f00, 1px 1px 0 #f00;
+    text-decoration: none;
     
-    <div id="openModal99" class="modalDialog">
-        <div>
-            <a href="#close" title="Close" class="close">&#9747;</a>
-            <form action="//formspree.io/thenino69@gmail.com" method="POST">
+}
 
-                <br><label for="fname">Name:</label><br>
-                <input type="text" id="fname" name="fname" placeholder="Full Name"><br>
-                <label for="email_address">Email:</label><br>
-                <input type="text" id="email_address" name="email_address" placeholder="Email"><br>
-                <label for="message">Message:</label><br>
-                <textarea id="message" name="message" placeholder="Tell Us About Your Place" style="height:150px"></textarea><br>
-                <br><input type="submit" value="Submit"><br>
-            </form><br>
-        </div>
-    </div>
+li a:hover{
+    padding: 5px 0;
+    transition: .5s;
+    color: #0ff;
+    text-shadow: 1px 1px 0 black, -1px -1px 0 black, 1px -1px 0 black, -1px 1px 0 black, 1px 1px 0 black;
+    border-bottom: 8px double #0df;
+}
 
-    <div id="footer">
-        <p>&copy; <img id="menumade" src="MENU.png"> made 2019</p>
-    </div>
+#stage {
+    position: fixed;
+    margin: 24px auto;
+    width: 100%;
+    z-index: -1;
+}
 
-    <script src="https://unpkg.com/aos@next/dist/aos.js"></script>
-    <script>
-        AOS.init();
-    </script>
+#stage img:nth-of-type(1) {
+    animation-name: fader;
+    animation-delay: 3s;
+    animation-duration: 2s;
+    z-index: 20;
+}
 
-</body>
+#stage img:nth-of-type(2) {
+    z-index: 10;
+}
 
-</html>
+#stage img:nth-of-type(n+3) {
+    display: none;
+}
+
+@keyframes fader {
+    from {
+        opacity: 1.0;
+    }
+    to {
+        opacity: 0.0;
+    }
+}
+
+nav {
+    top:0;
+    position: fixed;
+    background-color: #034;
+    border-bottom: 3px solid #023;
+    width: 100%;
+    height: 100px;
+    z-index: 10;
+}
+
+nav p:hover {
+    border-bottom: 3px solid #079;
+    font-weight: bolder;
+    text-shadow: 1px 1px 0 #f00, -.5px -.5px 0 #fff, .5px -.5px 0 #fff, -.5px .5px 0 #fff, .5px .5px 0 #fff;
+}
+
+.logoburger {
+    width: 55px;
+    margin: 25px 20px;
+    float: left;
+    -webkit-transition: width 2s, height 2s, -webkit-transform 1.5s;
+    /* Safari */
+    transition: width 2s, height 2s, transform 1.5s;
+}
+
+.logoburger:hover {
+    -webkit-transform: rotate(360deg);
+    /* Safari */
+    transform: rotate(360deg);
+}
+
+nav p {
+    float: right;
+    letter-spacing: 2px;
+    color: white;
+    padding: 5px 2px;
+    margin: 25px 20px;
+    font-family: 'Orbitron';
+}
+
+.logo {
+    float: left;
+    margin: 35px 0;
+    width: 120px;
+    filter: drop-shadow(2px 4px 1px #010);
+}
+
+h1 {
+    width: 100%;
+    color: white;
+    text-align: center;
+    font-family: 'Federant';
+    padding: 15px 20px 0px 20px;
+    font-weight: bolder;
+    margin: 0px auto;
+    letter-spacing: 1px;
+}
+
+.pandemic{
+    width: 800px;
+    height: 300px;
+    margin: 20px auto;
+    background: url(coronav.jpeg);
+    border: 2px solid #044;
+    border-radius: 20px;
+    box-shadow: 4px 6px 8px #000;
+}
+
+.pandemic h2{
+    margin-top: 40px;
+    color: #fff;
+    font-family: 'Federant';
+    font-size: 24px;
+    width: 350px;
+    padding-left: 65px;
+    text-shadow: 
+        2px 1px 2px #0c0;
+}
+
+.presence{
+    width: 800px;
+    height: 300px;
+    margin: 20px auto;
+    background: url(Presence.jpeg);
+    border: 2px solid #044;
+    border-radius: 20px;
+    box-shadow: 4px 6px 8px #000;
+}
+
+.presence h2{
+    margin-top: 40px;
+    color: #fff;
+    font-family: 'Federant';
+    font-size: 24px;
+    width: 800px;
+    padding-left: 495px;
+    padding-right: 20px;
+    text-shadow: 
+        2px 1px 2px #0c0;
+}
+
+#intro {
+    width: 100%;
+    height: 530px;
+    margin-bottom: 200px;
+}
+
+#intro img {
+    width: 100%;
+    margin: 76px auto;
+    height: 628px;
+    position: absolute;
+}
+
+#info {
+    background: linear-gradient(135deg, #800, #400 40%, #034, #045 100%);
+    display: flex;
+    max-width: 100%;
+    margin: 26px auto;
+    text-align: center;
+    padding-bottom: 20px;
+    flex-direction: column;
+    padding-bottom: 650px;
+}
+
+.services{
+    margin-top: 100px;
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    padding: 50px;
+}
+
+.cafe,
+.restaurant,
+.pastry {
+    width: 75%;
+    padding: 30px;
+    text-align: center;
+    font-family: 'Federant';
+    font-size: 22px;
+    font-weight: bolder;
+    color: white;
+    border: 2px double transparent;
+    border-radius: 30px;
+    box-shadow: 15px 15px 1px transparent;
+}
+
+.restaurant img {
+    width: 130px;
+    height: 60px;
+    padding: 8px;
+    margin: 23px auto 0;
+    filter: drop-shadow(2px 4px 1px #010);
+}
+
+.cafe img {
+    width: 82px;
+    height: 80px;
+    padding: 10px;
+    filter: drop-shadow(2px 4px 1px #010);
+}
+
+.pastry img {
+    width: 72px;
+    height: 75px;
+    padding: 10px 8px;
+    margin: 8px 0 0;
+    filter: drop-shadow(2px 4px 1px #010);
+}
+
+.cafe:hover,
+.restaurant:hover,
+.pastry:hover {
+    border: 2px solid #068;
+    cursor: pointer;
+    box-shadow: 15px 15px 5px #023;
+}
+
+.cafe .details,
+.restaurant .details,
+.pastry .details {
+    width: 95%;
+    height: 95%;
+    padding: 15px;
+    position: absolute;
+    content: "";
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%) rotateY(90deg);
+    transform-origin: 50%;
+    opacity: 0;
+    transition: all 0.6s ease-in;
+    font-size: 18px;
+    border-radius: 24px;
+    background: -moz-linear-gradient(135deg, #056 5%, #800 100%);
+    background: -webkit-linear-gradient(135deg, #056 5%, #800 100%);
+    background: linear-gradient(135deg, #056 5%, #800 100%);
+    filter: progid: DXImageTransform.Microsoft.gradient( startColorstr='#056', endColorstr='#800', GradientType=1);
+}
+
+.cafe:hover .details,
+.restaurant:hover .details,
+.pastry:hover .details {
+    transform: translate(-50%, -50%) rotateY(0deg);
+    opacity: 1;
+}
+
+
+#Btn {
+    margin: 20px 0 0 20%;
+    transition: .5s;
+    color: #ffeecc;
+    padding: 5px 0px;
+    background: repeating-linear-gradient(to top, #022, #058, #0d888f 100%);
+    width: 220px;
+    border-radius: 30px;
+    font-family: 'Orbitron';
+    font-weight: bolder;
+    font-size: 18px;
+    border: .5px solid #0b7075;
+    box-shadow: 2px 8px 10px #000, -2px 8px 10px #000;
+    text-shadow: 1px 1px 0 black, -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000;
+}
+
+#Btn a{
+    text-decoration: none;
+}
+
+#Btn:hover {
+    transition: .5s;
+    padding: 5px 4px 8px 4px;
+    border: 1px solid #000;
+    cursor: pointer;
+    font-weight: bolder;
+    color: #089;
+    text-shadow: 1px 1px 0 white, -1px -1px 0 black, 1px -1px 0 black, -1px 1px 0 black, 1px 1px 0 black;
+    box-shadow: 2px 6px 10px #057, -2px 6px 10px #057;
+}
+
+.modalDialog {
+    margin: auto;
+    position: fixed;
+    top: 0px;
+    right: 0px;
+    bottom: 0px;
+    left: 0px;
+    background: rgba(0, 0, 0, 0.8);
+    z-index: 99999;
+    opacity: 0;
+    -webkit-transition: opacity 600ms ease-in;
+    -moz-transition: opacity 600ms ease-in;
+    transition: opacity 400ms ease-in;
+    pointer-events: none;
+}
+
+.modalDialog:target {
+    opacity: 1;
+    pointer-events: auto;
+}
+
+.modalDialog>div {
+    text-align: center;
+    width: 500px;
+    position: relative;
+    margin: 100px auto;
+    padding: 1px 20px 1px 20px;
+    border-radius: 20px;
+    background: url(MENUBCKGRND.png);
+    background-size: 100% 100%;
+    border: #066 double 2px;
+    max-width: 100%;
+}
+
+label {
+    font-size: 20px;
+    text-align: center;
+    font-family: 'federant', serif;
+    color: white;
+    list-style-type: none;
+    text-shadow: 1px 1px 0 red, -1px -1px 0 red, 1px -1px 0 red, -1px 1px 0 red, 1px 1px 0 red;
+}
+
+textarea,
+input {
+    font-family: 'federant', serif;
+    color: red;
+    text-align: center;
+    font-size: 18px;
+    font-weight: bolder;
+    max-width: 300px;
+    opacity: .8;
+}
+
+select {
+    font-family: 'federant', serif;
+    color: red;
+    text-align: center;
+    font-size: 18px;
+    font-weight: bolder;
+    max-width: 50%;
+    box-sizing: border-box;
+}
+
+::placeholder {
+    /* Chrome, Firefox, Opera, Safari 10.1+ */
+    color: skyblue;
+    opacity: 1;
+    /* Firefox */
+}
+
+:-ms-input-placeholder {
+    /* Internet Explorer 10-11 */
+    color: red;
+}
+
+::-ms-input-placeholder {
+    /* Microsoft Edge */
+    color: red;
+}
+
+
+/* Style inputs with type="text", select elements and textareas */
+
+input[type=text],
+select,
+textarea {
+    margin: auto;
+    text-align: center;
+    width: 100%;
+    /* Full width */
+    padding: 5px;
+    /* Some padding */
+    border: 6px double #600;
+    /* Gray border */
+    border-radius: 30px;
+    /* Rounded borders */
+    box-sizing: border-box;
+    /* Make sure that padding and width stays in place */
+    margin-top: 10px;
+    /* Add a top margin */
+    margin-bottom: 20px;
+    /* Bottom margin */
+    resize: vertical;
+    /* Allow the user to vertically resize the textarea (not horizontally) */
+}
+
+textarea {
+    border-radius: 20px;
+}
+
+
+/* Style the submit button with a specific background color etc */
+
+input[type=submit] {
+    margin: auto;
+    margin-bottom: 20px;
+    text-align: center;
+    font-size: 22px;
+    background: repeating-linear-gradient(to top, #022, #058, #0d888f 100%);
+    color: white;
+    padding: 5px 30px;
+    border: 1px solid #008080;
+    cursor: pointer;
+    border-radius: 25px;
+    box-shadow: 0px 5px 25px black;
+    text-shadow: 1px 1px 0 black, -1px -1px 0 black, 1px -1px 0 black, -1px 1px 0 black, 1px 1px 0 black;
+    -webkit-transition: background-color 1s ease-out;
+    -moz-transition: background-color 1s ease-out;
+    -o-transition: background-color 1s ease-out;
+    transition: background-color 1s ease-out;
+}
+
+
+/* When moving the mouse over the submit button, add a blue color */
+
+input[type=submit]:hover {
+    margin: auto;
+    margin-bottom: 20px;
+    text-align: center;
+    border: 1px solid #009999;
+    color: #009999;
+    border-radius: 25px;
+    text-shadow: 1px 1px 0 white, -1px -1px 0 black, 1px -1px 0 black, -1px 1px 0 black, 1px 1px 0 black;
+    box-shadow: 0px 5px 25px #009999;
+}
+
+.close {
+    font-family: 'federant';
+    background: -webkit-radial-gradient( orange, red, #200);
+    max-width: 100%;
+    border: .5px hidden black;
+    color: white;
+    line-height: 29px;
+    position: absolute;
+    right: -12px;
+    text-align: center;
+    top: -10px;
+    width: 30px;
+    text-decoration: none;
+    font-weight: bold;
+    font-size: 20px;
+    -webkit-border-radius: 12px;
+    -moz-border-radius: 12px;
+    border-radius: 25px;
+    -moz-box-shadow: 1px 1px 3px #000;
+    -webkit-box-shadow: 1px 1px 3px #000;
+    box-shadow: 1px 1px 3px #000;
+    text-shadow: 1px 1px 0 black, -1px -1px 0 black, 1px -1px 0 black, -1px 1px 0 black, 1px 1px 0 black;
+}
+
+.close:hover {
+    background: black;
+    max-width: 100%;
+    border: .5px solid red;
+    color: black;
+    text-shadow: 1px 1px 0 red, -1px -1px 0 red, 1px -1px 0 red, -1px 1px 0 red, 1px 1px 0 red;
+}
+
+#footer {
+    position: fixed;
+    width: 100%;
+    margin: auto;
+    bottom: 0;
+    z-index: -1;
+}
+
+#footer img {
+    width: 75px;
+}
+
+#footer p {
+    text-align: center;
+    color: #0bb;
+    font-family: 'Quintessential';
+    font-size: 24px;
+    margin: 0px;
+}
+
+
+/*=======================================*/
+
+
+/*=======================================*/
+
+@media (max-width: 1000px) and (min-width: 601px) {
+    article,
+    .mobile,
+    ul {
+        display: none;
+    }
+    #Btn {
+        font-size: 12px;
+        width: 150px;
+        margin-left: 20%;
+        margin-top: 30px;
+    }
+    .consult {
+        width: 70px;
+    }
+    
+    .pandemic{
+        width: 550px;
+        background-size: 95% 105%;
+    }
+    
+    .pandemic h2{
+        width: 280px;
+        font-size: 23px;
+        padding: 0 0 0 30px;
+        margin-top: 40px;
+    }
+    
+    .presence{
+        width: 550px;
+        background: url('Presence.jpeg') 40%;
+    }
+    
+    .presence h2{
+        width: 530px;
+        font-size: 23px;
+        padding: 0 0 0 330px;
+        margin-top: 30px;
+    }
+    
+    #intro {
+        margin: auto;
+        height: 535px;
+        max-width: 100%;
+    }
+    #intro h1 {
+        font-size: 32px;
+        margin: 20px auto;
+        max-width: 100%;
+    }
+    #intro img {
+        margin: 76px auto;
+        max-width: 100%;
+        height: 460px;
+    }
+    h1 {
+        font-size: 28px;
+        margin: 0px;
+    }
+    
+    .services{
+        flex-direction: column;
+    }
+    
+    #info {
+        flex-direction: column;
+        max-width: 100%;
+    }
+    .cafe,
+    .restaurant,
+    .pastry {
+        min-width: 400px;
+        margin: auto;
+        margin-bottom: 20px;
+    }
+    .cafe .details,
+    .restaurant .details,
+    .pastry .details {
+        padding: 25px 20px;
+        max-width: 100%;
+    }
+}
+
+
+/*=======================================*/
+
+
+/*=======================================*/
+
+@media (max-width: 600px) {
+    label,
+    .desktop,
+    #Btn,
+    ul,
+    article {
+        display: none;
+    }
+    nav {
+        height: 85px;
+        background: repeating-linear-gradient( to right, #057, #045, #034, #045, #057 50%);
+    }
+    
+    .navicon {
+        float: right;
+        width: 33px;
+        height: 26px;
+        margin: 30px 10px;
+    }
+    .logo {
+        width: 95px;
+        margin: 35px 0 0 15%;
+    }
+    .logoburger {
+        width: 55px;
+        margin: 17px 15px;
+    }
+    #stage {
+        margin-top: -15px;
+        box-shadow: 2px 4px 6px #000;
+    }
+    #intro {
+        margin: auto;
+        height: 305px;
+        max-width: 100%;
+    }
+    #intro img {
+        margin: auto;
+        max-width: 100%;
+        height: 240px;
+    }
+    h1 {
+        margin-top: 65px;
+        font-size: 18px;
+        padding: 30px;
+    }
+    
+    .services{
+        margin-top: 50px;
+        flex-direction: column;
+        padding: 20px;
+    }
+    
+    .pandemic{
+        width: 300px;
+        height: 200px;
+        margin-top: 40px;
+        background: url(coronav.jpeg) 250% 1%;
+    }
+    
+    .pandemic h2{
+        width: 300px;
+        font-size: 18px;
+        padding: 20px;
+        margin-top: 10px;
+    }
+    
+    .presence{
+        width: 300px;
+        height: 200px;
+        margin-top: 40px;
+        background: url(Presence.jpeg);
+        background-size: 130% 100%;
+    }
+    
+    .presence h2{
+        width: 300px;
+        font-size: 18px;
+        padding: 20px;
+        margin-top: 20px;
+    }
+    
+    #info {
+        margin-top: -80px;
+        flex-direction: column;
+        max-width: 100%;
+        padding-bottom: 400px;
+    }
+    
+    .cafe,
+    .restaurant,
+    .pastry {
+        background: linear-gradient(135deg, #056 5%, #800 100%);
+        text-align: center;
+        font-size: 15px;
+        margin: 20px auto;
+        width: 170px;
+        border-radius: 100px;
+        padding: 30px;
+        border: 2px solid #068;
+    }
+    
+    .cafe .details,
+    .restaurant .details,
+    .pastry .details {
+        padding: 5px 18px;
+        border-radius: 15px;
+        font-size: 17px;
+        width: 250px;
+        height: 180px;
+        border: 2px solid #068;
+    }
+    
+    .cafe:hover,
+    .restaurant:hover,
+    .pastry:hover {
+        border: 2px solid #068;
+        cursor: pointer;
+        box-shadow: none;
+    }
+    
+    #Btn {
+        font-size: 8px;
+        width: 100px;
+        margin-left: 12%;
+    }
+    
+    .restaurant img {
+        width: 110px;
+        height: 60px;
+    }
+    footer img {
+        width: 50px;
+    }
+    footer p {
+        font-size: 15px;
+    }
+    .modalDialog>div {
+        text-align: center;
+        width: 300px;
+        position: relative;
+        margin: 75px auto;
+        padding: 1px 20px 1px 20px;
+        border-radius: 20px;
+        background: url(MENUBCKGRND.png);
+        background-size: 100% 100%;
+        border: #066 double 2px;
+        max-width: 100%;
+    }
+    input[type=text],
+    select,
+    textarea {
+        margin: 10px 0;
+        width: 90%;
+        opacity: .8;
+    }
+    .sidenav .closebtn {
+        padding: 11px 15px 28px 22px;
+        font-size: 30px;
+    }
+}
+
+@media (min-width: 1000px) and (max-width: 1200px) {
+    li{
+        margin: 0 20px;
+        font-size: 18px;
+        
+    }
+}
+
+@media (min-width: 1000px) {
+    .navicon,
+    .mobile{
+        display: none;
+    }
+}
