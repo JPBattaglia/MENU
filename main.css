@@ -219,7 +219,7 @@ nav p {
     font-family: 'Orbitron';
 }
 
-.logo {
+.logo img{
     float: left;
     margin: 35px 0;
     width: 120px;
@@ -241,7 +241,7 @@ h1 {
     width: 800px;
     height: 300px;
     margin: 20px auto;
-    background: url(coronav.jpeg);
+    background: url(Coronav.jpeg);
     border: 2px solid #044;
     border-radius: 20px;
     box-shadow: 4px 6px 8px #000;
@@ -259,16 +259,23 @@ h1 {
 }
 
 .presence{
+    background: url(Presence.jpeg);
+}
+
+.media{
+    background: url(Online.jpeg) 50% 25%;
+}
+
+.presence, .media{
     width: 800px;
     height: 300px;
     margin: 20px auto;
-    background: url(Presence.jpeg);
     border: 2px solid #044;
     border-radius: 20px;
     box-shadow: 4px 6px 8px #000;
 }
 
-.presence h2{
+.presence h2, .media h2{
     margin-top: 40px;
     color: #fff;
     font-family: 'Federant';
@@ -659,7 +666,12 @@ input[type=submit]:hover {
         background: url('Presence.jpeg') 40%;
     }
     
-    .presence h2{
+    .media{
+        width: 550px;
+        background: url('Online.jpeg') 10% -2;
+    }
+    
+    .presence h2, .media h2{
         width: 530px;
         font-size: 23px;
         padding: 0 0 0 330px;
@@ -725,6 +737,7 @@ input[type=submit]:hover {
     }
     
     nav {
+        width: 100%;
         height: 80px;
         background: repeating-linear-gradient(#057, #045, #034, #022, #034, #045, #057 5%);
     }
@@ -742,16 +755,24 @@ input[type=submit]:hover {
         margin: 25px 15px;
         filter: drop-shadow(2px 2px 3px #010);
     }
-    .logo {
-        width: 100px;
-        height: 24px;
-        margin: 25px 0 0 18%;
+    
+    .logo{
+        width: 100%;
+        display: flex;
+        align-items: center;
     }
+    
+    .logo img{
+        margin: auto;
+        margin-top: -50px;
+    }
+    
     .logoburger {
         width: 45px;
         height: 45px;
         margin: 14px 15px;
     }
+    
     #stage {
         margin-top: 80px;
     }
@@ -769,14 +790,19 @@ input[type=submit]:hover {
     }
     
     h1 {
-        font-size: 20px;
-        padding: 15px;
+        width: 300px;
+        font-size: 18px;
+        background: #700;
+        margin: -15px auto;
+        border-radius: 50px;
+        padding: 6px 0px;
+        box-shadow: 2px 2px 4px #000;
     }
     
     .services{
         margin-top: 115px;
         flex-direction: column;
-        padding: 20px;
+        padding: spx;
         height: 550px;
     }
     
@@ -784,7 +810,7 @@ input[type=submit]:hover {
         width: 300px;
         height: 200px;
         margin-top: 40px;
-        background: url(coronav.jpeg) 250% 1%;
+        background: url(Coronav.jpeg) 250% 1%;
     }
     
     .pandemic h2{
@@ -795,14 +821,21 @@ input[type=submit]:hover {
     }
     
     .presence{
+        background: url(Presence.jpeg);
+    }
+    
+    .media{
+        background: url(Online.jpeg);
+    }
+    
+    .presence, .media{
         width: 300px;
         height: 200px;
-        margin-top: -40px;
-        background: url(Presence.jpeg);
+        margin-top: 40px;
         background-size: 130% 100%;
     }
     
-    .presence h2{
+    .presence h2, .media h2{
         width: 300px;
         font-size: 18px;
         padding: 20px;
@@ -813,7 +846,7 @@ input[type=submit]:hover {
         margin-top: 15px;
         flex-direction: column;
         max-width: 100%;
-        padding-bottom: 400px;
+        padding-bottom: 10px;
     }
     
     .cafe,
@@ -886,7 +919,7 @@ input[type=submit]:hover {
     
     #footer{
         position:relative;
-        margin-top: 100px;
+        margin-top: 10px;
     }
 }
 
