@@ -713,48 +713,51 @@ input[type=submit]:hover {
 @media (max-width: 600px) {
     label,
     .desktop,
-    #Btn,
     ul,
+    #Btn,
     article {
         display: none;
     }
     nav {
-        height: 85px;
-        background: repeating-linear-gradient( to right, #057, #045, #034, #045, #057 50%);
+        height: 80px;
+        background: repeating-linear-gradient(#057, #045, #034, #022, #034, #045, #057 5%);
     }
-    
     .navicon {
         float: right;
         width: 33px;
         height: 26px;
-        margin: 30px 10px;
+        margin: 25px 15px;
+        filter: drop-shadow(2px 2px 3px #010);
     }
     .logo {
-        width: 95px;
-        margin: 35px 0 0 15%;
+        width: 100px;
+        height: 24px;
+        margin: 25px 0 0 18%;
     }
     .logoburger {
-        width: 55px;
-        margin: 17px 15px;
+        width: 45px;
+        height: 45px;
+        margin: 14px 15px;
     }
     #stage {
-        margin-top: -15px;
-        box-shadow: 2px 4px 6px #000;
+        margin-top: 80px;
     }
+    
     #intro {
         margin: auto;
-        height: 305px;
+        height: 345px;
         max-width: 100%;
     }
+    
     #intro img {
         margin: auto;
         max-width: 100%;
-        height: 240px;
+        height: 280px;
     }
+    
     h1 {
-        margin-top: 65px;
-        font-size: 18px;
-        padding: 30px;
+        font-size: 20px;
+        padding: 15px;
     }
     
     .services{
@@ -780,7 +783,7 @@ input[type=submit]:hover {
     .presence{
         width: 300px;
         height: 200px;
-        margin-top: 40px;
+        margin-top: -40px;
         background: url(Presence.jpeg);
         background-size: 130% 100%;
     }
@@ -793,7 +796,7 @@ input[type=submit]:hover {
     }
     
     #info {
-        margin-top: -80px;
+        margin-top: 15px;
         flex-direction: column;
         max-width: 100%;
         padding-bottom: 400px;
