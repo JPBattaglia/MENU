@@ -1,3 +1,8 @@
+*:focus {
+    outline: none;
+    background: none;
+   }
+
 html {
     min-height: 100%;
     overflow: auto;
@@ -62,13 +67,13 @@ body {
     background-size: 100% 103%;
     overflow-x: hidden;
     transition: .8s;
-    padding-top: 150px;
+    padding-top: 100px;
     font-family: 'Federant';
     font-weight: bold;
 }
 
 .sidenav a {
-    padding: 45px 10px;
+    margin: 65px 0;
     font-size: 22px;
     color: white;
     display: block;
@@ -333,7 +338,7 @@ h1 {
 }
 
 .cafe img {
-    width: 82px;
+    width: 100px;
     height: 80px;
     padding: 10px;
     filter: drop-shadow(2px 4px 1px #010);
@@ -718,10 +723,18 @@ input[type=submit]:hover {
     article {
         display: none;
     }
+    
     nav {
         height: 80px;
         background: repeating-linear-gradient(#057, #045, #034, #022, #034, #045, #057 5%);
     }
+    
+    .sidenav .closebtn{
+        margin: 5px 12px;
+        height: 55px;
+        width: 50px;
+    }
+    
     .navicon {
         float: right;
         width: 33px;
@@ -761,9 +774,10 @@ input[type=submit]:hover {
     }
     
     .services{
-        margin-top: 50px;
+        margin-top: 115px;
         flex-direction: column;
         padding: 20px;
+        height: 550px;
     }
     
     .pandemic{
@@ -813,6 +827,7 @@ input[type=submit]:hover {
         border-radius: 100px;
         padding: 30px;
         border: 2px solid #068;
+        box-shadow: 3px 4px 4px #068;
     }
     
     .cafe .details,
@@ -844,12 +859,7 @@ input[type=submit]:hover {
         width: 110px;
         height: 60px;
     }
-    footer img {
-        width: 50px;
-    }
-    footer p {
-        font-size: 15px;
-    }
+    
     .modalDialog>div {
         text-align: center;
         width: 300px;
@@ -872,6 +882,11 @@ input[type=submit]:hover {
     .sidenav .closebtn {
         padding: 11px 15px 28px 22px;
         font-size: 30px;
+    }
+    
+    #footer{
+        position:relative;
+        margin-top: 100px;
     }
 }
 
