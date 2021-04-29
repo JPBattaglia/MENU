@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+
+<html>
+
+<head>
+    <link rel="stylesheet" href="https://www.w3schools.com/w3css/4/w3.css">
+    <meta property="og:title" content="MENU" />
+    <meta property="og:image:type" content="image/png" />
+    <meta property="og:image:width" content="400" />
+    <meta property="og:image:height" content="300" />
+    <meta property="og:image" content="https://i.ibb.co/RCjm4by/BattBros.png" />
+    <meta property="og:image:secure_url" content="https://i.ibb.co/RCjm4by/BattBros.png" />
+    <meta name="keywords" content="Web Development">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <title>MENU - Contact</title>
+    <meta name="description" content="Online Presence Management">
+    <link rel="stylesheet" href="main.css">
+    <link rel="shortcut icon" type="image/png" href="MENU=.png">
+    <link href="https://fonts.googleapis.com/css?family=Federant|Akronim|Kaushan+Script|Fugaz+One|Righteous|Orbitron|Kanit|Quintessential" rel="stylesheet">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" href="https://unpkg.com/aos@next/dist/aos.css" />
+</head>
+
+<body id="animated-example" class="animated fadeOut">
+
+    <script>
+        window.addEventListener("beforeunload", function() {
+            document.body.classList.add("animate-out");
+        });
+    </script>
+
+
+    <div id="mySidenav" class="sidenav">
+        <a href="javascript:void(0)" class="closebtn" onclick="closeNav()">&#10754;</a>
+        <a href="index.html">Home</a>
+        <a style="text-decoration: underline" href="services.html">Services</a>
+        <a href="contact.html">Contact</a>
+    </div>
+
+    <script>
+        function openNav() {
+            document.getElementById("mySidenav").style.width = "150px";
+        }
+
+        function closeNav() {
+            document.getElementById("mySidenav").style.width = "0";
+        }
+    </script>
+
+    <nav>
+        <div data-aos="fade-left" data-aos-duration="1000" data-aos-anchor-placement="top-bottom" >
+            <img class="navicon" onclick="openNav()" src="BURGERLOGOKENTUCKY1.png">
+        </div>
+
+        <div data-aos="fade-right" data-aos-duration="1000" data-aos-anchor-placement="top-bottom">
+            <img class="logoburger" src="MENU=1.png">
+        </div>
+
+        <div data-aos="fade-right" data-aos-duration="800" data-aos-anchor-placement="top-bottom" class="logo"><img src="MENU.png"></div>
+        
+        <ul>
+            
+            <li><a href="contact.html">Contact</a></li>
+            <li><a href="services.html">Services</a></li>
+            <li><a href="index.html">Home</a></li>
+        
+        </ul>
+
+    </nav>
+
+<section data-aos="zoom-in-down" data-aos-duration="800" data-aos-delay="200" data-aos-anchor-placement="top-bottom"  class="cform">
+            
+            <h2 data-aos="flip-right" data-aos-duration="800" data-aos-delay="1700" data-aos-anchor-placement="top-bottom" >Contact Us</h2>
+                 
+                 <form action="//formspree.io/pinecrestdiner@gmail.com" method="POST">
+ 
+                 <input  data-aos="zoom-in-down" data-aos-duration="800" data-aos-delay="1200" data-aos-anchor-placement="top-bottom" type="text" id="fname" name="fname" placeholder="Full Name"><br>
+ 
+                 <input data-aos="zoom-in-down" data-aos-duration="800" data-aos-delay="1100" data-aos-anchor-placement="top-bottom"  type="text" id="email_address" name="email_address" placeholder="Email"><br>
+ 
+                 <select data-aos="zoom-in-down" data-aos-duration="800" data-aos-delay="900" data-aos-anchor-placement="top-bottom"  id="service" name="service">
+                 <option value="General">General</option>
+                 <option value="Logo">Restaurant</option>
+                 <option value="Icon">Retail</option>
+                 <option value="Flyer">Personal</option>
+                 <option value="Newsletter">Billing</option>
+                 <option value="Other">Tech Support</option>
+                 </select><br>
+ 
+                 <textarea data-aos="zoom-in-down" data-aos-duration="800" data-aos-delay="700" data-aos-anchor-placement="top-bottom" id="message" name="message" placeholder="Write Something..."></textarea><br>
+ 
+                 <input data-aos="flip-right" data-aos-duration="1000" data-aos-delay="1700" data-aos-anchor-placement="top-bottom"  type="submit" value="Submit">
+                </form><br><br><br>
+        </section>
+    
+    <div id="footer">
+        <p>&copy; <img id="menumade" src="MENU.png"> made 2019</p>
+    </div>
+    
+    <script src="https://unpkg.com/aos@next/dist/aos.js"></script>
+    <script>
+        AOS.init();
+    </script>
+
+</body>
+
+</html>
