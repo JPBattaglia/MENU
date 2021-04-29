@@ -423,7 +423,7 @@ h1 {
 
 .Btn1{
     cursor: pointer;
-    padding: 2px 10px;
+    padding: 2px 20px;
     color: white;
     border-radius: 30px;
     border: 2px solid #068;
@@ -475,6 +475,7 @@ h1 {
     max-width: 100%;
 }
 
+
 label {
     font-size: 20px;
     text-align: center;
@@ -491,7 +492,7 @@ input {
     text-align: center;
     font-size: 18px;
     font-weight: bolder;
-    max-width: 300px;
+    width: 300px;
     opacity: .8;
 }
 
@@ -620,8 +621,31 @@ input[type=submit]:hover {
     text-shadow: 1px 1px 0 red, -1px -1px 0 red, 1px -1px 0 red, -1px 1px 0 red, 1px 1px 0 red;
 }
 
+.cform{
+    margin: 160px auto;
+    width: 60%;
+    text-align: center;
+    border: 5px solid #068;
+    border-radius: 30px;
+    color: white;
+}
+
+.cform textarea, .cform input[type=text]{
+    width: 60%;
+    margin: 30px 0;
+}
+
+.cform input[type=submit]{
+    width: 30%;
+    margin-top: 20px;
+}
+
+.cform select{
+    color: skyblue;
+}
+
 #footer {
-    position: fixed;
+    position: relative;
     width: 100%;
     margin: auto;
     bottom: 0;
@@ -928,6 +952,29 @@ input[type=submit]:hover {
         border: #066 double 2px;
         max-width: 100%;
     }
+    
+    .cform h2{
+        font-family: 'federant';
+        margin: 10px 0 -10px 0;
+        font-size: 27px;
+    }
+    
+    .cform{
+        width: 85%;
+        margin: 100px auto;
+        border: 2px solid #068;
+    }
+    
+    .cform textarea, .cform input[type=text]{
+    width: 80%;
+    margin: 20px 0;
+    }
+    
+    .cform input[type=submit]{
+        width: 150px;
+        margin-bottom: -200px;
+    }
+    
     input[type=text],
     select,
     textarea {
