@@ -73,8 +73,8 @@ body {
 }
 
 .sidenav a {
-    margin: 65px 0;
-    font-size: 22px;
+    margin: 85px 0;
+    font-size: 24px;
     color: white;
     display: block;
     transition: 1s;
@@ -645,6 +645,13 @@ input[type=submit]:hover {
         margin-left: 20%;
         margin-top: 30px;
     }
+    
+    .sidenav .closebtn{
+        margin: 5px 32px;
+        height: 75px;
+        width: 50px;
+    }
+    
     .consult {
         width: 70px;
     }
@@ -743,34 +750,38 @@ input[type=submit]:hover {
     }
     
     .sidenav .closebtn{
-        margin: 5px 12px;
+        margin: 3px 18px;
         height: 55px;
         width: 50px;
     }
     
+    .sidenav a{
+        width: 85px;
+        margin: 85px auto;
+    }
+    
     .navicon {
         float: right;
-        width: 33px;
-        height: 26px;
-        margin: 25px 15px;
-        filter: drop-shadow(2px 2px 3px #010);
+        width: 40px;
+        height: 34px;
+        margin: 22px 15px;
     }
     
     .logo{
         width: 100%;
         display: flex;
-        align-items: center;
     }
     
     .logo img{
-        margin: auto;
-        margin-top: -50px;
+        margin-left: 16%;
+        margin-top: -52px;
+        width: 100px;
     }
     
     .logoburger {
-        width: 45px;
-        height: 45px;
-        margin: 14px 15px;
+        width: 40px;
+        height: 40px;
+        margin: 20px 10px;
     }
     
     #stage {
