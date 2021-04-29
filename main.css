@@ -396,6 +396,10 @@ h1 {
     opacity: 1;
 }
 
+.cafe .details .Btn1{
+    margin-top: 25px;
+}
+
 
 #Btn {
     margin: 20px 0 0 20%;
@@ -415,6 +419,15 @@ h1 {
 
 #Btn a{
     text-decoration: none;
+}
+
+.Btn1{
+    cursor: pointer;
+    padding: 2px 10px;
+    color: white;
+    border-radius: 30px;
+    border: 2px solid #068;
+    background: repeating-linear-gradient(to top, #022, #058, #0d888f 100%);
 }
 
 #Btn:hover {
@@ -811,7 +824,7 @@ input[type=submit]:hover {
     }
     
     .services{
-        margin-top: 115px;
+        margin-top: 90px;
         flex-direction: column;
         padding: spx;
         height: 550px;
@@ -864,11 +877,10 @@ input[type=submit]:hover {
     .restaurant,
     .pastry {
         background: linear-gradient(135deg, #056 5%, #800 100%);
-        text-align: center;
         font-size: 15px;
-        margin: 20px auto;
-        width: 170px;
-        border-radius: 100px;
+        margin: 10px 100px;
+        width: 175px;
+        border-radius: 100%;
         padding: 30px;
         border: 2px solid #068;
         box-shadow: 3px 4px 4px #068;
@@ -880,7 +892,7 @@ input[type=submit]:hover {
         padding: 5px 18px;
         border-radius: 15px;
         font-size: 17px;
-        width: 250px;
+        width: 300px;
         height: 180px;
         border: 2px solid #068;
     }
