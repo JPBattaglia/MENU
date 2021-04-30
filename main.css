@@ -263,7 +263,7 @@ h1 {
 }
 
 .media{
-    background: url(Online.jpeg) 50% 25%;
+    background: url(Online.jpeg) 80% 25%;
 }
 
 .presence, .media{
@@ -531,7 +531,7 @@ select,
 textarea {
     margin: auto;
     text-align: center;
-    width: 100%;
+    width: 85%;
     /* Full width */
     padding: 5px;
     /* Some padding */
@@ -557,6 +557,7 @@ textarea {
 /* Style the submit button with a specific background color etc */
 
 input[type=submit] {
+    width: 75%;
     margin: auto;
     margin-bottom: 20px;
     text-align: center;
@@ -622,7 +623,7 @@ input[type=submit]:hover {
 }
 
 .cform{
-    margin: 160px auto;
+    margin: 140px auto;
     width: 60%;
     text-align: center;
     border: 5px solid #068;
@@ -630,24 +631,46 @@ input[type=submit]:hover {
     color: white;
 }
 
+.cform textarea{
+    height: 100px;
+}
+
 .cform textarea, .cform input[type=text]{
     width: 60%;
-    margin: 30px 0;
+    margin: 50px 0 0 0;
+    color: white;
+}
+
+.cform textarea:hover, .cform input[type=text]:hover,.cform selct:hover{
+    border: 6px double #068;
+}
+
+.cform textarea:focus, .cform input[type=text]:focus,.cform selct:focus{
+    border: 6px double #068;
 }
 
 .cform input[type=submit]{
     width: 30%;
-    margin-top: 20px;
+    margin-top: 50px;
+    margin-bottom: -100px;
 }
 
 .cform select{
-    color: skyblue;
+    color: #66c1e5;
+    margin: 50px 0 0 0;
+    width: 40%;
+    padding: 4px 10px;
+}
+
+.cform h2{
+    font: 35px 'federant';
+    margin: 20px 0 -20px 0;
 }
 
 #footer {
     position: relative;
     width: 100%;
-    margin: auto;
+    margin: -20px auto;
     bottom: 0;
     z-index: -1;
 }
@@ -712,7 +735,7 @@ input[type=submit]:hover {
     
     .media{
         width: 550px;
-        background: url('Online.jpeg') 10% -2;
+        background: url('Online.jpeg') 65% 25%;
     }
     
     .presence h2, .media h2{
@@ -762,6 +785,10 @@ input[type=submit]:hover {
     .pastry .details {
         padding: 25px 20px;
         max-width: 100%;
+    }
+    
+    .cform{
+        width: 75%;
     }
 }
 
@@ -955,24 +982,29 @@ input[type=submit]:hover {
     
     .cform h2{
         font-family: 'federant';
-        margin: 10px 0 -10px 0;
+        margin: 10px 0 0px 0;
         font-size: 27px;
     }
     
     .cform{
         width: 85%;
-        margin: 100px auto;
-        border: 2px solid #068;
+        margin: 100px auto 0px;
+        border: 6px double #068;
     }
     
     .cform textarea, .cform input[type=text]{
     width: 80%;
-    margin: 20px 0;
+    margin: 15px 0;
     }
     
     .cform input[type=submit]{
         width: 150px;
-        margin-bottom: -200px;
+        margin: 20px 0 -200px 0 ;
+    }
+    
+    .cform select{
+        margin: 10px;
+        width: 50%;
     }
     
     input[type=text],
@@ -996,8 +1028,7 @@ input[type=submit]:hover {
 @media (min-width: 1000px) and (max-width: 1200px) {
     li{
         margin: 0 20px;
-        font-size: 18px;
-        
+        font-size: 18px;   
     }
 }
 
