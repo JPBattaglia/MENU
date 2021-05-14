@@ -8,6 +8,118 @@ html {
     overflow: auto;
 }
 
+.popup{
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    display: none;
+}
+
+.contentBox{
+    position: relative;
+    width: 600px;
+    height: 400px;
+    background: #fff;
+    border-radius: 20px;
+    display: flex;
+    box-shadow: 0 5px 15px #000;
+}
+
+.contentBox .imgBx{
+    position: relative;
+    width: 300px;
+    height: 500px;
+    display: flex;
+    justify-content: center;
+    align-items: center;  
+}
+
+.contentBox .imgBx::before{
+    content: '';
+    position: absolute;
+    top: 24px;
+    left: 15px;
+    width: 265px;
+    height: 260px;
+    background: #068;
+    border-radius: 50%;
+}
+
+.contentBox .imgBx img{
+    position: relative;
+    top: -40px;
+    max-width: 250px;
+    height: 325px;
+}
+
+.contentBox .content{
+    position: relative;
+    width: 300px;
+    height: 400px;
+    display: flex;
+    justify-content: center;
+    align-items: center; 
+    padding: 10px;
+}
+
+.contentBox .content h3{
+    color: #800;
+    line-height: 1.5em;
+    font-size: 2.8em;
+    font-weight: bolder;
+}
+
+.contentBox .content h2{
+    font-size: 4.5em;
+    color: #068;
+    line-height: .8em;
+    font-family: 'righteous';
+}
+
+.contentBox .content h2 span{
+    color: #000;
+    font-size: .8em;
+    text-transform: uppercase; 
+    font-weight: bolder;
+}
+
+.contentBox .content p{
+    margin-top: 0px;
+    font-weight: bold;
+    font-size: 22px;
+    font-family: 'Kanit';
+    width: 95%;
+    
+}
+
+.contentBox .content a{
+    display: inline-block;
+    padding: 8px 20px;
+    background: #f00;
+    color: #fff;
+    margin-left: 40px;
+    text-decoration: none;
+    border-radius: 50px;
+    border: 6px double white;
+}
+
+.contentBox .content a:hover{
+    border: 6px double #a00;
+}
+
+.closex{
+    position: absolute;
+    top: -10px;
+    right: -22px;
+    width: 60px;
+    font-size: 35px;
+    cursor: pointer;
+    border-radius: 50%;
+    z-index: 10;
+    text-shadow: 1px 1px 2px #f00;
+}
+
 .animated {
     background-color: #034;
     background-position: left top;
@@ -301,7 +413,8 @@ h1 {
 }
 
 #info {
-    background: linear-gradient(135deg, #800, #400 40%, #034, #045 100%);
+    background: url(Holo-1.jpeg);
+    background-size: 100% 100%;
     display: flex;
     max-width: 100%;
     margin: 26px auto;
@@ -362,16 +475,15 @@ h1 {
 .cafe:hover,
 .restaurant:hover,
 .pastry:hover {
-    border: 2px solid #068;
     cursor: pointer;
-    box-shadow: 15px 15px 5px #023;
 }
 
 .cafe .details,
 .restaurant .details,
 .pastry .details {
     width: 95%;
-    height: 95%;
+    height: auto;
+    border: 3px solid #068;
     padding: 15px;
     position: absolute;
     content: "";
@@ -557,7 +669,7 @@ textarea {
 /* Style the submit button with a specific background color etc */
 
 input[type=submit] {
-    width: 75%;
+    width: 35%;
     margin: auto;
     margin-bottom: 20px;
     text-align: center;
@@ -667,6 +779,84 @@ input[type=submit]:hover {
     margin: 20px 0 -20px 0;
 }
 
+.website {
+        width: 330px;
+        font-size: 28px;
+        background: #700;
+        margin: -15px auto;
+        border-radius: 50px;
+        padding: 6px 0px;
+        box-shadow: 2px 2px 4px #000;
+    }
+
+.plans{
+    width: 100%;
+    display: flex;
+    justify-content: center;
+    margin-bottom: 50px;
+}
+
+.star{
+    width: 100px;
+    height: auto;
+    margin: 20px auto;
+    background: #600;
+    border-radius: 50px;
+    padding: 10px;
+    border: 3px solid #068;
+    filter: drop-shadow(2px 2px 1px #010);
+}
+
+.star img{
+    width: 75px;
+    filter: drop-shadow(2px 2px 1px #000);
+    
+}
+
+.check{
+    width: 35px;
+    height: 25px;
+    filter: drop-shadow(2px 2px 1px #000);
+}
+
+.items{
+    text-align: left;
+    margin: 50px auto;
+    width: 75%;
+    background: #034;
+    padding: 10px 25px;
+    border-radius: 15px;
+    text-shadow: 2px 2px 1px #000;
+    box-shadow: 2px 4px 8px #000;
+}
+
+.items h4{
+    font-family: 'federant';
+}
+
+.basic, .pro, .prime{
+    margin: 20px;
+    width: 33%;
+    color: white;
+    text-align: center;
+    background: url(Holo-2.jpeg);
+    background-size: 100% 100%;
+    border-radius: 20px;
+    box-shadow: 2px 4px 4px #000;
+}
+
+.plans h3{
+    letter-spacing: 2.5px;
+    margin: 0;
+    color: #0f0;
+    font-family: 'Righteous';
+    font-size: 45px;
+    margin-bottom: -15px;
+    font-weight: bolder;
+    text-shadow: 2px 2px 1px #000;
+    
+}
+
 #footer {
     position: relative;
     width: 100%;
@@ -765,30 +955,55 @@ input[type=submit]:hover {
         margin: 0px;
     }
     
+    .website{
+        margin-bottom: 50px;
+    }
+    
     .services{
-        flex-direction: column;
+        flex-direction: row;
+        margin: 150px 10px 0;
+        padding: 0;
     }
     
     #info {
         flex-direction: column;
-        max-width: 100%;
+        width: 100%;
     }
     .cafe,
     .restaurant,
     .pastry {
-        min-width: 400px;
+        width: 400px;
         margin: auto;
         margin-bottom: 20px;
+        border: 
     }
     .cafe .details,
     .restaurant .details,
     .pastry .details {
-        padding: 25px 20px;
+        padding: 25px 5px;
         max-width: 100%;
+        height: auto;
+        border: 3px solid #068;
+    }
+    
+    .cafe:hover,
+    .restaurant:hover,
+    .pastry:hover {
+        border: 2px solid transparent;
+        cursor: pointer;
+        box-shadow: 15px 15px 5px transparent;
     }
     
     .cform{
         width: 75%;
+    }
+    
+    .items{
+        width: 90%;
+    }
+    
+    .items h4{
+        font-size: 16px;
     }
 }
 
@@ -798,6 +1013,57 @@ input[type=submit]:hover {
 
 /*=======================================*/
 
+@media (max-width: 800px){
+    .plans{
+        flex-direction: column;
+    }
+    
+    .basic, .pro, .prime{
+        width: 80%;
+        margin: 50px auto;
+    }
+    
+    .items{
+        width: 80%;
+    }
+    
+    .plans h1{
+        background: transparent;
+        box-shadow: none;
+        width: 100px;
+        font-size: 30px;
+        margin: 0px auto;
+    }
+    
+    .services{
+        margin-bottom: 50px;
+    }
+}
+
+/*=======================================*/
+
+
+/*=======================================*/
+
+@media (min-width: 600px) and (max-width: 800px){
+    .items{
+        width: 60%;
+        padding: 30px 0px 20px 80px;
+    }
+    
+    .plans{
+        width: 90%;
+        margin: auto;
+    }
+}
+
+/*=======================================*/
+
+
+/*=======================================*/
+
+
+
 @media (max-width: 600px) {
     label,
     .desktop,
@@ -805,6 +1071,69 @@ input[type=submit]:hover {
     #Btn,
     article {
         display: none;
+    }
+    
+    .contentBox{
+        margin-top: 70px;
+        width: 300px;
+        height: auto;
+        flex-direction: column;
+    }
+    
+    .contentBox .imgBx{
+        height: 200px;
+        transform: translateY(-50px);
+    }
+    
+    .contentBox .imgBx::before{
+        background: #fff;
+    }
+    .contentBox .imgBx img{
+        position: relative;
+        top: 40px;
+        max-width: 175px;
+        height: 200px;
+    }
+    
+    .contentBox .content{
+        height: auto;
+        text-align: center;
+        padding: 30px;
+        padding-top: 0;
+        font-size: 14px;
+        margin: -10px auto;
+    }
+    
+    .contentBox .content p{
+        font-size: 18px;
+        margin: 0px auto 10px;
+        font-family: 'Kanit';
+        font-weight: bolder;
+        line-height: 1.3;
+    }
+    
+    .contentBox .content h3{
+        font-weight: bolder;
+        font-size: 35px;
+        margin: 0;
+    }
+    
+    .contentBox .content h2{
+        font-family: 'righteous';
+        font-weight: bolder;
+    }
+    
+    .contentBox .content a{
+        margin: 10px auto 0;
+        font-weight: bolder;
+    }
+        
+    
+    .closex{
+        top:-7px;
+        right: -20px;
+        background-size: 10px;
+        background-position: center;
     }
     
     nav {
@@ -1036,5 +1365,9 @@ input[type=submit]:hover {
     .navicon,
     .mobile{
         display: none;
+    }
+    
+    .website{
+        margin-bottom: 50px;
     }
 }
