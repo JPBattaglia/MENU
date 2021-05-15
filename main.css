@@ -780,14 +780,30 @@ input[type=submit]:hover {
 }
 
 .website {
-        width: 75%;
-        font-size: 25px;
-        background: #700;
-        margin: -15px auto;
-        border-radius: 20px;
-        padding: 20px;
-        box-shadow: 2px 4px 8px #000;
-        border: 2px solid #068;
+    color: white;
+    width: 75%;
+    font-size: 25px;
+    background: #600;
+    margin: -15px auto;
+    border-radius: 20px;
+    padding: 20px;
+    box-shadow: 2px 4px 8px #000;
+}
+
+.website h1{
+        font-size: 34px;
+        text-align: center;
+        background: transparent;
+        box-shadow: none;
+        padding: 10px 0 0;
+        text-decoration: underline;
+        text-shadow: 2px 2px 0px #000;
+        text-underline-position: under;
+    }
+
+.website h2{
+    font-family: 'federant';
+    margin: 25px;
 }
 
 .plans{
@@ -812,7 +828,15 @@ input[type=submit]:hover {
     margin-bottom: 5px;
     width: 75px;
     filter: drop-shadow(2px 2px 1px #000);
-    
+    -webkit-transition: width 2s, height 2s, -webkit-transform 1.5s;
+    /* Safari */
+    transition: width 2s, height 2s, transform 1.5s;
+}
+
+.star img:hover {
+    -webkit-transform: rotate(360deg);
+    /* Safari */
+    transform: rotate(360deg);
 }
 
 .check{
@@ -825,7 +849,7 @@ input[type=submit]:hover {
     text-align: left;
     margin: 50px auto;
     width: 75%;
-    background: #034;
+    background: #046;
     padding: 10px 25px;
     border-radius: 15px;
     text-shadow: 2px 2px 1px #000;
@@ -972,6 +996,12 @@ h6{
     
     .website{
         margin-bottom: 50px;
+    }
+    
+    .website h2{
+        font-family: 'federant';
+        margin: 20px;
+        font-size: 24px
     }
     
     .services{
@@ -1219,9 +1249,22 @@ h6{
     }
     
     .website{
-        font-size: 16px;
-        text-align: left;
-        padding-left: 30px;
+        padding: 20px 10px;
+    }
+    
+    .website h1{
+        font-size: 22px;
+        text-align: center;
+        background: transparent;
+        box-shadow: none;
+        padding: 20px 0;
+        text-decoration: underline;
+        text-shadow: 2px 2px 0px #000;
+        text-underline-position: under;
+    }
+    
+    .website h2{
+        font-size: 18px;
     }
     
     .services{
