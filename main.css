@@ -309,7 +309,7 @@ nav p:hover {
 
 .logoburger {
     width: 55px;
-    margin: 25px 20px;
+    margin: 25px 10px 0 20px;
     float: left;
     -webkit-transition: width 2s, height 2s, -webkit-transform 1.5s;
     /* Safari */
@@ -334,7 +334,7 @@ nav p {
 .logo img{
     float: left;
     margin: 35px 0;
-    width: 120px;
+    width: 150px;
     filter: drop-shadow(2px 4px 1px #010);
 }
 
@@ -1004,9 +1004,13 @@ h6{
         font-size: 24px
     }
     
+    .items h4{
+        margin-left: -20px;
+    }
+    
     .services{
         flex-direction: row;
-        margin: 150px 10px 0;
+        margin: 150px 10px 50px 0;
         padding: 0;
     }
     
@@ -1099,6 +1103,10 @@ h6{
     .plans{
         width: 90%;
         margin: auto;
+    }
+    
+    .services{
+        margin: 175px 0 75px 0;
     }
 }
 
@@ -1248,8 +1256,13 @@ h6{
         box-shadow: 2px 2px 4px #000;
     }
     
+    .basic, .pro, .prime{
+        width: 95%;
+    }
+    
     .website{
         padding: 20px 10px;
+        width: 95%;
     }
     
     .website h1{
@@ -1265,8 +1278,17 @@ h6{
     }
     
     .website h2{
-        font-size: 18px;
+        font-size: 20px;
         margin: 20px 5px 0 15px;
+    }
+    
+    
+    .items h4{
+        margin-left: 30px;
+    }
+    
+    .items{
+        padding-top: 20px;
     }
     
     .services{
@@ -1422,10 +1444,25 @@ h6{
     }
 }
 
+/*=======================================*/
+
+
+/*=======================================*/
+
+@media (min-width: 800px) and (max-width: 1000px){
+    .items h4{
+        margin-left: 0px;
+    }
+}
+
 @media (min-width: 1000px) and (max-width: 1200px) {
     li{
         margin: 0 20px;
         font-size: 18px;   
+    }
+    
+    .items{
+        width: 80%;
     }
 }
 
