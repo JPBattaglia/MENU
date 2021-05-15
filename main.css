@@ -1253,6 +1253,7 @@ h6{
     }
     
     .website h1{
+        width: 150px;
         font-size: 22px;
         text-align: center;
         background: transparent;
@@ -1265,6 +1266,7 @@ h6{
     
     .website h2{
         font-size: 18px;
+        margin: 20px 5px 0 15px;
     }
     
     .services{
