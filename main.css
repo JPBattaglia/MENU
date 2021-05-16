@@ -1339,17 +1339,18 @@ h6{
     }
     
     .basic, .pro, .prime{
-        width: 95%;
+        width: 100%;
     }
     
     .website{
         padding: 20px 10px 35px;
         width: 95%;
+        border: 3px double #c00;
     }
     
     .website h1{
-        width: 155px;
-        font-size: 25px;
+        width: 200px;
+        font-size: 28px;
         text-align: center;
         background: transparent;
         box-shadow: none;
