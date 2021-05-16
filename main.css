@@ -44,6 +44,7 @@ html {
     height: 260px;
     background: #068;
     border-radius: 50%;
+    box-shadow: 2px 4px 8px #000, -2px 4px 8px #000;
 }
 
 .contentBox .imgBx img{
@@ -64,17 +65,20 @@ html {
 }
 
 .contentBox .content h3{
+    letter-spacing: -2px;
     color: #800;
     line-height: 1.5em;
-    font-size: 2.8em;
+    font-size: 3.2em;
     font-weight: bolder;
 }
 
 .contentBox .content h2{
+    letter-spacing: 3px;
     font-size: 4.5em;
-    color: #068;
+    color: #079;
     line-height: .8em;
     font-family: 'righteous';
+    text-shadow: 2px 2px 2px #000;
 }
 
 .contentBox .content h2 span{
@@ -85,30 +89,42 @@ html {
 }
 
 .contentBox .content p{
+    font-weight: bolder;
+    letter-spacing: -.5px;
     margin-top: 0px;
     font-weight: bold;
-    font-size: 22px;
+    font-size: 24px;
     font-family: 'Kanit';
     width: 95%;
     
 }
 
 .contentBox .content a{
+    transition: .5s;
+    font-family: 'federant';
     display: inline-block;
-    padding: 8px 20px;
-    background: #f00;
+    padding: 10px 20px;
+    background: repeating-linear-gradient(to top, #022, #058, #0d888f 100%);
     color: #fff;
     margin-left: 40px;
     text-decoration: none;
     border-radius: 50px;
-    border: 6px double white;
+    border: 1px solid #089;
+    box-shadow: 2px 4px 8px #050, -2px 4px 8px #000;
+    text-shadow: 1px 1px 0 black, -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000;
 }
 
 .contentBox .content a:hover{
-    border: 6px double #a00;
+    transition: .5s;
+    color: #0ac;
+    padding-bottom: 10px;
+    border: 1px solid #0ac;
+    text-shadow: 1px 1px 0 white, -1px -1px 0 black, 1px -1px 0 black, -1px 1px 0 black, 1px 1px 0 black;
+    box-shadow: 2px 6px 8px #0ac;
 }
 
 .closex{
+    font-weight: bolder;
     position: absolute;
     top: -10px;
     right: -22px;
@@ -117,7 +133,7 @@ html {
     cursor: pointer;
     border-radius: 50%;
     z-index: 10;
-    text-shadow: 1px 1px 2px #f00;
+    text-shadow: 1px 1px 0px #f00, -1px 1px 0px #f00,  -1px -1px 0px #f00,  1px -1px 0px #f00;
 }
 
 .animated {
@@ -1205,6 +1221,7 @@ h6{
     
     .contentBox .imgBx::before{
         background: #fff;
+        box-shadow: none;
     }
     .contentBox .imgBx img{
         position: relative;
