@@ -780,27 +780,27 @@ input[type=submit]:hover {
 }
 
 .website {
-    color: white;
+    color: #0ce;
     width: 75%;
     font-size: 25px;
-    background: #600;
+    background: #000;
     margin: -15px auto;
-    border-radius: 20px;
     padding: 20px;
-    box-shadow: 2px 4px 6px #000;
-    border: 2px solid #000;
+    border: 5px double #b00;
+    border-radius: 15px;
 }
 
 .website h1{
-        font-size: 34px;
-        text-align: center;
-        background: transparent;
-        box-shadow: none;
-        padding: 10px 0 0;
-        text-decoration: underline;
-        text-shadow: 2px 2px 0px #000;
-        text-underline-position: under;
-    }
+    color: #d00;
+    font-size: 34px;
+    text-align: center;
+    background: transparent;
+    box-shadow: none;
+    padding: 10px 0 0;
+    text-decoration: underline;
+    text-shadow: 1px 1px 0px #fff;
+    text-underline-position: under;
+}
 
 .website h2{
     font-family: 'federant';
@@ -811,7 +811,39 @@ input[type=submit]:hover {
     width: 100%;
     display: flex;
     justify-content: center;
-    margin-bottom: 50px;
+    margin-bottom: 100px;
+}
+
+.stars{
+    width: 100%;
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: center;
+    float: left;
+    margin-top: -70px;
+}
+
+.star-1, .star-3{
+    width: 60px;
+    height: 60px;
+    margin-top: 20px;
+}
+
+.star-2{
+    width: 75px;
+    height: 75px;
+    z-index: 9;
+}
+
+.star-3{
+    margin-left: -25px;
+    transform: rotate(25deg)
+}
+
+.star-1{
+    margin-right: -25px;
+    transform: rotate(-25deg)
 }
 
 .star{
@@ -848,7 +880,7 @@ input[type=submit]:hover {
 
 .items{
     text-align: left;
-    margin: 50px auto;
+    margin: 50px auto 75px;
     width: 75%;
     background: #046;
     padding: 10px 25px;
@@ -1109,6 +1141,8 @@ h6{
     .services{
         margin: 175px 0 75px 0;
     }
+    
+    
 }
 
 /*=======================================*/
@@ -1125,6 +1159,36 @@ h6{
     #Btn,
     article {
         display: none;
+    }
+    
+    .plans{
+        width: 90%;
+        margin: auto;
+    }
+    .prime{
+        margin-bottom: 100px;
+    }
+    
+    .stars{
+        margin-top: -60px;
+    }
+    
+    .star-1, .star-3{
+        width: 40px;
+        height: 40px;
+    }
+    
+    .star-2{
+        width: 50px;
+        height: 50px;
+    }
+    
+    .star-1{
+        margin-right: -15px;
+    }
+    
+    .star-3{
+        margin-left: -15px;
     }
     
     .contentBox{
@@ -1274,7 +1338,7 @@ h6{
         box-shadow: none;
         padding: 20px 0;
         text-decoration: underline;
-        text-shadow: 2px 2px 0px #000;
+        text-shadow: .5px .5px 0px #fff;
         text-underline-position: under;
     }
     
@@ -1376,6 +1440,10 @@ h6{
         box-shadow: none;
     }
     
+    .cafe{
+        margin-bottom: 50px;
+    }
+    
     #Btn {
         font-size: 8px;
         width: 100px;
@@ -1458,7 +1526,7 @@ h6{
 
 @media (min-width: 1000px) and (max-width: 1200px) {
     li{
-        margin: 0 20px;
+        margin: 0 15px;
         font-size: 18px;   
     }
     
@@ -1477,3 +1545,18 @@ h6{
         margin-bottom: 50px;
     }
 }
+
+@media (min-width: 1200px){
+    li{
+        margin-left: 28px;
+    }
+}
+
+@media (min-width: 1300px){
+    li a{
+        margin-left: 28px;
+    }
+}
+
+
+    
