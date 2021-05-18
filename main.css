@@ -271,7 +271,7 @@ li a{
 li a:hover{
     padding: 5px 0;
     transition: .5s;
-    color: #0bd;
+    color: #f00;
     text-shadow: 1px 1px 0 #fff, -1px -1px 0 #fff, 1px -1px 1px #fff, -1px 1px 0 #fff, 1px 1px 0 #fff;
 }
 
@@ -1163,7 +1163,7 @@ h6{
     #info h1{
         width: 500px;
         background: linear-gradient(to top, #500, #800, #500);
-        margin: -30px auto;
+        margin: -25px auto;
         border-radius: 50px;
         padding: 6px 0px;
         box-shadow: 2px 2px 4px #000;
