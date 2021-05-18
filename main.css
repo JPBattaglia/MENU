@@ -369,7 +369,7 @@ h1 {
     height: 300px;
     margin: 20px auto;
     background: url(Coronav.jpeg);
-    border: 2px solid #044;
+    border: 2px solid #068;
     border-radius: 20px;
     box-shadow: 4px 6px 8px #000;
 }
@@ -397,7 +397,7 @@ h1 {
     width: 800px;
     height: 300px;
     margin: 20px auto;
-    border: 2px solid #044;
+    border: 2px solid #068;
     border-radius: 20px;
     box-shadow: 4px 6px 8px #000;
 }
@@ -428,7 +428,7 @@ h1 {
 }
 
 #info {
-    background: url(Holo-1.jpeg);
+    background: linear-gradient(90deg, #500, #600, #a00, #600, #500);
     background-size: 100% 100%;
     display: flex;
     max-width: 100%;
@@ -863,7 +863,7 @@ input[type=submit]:hover {
 .star{
     width: 102px;
     height: auto;
-    margin: 20px auto;
+    margin: 20px auto 0;
     border-radius: 50px;
     padding: 10px;
     border: 4px solid #08a;
@@ -892,7 +892,7 @@ input[type=submit]:hover {
 
 .items{
     text-align: left;
-    margin: 50px auto 75px;
+    margin: 20px auto 50px;
     width: 75%;
     background: linear-gradient(90deg, #023, #034, #057, #057, #034, #023);
     padding: 10px 25px;
@@ -921,6 +921,7 @@ input[type=submit]:hover {
     letter-spacing: 2.5px;
     font-weight: bolder;
     text-decoration: underline;
+    padding: 0px;
 }
 
 .plans h3{
@@ -1429,6 +1430,7 @@ h6{
         border-radius: 50%;
         padding: 30px;
         box-shadow: 4px 8px 10px #000;
+        border: 2px solid #000;
     }
     
     .cafe .details,
