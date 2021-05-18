@@ -323,9 +323,11 @@ nav p:hover {
 }
 
 .logoburger {
-    width: 55px;
-    margin: 22px 10px 0 20px;
+    width: 65px;
+    height: 65px;
+    margin: 18px 10px 0 20px;
     float: left;
+    filter: drop-shadow(2px 2px 0px #000);
     -webkit-transition: width 2s, height 2s, -webkit-transform 1.5s;
     /* Safari */
     transition: width 2s, height 2s, transform 1.5s;
@@ -396,7 +398,7 @@ h1 {
 .presence, .media{
     width: 800px;
     height: 300px;
-    margin: 20px auto;
+    margin: 75px auto;
     border: 2px solid #068;
     border-radius: 20px;
     box-shadow: 4px 6px 8px #000;
