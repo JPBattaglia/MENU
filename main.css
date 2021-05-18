@@ -44,7 +44,7 @@ html {
     height: 260px;
     background: #068;
     border-radius: 50%;
-    box-shadow: 2px 4px 8px #000, -2px 4px 8px #000;
+    box-shadow: 4px 6px 8px #000;
 }
 
 .contentBox .imgBx img{
@@ -103,24 +103,24 @@ html {
     transition: .5s;
     font-family: 'federant';
     display: inline-block;
-    padding: 10px 20px;
-    background: repeating-linear-gradient(to top, #022, #058, #0d888f 100%);
+    padding: 10px 20px 8px;
+    background: repeating-linear-gradient(to bottom, #022, #058, #0d888f 100%);
     color: #fff;
     margin-left: 40px;
     text-decoration: none;
     border-radius: 50px;
-    border: 1px solid #089;
-    box-shadow: 2px 4px 8px #050, -2px 4px 8px #000;
+    border: .5px solid #079;
+    box-shadow: 2px 4px 10px #000, -2px 6px 10px #046;
     text-shadow: 1px 1px 0 black, -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000;
 }
 
 .contentBox .content a:hover{
     transition: .5s;
     color: #0ac;
-    padding-bottom: 10px;
     border: 1px solid #0ac;
+    background: repeating-linear-gradient(to top, #022, #058, #0d888f 100%);
     text-shadow: 1px 1px 0 white, -1px -1px 0 black, 1px -1px 0 black, -1px 1px 0 black, 1px 1px 0 black;
-    box-shadow: 2px 6px 8px #0ac;
+    box-shadow: 2px 6px 8px #fff;
 }
 
 .closex{
@@ -262,7 +262,7 @@ li{
 
 li a{
     text-decoration: none;
-    text-shadow: 1px 1px 0 #f00, -1px -1px 0 #f00, 1px -1px 0 #f00, -1px 1px 0 #f00, 1px 1px 0 #f00;
+    text-shadow: 1px 1px 0 #000, -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000;
     text-decoration: none;
     
 }
@@ -324,7 +324,7 @@ nav p:hover {
 
 .logoburger {
     width: 55px;
-    margin: 25px 10px 0 20px;
+    margin: 22px 10px 0 20px;
     float: left;
     -webkit-transition: width 2s, height 2s, -webkit-transform 1.5s;
     /* Safari */
@@ -440,7 +440,7 @@ h1 {
 }
 
 .services{
-    margin-top: 100px;
+    margin: 100px auto 50px;
     display: flex;
     flex-direction: row;
     align-items: center;
@@ -448,6 +448,14 @@ h1 {
     text-align: center;
     padding: 50px;
 }
+
+.cafe h4,
+.restaurant h4,
+.pastry h4{
+    font-family: 'federant';
+    margin: 0 0 -10px;
+    
+} 
 
 .cafe,
 .restaurant,
@@ -497,8 +505,8 @@ h1 {
 .restaurant .details,
 .pastry .details {
     width: 95%;
+    border: 1.5px solid #000;
     height: auto;
-    border: .5px solid #024;
     padding: 5px 15px;
     position: absolute;
     content: "";
@@ -510,6 +518,7 @@ h1 {
     transition: all 0.6s ease-in;
     font-size: 18px;
     border-radius: 24px;
+    box-shadow: 4px 8px 8px #000;
     background: -moz-linear-gradient(135deg, #056 5%, #800 100%);
     background: -webkit-linear-gradient(135deg, #056 5%, #800 100%);
     background: linear-gradient(90deg, #400, #600, #800, #800, #600, #400 );
@@ -522,11 +531,6 @@ h1 {
     transform: translate(-50%, -50%) rotateY(0deg);
     opacity: 1;
 }
-
-.cafe .details .Btn1{
-    margin-top: 25px;
-}
-
 
 #Btn {
     margin: 20px 0 0 20%;
@@ -549,12 +553,21 @@ h1 {
 }
 
 .Btn1{
+    transition: .3s;
     cursor: pointer;
     padding: 2px 20px;
     color: white;
     border-radius: 30px;
-    border: 2px solid #068;
+    border: 1.5px solid #068;
     background: repeating-linear-gradient(to top, #022, #058, #0d888f 100%);
+    box-shadow: 2px 4px 8px #000, -2px 4px 8px #000;
+}
+
+.Btn1:hover{
+    transition: .3s;
+    color: #0ac;
+    text-shadow: 1px 1px 0 white, -1px -1px 0 black, 1px -1px 0 black, -1px 1px 0 black, 1px 1px 0 black;
+    box-shadow: 2px 4px 8px #800, -2px 4px 8px #800;
 }
 
 #Btn:hover {
@@ -910,7 +923,7 @@ input[type=submit]:hover {
     width: 33%;
     color: white;
     text-align: center;
-    background: url(Holo-2.jpeg);
+    background: url(Holo-4.jpeg);
     background-size: 100% 100%;
     border-radius: 20px;
     box-shadow: 4px 6px 8px #000;
@@ -1056,7 +1069,7 @@ h6{
     
     .services{
         flex-direction: row;
-        margin: 150px 10px 50px 0;
+        margin: 150px 10px 70px 0;
         padding: 0;
     }
     
@@ -1143,6 +1156,15 @@ h6{
     .items{
         width: 60%;
         padding: 30px 0px 20px 80px;
+    }
+    
+    #info h1{
+        width: 500px;
+        background: #700;
+        margin: -30px auto;
+        border-radius: 50px;
+        padding: 6px 0px;
+        box-shadow: 2px 2px 4px #000;
     }
     
     .plans{
@@ -1429,7 +1451,7 @@ h6{
         width: 275px;
         border-radius: 50%;
         padding: 30px;
-        box-shadow: 4px 8px 10px #000;
+        box-shadow: 4px 4px 8px #000;
         border: 2px solid #000;
     }
     
@@ -1465,7 +1487,11 @@ h6{
     }
     
     .Btn1{
-        float: left;
+        position: fixed;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        bottom: 5px;
         margin: -11px 0 0 30%;
         padding: 2px 20px;
     }
@@ -1558,6 +1584,15 @@ h6{
     .items h4{
         margin-left: 0px;
     }
+    
+    #info h1{
+        width: 550px;
+        background: #700;
+        margin: -30px auto;
+        border-radius: 50px;
+        padding: 6px 0px;
+        box-shadow: 2px 2px 4px #000;
+    }
 }
 
 @media (min-width: 1000px) and (max-width: 1200px) {
@@ -1580,6 +1615,16 @@ h6{
     .website{
         margin-bottom: 50px;
     }
+    
+    #info h1{
+        width: 700px;
+        background: #700;
+        margin: -30px auto;
+        border-radius: 50px;
+        padding: 6px 0px;
+        box-shadow: 2px 2px 4px #000;
+    }
+
 }
 
 @media (min-width: 1200px){
