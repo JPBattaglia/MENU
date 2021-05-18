@@ -261,6 +261,7 @@ li{
 }
 
 li a{
+    padding: 5px 0;
     text-decoration: none;
     text-shadow: 1px 1px 0 #000, -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000;
     text-decoration: none;
@@ -270,9 +271,8 @@ li a{
 li a:hover{
     padding: 5px 0;
     transition: .5s;
-    color: #0ff;
-    text-shadow: 1px 1px 0 black, -1px -1px 0 black, 1px -1px 0 black, -1px 1px 0 black, 1px 1px 0 black;
-    border-bottom: 8px double #0df;
+    color: #0bd;
+    text-shadow: 1px 1px 0 #fff, -1px -1px 0 #fff, 1px -1px 1px #fff, -1px 1px 0 #fff, 1px 1px 0 #fff;
 }
 
 #stage {
@@ -507,7 +507,7 @@ h1 {
     width: 95%;
     border: 1.5px solid #000;
     height: auto;
-    padding: 5px 15px;
+    padding: 5px 15px 10px;
     position: absolute;
     content: "";
     top: 50%;
@@ -923,10 +923,10 @@ input[type=submit]:hover {
     width: 33%;
     color: white;
     text-align: center;
-    background: url(Holo-4.jpeg);
-    background-size: 100% 100%;
     border-radius: 20px;
-    box-shadow: 4px 6px 8px #000;
+    background: #046;
+    box-shadow: inset 6px 6px 12px #002230,
+            inset -6px -6px 12px #0088be;
 }
 
 .plans h1{
@@ -1077,6 +1077,8 @@ h6{
         flex-direction: column;
         width: 100%;
     }
+    
+    
     .cafe,
     .restaurant,
     .pastry {
@@ -1160,7 +1162,7 @@ h6{
     
     #info h1{
         width: 500px;
-        background: #700;
+        background: linear-gradient(to top, #500, #800, #500);
         margin: -30px auto;
         border-radius: 50px;
         padding: 6px 0px;
@@ -1349,7 +1351,7 @@ h6{
     h1 {
         width: 300px;
         font-size: 18px;
-        background: #700;
+        background: linear-gradient(to top, #600, #900, #900, #600);
         margin: -15px auto;
         border-radius: 50px;
         padding: 6px 0px;
@@ -1586,8 +1588,8 @@ h6{
     }
     
     #info h1{
-        width: 550px;
-        background: #700;
+        width: 500px;
+        background: linear-gradient(to top, #500, #800, #500);
         margin: -30px auto;
         border-radius: 50px;
         padding: 6px 0px;
@@ -1618,7 +1620,7 @@ h6{
     
     #info h1{
         width: 700px;
-        background: #700;
+        background: linear-gradient(to top, #500, #800, #500);
         margin: -30px auto;
         border-radius: 50px;
         padding: 6px 0px;
