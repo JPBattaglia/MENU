@@ -536,16 +536,16 @@ h1 {
 }
 
 #Btn {
-    margin: 20px 0 0 20%;
+    margin: 26px 0 0 20%;
     transition: .5s;
     color: #ffeecc;
     padding: 5px 0px;
     background: repeating-linear-gradient(to top, #022, #058, #0d888f 100%);
-    width: 220px;
+    width: 185px;
     border-radius: 30px;
-    font-family: 'Orbitron';
+    font-family: 'lexend deca';
     font-weight: bolder;
-    font-size: 18px;
+    font-size: 15px;
     border: .5px solid #0b7075;
     box-shadow: 2px 8px 10px #000, -2px 8px 10px #000;
     text-shadow: 1px 1px 0 black, -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000;
@@ -993,8 +993,7 @@ h6{
     #Btn {
         font-size: 12px;
         width: 150px;
-        margin-left: 20%;
-        margin-top: 30px;
+        margin: 30px 12%;
     }
     
     .sidenav .closebtn{
@@ -1190,7 +1189,7 @@ h6{
     .contentBox .imgBx img{
         position: relative;
         top: 45px;
-        width: 180px;
+        width: 175px;
         height: 230px;
     }
     
@@ -1204,9 +1203,9 @@ h6{
     }
     
     .contentBox .content p{
-        font-size: 20px;
+        font-size: 17px;
         margin: 0px auto 10px;
-        font-family: 'Kanit';
+        font-family: 'lexend deca';
         font-weight: bolder;
         line-height: 1.3;
     }
@@ -1214,7 +1213,7 @@ h6{
     .contentBox .content h3{
         font-weight: bolder;
         font-size: 45px;
-        margin: 0;
+        margin: -10px 0 0;
     }
     
     .contentBox .content h2{
@@ -1225,11 +1224,11 @@ h6{
     .contentBox .content a{
         margin: 10px auto 0;
         font-weight: bolder;
+        font-size: 18px;
     }
-        
     
     .closex{
-        top:-2px;
+        top:-6px;
         right: -20px;
         background-size: 10px;
         background-position: center;
@@ -1698,12 +1697,24 @@ h6{
         padding: 10px 0px;
         font-size: 26px;
     }
+    
+    #Btn{
+        margin-left: 15%;
+        font-size: 14px;
+        width: 160px;
+    }
 }
 
-@media (min-width: 1000px) and (max-width: 1200px) {
+@media (min-width: 1001px) and (max-width: 1200px) {
     li{
-        margin: 0 15px;
-        font-size: 18px;   
+        margin: 0 28px;
+        font-size: 24px;   
+    }
+    
+    #Btn{
+        margin-left: 12%;
+        font-size: 14px;
+        width: 150px;
     }
     
     .items{
@@ -1711,7 +1722,7 @@ h6{
     }
 }
 
-@media (min-width: 1000px) {
+@media (min-width: 1001px) {
     .navicon,
     .mobile{
         display: none;
@@ -1736,12 +1747,14 @@ h6{
 @media (min-width: 1200px){
     li{
         margin-left: 28px;
+        font-size: 24px;
     }
 }
 
 @media (min-width: 1300px){
     li a{
         margin-left: 28px;
+        font-size: 26px;
     }
 }
 
