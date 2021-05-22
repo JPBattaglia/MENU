@@ -226,20 +226,43 @@ body {
     text-decoration: none;
 }
 
+.burger{
+    float: right;
+    margin: 30px 20px 0 0;
+}
+
+span{
+    display: block;
+    width: 43px;
+    height: 7px;
+    margin-bottom: 5px;
+    background: linear-gradient(to left, #034, #079, #0bd, #0df, #0bd, #079, #034);
+    z-index: 1;
+    box-shadow: 2px 2px 2px #800;
+    border: .5px solid #000;
+}
+
+#top{
+    border-top-right-radius: 5px;
+    border-top-left-radius: 5px;
+}
+
+#middle{
+    border-radius: 3px;
+}
+
+#bottom{
+    border-bottom-right-radius: 5px;
+    border-bottom-left-radius: 5px;
+}
+
 .navicon {
     float: right;
     width: 44px;
     height: 35px;
     margin: 28px 20px 10px 0;
     cursor: pointer;
-    filter: drop-shadow(2px 4px 1px #010);
-}
-
-.navicon1 {
-    width: 30px;
-    height: 4px;
-    margin: 5px;
-    background: white;
+    filter: drop-shadow(0px 0px 0px #000);
 }
 
 ul, li{
@@ -793,7 +816,7 @@ input[type=submit]:hover {
 }
 
 .cform input[type=submit]{
-    width: 30%;
+    width: 25%;
     margin-top: 50px;
     margin-bottom: -100px;
 }
@@ -1263,6 +1286,10 @@ h6{
         height: auto;
     }
     
+    .cform input[type=submit]{
+        width: 30%;
+    }
+    
 }
 
 /*=======================================*/
@@ -1392,11 +1419,15 @@ h6{
         margin: 85px auto;
     }
     
-    .navicon {
+    .burger {
         float: right;
-        width: 40px;
-        height: 34px;
-        margin: 22px 15px;
+        margin: -60px 15px 0 0;
+    }
+    
+    span{
+        width: 35px;
+        height: 6px;
+        margin: 3px;
     }
     
     .logo{
@@ -1488,7 +1519,6 @@ h6{
     .pandemic{
         width: 300px;
         height: 200px;
-        margin-top: 40px;
         background: url(Coronav.jpeg) 250% 1%;
     }
     
@@ -1501,6 +1531,8 @@ h6{
     
     .presence{
         background: url(Presence.jpeg);
+        margin: 20px auto;
+        
     }
     
     .media{
@@ -1517,7 +1549,6 @@ h6{
     .presence, .media{
         width: 300px;
         height: 200px;
-        margin-top: 40px;
         background-size: 130% 100%;
     }
     
@@ -1528,8 +1559,13 @@ h6{
         margin-top: 20px;
     }
     
+    .presence, .pandemic, .media{
+        border: .5px solid #000;
+        margin-top: 30px;
+    }
+    
     #info {
-        margin-top: 15px;
+        margin-top: 16px;
         flex-direction: column;
         max-width: 100%;
         padding-bottom: 10px;
@@ -1541,7 +1577,7 @@ h6{
                     inset 16px 16px 32px #da0000;
         width: 310px;
         font-size: 17px;
-        padding: 10px;
+        padding: 7px;
     }
     
     .cafe,
@@ -1618,7 +1654,7 @@ h6{
     
     .cform h2{
         font-family: 'federant';
-        margin: 15px 0 0px 0;
+        margin: 25px auto 10px;
         font-size: 27px;
     }
     
@@ -1631,6 +1667,7 @@ h6{
     .cform textarea, .cform input[type=text]{
     width: 80%;
     margin: 15px 0;
+        padding: 3px;
     }
     
     .cform input[type=submit]{
@@ -1723,7 +1760,7 @@ h6{
 }
 
 @media (min-width: 1001px) {
-    .navicon,
+    .burger,
     .mobile{
         display: none;
     }
@@ -1737,17 +1774,20 @@ h6{
         background: #880000;
         box-shadow: inset -16px -16px 32px #360000,
                     inset 16px 16px 32px #da0000;
-        margin: -30px auto;
+        margin: -25px auto;
         border-radius: 50px;
-        padding: 12px 0px;
+        padding: 5px 0px;
     }
-
 }
 
 @media (min-width: 1200px){
     li{
         margin-left: 28px;
         font-size: 24px;
+    }
+    
+    .cform input[type=submit]{
+        width: 20%;
     }
 }
 
