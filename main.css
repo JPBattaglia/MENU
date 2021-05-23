@@ -1460,9 +1460,9 @@ h6{
     }
     
     .burger span{
-        width: 38px;
+        width: 35px;
         height: 6px;
-        margin: 4.5px;
+        margin: 4px;
     }
     
     #top{
@@ -1478,19 +1478,19 @@ h6{
     .logo{
         width: 100%;
         display: flex;
+        margin-top: -7px;
+        width: 100px;
     }
     
     .logo img{
-        height: 24px;
-        margin-left: 14%;
-        margin-top: -50px;
-        width: 100px;
+        height: 24px;  
     }
     
     .logoburger {
         width: 38px;
         height: 38px;
         margin: 18px 5px;
+        filter: drop-shadow(1px 1px 0px #000);
     }
     
     #stage {
