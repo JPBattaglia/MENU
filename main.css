@@ -236,7 +236,7 @@ body {
     width: 43px;
     height: 7px;
     margin-bottom: 5px;
-    background: linear-gradient(to left, #034, #079, #0bd, #0df, #0bd, #079, #034);
+    background: linear-gradient(to left, #034, #068, #09b, #0cf, #09b, #068, #034);
     z-index: 1;
     box-shadow: 2px 2px 2px #800;
     border: .5px solid #000;
