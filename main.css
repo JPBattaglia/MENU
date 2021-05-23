@@ -1303,6 +1303,20 @@ h6{
     .consult{
         margin: 0px 50%;
     }
+    
+    .presence h2{
+        padding: 15px 6px 0 355px;
+        width: 100%;
+    }
+    
+    .pandemic h2{
+        padding: 45px 25px;
+    }
+    
+    .media  h2{
+        padding: 5px 4px 0 310px;
+        width: 100%;
+    }
 }
 
 /*=======================================*/
@@ -1439,8 +1453,8 @@ h6{
     
     .burger span{
         width: 38px;
-        height: 7px;
-        margin: 3px;
+        height: 6px;
+        margin: 4.5px;
     }
     
     #top{
@@ -1548,7 +1562,7 @@ h6{
     .pandemic h2{
         width: 300px;
         font-size: 18px;
-        padding: 20px;
+        padding: 30px 20px;
         margin-top: 10px;
     }
     
@@ -1565,7 +1579,7 @@ h6{
     .media h2{
         width: 300px;
         font-size: 18px;
-        padding: 20px;
+        padding: 30px;
         margin-top: 10px;
     }
     
@@ -1578,12 +1592,11 @@ h6{
     .presence h2{
         width: 300px;
         font-size: 18px;
-        padding: 20px;
+        padding: 40px 20px;
         margin-top: 20px;
     }
     
     .presence, .pandemic, .media{
-        border: .5px solid #000;
         margin-top: 30px;
     }
     
@@ -1598,7 +1611,7 @@ h6{
         background: #880000;
         box-shadow: inset -16px -16px 32px #360000,
                     inset 16px 16px 32px #da0000;
-        width: 310px;
+        width: 300px;
         font-size: 17px;
         padding: 4px;
         margin-top: -12px;
@@ -1764,6 +1777,20 @@ h6{
         font-size: 14px;
         width: 160px;
     }
+    
+    .presence h2{
+        padding: 15px 6px 0 355px;
+        width: 100%;
+    }
+    
+    .pandemic h2{
+        padding: 45px 25px;
+    }
+    
+    .media  h2{
+        padding: 5px 4px 0 310px;
+        width: 100%;
+    }
 }
 
 @media (min-width: 1001px) and (max-width: 1200px) {
@@ -1801,6 +1828,25 @@ h6{
         margin: -25px auto;
         border-radius: 50px;
         padding: 5px 0px;
+    }
+    
+    .presence h2{
+        padding: 35px 20px 0 520px;
+        width: 100%;
+    }
+    
+    .pandemic h2{
+        padding: 35px 500px 0 60px;
+        width: 100%
+    }
+    
+    .media  h2{
+        padding: 35px 34px 0 500px;
+        width: 100%;
+    }
+    
+    .consult{
+        margin: 25px 32%;
     }
 }
 
