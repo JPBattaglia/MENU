@@ -799,10 +799,16 @@ input[type=submit]:hover {
     height: 100px;
 }
 
+.cform select{
+    color: deepskyblue;
+    background: #fff;
+}
+
 .cform textarea, .cform input[type=text]{
     width: 60%;
     margin: 50px 0 0 0;
-    color: white;
+    color: deepskyblue;
+    background: #fff;
 }
 
 .cform textarea:hover, .cform input[type=text]:hover,.cform selct:hover{
