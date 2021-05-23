@@ -1280,7 +1280,7 @@ h6{
         background: #880000;
         box-shadow: inset -16px -16px 32px #360000,
                     inset 16px 16px 32px #da0000;
-        margin: -25px auto;
+        margin: -15px auto;
         border-radius: 50px;
         padding: 2px 0px;
     }
@@ -1489,7 +1489,7 @@ h6{
     .logoburger {
         width: 40px;
         height: 40px;
-        margin: 20px 10px;
+        margin: 18px 10px;
     }
     
     #stage {
@@ -1778,7 +1778,7 @@ h6{
         background: #880000;
         box-shadow: inset -16px -16px 32px #360000,
                     inset 16px 16px 32px #da0000;
-        margin: -25px auto;
+        margin: -20px auto;
         border-radius: 50px;
         padding: 5px 0px;
         font-size: 26px;
@@ -1837,9 +1837,9 @@ h6{
         background: #880000;
         box-shadow: inset -16px -16px 32px #360000,
                     inset 16px 16px 32px #da0000;
-        margin: -25px auto;
+        margin: -22px auto;
         border-radius: 50px;
-        padding: 2px 0px;
+        padding: 0px 0px;
     }
     
     .presence h2{
