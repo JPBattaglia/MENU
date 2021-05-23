@@ -1481,15 +1481,15 @@ h6{
     }
     
     .logo img{
-        margin-left: 16%;
+        margin-left: 12%;
         margin-top: -52px;
         width: 100px;
     }
     
     .logoburger {
-        width: 40px;
-        height: 40px;
-        margin: 18px 10px;
+        width: 35px;
+        height: 35px;
+        margin: 22px 5px;
     }
     
     #stage {
@@ -1664,20 +1664,13 @@ h6{
     }
     
     .consult{
-        margin: -63px 52%;
+        margin: -55px 46%;
     }
     
     #Btn {
         font-size: 8px;
-        width: 85px;
+        width: 100px;
         box-shadow: 2px 4px 10px #000;
-        padding: 10px 15px 15px 10px;
-        border-radius: 100%;
-        margin: -15px 0 0 0;
-    }
-    
-    #Btn:hover{
-        padding: 10px 15px 15px 10px;
     }
     
     .Btn1{
