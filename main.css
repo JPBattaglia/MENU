@@ -228,6 +228,7 @@ body {
 }
 
 .burger{
+    transition: 1.5s;
     float: right;
     margin: 30px 20px 0 0;
 }
@@ -239,8 +240,13 @@ body {
     margin-bottom: 5px;
     background: linear-gradient(to left, #034, #068, #09b, #0cf, #09b, #068, #034);
     z-index: 1;
-    box-shadow: 2px 2px 2px #800;
+    box-shadow: 1px 1.5px 2px #800;
     border: .5px solid #000;
+}
+
+.burger:hover{
+    filter: drop-shadow(0px 0px 10px #0ac);
+    transition: 1.5s;
 }
 
 #top{
