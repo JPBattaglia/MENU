@@ -267,13 +267,15 @@ body {
 
 ul, li{
     float:right;
-    display: block;
+    display: flex;
+    flex-direction: row;
     text-decoration: none;
     color: white;
 }
 
 ul{
-    margin-top: 30px;
+    margin-top: 25px;
+    width: 45%;
 }
 
 li{
@@ -556,13 +558,17 @@ h1 {
     opacity: 1;
 }
 
+.consult{
+    width: 150px;
+    margin: 30px 0 0 40%;
+}
+
 #Btn {
-    margin: 26px 0 0 20%;
     transition: .5s;
     color: #ffeecc;
     padding: 5px 0px;
     background: repeating-linear-gradient(to top, #022, #058, #0d888f 100%);
-    width: 185px;
+    width: 175px;
     border-radius: 30px;
     font-family: 'lexend deca';
     font-weight: bolder;
@@ -1294,6 +1300,9 @@ h6{
         width: 30%;
     }
     
+    .consult{
+        margin: 0px 50%;
+    }
 }
 
 /*=======================================*/
@@ -1636,7 +1645,7 @@ h6{
     #Btn {
         font-size: 8px;
         width: 100px;
-        margin-left: 12%;
+        margin: 0 12%;
     }
     
     .Btn1{
@@ -1751,7 +1760,7 @@ h6{
     }
     
     #Btn{
-        margin-left: 15%;
+        margin: 0 15%;
         font-size: 14px;
         width: 160px;
     }
@@ -1766,7 +1775,7 @@ h6{
     #Btn{
         margin-left: 12%;
         font-size: 14px;
-        width: 150px;
+        width: 160px;
     }
     
     .items{
