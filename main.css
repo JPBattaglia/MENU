@@ -1650,6 +1650,12 @@ h6{
         height: 173px;
     }
     
+    .cafe .details p,
+    .restaurant .details p,
+    .pastry .details p{
+        margin: 7px 5px;
+    }
+    
     .cafe:hover,
     .restaurant:hover,
     .pastry:hover {
@@ -1661,12 +1667,9 @@ h6{
         margin-bottom: 50px;
     }
     
-    .cafe .details p{
-        margin-bottom: 6px;
-    }
-    
     .consult{
         margin: -55px 50%;
+        width: 110px;
     }
     
     #Btn {
@@ -1680,9 +1683,9 @@ h6{
         display: flex;
         align-items: center;
         justify-content: center;
-        bottom: 5px;
+        bottom: 15px;
         margin: -11px 0 0 30%;
-        padding: 2px 20px;
+        padding: 1px 20px;
     }
     
     .restaurant img {
