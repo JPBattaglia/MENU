@@ -65,17 +65,19 @@ html {
 }
 
 .contentBox .content h3{
+    
     letter-spacing: -2px;
-    color: #800;
+    color: #e00;
     line-height: 1.5em;
     font-size: 3.2em;
     font-weight: bolder;
+    text-shadow: 2px 2px 2px #000;
 }
 
 .contentBox .content h2{
     letter-spacing: 3px;
     font-size: 4.5em;
-    color: #079;
+    color: #0ac;
     line-height: .8em;
     font-family: 'righteous';
     text-shadow: 2px 2px 2px #000;
@@ -86,6 +88,7 @@ html {
     font-size: .8em;
     text-transform: uppercase; 
     font-weight: bolder;
+    text-shadow: 0px 1px 0px #000;
 }
 
 .contentBox .content p{
@@ -101,7 +104,7 @@ html {
 
 .contentBox .content a{
     transition: .5s;
-    font-family: 'Orbitron';
+    font-family: 'Lexend Deca';
     font-weight: bolder;
     display: inline-block;
     padding: 10px 20px 8px;
@@ -744,10 +747,6 @@ textarea {
     border-radius: 25px;
     box-shadow: 0px 5px 25px black;
     text-shadow: 1px 1px 0 black, -1px -1px 0 black, 1px -1px 0 black, -1px 1px 0 black, 1px 1px 0 black;
-    -webkit-transition: background-color 1s ease-out;
-    -moz-transition: background-color 1s ease-out;
-    -o-transition: background-color 1s ease-out;
-    transition: background-color 1s ease-out;
 }
 
 .cform input[type=submit]:hover{
@@ -1132,7 +1131,7 @@ h6{
     
     .contentBox{
         margin-top: 70px;
-        width: 350px;
+        width: 400px;
         height: auto;
         flex-direction: column;
     }
@@ -1151,7 +1150,7 @@ h6{
     .contentBox .imgBx img{
         position: relative;
         top: 45px;
-        width: 175px;
+        width: 185px;
         height: 230px;
     }
     
@@ -1181,6 +1180,7 @@ h6{
     .contentBox .content h2{
         font-family: 'righteous';
         font-weight: bolder;
+        width: 300px;
     }
     
     .contentBox .content a{
@@ -1313,7 +1313,7 @@ h6{
     .contentBox .imgBx img{
         position: relative;
         top: 40px;
-        max-width: 175px;
+        max-width: 160px;
         height: 200px;
     }
     
@@ -1336,7 +1336,7 @@ h6{
     
     .contentBox .content h3{
         font-weight: bolder;
-        font-size: 35px;
+        font-size: 40px;
         margin: 0;
     }
     
