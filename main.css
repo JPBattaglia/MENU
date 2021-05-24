@@ -1722,6 +1722,7 @@ h6{
     
     .cform{
         width: 85%;
+        height: 95%;
         margin: 100px auto 0px;
         border: 6px double #068;
     }
