@@ -245,6 +245,7 @@ body {
 }
 
 .burger:hover{
+    cursor: pointer;
     filter: drop-shadow(0px 0px 10px #0ac);
     transition: 1.5s;
 }
@@ -593,7 +594,7 @@ h1 {
 .Btn1{
     transition: .3s;
     cursor: pointer;
-    padding: 2px 20px;
+    padding: 1px 20px;
     color: white;
     border-radius: 30px;
     border: 1.5px solid #068;
@@ -605,7 +606,7 @@ h1 {
     transition: .3s;
     color: #0ac;
     text-shadow: 1px 1px 0 white, -1px -1px 0 black, 1px -1px 0 black, -1px 1px 0 black, 1px 1px 0 black;
-    box-shadow: 2px 4px 8px #800, -2px 4px 8px #800;
+    box-shadow: 2px 2px 8px #800, -2px 2px 8px #f00;
 }
 
 #Btn:hover {
@@ -765,7 +766,7 @@ input[type=submit]:hover {
     color: #009999;
     border-radius: 25px;
     text-shadow: 1px 1px 0 white, -1px -1px 0 black, 1px -1px 0 black, -1px 1px 0 black, 1px 1px 0 black;
-    box-shadow: 0px 5px 25px #009999;
+    box-shadow: 0px 5px 25px #0cf;
 }
 
 .close {
@@ -837,6 +838,11 @@ input[type=submit]:hover {
     width: 25%;
     margin-top: 50px;
     margin-bottom: -100px;
+}
+
+.cform input[type=submit]:hover{
+    box-shadow: 0px 5px 25px #0df;
+    text-shadow: 1px 1px 0 #fff, -1px -1px 0 black, 1px -1px 0 black, -1px 1px 0 black, 1px 1px 0 #fff;
 }
 
 .cform select{
@@ -960,6 +966,7 @@ input[type=submit]:hover {
 
 .items h4{
     font-family: 'federant';
+    color: #fff;
 }
 
 .basic, .pro, .prime{
@@ -1000,7 +1007,7 @@ h6{
 }
 
 #footer {
-    position: relative;
+    position: fixed;
     width: 100%;
     margin: -20px auto;
     bottom: 0;
@@ -1306,6 +1313,7 @@ h6{
     
     .cform input[type=submit]{
         width: 30%;
+        margin: 30px;
     }
     
     .consult{
@@ -1425,7 +1433,7 @@ h6{
     }
     
     .contentBox .content a{
-        margin: 10px auto 0;
+        margin: 10px auto;
         font-weight: bolder;
     }
         
@@ -1476,20 +1484,20 @@ h6{
     }
     
     .logo{
-        width: 100%;
         display: flex;
-        margin-top: -7px;
+        margin-top: -5px;
         width: 100px;
     }
     
     .logo img{
-        height: 24px; 
+        height: 20px; 
+        width: 85px;
         filter: drop-shadow(2px 3px 1px #000);
     }
     
     .logoburger {
-        width: 38px;
-        height: 38px;
+        width: 35px;
+        height: 35px;
         margin: 18px 5px;
         filter: drop-shadow(1px 1px 0px #000);
     }
@@ -1668,7 +1676,7 @@ h6{
     }
     
     .consult{
-        margin: -55px 50%;
+        margin: -55px 46%;
         width: 110px;
     }
     
@@ -1726,11 +1734,12 @@ h6{
     
     .cform input[type=submit]{
         width: 150px;
-        margin: 20px 0 -200px 0 ;
+        margin: 10px auto 30px;
     }
     
     .cform select{
         margin: 10px;
+        padding: 3px 20px;
         width: 50%;
     }
     
@@ -1808,6 +1817,26 @@ h6{
         padding: 5px 4px 0 310px;
         width: 100%;
     }
+    
+    .cform input[type=submit]{
+        margin-bottom: 50px;
+    }
+    
+    .star{
+        width: 70px;
+        height: 70px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border: 2px solid #0ac;
+    }
+    
+    .star img{
+        width: 50px;
+        height: 50px;
+        margin: 0 auto 5px;
+        
+    }
 }
 
 @media (min-width: 1001px) and (max-width: 1200px) {
@@ -1864,6 +1893,10 @@ h6{
     
     .consult{
         margin: 25px 32%;
+    }
+    
+    .cform input[type=submit]{
+        margin-bottom: 50px;
     }
 }
 
