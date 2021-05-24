@@ -620,40 +620,6 @@ h1 {
     box-shadow: 2px 6px 10px #057, -2px 6px 10px #057;
 }
 
-.modalDialog {
-    margin: auto;
-    position: fixed;
-    top: 0px;
-    right: 0px;
-    bottom: 0px;
-    left: 0px;
-    background: rgba(0, 0, 0, 0.8);
-    z-index: 99999;
-    opacity: 0;
-    -webkit-transition: opacity 600ms ease-in;
-    -moz-transition: opacity 600ms ease-in;
-    transition: opacity 400ms ease-in;
-    pointer-events: none;
-}
-
-.modalDialog:target {
-    opacity: 1;
-    pointer-events: auto;
-}
-
-.modalDialog>div {
-    text-align: center;
-    width: 500px;
-    position: relative;
-    margin: 100px auto;
-    padding: 1px 20px 1px 20px;
-    border-radius: 20px;
-    background: url(MENUBCKGRND.png);
-    background-size: 100% 100%;
-    border: #066 double 2px;
-    max-width: 100%;
-}
-
 
 .cform label {
     font-size: 20px;
@@ -733,7 +699,7 @@ textarea {
 }
 
 .cform{
-    margin: 140px auto;
+    margin: 140px auto 0;
     width: 60%;
     text-align: center;
     border: 5px solid #068;
