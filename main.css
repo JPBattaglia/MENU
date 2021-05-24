@@ -1007,9 +1007,9 @@ h6{
 }
 
 #footer {
-    position: fixed;
+    position: relative;
     width: 100%;
-    margin: -20px auto;
+    margin: 20px auto;
     bottom: 0;
     z-index: -1;
 }
@@ -1722,7 +1722,6 @@ h6{
     
     .cform{
         width: 85%;
-        height: 95%;
         margin: 100px auto 0px;
         border: 6px double #068;
     }
@@ -1774,7 +1773,7 @@ h6{
     
     #footer{
         position:relative;
-        margin-top: 40px;
+        margin: 50px auto 0px;
     }
 }
 
