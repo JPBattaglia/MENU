@@ -1165,6 +1165,10 @@ h6{
         padding: 30px 0px 0px 120px;
     }
     
+    .items h4{
+        font-size: 22px;
+    }
+    
     .contentBox{
         margin-top: 70px;
         width: 400px;
