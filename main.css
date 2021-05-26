@@ -412,7 +412,7 @@ h1 {
     box-shadow: 4px 6px 8px #000;
 }
 
-.pandemic h2{
+.pandemic h2 {
     margin-top: 40px;
     color: #fff;
     font-family: 'Federant';
@@ -423,15 +423,32 @@ h1 {
         1px 1px 0px #0bd;
 }
 
+.media h2{
+    margin-top: 40px;
+    margin-left: -450px;
+    color: #fff;
+    font-family: 'Federant';
+    font-size: 24px;
+    width: 350px;
+    padding-left: 65px;
+    text-shadow: 
+        1px 1px 0px #000;
+}
+
 .presence{
     background: url(Presence.jpeg);
 }
 
 .media{
-    background: url(Online.jpeg) 80% 25%;
+    background: url(Online.jpeg) 20% 30%;
 }
 
-.presence, .media{
+.commerce{
+    background: url(Ecommerce.jpg);
+    background-size: 100% 110%;
+}
+
+.presence, .media, .commerce{
     width: 800px;
     height: 300px;
     margin: 75px auto;
@@ -439,7 +456,7 @@ h1 {
     box-shadow: 4px 6px 8px #000;
 }
 
-.presence h2, .media h2{
+.presence h2{
     margin-top: 40px;
     color: #fff;
     font-family: 'Federant';
@@ -450,6 +467,21 @@ h1 {
     text-shadow: 
         2px 1px 0px #000;
 }
+
+.commerce h2{
+    margin-top: 40px;
+    color: #fff;
+    font-family: 'Federant';
+    font-size: 24px;
+    width: 800px;
+    padding-top: 30px;
+    padding-left: 495px;
+    padding-right: 20px;
+    text-shadow: 
+        2px 1px 0px #000;
+}
+
+
 
 #intro {
     width: 100%;
@@ -986,7 +1018,11 @@ h6{
     
     .media{
         width: 550px;
-        background: url('Online.jpeg') 65% 25%;
+        background: url('Online.jpeg') 32% 45%;
+    }
+    
+    .commerce{
+        width: 550px;
     }
     
     .presence h2{
@@ -1244,8 +1280,14 @@ h6{
     }
     
     .media  h2{
-        padding: 5px 4px 0 310px;
+        padding: 5px 40px 0 310px;
         width: 100%;
+        margin-left: -290px;
+    }
+    
+    .commerce h2{
+        width: 100%;
+        padding: 10px 10px 10px 300px;
     }
 }
 
@@ -1491,7 +1533,7 @@ h6{
         background: url(Coronav.jpeg) 250% 1%;
     }
     
-    .pandemic h2{
+    .pandemic h2, .commerce h2{
         width: 300px;
         font-size: 18px;
         padding: 30px 20px;
@@ -1504,18 +1546,24 @@ h6{
         
     }
     
+    .commerce{
+        background: url(Ecommerce.jpg);
+        width: 300px;
+        height: 200px;
+    }
+    
     .media{
         background: url(Online.jpeg);
     }
     
     .media h2{
         width: 300px;
+        margin: 0;
         font-size: 18px;
-        padding: 30px;
-        margin-top: 10px;
+        padding: 30px 20px;
     }
     
-    .presence, .media{
+    .presence, .media, .commerce{
         width: 300px;
         height: 200px;
         background-size: 130% 100%;
@@ -1528,15 +1576,20 @@ h6{
         margin-top: 20px;
     }
     
-    .presence, .pandemic, .media{
+    .presence, .pandemic, .media, .commerce{
         margin-top: 30px;
+    }
+    
+    .media{
+        margin-top: 100px;
     }
     
     #info {
         margin-top: 16px;
         flex-direction: column;
         max-width: 100%;
-        padding-bottom: 10px;
+        padding-bottom: 100px;
+        
     }
     
     #info h1{
@@ -1708,7 +1761,12 @@ h6{
     }
     
     .media  h2{
-        padding: 5px 4px 0 310px;
+        width: 100%;
+        margin-left: -250px;
+    }
+    
+    .commerce h2{
+        padding: 10px 10px 0 300px;
         width: 100%;
     }
     
@@ -1800,6 +1858,10 @@ h6{
     .cform input[type=submit]{
         margin: 50px auto;
         width: 25%;
+    }
+    
+    #footer{
+        margin: -20px;
     }
 }
 
