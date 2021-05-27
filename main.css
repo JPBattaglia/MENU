@@ -8,6 +8,28 @@ html {
     overflow: auto;
 }
 
+.splash{
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100vh;
+    background: #590b22;
+    z-index: 999999999999999;
+}
+
+.splash.display-none{
+    position: fixed;
+    opacity: 0;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100vh;
+    background: #691027;
+    z-index: -9999;
+    transition: all 1.5s;
+}
+
 .popup{
     position: fixed;
     top: 50%;
