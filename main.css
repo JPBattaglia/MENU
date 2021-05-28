@@ -1327,17 +1327,25 @@ h6{
 
 @media (max-width: 600px) {
     label,
-    .splash,
     .desktop,
     ul,
     article {
         display: none;
     }
     
+    .splash{
+        padding-bottom: 50px;
+        width: 160%;
+        position: absolute;
+        left: 50%;
+        transform: translateX(-50%);
+    }
+    
     .plans{
         width: 90%;
         margin: auto;
     }
+    
     .prime{
         margin-bottom: 100px;
     }
