@@ -1309,7 +1309,8 @@ h6{
     .media  h2{
         padding: 5px 40px 0 310px;
         width: 100%;
-        margin-left: -290px;
+        margin-left: -270px;
+        padding: 20px 50px 10px 285px;
     }
     
     .commerce h2{
@@ -1596,7 +1597,7 @@ h6{
         width: 300px;
         margin: 0;
         font-size: 18px;
-        padding: 30px 20px;
+        padding: 30px 35px;
     }
     
     .presence, .media, .commerce{
@@ -1799,6 +1800,7 @@ h6{
     .media  h2{
         width: 100%;
         margin-left: -250px;
+        padding: 20px 50px 10px 257px;
     }
     
     .commerce h2{
