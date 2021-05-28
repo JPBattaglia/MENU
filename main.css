@@ -1327,6 +1327,7 @@ h6{
 
 @media (max-width: 600px) {
     label,
+    .splash,
     .desktop,
     ul,
     article {
