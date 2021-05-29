@@ -66,7 +66,7 @@ html {
     height: 260px;
     background: #068;
     border-radius: 50%;
-    box-shadow: 4px 6px 8px #000;
+    box-shadow: 6px 8px 15px #000;
 }
 
 .contentBox .imgBx img{
@@ -83,26 +83,32 @@ html {
     display: flex;
     justify-content: center;
     align-items: center; 
-    padding: 10px;
+    padding: 0px;
 }
 
 .contentBox .content h3{
-    
+    margin-bottom: -5px;
     letter-spacing: -2px;
     color: #e00;
     line-height: 1.5em;
-    font-size: 3.2em;
+    font-size: 3.3em;
     font-weight: bolder;
     text-shadow: 2px 2px 2px #000;
 }
 
 .contentBox .content h2{
-    letter-spacing: 3px;
+    letter-spacing: 2px;
     font-size: 4.5em;
     color: #0ac;
     line-height: .8em;
     font-family: 'righteous';
     text-shadow: 2px 2px 2px #000;
+    font-weight: bolder;
+    margin-bottom: 10px;
+}
+
+.contentBox .content h2 sup{
+    font-size: 40px;
 }
 
 .contentBox .content h2 span{
@@ -111,6 +117,7 @@ html {
     text-transform: uppercase; 
     font-weight: bolder;
     text-shadow: 0px 1px 0px #000;
+    letter-spacing: 0px;
 }
 
 .contentBox .content p{
@@ -121,7 +128,6 @@ html {
     font-size: 20px;
     font-family: 'Lexend Deca';
     width: 95%;
-    
 }
 
 .contentBox .content a{
@@ -132,7 +138,7 @@ html {
     padding: 10px 20px 8px;
     background: repeating-linear-gradient(to bottom, #022, #058, #0d888f 100%);
     color: #fff;
-    margin-left: 40px;
+    margin-left: 60px;
     text-decoration: none;
     border-radius: 50px;
     border: .5px solid #079;
@@ -146,7 +152,7 @@ html {
     border: 1px solid #0ac;
     background: repeating-linear-gradient(to top, #022, #058, #0d888f 100%);
     text-shadow: 1px 1px 0 white, -1px -1px 0 black, 1px -1px 0 black, -1px 1px 0 black, 1px 1px 0 black;
-    box-shadow: 2px 6px 8px #fff;
+    box-shadow: 2px 6px 18px #057;
 }
 
 .closex{
@@ -159,6 +165,13 @@ html {
     border-radius: 50%;
     z-index: 10;
     text-shadow: 1px 1px 0px #f00, -1px 1px 0px #f00,  -1px -1px 0px #f00,  1px -1px 0px #f00;
+}
+
+.closex:hover{
+    transition: .2s;
+    filter: drop-shadow(0px 0px 1px #f00);
+    color: #f00;
+    text-shadow: 1px 1px 0px #000, -1px 1px 0px #000,  -1px -1px 0px #000,  1px -1px 0px #000;
 }
 
 .animated {
@@ -385,7 +398,7 @@ nav p:hover {
     height: 65px;
     margin: 15px 10px 0 20px;
     float: left;
-    filter: drop-shadow(2px 2px 0px #000);
+    filter: drop-shadow(1px 4px 1px #000);
     -webkit-transition: width 2s, height 2s, -webkit-transform 1.5s;
     /* Safari */
     transition: width 2s, height 2s, transform 1.5s;
@@ -936,6 +949,7 @@ textarea {
 }
 
 .basic, .pro, .prime{
+    text-decoration: none;
     margin: 20px;
     width: 33%;
     color: white;
@@ -944,6 +958,14 @@ textarea {
     background: #057;
     box-shadow: inset 6px 6px 12px #002230,
             inset -6px -6px 12px #0088be;
+}
+
+.basic h1{
+    color: #0bf;
+}
+
+.prime h1{
+    color: #fc0;
 }
 
 .plans h1{
@@ -1184,8 +1206,8 @@ h6{
 @media (min-width: 600px) and (max-width: 800px){
     
     .items{
-        width: 75%;
-        padding: 30px 0px 0px 120px;
+        width: 65%;
+        padding: 30px 0px 10px 120px;
     }
     
     .items h4{
@@ -1212,9 +1234,9 @@ h6{
     
     .contentBox .imgBx img{
         position: relative;
-        top: 45px;
-        width: 185px;
-        height: 230px;
+        top: 35px;
+        width: 175px;
+        height: 210px;
     }
     
     .contentBox .content{
@@ -1227,8 +1249,8 @@ h6{
     }
     
     .contentBox .content p{
-        font-size: 22px;
-        margin: 0px auto 10px;
+        font-size: 20px;
+        margin: 10px auto 30px;
         font-family: 'lexend deca';
         font-weight: bolder;
         line-height: 1.3;
@@ -1236,14 +1258,16 @@ h6{
     
     .contentBox .content h3{
         font-weight: bolder;
-        font-size: 45px;
-        margin: -10px 0 0;
+        font-size: 50px;
+        margin: -25px 0 5px;
     }
     
     .contentBox .content h2{
         font-family: 'righteous';
         font-weight: bolder;
         width: 300px;
+        margin-bottom: -5px;
+        letter-spacing: 4px;
     }
     
     .contentBox .content a{
@@ -1270,8 +1294,12 @@ h6{
     }
     
     .plans{
-        width: 85%;
+        width: 95%;
         margin: 0px auto 50px;
+    }
+    
+    .basic, .pro, .prime{
+        padding-bottom: 50px;
     }
     
     .services{
@@ -1316,6 +1344,10 @@ h6{
     .commerce h2{
         width: 100%;
         padding: 20px 10px 10px 300px;
+    }
+    
+    .website{
+        width: 85%
     }
 }
 
@@ -1429,7 +1461,10 @@ h6{
         margin: 10px auto;
         font-weight: bolder;
     }
-        
+    
+    .contentBox .content h2 sup{
+        font-size: 35px;
+    }
     
     .closex{
         top:-2px;
@@ -1492,7 +1527,7 @@ h6{
         width: 35px;
         height: 35px;
         margin: 18px 5px;
-        filter: drop-shadow(1px 1px 0px #000);
+        filter: drop-shadow(0px 2px 1px #000);
     }
     
     #stage {
