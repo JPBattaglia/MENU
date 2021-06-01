@@ -1112,8 +1112,18 @@ h6{
         font-size: 24px
     }
     
+    .items{
+        margin-bottom: 20px;
+    }
+    
     .items h4{
-        margin-left: -20px;
+        line-height: .5;
+        margin: 10px 0 0 -20px;
+    }
+    
+    .items img{
+        width: 28px;
+        height: 20px;
     }
     
     .services{
@@ -1172,6 +1182,11 @@ h6{
 /*=======================================*/
 
 @media (max-width: 800px){
+    
+    .splash{
+        background: #4c131e;
+    }
+    
     .plans{
         flex-direction: column;
     }
@@ -1211,7 +1226,7 @@ h6{
     }
     
     .items h4{
-        font-size: 22px;
+        font-size: 18px;
     }
     
     .contentBox{
@@ -1294,7 +1309,7 @@ h6{
     }
     
     .plans{
-        width: 95%;
+        width: 90%;
         margin: 0px auto 50px;
     }
     
@@ -1348,6 +1363,16 @@ h6{
     
     .website{
         width: 85%
+    }
+    
+    .star{
+        width: 74px;
+        border: 2px solid #0ac;
+    }
+    
+    .star img{
+        width: 50px;
+        margin: 0 2px 2px 0;
     }
 }
 
@@ -1584,12 +1609,20 @@ h6{
     
     
     .items h4{
-        margin-left: 30px;
+        font-size: 16px;
+        margin: 5px 0 0 25%;
+    }
+    
+    .items img{
+        width: 28px;
+        height: 20px;
+        margin-bottom: 3px;
     }
     
     .items{
         padding-top: 20px;
         background: linear-gradient(90deg, #023, #034, #057, #057, #034, #023);
+        width: 80%;
     }
     
     .services{
@@ -1775,20 +1808,22 @@ h6{
     }
     
     .star{
-        width: 75px;
-        height: 75px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 55px;
+        height: 55px;
         border: 2px solid #0ac;
-        margin: 20px auto 5px;
     }
     
     .star img{
-        width: 50px;
-        margin: 0 2px 5px 0;
+        margin: 0 0px 6px 0;
     }
     
     .items{
-        margin: 20px auto 50px;
+        margin: 20px auto 30px;
     }
+    
     
     #footer{
         position:relative;
