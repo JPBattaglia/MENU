@@ -516,8 +516,6 @@ h1 {
         2px 1px 0px #000;
 }
 
-
-
 #intro {
     width: 100%;
     height: 530px;
@@ -904,9 +902,12 @@ textarea {
 }
 
 .star{
-    width: 102px;
-    height: auto;
-    margin: 20px auto 5px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 65px;
+    height: 65px;
+    margin: 20px auto;
     border-radius: 50px;
     padding: 10px;
     border: 4px solid #08a;
@@ -914,7 +915,7 @@ textarea {
 }
 
 .star img{
-    margin: 0 7px 5px 0;
+    margin: 0 0 5px 0px;
     width: 75px;
     -webkit-transition: width 2s, height 2s, -webkit-transform 1.5s;
     /* Safari */
@@ -981,12 +982,16 @@ textarea {
     letter-spacing: 2.5px;
     margin: 0;
     color: #0f0;
-    font-family: 'Righteous';
-    font-size: 45px;
-    margin-bottom: -15px;
+    font-family: 'Orbitron';
+    font-size: 35px;
+    margin-bottom: -10px;
     font-weight: bolder;
     text-shadow: 2px 2px 1px #000;
     
+}
+
+.plans sup{
+    font-size: 20px;
 }
 
 h6{
@@ -1368,13 +1373,18 @@ h6{
     }
     
     .star{
-        width: 74px;
+        margin: 25px auto 10px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 54px;
+        height: 54px;
         border: 2px solid #0ac;
     }
     
     .star img{
-        width: 50px;
-        margin: 0 2px 2px 0;
+        width: 65px;
+        margin: 0 0 6px 0;
     }
 }
 
@@ -1451,7 +1461,7 @@ h6{
     .contentBox .imgBx img{
         position: relative;
         top: 15px;
-        left: -5px;
+        left: -3px;
         max-width: 160px;
         height: 150px;
     }
@@ -1614,7 +1624,7 @@ h6{
     
     .items h4{
         font-size: 16px;
-        margin: 5px 0 0 25%;
+        margin: 5px 0 0 20%;
     }
     
     .items img{
@@ -1822,6 +1832,7 @@ h6{
     
     .star img{
         margin: 0 0px 6px 0;
+        width: 65px;
     }
     
     .items{
