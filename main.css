@@ -519,7 +519,7 @@ h1 {
 #intro {
     width: 100%;
     height: 530px;
-    margin-bottom: 200px;
+    margin-bottom: 195px;
 }
 
 #intro img {
@@ -530,11 +530,11 @@ h1 {
 }
 
 #info {
-    background: linear-gradient(90deg, #500, #600, #a00, #600, #500);
+    background: linear-gradient(90deg, #330000, #590000, #870000, #590000, #330000);
     background-size: 100% 100%;
     display: flex;
     max-width: 100%;
-    margin: 26px auto;
+    margin: 20px auto;
     text-align: center;
     padding-bottom: 20px;
     flex-direction: column;
@@ -1308,8 +1308,8 @@ h6{
     #info h1{
         width: 480px;
         background: #880000;
-        box-shadow: inset -16px -16px 32px #360000,
-                    inset 16px 16px 32px #da0000;
+        box-shadow: inset -16px -16px 32px #da0000,
+                    inset 16px 16px 32px #360000;
         margin: -15px auto;
         border-radius: 50px;
         padding: 2px 0px;
@@ -1404,7 +1404,7 @@ h6{
     }
     
     .splash{
-        padding-bottom: 50px;
+        padding-bottom: 100px;
         width: 160%;
         position: absolute;
         left: 50%;
@@ -1713,8 +1713,8 @@ h6{
     
     #info h1{
         background: #880000;
-        box-shadow: inset -16px -16px 32px #360000,
-                    inset 16px 16px 32px #da0000;
+        box-shadow: inset -16px -16px 32px #da0000,
+                    inset 16px 16px 32px #360000;
         width: 300px;
         font-size: 17px;
         padding: 4px;
@@ -1859,8 +1859,8 @@ h6{
     #info h1{
         width: 480px;
         background: #880000;
-        box-shadow: inset -16px -16px 32px #360000,
-                    inset 16px 16px 32px #da0000;
+        box-shadow: inset -16px -16px 32px #da0000,
+                    inset 16px 16px 32px #360000;
         margin: -20px auto;
         border-radius: 50px;
         padding: 5px 0px;
@@ -1952,8 +1952,8 @@ h6{
     #info h1{
         width: 620px;
         background: #880000;
-        box-shadow: inset -16px -16px 32px #360000,
-                    inset 16px 16px 32px #da0000;
+        box-shadow: inset -16px -16px 32px #da0000,
+                    inset 16px 16px 32px #360000;
         margin: -22px auto;
         border-radius: 50px;
         padding: 0px 0px;
