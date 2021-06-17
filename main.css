@@ -1,2063 +1,244 @@
-*:focus {
-    outline: none;
-    background: transparent;
-   }
-
-html {
-    min-height: 100%;
-    overflow: auto;
-}
-
-.splash{
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100vh;
-    background: #540c21;
-    z-index: 999999999999999;
-}
-
-.splash.display-none{
-    position: fixed;
-    opacity: 0;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100vh;
-    background: #540c21;
-    z-index: -9999;
-    transition: all 1.5s;
-}
-
-.popup{
-    position: fixed;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    display: none;
-}
-
-.contentBox{
-    position: relative;
-    width: 600px;
-    height: 400px;
-    background: #fff;
-    border-radius: 20px;
-    display: flex;
-    box-shadow: 0 5px 15px #000;
-}
-
-.contentBox .imgBx{
-    position: relative;
-    width: 300px;
-    height: 500px;
-    display: flex;
-    justify-content: center;
-    align-items: center;  
-}
-
-.contentBox .imgBx::before{
-    content: '';
-    position: absolute;
-    top: 30px;
-    left: 18px;
-    width: 255px;
-    height: 250px;
-    background: #068;
-    border-radius: 50%;
-    box-shadow: 6px 8px 15px #000;
-}
-
-.contentBox .imgBx img{
-    position: relative;
-    top: -40px;
-    max-width: 240px;
-    height: 300px;
-}
-
-.contentBox .content{
-    position: relative;
-    width: 300px;
-    height: 400px;
-    display: flex;
-    justify-content: center;
-    align-items: center; 
-    padding: 0px;
-}
-
-.contentBox .content h3{
-    margin-bottom: 25px;
-    letter-spacing: -2px;
-    color: #e00;
-    line-height: 1.5em;
-    font-size: 3.3em;
-    font-weight: bolder;
-    text-shadow: 2px 2px 2px #000;
-}
-
-.contentBox .content h2{
-    letter-spacing: 2px;
-    font-size: 4.5em;
-    color: #0ac;
-    line-height: .8em;
-    font-family: 'righteous';
-    text-shadow: 2px 2px 2px #000;
-    font-weight: bolder;
-    margin-bottom: 10px;
-}
-
-.contentBox .content h2 sup{
-    font-size: 40px;
-}
-
-.contentBox .content h2 span{
-    color: #000;
-    font-size: .8em;
-    text-transform: uppercase; 
-    font-weight: bolder;
-    text-shadow: 0px 1px 0px #000;
-    letter-spacing: 0px;
-}
-
-.contentBox .content p{
-    font-weight: bolder;
-    letter-spacing: -.5px;
-    margin-top: -5px;
-    font-weight: bold;
-    font-size: 20px;
-    font-family: 'Lexend Deca';
-    width: 95%;
-}
-
-.contentBox .content a{
-    margin-top: 5px;
-    transition: .5s;
-    font-family: 'Lexend Deca';
-    font-weight: bolder;
-    display: inline-block;
-    padding: 10px 20px 8px;
-    background: repeating-linear-gradient(to bottom, #022, #058, #0d888f 100%);
-    color: #fff;
-    margin-left: 60px;
-    text-decoration: none;
-    border-radius: 50px;
-    border: .5px solid #079;
-    box-shadow: 1px 6px 10px #000;
-    text-shadow: 1px 1px 0 black, -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000;
-}
-
-.contentBox .content a:hover{
-    transition: .5s;
-    color: #0ac;
-    border: 1px solid #0ac;
-    background: repeating-linear-gradient(to top, #022, #058, #0d888f 100%);
-    text-shadow: 1px 1px 0 white, -1px -1px 0 black, 1px -1px 0 black, -1px 1px 0 black, 1px 1px 0 black;
-    box-shadow: 2px 6px 18px #057;
-}
-
-.closex{
-    position: absolute;
-    top: -5px;
-    right: -18px;
-    width: 60px;
-    font-size: 35px;
-    cursor: pointer;
-    border-radius: 50%;
-    z-index: 10;
-    text-shadow: 1px 1px 0px #f00, -1px 1px 0px #f00,  -1px -1px 0px #f00,  1px -1px 0px #f00;
-}
-
-.closex:hover{
-    transition: .2s;
-    filter: drop-shadow(0px 0px 1px #f00);
-    color: #f00;
-    text-shadow: 1px 1px 0px #000, -1px 1px 0px #000,  -1px -1px 0px #000,  1px -1px 0px #000;
-}
-
-.animated {
-    background-color: #034;
-    background-position: left top;
-    margin-bottom: 30px;
-    -webkit-animation-duration: 3s;
-    animation-duration: 3s;
-    -webkit-animation-fill-mode: both;
-    animation-fill-mode: both;
-}
-
-@-webkit-keyframes fadeOut {
-    100% {
-        opacity: 1;
-    }
-    0% {
-        opacity: 0;
-    }
-}
-
-@keyframes fadeOut {
-    100% {
-        opacity: 1;
-    }
-    0% {
-        opacity: 0;
-    }
-}
-
-.fadeOut {
-    -webkit-animation-name: fadeOut;
-    animation-name: fadeOut;
-}
-
-article {
-    position: absolute;
-    left: 0px;
-    top: 155px;
-    text-align: center;
-}
-
-body {
-    background: -moz-linear-gradient(-45deg, #600 25%, #044, #044 100%);
-    background: -webkit-linear-gradient(-45deg, #600 25%, #044, #044 100%);
-    background: linear-gradient(135deg, #800, #400 40%, #034, #045 100%);
-    filter: progid: DXImageTransform.Microsoft.gradient( startColorstr='#800', endColorstr='#045', GradientType=1);
-}
-
-.sidenav {
-    height: 100%;
-    width: 0;
-    position: fixed;
-    z-index: 100;
-    top: 0;
-    right: 0;
-    background: linear-gradient(to right, #034, #046, #068, #046, #034 100%);
-    background-repeat: repeat;
-    background-size: 100% 103%;
-    overflow-x: hidden;
-    transition: .8s;
-    padding-top: 100px;
-    font-family: 'Federant';
-    font-weight: bold;
-}
-
-.sidenav a {
-    margin: 85px 0;
-    font-size: 24px;
-    color: white;
-    display: block;
-    transition: 1s;
-    max-width: 100%;
-    text-align: center;
-    text-shadow: 1px 1px 0 red, -1px -1px 0 #800, 1px -1px 0 #800, -1px 1px 0 #800, 1px 1px 0 #800;
-    text-decoration: none;
-}
-
-.sidenav a:hover {
-    color: red;
-    text-shadow: 1px 1px 0 tan, -1px -1px 0 white, 1px -1px 0 white, -1px 1px 0 white, 1px 1px 0 white;
-}
-
-.sidenav .closebtn {
-    margin: 0px;
-    padding: 8px 28px 28px 22px;
-    position: absolute;
-    top: 0px;
-    right: 0px;
-    font-size: 40px;
-    text-decoration: none;
-}
-
-.burger{
-    transition: 1.5s;
-    float: right;
-    margin: 30px 20px 0 0;
-    background: none;
-    border: none;
-}
-
-.burger span{
-    display: block;
-    width: 43px;
-    height: 7px;
-    margin-bottom: 5px;
-    background: linear-gradient(to left, #034, #068, #09b, #0cf, #09b, #068, #034);
-    z-index: 1;
-    box-shadow: 1px 1.5px 2px #800;
-    border: .5px solid #000;
-}
-
-.burger:hover{
-    cursor: pointer;
-    filter: drop-shadow(0px 0px 10px #0ac);
-    transition: 1.5s;
-}
-
-#top{
-    border-top-right-radius: 5px;
-    border-top-left-radius: 5px;
-}
-
-#middle{
-    border-radius: 3px;
-}
-
-#bottom{
-    border-bottom-right-radius: 5px;
-    border-bottom-left-radius: 5px;
-}
-
-.navicon {
-    float: right;
-    width: 44px;
-    height: 35px;
-    margin: 28px 20px 10px 0;
-    cursor: pointer;
-    filter: drop-shadow(0px 0px 0px #000);
-}
-
-ul, li{
-    float:right;
-    display: flex;
-    flex-direction: row-reverse;
-    text-decoration: none;
-    color: white;
-}
-
-ul{
-    margin-top: 25px;
-    width: 45%;
-}
-
-li{
-    margin: 0 40px;
-    font-family: 'federant';
-    font-size: 22px;
-    letter-spacing: 1px;
-}
-
-li a{
-    transition: 1s;
-    padding: 5px 0;
-    text-decoration: none;
-    text-shadow: 1px 1px 0 #000, -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000;
-    text-decoration: none;
-    
-}
-
-li a:hover{
-    padding: 5px 0;
-    transition: .5s;
-    color: #f00;
-    text-shadow: .5px .5px 0 #fff, -1px -1px 0 #300, 1px -1px 1px #300, -1px 1px 0 #300, 1px 1px 0 #300;
-}
-
-#stage {
-    position: fixed;
-    margin: 24px auto;
-    width: 100%;
-    z-index: -1;
-}
-
-#stage img:nth-of-type(1) {
-    animation-name: fader;
-    animation-delay: 3s;
-    animation-duration: 2s;
-    z-index: 20;
-}
-
-#stage img:nth-of-type(2) {
-    z-index: 10;
-}
-
-#stage img:nth-of-type(n+3) {
-    display: none;
-}
-
-@keyframes fader {
-    from {
-        opacity: 1.0;
-    }
-    to {
-        opacity: 0.0;
-    }
-}
-
-nav {
-    top:0;
-    position: fixed;
-    background: repeating-linear-gradient(#057, #046, #034, #023, #034, #046, #057 5%);
-    border-bottom: 3px solid #023;
-    width: 100%;
-    height: 100px;
-    z-index: 10;
-}
-
-nav p:hover {
-    border-bottom: 3px solid #079;
-    font-weight: bolder;
-    text-shadow: 1px 1px 0 #f00, -.5px -.5px 0 #fff, .5px -.5px 0 #fff, -.5px .5px 0 #fff, .5px .5px 0 #fff;
-}
-
-.logoburger {
-    width: 65px;
-    height: 65px;
-    margin: 15px 10px 0 20px;
-    float: left;
-    filter: drop-shadow(1px 4px 1px #000);
-    -webkit-transition: width 2s, height 2s, -webkit-transform 1.5s;
-    /* Safari */
-    transition: width 2s, height 2s, transform 1.5s;
-}
-
-.logoburger:hover {
-    -webkit-transform: rotate(360deg);
-    /* Safari */
-    transform: rotate(360deg);
-}
-
-nav p {
-    float: right;
-    letter-spacing: 2px;
-    color: white;
-    padding: 5px 2px;
-    margin: 25px 20px;
-    font-family: 'Orbitron';
-}
-
-.logo img{
-    float: left;
-    margin: 30px 0;
-    width: 150px;
-    filter: drop-shadow(2px 4px 1px #010);
-}
-
-h1 {
-    width: 100%;
-    color: white;
-    text-align: center;
-    font-family: 'Federant';
-    padding: 15px 20px 0px 20px;
-    font-weight: bolder;
-    margin: 0px auto;
-    letter-spacing: 1px;
-}
-
-.pandemic{
-    width: 800px;
-    height: 300px;
-    margin: 20px auto;
-    background: url(Coronav.jpeg);
-    border-radius: 20px;
-    box-shadow: 4px 6px 8px #000;
-}
-
-.pandemic h2 {
-    margin-top: 40px;
-    color: #fff;
-    font-family: 'Federant';
-    font-size: 24px;
-    width: 350px;
-    padding-left: 65px;
-    text-shadow: 
-        1px 1px 0px #0bd;
-}
-
-.media h2{
-    margin-top: 40px;
-    margin-left: -450px;
-    color: #fff;
-    font-family: 'Federant';
-    font-size: 24px;
-    width: 350px;
-    padding-left: 65px;
-    text-shadow: 
-        1px 1px 0px #000;
-}
-
-.presence{
-    background: url(Presence.jpeg);
-}
-
-.media{
-    background: url(Online.jpeg) 20% 30%;
-}
-
-.commerce{
-    background: url(Ecommerce.jpg);
-    background-size: 100% 110%;
-}
-
-.presence, .media, .commerce{
-    width: 800px;
-    height: 300px;
-    margin: 75px auto;
-    border-radius: 20px;
-    box-shadow: 4px 6px 8px #000;
-}
-
-.presence h2{
-    margin-top: 40px;
-    color: #fff;
-    font-family: 'Federant';
-    font-size: 24px;
-    width: 800px;
-    padding-left: 495px;
-    padding-right: 20px;
-    text-shadow: 
-        2px 1px 0px #000;
-}
-
-.commerce h2{
-    margin-top: 40px;
-    color: #fff;
-    font-family: 'Federant';
-    font-size: 24px;
-    width: 800px;
-    padding-top: 50px;
-    padding-left: 495px;
-    padding-right: 20px;
-    text-shadow: 
-        2px 1px 0px #000;
-}
-
-#intro {
-    width: 100%;
-    height: 530px;
-    margin-bottom: 195px;
-}
-
-#intro img {
-    width: 100%;
-    margin: 76px auto;
-    height: 628px;
-    position: absolute;
-}
-
-#info {
-    background: linear-gradient(90deg, #800, #a00, #f00, #a00, #800);
-    background-size: 100% 100%;
-    display: flex;
-    max-width: 100%;
-    margin: 20px auto;
-    text-align: center;
-    padding-bottom: 20px;
-    flex-direction: column;
-    padding-bottom: 50px;
-}
-
-.services{
-    margin: 100px auto 50px;
-    display: flex;
-    flex-direction: row;
-    align-items: center;
-    justify-content: center;
-    text-align: center;
-    padding: 50px;
-}
-
-.cafe h4,
-.restaurant h4,
-.pastry h4{
-    font-family: 'federant';
-    margin: 0 0 -10px;
-    
-} 
-
-.cafe,
-.restaurant,
-.pastry {
-    width: 75%;
-    padding: 30px;
-    text-align: center;
-    font-family: 'Federant';
-    font-size: 22px;
-    font-weight: bolder;
-    color: white;
-    border: 2px double transparent;
-    border-radius: 30px;
-    box-shadow: 15px 15px 1px transparent;
-}
-
-.restaurant img {
-    width: 130px;
-    height: 60px;
-    padding: 8px;
-    margin: 23px auto 0;
-    filter: drop-shadow(2px 4px 1px #010);
-}
-
-.cafe img {
-    width: 100px;
-    height: 80px;
-    padding: 10px;
-    filter: drop-shadow(2px 4px 1px #010);
-}
-
-.pastry img {
-    width: 72px;
-    height: 75px;
-    padding: 10px 8px;
-    margin: 8px 0 0;
-    filter: drop-shadow(2px 4px 1px #010);
-}
-
-.cafe:hover,
-.restaurant:hover,
-.pastry:hover {
-    cursor: pointer;
-}
-
-.cafe .details,
-.restaurant .details,
-.pastry .details {
-    width: 95%;
-    border: 1.5px solid #000;
-    height: auto;
-    padding: 5px 15px 10px;
-    position: absolute;
-    content: "";
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%) rotateY(90deg);
-    transform-origin: 50%;
-    opacity: 0;
-    transition: all 0.6s ease-in;
-    font-size: 18px;
-    border-radius: 24px;
-    box-shadow: 4px 8px 8px #000;
-    background: -moz-linear-gradient(135deg, #056 5%, #800 100%);
-    background: -webkit-linear-gradient(135deg, #056 5%, #800 100%);
-    background: linear-gradient(90deg, #400, #600, #800, #800, #600, #400 );
-    filter: progid: DXImageTransform.Microsoft.gradient( startColorstr='#056', endColorstr='#800', GradientType=1);
-}
-
-.cafe:hover .details,
-.restaurant:hover .details,
-.pastry:hover .details {
-    transform: translate(-50%, -50%) rotateY(0deg);
-    opacity: 1;
-}
-
-.consult{
-    width: 150px;
-    margin: 30px 0 0 40%;
-}
-
-#Btn {
-    transition: .5s;
-    color: #ffeecc;
-    padding: 5px 0px;
-    background: repeating-linear-gradient(to top, #022, #058, #0d888f 100%);
-    width: 185px;
-    border-radius: 30px;
-    font-family: 'Orbitron';
-    font-weight: bolder;
-    font-size: 15px;
-    letter-spacing: .5px;
-    border: .5px solid #0b7075;
-    box-shadow: 2px 8px 10px #000, -2px 8px 10px #000;
-    text-shadow: 1px 1px 0 black, -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000;
-}
-
-#Btn a{
-    text-decoration: none;
-}
-
-.Btn1{
-    transition: .3s;
-    cursor: pointer;
-    padding: 1px 20px;
-    color: white;
-    border-radius: 30px;
-    border: 1.5px solid #068;
-    background: repeating-linear-gradient(to top, #022, #058, #0d888f 100%);
-    box-shadow: 2px 4px 8px #000, -2px 4px 8px #000;
-}
-
-.Btn1:hover{
-    transition: .3s;
-    color: #0ac;
-    text-shadow: 1px 1px 0 white, -1px -1px 0 black, 1px -1px 0 black, -1px 1px 0 black, 1px 1px 0 black;
-    box-shadow: 2px 2px 8px #800, -2px 2px 8px #f00;
-}
-
-#Btn:hover {
-    transition: .5s;
-    padding: 5px 4px 8px 4px;
-    border: 1px solid #000;
-    cursor: pointer;
-    font-weight: bolder;
-    color: #089;
-    text-shadow: 1px 1px 0 white, -1px -1px 0 black, 1px -1px 0 black, -1px 1px 0 black, 1px 1px 0 black;
-    box-shadow: 2px 6px 10px #057, -2px 6px 10px #057;
-}
-
-
-.cform label {
-    font-size: 20px;
-    text-align: center;
-    font-family: 'federant', serif;
-    color: white;
-    list-style-type: none;
-    text-shadow: 1px 1px 0 red, -1px -1px 0 red, 1px -1px 0 red, -1px 1px 0 red, 1px 1px 0 red;
-}
-
-.cform textarea,
-.cform input {
-    font-family: 'federant', serif;
-    color: red;
-    text-align: center;
-    font-size: 18px;
-    font-weight: bolder;
-    width: 300px;
-    opacity: .8;
-}
-
-.cform select {
-    font-family: 'federant', serif;
-    color: red;
-    text-align: center;
-    font-size: 18px;
-    font-weight: bolder;
-    max-width: 50%;
-    box-sizing: border-box;
-}
-
-::placeholder {
-    /* Chrome, Firefox, Opera, Safari 10.1+ */
-    color: skyblue;
-    opacity: 1;
-    /* Firefox */
-}
-
-:-ms-input-placeholder {
-    /* Internet Explorer 10-11 */
-    color: red;
-}
-
-::-ms-input-placeholder {
-    /* Microsoft Edge */
-    color: red;
-}
-
-
-/* Style inputs with type="text", select elements and textareas */
-
-input[type=text],
-select,
-textarea {
-    margin: auto;
-    text-align: center;
-    width: 85%;
-    /* Full width */
-    padding: 5px;
-    /* Some padding */
-    border: 6px double #600;
-    /* Gray border */
-    border-radius: 30px;
-    /* Rounded borders */
-    box-sizing: border-box;
-    /* Make sure that padding and width stays in place */
-    margin-top: 10px;
-    /* Add a top margin */
-    margin-bottom: 20px;
-    /* Bottom margin */
-    resize: vertical;
-    /* Allow the user to vertically resize the textarea (not horizontally) */
-}
-
-textarea {
-    border-radius: 20px;
-}
-
-.cform{
-    margin: 140px auto 0;
-    width: 60%;
-    text-align: center;
-    border: 5px solid #068;
-    border-radius: 30px;
-    color: white;
-}
-
-.cform textarea{
-    height: 100px;
-}
-
-.cform select{
-    color: deepskyblue;
-    background: #fff;
-}
-
-.cform textarea, .cform input[type=text]{
-    width: 60%;
-    margin: 50px 0 0 0;
-    color: deepskyblue;
-    background: #fff;
-}
-
-.cform textarea:hover, .cform input[type=text]:hover,.cform selct:hover{
-    border: 6px double #068;
-}
-
-.cform textarea:focus, .cform input[type=text]:focus,.cform selct:focus{
-    border: 6px double #068;
-}
-
-.cform input[type=submit]{
-    width: 25%;
-    width: 35%;
-    text-align: center;
-    font-size: 22px;
-    background: repeating-linear-gradient(to top, #022, #058, #0d888f 100%);
-    color: white;
-    padding: 5px 30px;
-    border: 1px solid #008080;
-    cursor: pointer;
-    border-radius: 25px;
-    box-shadow: 0px 5px 25px black;
-    text-shadow: 1px 1px 0 black, -1px -1px 0 black, 1px -1px 0 black, -1px 1px 0 black, 1px 1px 0 black;
-}
-
-.cform input[type=submit]:hover{
-    text-align: center;
-    border: 1px solid #009999;
-    color: #009999;
-    border-radius: 25px;
-    text-shadow: 1px 1px 0 white, -1px -1px 0 black, 1px -1px 0 black, -1px 1px 0 black, 1px 1px 0 black;
-    box-shadow: 0px 5px 25px #0cf;
-}
-
-.cform select{
-    color: #66c1e5;
-    margin: 50px 0 0 0;
-    width: 40%;
-    padding: 4px 10px;
-}
-
-.cform h2{
-    font: 35px 'federant';
-    margin: 20px 0 -20px 0;
-}
-
-.website {
-    color: #fff;
-    width: 75%;
-    font-size: 25px;
-    background: linear-gradient(90deg, #000, #024, #000);
-    margin: -15px auto;
-    padding: 20px;
-    border-radius: 20px;
-}
-
-.website h1{
-    color: #d00;
-    font-size: 34px;
-    text-align: center;
-    background: transparent;
-    box-shadow: none;
-    padding: 10px 0 0;
-    text-decoration: underline;
-    text-shadow: 1px 1px 0px #fff;
-    text-underline-position: under;
-}
-
-.website h2{
-    font-family: 'federant';
-    margin: 25px;
-}
-
-.plans{
-    width: 100%;
-    display: flex;
-    justify-content: center;
-    margin-bottom: 100px;
-}
-
-.stars{
-    width: 100%;
-    display: flex;
-    flex-direction: row;
-    align-items: center;
-    justify-content: center;
-    float: left;
-    margin-top: -70px;
-}
-
-.star-1, .star-3{
-    width: 60px;
-    height: 60px;
-    margin-top: 20px;
-}
-
-.star-2{
-    width: 75px;
-    height: 75px;
-    z-index: 9;
-}
-
-.star-3{
-    margin-left: -25px;
-    transform: rotate(25deg)
-}
-
-.star-1{
-    margin-right: -25px;
-    transform: rotate(-25deg)
-}
-
-.star{
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    width: 65px;
-    height: 65px;
-    margin: 20px auto;
-    border-radius: 50px;
-    padding: 10px;
-    border: 4px solid #08a;
-    filter: drop-shadow(0px 3px 1px #010);
-}
-
-.star img{
-    margin: 0 0 5px 0px;
-    width: 75px;
-    -webkit-transition: width 2s, height 2s, -webkit-transform 1.5s;
-    /* Safari */
-    transition: width 2s, height 2s, transform 1.5s;
-}
-
-.star img:hover {
-    -webkit-transform: rotate(360deg);
-    /* Safari */
-    transform: rotate(360deg);
-    filter: drop-shadow(0px 0px 0px transparent);
-}
-
-.check{
-    width: 35px;
-    height: 25px;
-    filter: drop-shadow(2px 2px 1px #000);
-}
-
-.items{
-    text-align: left;
-    margin: 20px auto 50px;
-    width: 75%;
-    background: linear-gradient(90deg, #023, #034, #057, #057, #034, #023);
-    padding: 10px 25px 0px 25px;
-    border-radius: 15px;
-    text-shadow: 2px 2px 1px #000;
-    box-shadow: 2px 4px 8px #000;
-}
-
-.items h4{
-    font-family: 'federant';
-    color: #fff;
-    margin-left: 18%;
-}
-
-.basic, .pro, .prime{
-    text-decoration: none;
-    margin: 20px;
-    width: 33%;
-    color: white;
-    text-align: center;
-    border-radius: 20px;
-    background: #057;
-    box-shadow: inset 6px 6px 12px #002230,
-            inset -6px -6px 12px #0088be;
-}
-
-.basic h1{
-    color: #0bf;
-}
-
-.prime h1{
-    color: #fc0;
-}
-
-.plans h1{
-    text-shadow: 2px 2px 0px #000;
-    letter-spacing: 2.5px;
-    font-weight: bolder;
-    text-decoration: underline;
-    padding: 0px;
-}
-
-.plans h3{
-    letter-spacing: 2.5px;
-    margin: 0;
-    color: #0f0;
-    font-family: 'Orbitron';
-    font-size: 35px;
-    margin-bottom: -10px;
-    font-weight: bolder;
-    text-shadow: 2px 2px 1px #000;
-    
-}
-
-.plans sup{
-    font-size: 20px;
-}
-
-h6{
-    font-family: 'federant';
-    margin: 0;
-    font-size: 15px;
-}
-
-#footer {
-    position: relative;
-    width: 100%;
-    margin: 20px auto;
-    bottom: 0;
-    z-index: -1;
-}
-
-#footer img {
-    width: 75px;
-}
-
-#footer p {
-    text-align: center;
-    color: #0bb;
-    font-family: 'Quintessential';
-    font-size: 24px;
-    margin: 0px;
-}
-
-
-/*=======================================*/
-
-
-/*=======================================*/
-
-@media (max-width: 1000px) and (min-width: 601px) {
-    .mconsult
-    article,
-    .mobile,
-    ul {
-        display: none;
-    }
-    #Btn {
-        font-size: 12px;
-        width: 170px;
-        margin: 30px 12%;
-    }
-    
-    .sidenav .closebtn{
-        margin: 5px 32px;
-        height: 75px;
-        width: 50px;
-    }
-    
-    .dconsult {
-        width: 70px;
-    }
-    
-    .pandemic{
-        width: 550px;
-        background-size: 95% 105%;
-    }
-    
-    .pandemic h2{
-        width: 280px;
-        font-size: 23px;
-        padding: 0 0 0 30px;
-        margin-top: 40px;
-    }
-    
-    .presence{
-        width: 550px;
-        background: url('Presence.jpeg') 40%;
-    }
-    
-    .media{
-        width: 550px;
-        background: url('Online.jpeg') 32% 45%;
-    }
-    
-    .commerce{
-        width: 550px;
-    }
-    
-    .presence h2{
-        width: 530px;
-        font-size: 23px;
-        padding: 0 0 0 330px;
-        margin-top: 30px;
-    }
-    
-    .media h2{
-        width: 600px;
-        padding: 0 65px 0 295px;
-        margin-top: 5px;
-    }
-    
-    #intro {
-        margin: auto;
-        height: 535px;
-        max-width: 100%;
-    }
-    #intro h1 {
-        font-size: 32px;
-        margin: 20px auto;
-        max-width: 100%;
-    }
-    #intro img {
-        margin: 76px auto;
-        max-width: 100%;
-        height: 460px;
-    }
-    h1 {
-        font-size: 28px;
-        margin: 0px;
-    }
-    
-    .website{
-        margin-bottom: 50px;
-    }
-    
-    .website h2{
-        font-family: 'federant';
-        margin: 20px;
-        font-size: 24px
-    }
-    
-    .items{
-        margin-bottom: 20px;
-    }
-    
-    .items h4{
-        line-height: .5;
-        margin: 10px 0 0 -20px;
-    }
-    
-    .items img{
-        width: 28px;
-        height: 20px;
-    }
-    
-    .services{
-        flex-direction: row;
-        margin: 150px 10px 70px 0;
-        padding: 0;
-    }
-    
-    #info {
-        flex-direction: column;
-        width: 100%;
-    }
-    
-    
-    .cafe,
-    .restaurant,
-    .pastry {
-        width: 400px;
-        margin: auto;
-        margin-bottom: 20px;
-        border: 
-    }
-    .cafe .details,
-    .restaurant .details,
-    .pastry .details {
-        padding: 10px;
-        max-width: 100%;
-        height: auto;
-    }
-    
-    .cafe:hover,
-    .restaurant:hover,
-    .pastry:hover {
-        border: 2px solid transparent;
-        cursor: pointer;
-        box-shadow: 15px 15px 5px transparent;
-    }
-    
-    .cform{
-        width: 75%;
-    }
-    
-    .items{
-        width: 90%;
-    }
-    
-    .items h4{
-        font-size: 16px;
-    }
-}
-
-
-/*=======================================*/
-
-
-/*=======================================*/
-
-@media (max-width: 800px){
-    
-    .splash{
-        background: #4c131e;
-    }
-    
-    .plans{
-        flex-direction: column;
-    }
-    
-    .basic, .pro, .prime{
-        width: 90%;
-        margin: 50px auto;
-    }
-    
-    .items{
-        width: 80%;
-    }
-    
-    .plans h1{
-        background: transparent;
-        box-shadow: none;
-        width: 100px;
-        font-size: 30px;
-        margin: 0px auto;
-    }
-    
-    .services{
-        margin-bottom: 50px;
-    }
-}
-
-/*=======================================*/
-
-
-/*=======================================*/
-
-@media (min-width: 600px) and (max-width: 800px){
-    .dconsult{
-        display: none;
-    }
-    
-    .items{
-        width: 65%;
-        padding: 30px 0px 10px 120px;
-    }
-    
-    .items h4{
-        font-size: 18px;
-    }
-    
-    .contentBox{
-        margin-top: 70px;
-        width: 400px;
-        height: auto;
-        flex-direction: column;
-    }
-    
-    .contentBox .imgBx{
-        height: 220px;
-        margin: auto;
-        transform: translateY(-50px);
-    }
-    
-    .contentBox .imgBx::before{
-        background: #fff;
-        box-shadow: none;
-    }
-    
-    .contentBox .imgBx img{
-        position: relative;
-        top: 38px;
-        left: -3px;
-        width: 175px;
-        height: 210px;
-    }
-    
-    .contentBox .content{
-        height: auto;
-        text-align: center;
-        padding: 50px 20px;
-        padding-top: 10px;
-        font-size: 16px;
-        margin: -5px auto;
-    }
-    
-    .contentBox .content p{
-        font-size: 20px;
-        margin: 10px auto 30px;
-        font-family: 'lexend deca';
-        font-weight: bolder;
-        line-height: 1.3;
-    }
-    
-    .contentBox .content h3{
-        font-weight: bolder;
-        font-size: 50px;
-        margin: -25px 0 5px;
-    }
-    
-    .contentBox .content h2{
-        font-family: 'righteous';
-        font-weight: bolder;
-        width: 300px;
-        margin-bottom: -5px;
-        letter-spacing: 4px;
-    }
-    
-    .contentBox .content a{
-        margin: 10px auto 0;
-        font-weight: bolder;
-        font-size: 18px;
-    }
-    
-    .closex{
-        top:-6px;
-        right: -20px;
-        background-size: 10px;
-        background-position: center;
-    }
-    
-    #info h1{
-        width: 480px;
-        background: #880000;
-        box-shadow: inset -16px -16px 32px #360000,
-                    inset 16px 16px 32px #da0000;
-        margin: -15px auto;
-        border-radius: 50px;
-        padding: 2px 0px;
-    }
-    
-    .plans{
-        width: 90%;
-        margin: 0px auto 50px;
-    }
-    
-    .basic, .pro, .prime{
-        padding-bottom: 50px;
-    }
-    
-    .services{
-        margin: 120px 0 75px 0;
-    }
-    
-    .cafe .details,
-    .restaurant .details,
-    .pastry .details {
-        padding: 0px 10px 20px;
-        border-radius: 15px;
-        font-size: 16px;
-        width: 320px;
-        height: auto;
-    }
-    
-    .cform input[type=submit]{
-        width: 30%;
-        margin: 30px;
-    }
-    
-    .mconsult{
-        margin: 0px 50%;
-    }
-    
-    .presence h2{
-        padding: 15px 6px 0 355px;
-        width: 100%;
-    }
-    
-    .pandemic h2{
-        padding: 45px 25px;
-    }
-    
-    .media  h2{
-        padding: 5px 40px 0 310px;
-        width: 100%;
-        margin-left: -270px;
-        padding: 20px 50px 10px 285px;
-    }
-    
-    .commerce h2{
-        width: 100%;
-        padding: 20px 10px 10px 300px;
-    }
-    
-    .website{
-        width: 85%
-    }
-    
-    .star{
-        margin: 25px auto 10px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        width: 54px;
-        height: 54px;
-        border: 2px solid #0ac;
-    }
-    
-    .star img{
-        width: 65px;
-        margin: 0 0 6px 0;
-    }
-}
-
-/*=======================================*/
-
-
-/*=======================================*/
-
-
-
-@media (max-width: 600px) {
-    label,
-    .desktop,
-    ul,
-    .dconsult,
-    article {
-        display: none;
-    }
-    
-    .splash{
-        padding-bottom: 100px;
-        width: 160%;
-        position: absolute;
-        left: 50%;
-        transform: translateX(-50%);
-    }
-    
-    .plans{
-        width: 90%;
-        margin: auto;
-    }
-    
-    .prime{
-        margin-bottom: 100px;
-    }
-    
-    .stars{
-        margin-top: -60px;
-    }
-    
-    .star-1, .star-3{
-        width: 40px;
-        height: 40px;
-    }
-    
-    .star-2{
-        width: 50px;
-        height: 50px;
-    }
-    
-    .star-1{
-        margin-right: -15px;
-    }
-    
-    .star-3{
-        margin-left: -15px;
-    }
-    
-    .contentBox{
-        margin-top: 70px;
-        width: 280px;
-        height: auto;
-        flex-direction: column;
-    }
-    
-    .contentBox .imgBx{
-        height: 200px;
-        transform: translateY(-50px);
-    }
-    
-    .contentBox .imgBx::before{
-        background: #fff;
-        box-shadow: none;
-        left: 4%;
-    }
-    .contentBox .imgBx img{
-        position: relative;
-        top: 15px;
-        left: -9px;
-        max-width: 160px;
-        height: 150px;
-    }
-    
-    .contentBox .content{
-        height: auto;
-        text-align: center;
-        padding: 30px;
-        padding-top: 0;
-        font-size: 14px;
-        margin: -10px auto;
-    }
-    
-    .contentBox .content p{
-        font-size: 14px;
-        margin: 5px 10px 20px -20px;
-        font-family: 'Lexend Deca';
-        font-weight: bolder;
-        line-height: 1.3;
-        width: 110%;
-    }
-    
-    .contentBox .content h3{
-        font-weight: bolder;
-        font-size: 40px;
-        margin: -55px 10px 5px -10px;
-    }
-    
-    .contentBox .content h2{
-        font-family: 'righteous';
-        font-weight: bolder;
-        font-size: 55px;
-        margin: 0px 10px 0px -10px;
-    }
-    
-    .contentBox .content a{
-        margin: 5px 10px 15px -10px;
-        font-weight: bolder;
-    }
-    
-    .contentBox .content h2 sup{
-        font-size: 30px;
-    }
-    
-    .closex{
-        top:-2px;
-        right: -20px;
-        background-size: 10px;
-        background-position: center;
-    }
-    
-    nav {
-        width: 100%;
-        height: 80px;
-        background: repeating-linear-gradient(#057, #045, #034, #022, #034, #045, #057 5%);
-    }
-    
-    .sidenav .closebtn{
-        margin: 3px 18px;
-        height: 55px;
-        width: 50px;
-    }
-    
-    .sidenav a{
-        width: 85px;
-        margin: 85px auto;
-    }
-    
-    .burger {
-        float: right;
-        margin: -60px 10px 0 0;
-    }
-    
-    .burger span{
-        width: 35px;
-        height: 6px;
-        margin: 4px;
-    }
-    
-    #top{
-        border-top-right-radius: 3.5px;
-        border-top-left-radius: 3.5px;
-    }
-    
-    #bottom{
-        border-bottom-right-radius: 3.5px;
-        border-bottom-left-radius: 3.5px;
-    }
-    
-    .logo{
-        display: flex;
-        margin-top: -5px;
-        width: 100px;
-    }
-    
-    .logo img{
-        height: 22px; 
-        width: 85px;
-        filter: drop-shadow(2px 3px 1px #000);
-    }
-    
-    .logoburger {
-        width: 35px;
-        height: 35px;
-        margin: 18px 5px;
-        filter: drop-shadow(0px 2px 1px #000);
-    }
-    
-    #stage {
-        margin-top: 80px;
-    }
-    
-    #intro {
-        margin: auto;
-        height: 315px;
-        max-width: 100%;
-    }
-    
-    #intro img {
-        margin: auto;
-        max-width: 100%;
-        height: 250px;
-    }
-    
-    h1 {
-        width: 300px;
-        font-size: 18px;
-        background: linear-gradient(to top, #600, #900, #900, #600);
-        margin: -15px auto;
-        border-radius: 50px;
-        padding: 6px 0px;
-        box-shadow: 2px 2px 4px #000;
-    }
-    
-    .basic, .pro, .prime{
-        width: 100%;
-    }
-    
-    .website{
-        padding: 20px 10px 35px;
-        width: 95%;
-    }
-    
-    .website h1{
-        width: 200px;
-        font-size: 28px;
-        text-align: center;
-        background: transparent;
-        box-shadow: none;
-        padding: 20px 0;
-        text-decoration: underline;
-        text-shadow: .5px .5px 0px #fff;
-        text-underline-position: under;
-    }
-    
-    .website h2{
-        font-size: 20px;
-        margin: 20px 5px 0 15px;
-    }
-    
-    
-    .items h4{
-        font-size: 16px;
-        margin: 5px 0 0 20%;
-    }
-    
-    .items img{
-        width: 28px;
-        height: 20px;
-        margin-bottom: 3px;
-    }
-    
-    .items{
-        padding-top: 20px;
-        background: linear-gradient(90deg, #023, #034, #057, #057, #034, #023);
-        width: 80%;
-    }
-    
-    .pandemic{
-        width: 300px;
-        height: 200px;
-        background: url(Coronav.jpeg) 250% 1%;
-    }
-    
-    .pandemic h2, .commerce h2{
-        width: 300px;
-        font-size: 18px;
-        padding: 30px 20px;
-        margin-top: 10px;
-    }
-    
-    .presence{
-        background: url(Presence.jpeg);
-        margin: 20px auto;
+<!DOCTYPE html>
+
+<html>
+
+<head>
+    <link rel="stylesheet" href="https://www.w3schools.com/w3css/4/w3.css">
+    <meta property="og:title" content="MENU" />
+    <meta property="og:image:type" content="image/png" />
+    <meta property="og:image:width" content="400" />
+    <meta property="og:image:height" content="300" />
+    <meta property="og:image" content="https://i.ibb.co/cCVS5T1/Menu-Logo-Grdnt.png" />
+    <meta property="og:image:secure_url" content="https://i.ibb.co/cCVS5T1/Menu-Logo-Grdnt.png" />
+    <meta name="keywords" content="Web Development">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <title>MENU - Services</title>
+    <meta name="description" content="Online Presence Management">
+    <link rel="stylesheet" href="main.css">
+    <link rel="shortcut icon" type="image/png" href="MENU=.png">
+    <link href="https://fonts.googleapis.com/css?family=Federant|Lexend+Deca|Kaushan+Script|Fugaz+One|Righteous|Orbitron|Kanit|Quintessential" rel="stylesheet">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" href="https://unpkg.com/aos@next/dist/aos.css" />
+</head>
+
+<body style="background: linear-gradient(90deg, #034, #057, #034);" id="animated-example" class="animated fadeOut">
+
+    <script>
+        window.addEventListener("beforeunload", function() {
+            document.body.classList.add("animate-out");
+        });
+    </script>
+
+
+    <div id="mySidenav" class="sidenav">
+        <a href="javascript:void(0)" class="closebtn" onclick="closeNav()">&#10754;</a>
+        <a href="index.html">Home</a>
+        <a style="text-decoration: underline; text-underline-position: under;" href="services.html">Services</a>
+        <a href="contact.html">Contact</a>
+    </div>
+
+    <script>
+        function openNav() {
+            document.getElementById("mySidenav").style.width = "150px";
+        }
+
+        function closeNav() {
+            document.getElementById("mySidenav").style.width = "0";
+        }
+    </script>
+
+    <nav>
+
+        <div data-aos="fade-right" data-aos-duration="1000" data-aos-anchor-placement="top-bottom">
+            <img class="logoburger" src="MENU=.png">
+        </div>
+
+        <div data-aos="fade-right" data-aos-duration="800" data-aos-anchor-placement="top-bottom" class="logo"><img src="MenuRed.png"></div>
         
-    }
-    
-    .commerce{
-        background: url(Ecommerce.jpg);
-        width: 300px;
-        height: 200px;
-    }
-    
-    .media{
-        background: url(Online.jpeg);
-    }
-    
-    .media h2{
-        width: 300px;
-        margin: 0;
-        font-size: 18px;
-        padding: 30px 35px;
-    }
-    
-    .presence, .media, .commerce{
-        width: 300px;
-        height: 200px;
-        background-size: 130% 100%;
-    }
-    
-    .presence h2{
-        width: 300px;
-        font-size: 18px;
-        padding: 40px 20px;
-        margin-top: 20px;
-    }
-    
-    .presence, .pandemic, .media, .commerce{
-        margin-top: 10px;
-    }
-    
-    .media{
-        margin-top: 70px;
-    }
-    
-    #info {
-        margin-top: 16px;
-        flex-direction: column;
-        max-width: 100%;
-        padding-bottom: 100px;
+        <div class="burger" data-aos="fade-left" data-aos-duration="1000" data-aos-anchor-placement="top-bottom" >
+            <div data-aos="fade-left" data-aos-duration="1000" data-aos-anchor-placement="top-bottom"  onclick="openNav()"> <span id="top"></span> <span id="middle"></span> <span id="bottom"></span></div> 
+        </div>
         
-    }
-    
-    #info h1{
-        background: #880000;
-        box-shadow: inset -16px -16px 32px #360000,
-                    inset 16px 16px 32px #da0000;
-        width: 300px;
-        font-size: 17px;
-        padding: 4px;
-        margin-top: -12px;
-    }
-    
-    .services{
-        flex-direction: row;
-        margin: 100px 20px 80px;
-        padding: 20px;
-        justify-content: space-evenly;
-    }
-    
-    .services img{
-        float: left;
-        left: 0;
-        width: 35px;
-        height: 35px;
-        margin: -10px 0 0 10px;
-        padding: 0;
-    }
-    
-    .services h4{
-        font-size: 15px;
-        margin-top: 20px;
-    }
-    
-    .cafe,
-    .restaurant,
-    .pastry {
-        background: linear-gradient(0deg, #013, #023, #034, #046, #046, #034, #023, #012);
-        font-size: 18px;
-        margin: 10px;
-        width: 100px;
-        height: 70px;
-        border-radius: 50%;
-        padding: 25px;
-        box-shadow: 4px 4px 8px #000;
-        border: 2px solid #000;
-    }
-    
-    .cafe .details,
-    .restaurant .details,
-    .pastry .details {
-        padding: 0px 2px 40px;
-        border-radius: 15px;
-        font-size: 12px;
-        width: 120px;
-        height: auto;
-        margin-top: 18px;
-    }
-    
-    .cafe .details p,
-    .restaurant .details p,
-    .pastry .details p{
-        margin: 7px 5px;
-    }
-    
-    .cafe:hover,
-    .restaurant:hover,
-    .pastry:hover {
-        cursor: pointer;
-        box-shadow: none;
-    }
-    
-    .mconsult{
-        margin: -55px 46%;
-        width: 110px;
-    }
-    
-    #Btn {
-        font-size: 8px;
-        width: 110px;
-        box-shadow: 2px 4px 10px #000;
-    }
-    
-    .Btn1{
-        position: fixed;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        bottom: 10px;
-        margin: 0px 0 0 20%;
-        padding: 1px 15px;
-    }
-    
-    .restaurant img {
-        width: 65px;
-        height: 30px;
-        margin-left: -5px;
-        margin-top: -2px;
-    }
-    
-    .cform h2{
-        font-family: 'federant';
-        margin: 25px auto 10px;
-        font-size: 27px;
-    }
-    
-    .cform{
-        width: 85%;
-        margin: 100px auto 0px;
-        border: 6px double #068;
-    }
-    
-    .cform textarea, .cform input[type=text]{
-    width: 80%;
-    margin: 15px 0;
-        padding: 3px;
-    }
-    
-    .cform input[type=submit]{
-        width: 150px;
-        margin: 10px auto 30px;
-    }
-    
-    .cform select{
-        margin: 10px;
-        padding: 3px 20px;
-        width: 50%;
-    }
-    
-    .sidenav .closebtn {
-        padding: 11px 15px 28px 22px;
-        font-size: 30px;
-    }
-    
-    .star{
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        width: 55px;
-        height: 55px;
-        border: 2px solid #0ac;
-        margin-bottom: 5px;
-    }
-    
-    .star img{
-        margin: 0 0px 6px 0;
-        width: 65px;
-    }
-    
-    .items{
-        margin: 20px auto 30px;
-    }
-    
-    
-    #footer{
-        position:relative;
-        margin: 50px auto 0px;
-    }
-}
+        <ul class="desknav">
+            
+            <li><a href="contact.html">Contact</a></li>
+            <li><a href="services.html">Services</a></li>
+            <li><a href="index.html">Home</a></li>
+        
+        </ul>
+        
+        <div class="mconsult">
+            <a href="tel:17573255866"><button id="Btn" data-aos="fade-down" data-aos-duration="800" data-aos-anchor-placement="top-bottom">Free Consultation</button></a>
+        </div>
+        
+        <div class="dconsult">
+            <a href="contact.html"><button id="Btn" data-aos="fade-down" data-aos-duration="800" data-aos-anchor-placement="top-bottom">Free Consultation</button></a>
+        </div>
 
-/*=======================================*/
+    </nav>
 
+<div class="services">
+    
+        <div class="restaurant" data-aos="zoom-in-up" data-aos-duration="1000" data-aos-delay="400" ><img data-aos="fade-in" data-aos-anchor-placement="center-bottom" data-aos-duration="1000" data-aos-delay="1200" src="ServNapkinTray.png"><br><h4 data-aos="zoom-in-down" data-aos-duration="800" data-aos-delay="600" >Service</h4>
 
-/*=======================================*/
+            <div class="details">
+                <p>All Dining Establishments Need A Digital Presence These Days. We Can Provide And Manage It All For You.</p><a href="#food"><button class="Btn1">Details</button></a>
+            </div>
+        </div>
 
-@media (min-width: 800px) and (max-width: 1000px){
-    
-    .mconsult{
-        display: none;
-    }
-    
-    .dconsult{
-        margin: 30px 45%;;
-    }
-    
-    .items h4{
-        margin-left: 10%;
-    }
-    
-    #info h1{
-        width: 480px;
-        background: #880000;
-        box-shadow: inset -16px -16px 32px #360000,
-                    inset 16px 16px 32px #da0000;
-        margin: -20px auto;
-        border-radius: 50px;
-        padding: 5px 0px;
-        font-size: 26px;
-    }
-    
-    #Btn{
-        margin: 0 15%;
-        font-size: 14px;
-        width: 200px;
-    }
-    
-    .presence h2{
-        padding: 15px 6px 0 355px;
-        width: 100%;
-    }
-    
-    .pandemic h2{
-        padding: 45px 25px;
-    }
-    
-    .media  h2{
-        width: 100%;
-        margin-left: -250px;
-        padding: 20px 50px 10px 257px;
-    }
-    
-    .commerce h2{
-        padding: 20px 10px 0 300px;
-        width: 100%;
-    }
-    
-    .cform input[type=submit]{
-        margin: 50px auto;
-        width: 25%;
-    }
-    
-    .star{
-        width: 70px;
-        height: 70px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        border: 2px solid #0ac;
-    }
-    
-    .star img{
-        width: 50px;
-        height: 50px;
-        margin: 0 auto 5px;   
-    }
-    
-    .basic, .pro, .prime{
-        margin: 10px;
-    }
-}
+        <div class="pastry" data-aos="zoom-in-up" data-aos-duration="1000" data-aos-delay="600"><img data-aos="fade-in" data-aos-anchor-placement="center-bottom" data-aos-duration="1000" data-aos-delay="1400" src="Retail.png"><br><h4 data-aos="zoom-in-down" data-aos-duration="800" data-aos-delay="800" >Retail</h4>
 
-@media (min-width: 1001px) and (max-width: 1200px) {
-    li{
-        margin: 0 28px;
-        font-size: 24px;   
-    }
-    
-    #Btn{
-        margin-left: 12%;
-        font-size: 14px;
-        width: 200px;
-    }
-    
-    .items{
-        width: 80%;
-    }
-    
-    .pro, .basic, .prime{
-        margin: 10px
-    }
-    .items h4{
-        margin-left: 10%;
-    }
-    
-    
-}
+            <div class="details">
+                <p>We Can Set Up An Automated Ecommerce Site For You So You Can Increase Sales And Focus On Your Craft.</p><a href="#e-commerce"><button class="Btn1">Details</button></a>
+            </div>
+        </div>
 
-@media (min-width: 1001px) {
-    .burger,
-    .mconsult,
-    .mobile{
-        display: none;
-    }
+        <div class="cafe" data-aos="zoom-in-up" data-aos-duration="1000" data-aos-delay="800"><img data-aos="fade-in" data-aos-duration="1000" data-aos-delay="1600" src="Portfolio.png"><br><h4 data-aos="zoom-in-down" data-aos-duration="800" data-aos-anchor-placement="center-bottom" data-aos-delay="1000" >Personal</h4>
+            <div class="details">
+                <p>Every Portfolio Has Its Own Style And Feel. We Strive To Showcase That Uniqueness For Each Individual.</p><a href="#personal"><button class="Btn1">Details</button></a>
+            </div>
+        </div>
+    </div>
     
-    .website{
-        margin-bottom: 50px;
-    }
+    <div data-aos="zoom-in-up" data-aos-duration="2000" data-aos-delay="800" class="website">
+        
+        <div data-aos="zoom-out-up" data-aos-delay="1000" data-aos-duration="800" class="stars">
+            
+            <img class="star-1" src="Star-1.png">
+            <img data-aos="zoom-in-up" data-aos-duration="2000" data-aos-delay="1000" class="star-2" src="Star-2.png">
+            <img class="star-3" src="Star-3.png">
+        </div>
     
-    #info h1{
-        width: 620px;
-        background: #880000;
-        box-shadow: inset -16px -16px 32px #360000,
-                    inset 16px 16px 32px #da0000;
-        margin: -22px auto;
-        border-radius: 50px;
-        padding: 0px 0px;
-    }
+        <h2  data-aos="zoom-in-up" data-aos-duration="1000" data-aos-delay="1500" data-aos-anchor-placement="top-bottom">Each site will have its own unique requirements so the plans listed below are really meant to give an idea of what we offer and their associated costs. We much prefer to build each plan for every individual need so contact our team now and let us build a plan for you with no obligation.</h2>
     
-    .presence h2{
-        padding: 35px 20px 0 520px;
-        width: 100%;
-    }
+    </div>
     
-    .pandemic h2{
-        padding: 35px 500px 0 60px;
-        width: 100%
-    }
     
-    .media  h2{
-        padding: 35px 34px 0 500px;
-        width: 100%;
-    }
+    <div class="plans">
+        
+        <div data-aos="zoom-in-up" data-aos-delay="300" data-aos-duration="1800" data-aos-anchor-placement="top-center" class="basic">
+            <div class="star"><img src="Star-1.png"></div>
+            <h1>Basic</h1>
+                <h3>100</h3>
+             <h6>monthly</h6>
+            
+                    <div data-aos="fade-up" data-aos-delay="1000" data-aos-duration="1800" data-aos-anchor-placement="top-bottom" class="items">
+                        <h4><img class="check" src="CheckBox.png"> 3 - 4 Pages</h4>
+                        <h4><img class="check" src="CheckBox.png"> Hosting</h4>
+                        <h4><img class="check" src="CheckBox.png"> Maintanence</h4>
+                        <h4><img class="check" src="CheckBox.png"> SEO</h4>
+                        <h4><img class="check" src="CheckBox-1.png"> E-Commerce</h4>
+                        <h4><img class="check" src="CheckBox-1.png"> Branding/Logo</h4>
+                        <h4><img class="check" src="CheckBox-1.png"> Social Media</h4>
+                        <h4><img class="check" src="CheckBox-1.png"> Mobile App</h4><br>
+                    </div>
+        </div>
+        
+        <div data-aos="zoom-in-up" data-aos-delay="500" data-aos-duration="2000" data-aos-anchor-placement="top-center" class="pro">
+            <div class="star"><img src="Star-2.png"></div>
+            <h1>Pro</h1>
+                 <h3>200</h3>
+             <h6>monthly</h6>
+            
+                    <div data-aos="fade-up" data-aos-delay="1200" data-aos-duration="1800" data-aos-anchor-placement="top-bottom" class="items">
+                        <h4><img class="check" src="CheckBox.png"> 5 - 10 Pages</h4>
+                        <h4><img class="check" src="CheckBox.png"> Hosting</h4>
+                        <h4><img class="check" src="CheckBox.png"> Maintanence</h4>
+                        <h4><img class="check" src="CheckBox.png"> SEO</h4>
+                        <h4><img class="check" src="CheckBox.png"> E-Commerce</h4>
+                        <h4><img class="check" src="CheckBox-1.png"> Branding/Logo </h4>
+                        <h4><img class="check" src="CheckBox-1.png"> Social Media</h4>
+                        <h4><img class="check" src="CheckBox-1.png"> Mobile App</h4><br>
+                    </div>
+    </div>
+        
+        <div data-aos="zoom-in-up" data-aos-delay="800" data-aos-duration="2500" data-aos-anchor-placement="top-center" class="prime">
+            <div class="star"><img src="Star-3.png"></div>
+            <h1>Prime</h1>
+                 <h3>300</h3>
+             <h6>monthly</h6>
+            
+                    <div data-aos="fade-up" data-aos-delay="1400" data-aos-duration="1800" data-aos-anchor-placement="top-bottom" class="items">
+                        <h4><img class="check" src="CheckBox.png"> 10+ Pages</h4>
+                        <h4><img class="check" src="CheckBox.png"> Hosting</h4>
+                        <h4><img class="check" src="CheckBox.png"> Maintanence</h4>
+                        <h4><img class="check" src="CheckBox.png"> SEO</h4>
+                        <h4><img class="check" src="CheckBox.png"> E-Commerce</h4>
+                        <h4><img class="check" src="CheckBox.png"> Branding/Logo</h4>
+                        <h4><img class="check" src="CheckBox.png"> Social Media</h4>
+                        <h4><img class="check" src="CheckBox.png"> Mobile App</h4>
+                        <br id="food">
+                    </div>
+        </div>
     
-    .dconsult{
-        margin: 25px 30%;
-    }
+    </div>
     
-    .cform input[type=submit]{
-        margin: 50px auto;
-        width: 25%;
-    }
-    
-    .cform{
-        margin-bottom: 50px;
-    }
-    
-    #footer{
-        margin: -20px;
-    }
-}
+    <div data-aos="zoom-in-up" data-aos-duration="2000" data-aos-anchor-placement="top-bottom" class="website">
+        
+        <h1 data-aos="flip-right" data-aos-duration="3000" data-aos-delay="300" data-aos-anchor-placement="top-bottom">Food Service</h1>
+        <h2 data-aos="zoom-in-up" data-aos-duration="2000" data-aos-delay="500" data-aos-anchor-placement="top-bottom">Restaurants, cafes, diners, bakeries etc. all now recognize since 2020 the absolute necessity to maintain an online presence. We specialize in this specific niche especially the small business mom and pop locations. We specifically relate because we come from over 20 years of working in restaurants ourselves, from casual to fine dining. </h2><h2 data-aos="zoom-in-up" data-aos-duration="2000" data-aos-delay="800" data-aos-anchor-placement="top-bottom">It's imperative that people be able to find your establishment online in order to increase reservations and new prospective future regulars. Relying solely on word of mouth and neighborhood foot traffic is no longer enough to survive. We'll help put you on the map both literally and figuratively.</h2>
 
-@media (min-width: 1200px){
-    li{
-        margin-left: 28px;
-        font-size: 24px;
-    }
+    </div><br id="e-commerce"><br><br><br>
     
-    .cform input[type=submit]{
-        width: 20%;
-    }
-    
-    .dconsult{
-        margin: 25px 35%;
-    }
-    
-    #Btn{
-        width: 210px;
-    }
-}
+    <div data-aos="zoom-in-up" data-aos-duration="2000" data-aos-anchor-placement="top-bottom" class="website">
+        
+        <h1 data-aos="flip-right" data-aos-duration="3000" data-aos-delay="300" data-aos-anchor-placement="top-bottom">E-Commerce</h1>
+        <h2 data-aos="zoom-in-up" data-aos-duration="2000" data-aos-delay="500" data-aos-anchor-placement="top-bottom" >Selling online has continued to increase in popularity exponentially every year. More people are buying from online providers now more than ever thanks to recent events. We can seemlessly integrate a catalogue of items, your own customizable shopping cart, a checkout page and even shipping all into your website using a third party provider that handles all of your transactions and even provides reports to let you see how your products are selling.</h2>
 
-@media (min-width: 1300px){
-    li a{
-        margin-left: 28px;
-        font-size: 26px;
-    }
-}
-
-
+    </div><br id="personal"><br><br><br>
     
+    <div data-aos="zoom-in-up" data-aos-duration="2000" data-aos-anchor-placement="top-bottom" class="website">
+        
+        <h1 data-aos="flip-right" data-aos-duration="3000" data-aos-delay="300" data-aos-anchor-placement="top-bottom">Personal</h1>
+        <h2 data-aos="zoom-in-up" data-aos-duration="2000" data-aos-delay="500" data-aos-anchor-placement="top-bottom" >Creating your own portfolio or service providing website is essential for artists, entreprenuers, personal trainers, instructors, etc. It can help break into the freelancing platform and it all starts with a website. We like to make every personal website reflect the personality and style of each client.</h2>
+
+    </div><br><br><br><br>
+    
+    <div class="popup">
+        <div class="contentBox">
+            <div class="closex">&#10754;</div>
+            <div class="imgBx">
+                <img src="MenuLeft.png">
+            </div>
+            <div class="content">
+                <div>
+                <h3>Special Offer</h3>
+                <h2>50<sup>%</sup><span> Off</span></h2>
+                <p>Initial design & build with free consultation and quote.</p>
+                <a href="contact.html">Get This Deal</a>
+                </div>
+            </div>
+        </div>
+    </div>
+        
+        <script>
+        
+        const popup = document.querySelector('.popup');
+        const closex = document.querySelector('.closex');
+            
+            window.onload = function(){
+                setTimeout(function(){
+                    popup.style.display = "block";
+                }, 20000)
+            }
+            
+            closex.addEventListener('click', () => {
+                popup.style.display = "none";
+            })
+        </script>
+    
+
+    <div id="footer" style="background: #034; height: 40px;">
+        <p>&copy; <img id="menumade" src="MENU.png"> made 2019</p>
+    </div>
+    
+    <script src="https://unpkg.com/aos@next/dist/aos.js"></script>
+    <script>
+        AOS.init();
+    </script>
+
+</body>
+
+</html>
