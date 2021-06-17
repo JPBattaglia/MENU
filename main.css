@@ -1727,8 +1727,9 @@ h6{
     
     .services{
         flex-direction: row;
-        margin: 80px 20px 100px;
+        margin: 100px 20px 80px;
         padding: 20px;
+        justify-content: space-evenly;
     }
     
     .services img{
@@ -1767,7 +1768,7 @@ h6{
         font-size: 12px;
         width: 120px;
         height: auto;
-        margin-top: 35px;
+        margin-top: 18px;
     }
     
     .cafe .details p,
