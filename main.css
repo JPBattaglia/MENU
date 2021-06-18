@@ -71,7 +71,7 @@ html {
 
 .contentBox .imgBx img{
     position: relative;
-    top: -40px;
+    top: -45px;
     max-width: 240px;
     height: 300px;
 }
@@ -398,9 +398,9 @@ nav p:hover {
 }
 
 .logoburger {
-    width: 65px;
-    height: 65px;
-    margin: 15px 10px 0 20px;
+    width: 55px;
+    height: 55px;
+    margin: 21px 10px 0 20px;
     float: left;
     filter: drop-shadow(1px 4px 1px #000);
     -webkit-transition: width 2s, height 2s, -webkit-transform 1.5s;
@@ -445,7 +445,8 @@ h1 {
     width: 800px;
     height: 300px;
     margin: 20px auto;
-    background: url(Coronav.jpeg);
+    background: url(Pandemic.jpeg);
+    background-size: 100% 100%;
     border-radius: 20px;
     box-shadow: 4px 6px 8px #000;
 }
@@ -458,7 +459,7 @@ h1 {
     width: 350px;
     padding-left: 65px;
     text-shadow: 
-        1px 1px 0px #0bd;
+        1px 1px 0px #000;
 }
 
 .media h2{
@@ -1056,7 +1057,7 @@ h6{
     
     .pandemic{
         width: 550px;
-        background-size: 95% 105%;
+        background-size: 105% 100%;
     }
     
     .pandemic h2{
@@ -1259,12 +1260,15 @@ h6{
     .contentBox .imgBx::before{
         background: #fff;
         box-shadow: none;
+        width: 300px;
+        left: 0px;
+        top: 5px;
     }
     
     .contentBox .imgBx img{
         position: relative;
-        top: 38px;
-        left: -3px;
+        top: 18px;
+        left: 0px;
         width: 175px;
         height: 210px;
     }
@@ -1289,7 +1293,7 @@ h6{
     .contentBox .content h3{
         font-weight: bolder;
         font-size: 50px;
-        margin: -25px 0 5px;
+        margin: -40px 0 15px;
     }
     
     .contentBox .content h2{
@@ -1635,7 +1639,7 @@ h6{
     
     .items h4{
         font-size: 16px;
-        margin: 5px 0 0 20%;
+        margin: 5px 0 0 22%;
     }
     
     .items img{
@@ -1653,7 +1657,6 @@ h6{
     .pandemic{
         width: 300px;
         height: 200px;
-        background: url(Coronav.jpeg) 250% 1%;
     }
     
     .pandemic h2, .commerce h2{
@@ -1749,7 +1752,7 @@ h6{
     .cafe,
     .restaurant,
     .pastry {
-        background: linear-gradient(0deg, #013, #023, #034, #046, #046, #034, #023, #012);
+        background: linear-gradient(0deg, #023, #046, #057, #057, #046, #023);
         font-size: 18px;
         margin: 10px;
         width: 100px;
@@ -1757,7 +1760,7 @@ h6{
         border-radius: 50%;
         padding: 25px;
         box-shadow: 4px 4px 8px #000;
-        border: 2px solid #000;
+        border: 1px solid #000;
     }
     
     .cafe .details,
