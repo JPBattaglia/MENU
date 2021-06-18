@@ -843,21 +843,24 @@ textarea {
     color: #fff;
     width: 75%;
     font-size: 25px;
-    background: linear-gradient(90deg, #000, #024, #000);
+    background: linear-gradient(315deg, #002e4d, #046);
+    box-shadow:  -7px -7px 15px #001f34,
+             7px 7px 15px #057;
     margin: -15px auto;
     padding: 20px;
     border-radius: 20px;
 }
 
 .website h1{
-    color: #d00;
+    color: #e00;
     font-size: 34px;
     text-align: center;
     background: transparent;
     box-shadow: none;
     padding: 10px 0 0;
     text-decoration: underline;
-    text-shadow: 1px 1px 0px #fff;
+    text-shadow: 1px 1px 0px #fff,
+                -1px -1px 0px #000;
     text-underline-position: under;
 }
 
@@ -1616,7 +1619,7 @@ h6{
     
     .website{
         padding: 20px 10px 35px;
-        width: 95%;
+        width: 90%;
     }
     
     .website h1{
