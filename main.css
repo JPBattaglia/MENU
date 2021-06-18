@@ -843,7 +843,7 @@ textarea {
     color: #fff;
     width: 75%;
     font-size: 25px;
-    background: #002633;
+    background: linear-gradient(315deg, #002632, #002d3c);
     box-shadow:  -12px -8px 28px #000,
                 12px 8px 28px #068;
     margin: -15px auto;
