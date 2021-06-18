@@ -844,8 +844,8 @@ textarea {
     width: 75%;
     font-size: 25px;
     background: #002633;
-    box-shadow:  -12px -8px 18px #000,
-                12px 8px 18px #068;
+    box-shadow:  -12px -8px 28px #000,
+                12px 8px 28px #068;
     margin: -15px auto;
     padding: 20px;
     border-radius: 20px;
