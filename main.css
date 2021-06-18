@@ -1811,6 +1811,11 @@ h6{
         padding: 1px 15px;
     }
     
+    .cafe img{
+        width: 45px;
+        margin-left: 3px;
+    }
+    
     .restaurant img {
         width: 65px;
         height: 30px;
