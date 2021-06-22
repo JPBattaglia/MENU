@@ -574,7 +574,7 @@ h1 {
 }
 
 #info {
-    background: linear-gradient(90deg, #800, #a00, #f00, #a00, #800);
+    background: linear-gradient(90deg, #800, transparent, #800);
     background-size: 100% 100%;
     display: flex;
     max-width: 100%;
