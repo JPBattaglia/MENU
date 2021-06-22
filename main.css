@@ -158,6 +158,8 @@ html {
 }
 
 .closex{
+    transition: .5s;
+    color: #f00;
     position: absolute;
     top: -5px;
     right: -18px;
@@ -166,14 +168,14 @@ html {
     cursor: pointer;
     border-radius: 50%;
     z-index: 10;
-    text-shadow: 1px 1px 0px #f00, -1px 1px 0px #f00,  -1px -1px 0px #f00,  1px -1px 0px #f00;
+    filter: drop-shadow(0px 0px 1px #f00);
+    text-shadow: 1px 1px 0px #000, -1px 1px 0px #000,  -1px -1px 0px #000,  1px -1px 0px #000;
 }
 
 .closex:hover{
-    transition: .2s;
-    filter: drop-shadow(0px 0px 1px #f00);
-    color: #f00;
-    text-shadow: 1px 1px 0px #000, -1px 1px 0px #000,  -1px -1px 0px #000,  1px -1px 0px #000;
+    transition: .5s;
+    color: #000;
+    text-shadow: 1px 1px 0px #f00, -1px 1px 0px #f00,  -1px -1px 0px #f00,  1px -1px 0px #f00;
 }
 
 .animated {
@@ -1460,7 +1462,7 @@ h6{
     }
     
     #myBtn{
-        margin: 0 5px -10px 0;
+        margin: 0 5px -5px 0;
     }
     
     .splash{
