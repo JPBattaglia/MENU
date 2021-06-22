@@ -6,6 +6,7 @@
 html {
     min-height: 100%;
     overflow: auto;
+    scroll-behavior: smooth;
 }
 
 .splash{
@@ -183,6 +184,45 @@ html {
     animation-duration: 3s;
     -webkit-animation-fill-mode: both;
     animation-fill-mode: both;
+}
+
+#myBtn {
+    margin-right: 30px;
+    display: none;
+    /* Hidden by default */
+    position: fixed;
+    /* Fixed/sticky position */
+    bottom: 20px;
+    /* Place the button at the bottom of the page */
+    right: 5px;
+    /* Place the button 5px from the right */
+    z-index: 99;
+    /* Make sure it does not overlap */
+    outline: none;
+    /* Remove outline */
+    cursor: pointer;
+    /* Add a mouse pointer on hover */
+    padding: 15px;
+    /* Some padding */
+    border-radius: 50px;
+    /* Rounded corners */
+    border: 1px solid red;
+    background: url("redarrow.png");
+}
+
+#myBtn:hover {
+    border-color: dodgerblue;
+    background: url("bluearrow1.png");
+}
+
+
+#scrolldown {
+    margin: 50px auto 0px;
+    font-size: 45px;
+    text-align: center;
+    color: #b30000;
+    font-family: 'Kaushan Script', serif;
+    text-shadow: 1px 1px 0 dodgerblue, -1px -1px 0 dodgerblue, 1px -1px 0 white, -1px 1px 0 white, 1px 1px 0 white;
 }
 
 @-webkit-keyframes fadeOut {
@@ -1419,6 +1459,10 @@ h6{
         display: none;
     }
     
+    #myBtn{
+        margin: 0 5px -10px 0;
+    }
+    
     .splash{
         padding-bottom: 100px;
         width: 160%;
@@ -1619,7 +1663,7 @@ h6{
     
     .website{
         padding: 20px 10px 35px;
-        width: 90%;
+        width: 88%;
     }
     
     .website h1{
