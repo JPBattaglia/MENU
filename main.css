@@ -622,9 +622,9 @@ h1 {
 
 .restaurant img {
     width: 130px;
-    height: 60px;
+    height: 65px;
     padding: 8px;
-    margin: 23px auto 0;
+    margin: 20px auto 0;
     filter: drop-shadow(2px 4px 1px #010);
 }
 
@@ -1483,25 +1483,26 @@ h6{
     }
     
     .stars{
-        margin-top: -60px;
+        margin-top: -80px;
     }
     
     .star-1, .star-3{
-        width: 40px;
-        height: 40px;
+        width: 55px;
+        height: 55px;
     }
     
     .star-2{
-        width: 50px;
-        height: 50px;
+        width: 65px;
+        height: 70px;
+        margin-top: -15px;
     }
     
     .star-1{
-        margin-right: -15px;
+        margin-right: -25px;
     }
     
     .star-3{
-        margin-left: -15px;
+        margin-left: -25px;
     }
     
     .contentBox{
@@ -1781,7 +1782,7 @@ h6{
     
     .services{
         flex-direction: row;
-        margin: 100px 20px 80px;
+        margin: 125px 0px 80px;
         padding: 20px;
         justify-content: space-evenly;
     }
@@ -1858,6 +1859,36 @@ h6{
         margin: 0px 0 0 20%;
         padding: 1px 15px;
         z-index: 99999;
+    }
+    
+    .cafe{
+        margin-right: 200px;
+    }
+    
+    .cafe .details{
+        margin-top: 0px;
+    }
+    
+    .pastry{
+        margin-left: 200px;
+    }
+    
+    .pastry .details{
+        margin-top: 0px;
+    }
+    
+    .restaurant{
+        margin-top: -100px;
+    }
+    
+    .restaurant .details{
+        margin-top: 40px;
+        width: 140px;
+        padding: 10px 5px 40px;
+    }
+    
+    .restaurant .Btn1{
+        margin: 0px 23% 0;
     }
     
     .cafe img{
