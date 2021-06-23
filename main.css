@@ -319,7 +319,7 @@ body {
 .burger span{
     display: block;
     width: 43px;
-    height: 7px;
+    height: 5px;
     margin-bottom: 5px;
     background: linear-gradient(to left, #034, #068, #09b, #0cf, #09b, #068, #034);
     z-index: 1;
@@ -887,7 +887,7 @@ textarea {
     font-size: 25px;
     background: linear-gradient(315deg, #002632, #002d3c);
     box-shadow:  -12px -8px 28px #000,
-                12px 8px 28px #08a;
+                12px 8px 28px #079;
     margin: -15px auto;
     padding: 20px;
     border-radius: 20px;
@@ -1872,7 +1872,7 @@ h6{
     }
     
     .cafe .details{
-        margin-top: -20px;
+        margin-top: 0px;
         margin-left: -5px;
     }
     
@@ -1881,7 +1881,7 @@ h6{
     }
     
     .pastry .details{
-        margin-top: -20px;
+        margin-top: 0px;
         margin-left: 5px;
     }
     
