@@ -319,7 +319,7 @@ body {
 .burger span{
     display: block;
     width: 43px;
-    height: 5px;
+    height: 7px;
     margin-bottom: 5px;
     background: linear-gradient(to left, #034, #068, #09b, #0cf, #09b, #068, #034);
     z-index: 1;
@@ -1603,7 +1603,7 @@ h6{
     
     .burger span{
         width: 35px;
-        height: 6px;
+        height: 5px;
         margin: 4px;
     }
     
