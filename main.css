@@ -1664,8 +1664,9 @@ h6{
     }
     
     .website{
+        margin-top: 10px;
         padding: 20px 10px 35px;
-        width: 88%;
+        width: 85%;
     }
     
     .website h1{
@@ -1856,6 +1857,7 @@ h6{
         bottom: 10px;
         margin: 0px 0 0 20%;
         padding: 1px 15px;
+        z-index: 99999;
     }
     
     .cafe img{
