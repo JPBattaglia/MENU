@@ -576,7 +576,7 @@ h1 {
 }
 
 #info {
-    background: linear-gradient(90deg, #800, transparent, #800);
+    background: linear-gradient(90deg, #700, #c00, #700);
     background-size: 100% 100%;
     display: flex;
     max-width: 100%;
@@ -2132,7 +2132,7 @@ h6{
     }
 }
 
-@media (min-width: 1200px){
+@media (min-width: 1201px){
     li{
         margin-left: 28px;
         font-size: 24px;
