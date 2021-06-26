@@ -576,7 +576,7 @@ h1 {
 }
 
 #info {
-    background: url(Wide.jpg);
+    background: url(Wide2.jpg);
     background-size: 100% 100%;
     display: flex;
     max-width: 100%;
@@ -1768,7 +1768,7 @@ h6{
     }
     
     #info {
-        background: url(Wide.jpg);
+        background: url(Wide2.jpg);
         background-size: 100% 100%;
         margin-top: 16px;
         flex-direction: column;
