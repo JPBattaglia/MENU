@@ -217,16 +217,6 @@ html {
     background: url("bluearrow1.png");
 }
 
-
-#scrolldown {
-    margin: 50px auto 0px;
-    font-size: 45px;
-    text-align: center;
-    color: #b30000;
-    font-family: 'Kaushan Script', serif;
-    text-shadow: 1px 1px 0 dodgerblue, -1px -1px 0 dodgerblue, 1px -1px 0 white, -1px 1px 0 white, 1px 1px 0 white;
-}
-
 @-webkit-keyframes fadeOut {
     100% {
         opacity: 1;
@@ -699,13 +689,13 @@ h1 {
     padding: 5px 0px;
     background: repeating-linear-gradient(to top, #022, #058, #0d888f 100%);
     width: 185px;
-    border-radius: 30px;
+    border-radius: 12px;
     font-family: 'Orbitron';
     font-weight: bolder;
     font-size: 15px;
     letter-spacing: .5px;
     border: .5px solid #0b7075;
-    box-shadow: 2px 8px 10px #000, -2px 8px 10px #000;
+    box-shadow: 2px 6px 10px #000;
     text-shadow: 1px 1px 0 black, -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000;
 }
 
@@ -1878,6 +1868,13 @@ h6{
         margin-left: 30%;
     }
     
+    .pastry img{
+        margin-top: -5px;
+        margin-left: 2px;
+        width: 45px;
+        height: 30px;
+    }
+    
     .pastry .details{
         margin-top: 0px;
         margin-left: 5px;
@@ -1898,8 +1895,9 @@ h6{
     }
     
     .cafe img{
-        width: 45px;
-        margin-left: 3px;
+        width: 47px;
+        margin-left: 2px;
+        height: 36px;
     }
     
     .restaurant img {
