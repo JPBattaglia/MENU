@@ -190,14 +190,14 @@ html {
 
 .arrow{
     position: absolute;
-    top: 97%;
+    top: 98%;
     left: 60%;
     transform: translate(-50%,-50%);
 }
 
 .arrows{
     position: absolute;
-    top: 97%;
+    top: 98%;
     left: 40%;
     transform: translate(-50%,-50%);
 }
@@ -208,11 +208,11 @@ html {
     height: 25px;
     border-radius: 5px;
     border-radius: 5px;
-    border-bottom: 5px solid #0ce;
-    border-right: 5px solid #0ce;
+    border-bottom: 5px solid #0ac;
+    border-right: 5px solid #0ac;
     transform: rotate(45deg);
     margin: -10px;
-    animation: animate 4s infinite;
+    animation: animate 5.5s infinite;
 }
 .arrow span:nth-child(2), .arrows span:nth-child(2){
     animation-delay: -0.2s;
@@ -237,7 +237,7 @@ html {
 #myBtn {
     color: #0ac;
     transform: rotate(180deg);
-    font-size: 35px;
+    font-size: 40px;
     margin-right: 20px;
     display: none;
     /* Hidden by default */
@@ -257,11 +257,12 @@ html {
     /* Some padding */
     border-radius: 50px;
     /* Rounded corners */
-    border: 1px solid #0ac;
+    border: 1px solid transparent;
     background: transparent;
 }
 
 #myBtn:hover {
+    transition: 1s;
     border-color: white;
     background: transparent;
     color: white;
@@ -1514,10 +1515,6 @@ h6{
         display: none;
     }
     
-    #myBtn{
-        margin: 0 5px -5px 0;
-    }
-    
     .splash{
         padding-bottom: 100px;
         width: 160%;
@@ -1911,10 +1908,15 @@ h6{
     }
     
     #myBtn{
-        font-size: 25px;
+        margin: 0 -5px -15px 0;
+        font-size: 35px;
         padding: 0 6px;
         color: #0ce;
-        border: 1px solid #0ce;
+        border: 1px solid transparent;
+    }
+    
+    #myBtn:hover{
+        border: 1px solid transparent;
     }
     
     .cafe{
