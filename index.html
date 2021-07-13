@@ -133,20 +133,38 @@
         </script>
     </div>
     
+    <script>
+  
+            // When the user scrolls down 20px from the top of the document, show the button
+            window.onscroll = function() {scrollFunction()};
+
+            function scrollFunction() {
+            if (document.body.scrollTop > 0 || document.documentElement.scrollTop > 0) {
+           
+            document.getElementById("scrollup").style.display = "none";
+                }
+            }
+
+        </script>
+    
     <div id="info">
 
         <h1 data-aos="fade-up" data-aos-duration="800" data-aos-delay="1000" data-aos-anchor-placement="top-bottom"> Online Presence Management</h1><br><br>
         
-        <div class="arrow">
-                <span></span>
-                <span></span>
-                <span></span>
-        </div>
+        <div id="scrollup">
         
-        <div class="arrows">
-                <span></span>
-                <span></span>
-                <span></span>
+            <div class="arrow">
+                    <span></span>
+                    <span></span>
+                    <span></span>
+            </div>
+
+            <div class="arrows">
+                    <span></span>
+                    <span></span>
+                    <span></span>
+            </div>
+            
         </div>
         
         <div data-aos="zoom-in-up" data-aos-duration="2000" data-aos-delay="500" data-aos-anchor-placement="top-bottom" class="desktop"><div class="presence">

@@ -204,13 +204,15 @@ html {
 
 .arrow span, .arrows span{
     display: block;
-    width: 20px;
-    height: 20px;
+    width: 25px;
+    height: 25px;
+    border-radius: 5px;
+    border-radius: 5px;
     border-bottom: 5px solid #0ce;
     border-right: 5px solid #0ce;
     transform: rotate(45deg);
     margin: -10px;
-    animation: animate 2s infinite;
+    animation: animate 4s infinite;
 }
 .arrow span:nth-child(2), .arrows span:nth-child(2){
     animation-delay: -0.2s;
