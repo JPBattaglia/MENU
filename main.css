@@ -1659,7 +1659,7 @@ h6{
         background: white;
         width: 35px;
         height: 35px;
-        padding: 10px 0px 6px .5px;
+        padding: 0px 0px 6px .5px;
     }
     
     nav {
@@ -1670,7 +1670,7 @@ h6{
     
     .burger {
         float: right;
-        margin: -55px 10px 0 0;
+        margin: -58px 10px 0 0;
     }
     
     .burger span{
@@ -1704,7 +1704,7 @@ h6{
     .logoburger {
         width: 35px;
         height: 35px;
-        margin: 22px 5px;
+        margin: 21px 5px;
         filter: drop-shadow(0px 2px 1px #000);
     }
     
