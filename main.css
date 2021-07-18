@@ -1659,7 +1659,10 @@ h6{
         background: white;
         width: 35px;
         height: 35px;
-        padding: 0px 0px 6px .5px;
+    }
+    
+    .closex span{
+        margin: 0px 0px 6px .5px;
     }
     
     nav {
