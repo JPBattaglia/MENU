@@ -1420,6 +1420,7 @@ h6{
         width: 40px;
         height: 40px;
         padding-bottom: 8px;
+        filter: drop-shadow(0px 0px 1px transparent);
     }
     
     #info h1{
@@ -1654,16 +1655,13 @@ h6{
         align-items: center;
         justify-content: center;
         font-size: 30px;
-        top: -35px;
-        right: -25px;
+        top: 5px;
+        right: 5px;
         background: white;
         width: 35px;
         height: 35px;
-    }
-    
-    .closex span{
-        float: right;
-        margin: 0px 0px 6px .5px;
+        padding: 0px 0px 6px .5px;
+        filter: drop-shadow(0px 0px 1px transparent);
     }
     
     nav {
