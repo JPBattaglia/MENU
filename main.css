@@ -1659,7 +1659,7 @@ h6{
         background: white;
         width: 35px;
         height: 35px;
-        margin: 0px 0px -2px 1px;
+        padding: 3px 0px 6px 1px;
     }
     
     nav {
