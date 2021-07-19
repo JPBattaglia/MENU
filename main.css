@@ -455,13 +455,14 @@ li a:hover{
     cursor: pointer;
     position: absolute;
     width: 100%;
+    margin: -1px 40% 0 70%;
 }
 
 .dropdown-text,
 .dropdown-content a {
     color: #fff;
     font-family: 'federant';
-    font-size: 23px;
+    font-size: 24px;
 }
 
 .dropdown-text:hover{
@@ -478,11 +479,11 @@ li a:hover{
     top: -10px;
     border: none;
     padding: 0;
-    margin: 0 0 0 1px;
+    margin: 0 35px 0 1px;
     background: transparent;
     text-indent: -10px;
     height: 34px;
-    width: 100%;
+    width: 120%;
 }
 
 .dropdown-toggle:focus {
@@ -562,6 +563,11 @@ li a:hover{
     to {
         opacity: 0.0;
     }
+}
+
+.desknav img{
+    width: 35px;
+    padding: 0 8px 8px 0;
 }
 
 nav {
@@ -2260,7 +2266,17 @@ h6{
         margin-left: 10%;
     }
     
+    .desknav li{
+        font-size: 18px;
+    }
     
+    .desknav img{
+        width: 30px;
+    }
+    
+    .dropdown-text{
+        margin: -3px 10px 0 20px;;
+    }
 }
 
 @media (min-width: 1001px) {
