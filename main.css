@@ -137,7 +137,7 @@ html {
     font-family: 'Lexend Deca';
     font-weight: bolder;
     display: inline-block;
-    padding: 10px 20px 8px;
+    padding: 11px 20px 8px;
     background: repeating-linear-gradient(to bottom, #022, #058, #0d888f 100%);
     color: #fff;
     margin-left: 60px;
@@ -439,6 +439,96 @@ li a:hover{
     transition: .5s;
     color: #f00;
     text-shadow: .5px .5px 0 #fff, -1px -1px 0 #300, 1px -1px 1px #300, -1px 1px 0 #300, 1px 1px 0 #300;
+}
+
+.dropdown {
+    position: relative;
+    display: flex;
+    text-align: center;
+    justify-content: center;
+    top: 8px;
+    width: 100px;
+    padding: 0 10%;
+}
+
+.dropdown-text {
+    cursor: pointer;
+    position: absolute;
+    width: 100%;
+}
+
+.dropdown-text,
+.dropdown-content a {
+    color: #fff;
+    font-family: 'federant';
+    font-size: 23px;
+}
+
+.dropdown-text:hover{
+    transition: .5s;
+    color: #f00;
+    text-shadow: .5px .5px 0 #fff, -1px -1px 0 #300, 1px -1px 1px #300, -1px 1px 0 #300, 1px 1px 0 #300;
+}
+
+.dropdown-toggle {
+    font-size: 0;
+    z-index: 1;
+    cursor: pointer;
+    position: absolute;
+    top: -10px;
+    border: none;
+    padding: 0;
+    margin: 0 0 0 1px;
+    background: transparent;
+    text-indent: -10px;
+    height: 34px;
+    width: 100%;
+}
+
+.dropdown-toggle:focus {
+    outline: 0;
+}
+
+.dropdown-content {
+    -webkit-transition: all .25s ease;
+    -moz-transition: all .25s ease;
+    -ms-transition: all .25s ease;
+    -o-transition: all .25s ease;
+    transition: all .5s ease;
+    position: absolute;
+    top: 32px;
+    padding: 0 10px;
+    margin: 0;
+    opacity: 0;
+    visibility:hidden;
+    line-height: 32px;
+    width: 110%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    background: repeating-linear-gradient(#057, #046, #034, #023, #034, #046, #057 4%);
+    border-radius: 10px;
+    border: 3px solid #079;
+}
+
+.dropdown-content a {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-left: 5px;
+    font-size: 18px;
+}
+
+.dropdown-toggle:focus ~ .dropdown-text {
+    z-index: 2;
+}
+
+.dropdown-content:hover,
+.dropdown-toggle:focus ~ .dropdown-content {
+    opacity: 1;
+    visibility:visible;
+    top: 42px;
 }
 
 #stage {
