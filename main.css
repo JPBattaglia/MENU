@@ -2346,7 +2346,7 @@ h6{
 @media (min-width: 1201px){
     li{
         margin-left: 28px;
-        font-size: 24px;
+        font-size: 22px;
     }
     
     .cform input[type=submit]{
@@ -2362,7 +2362,8 @@ h6{
     }
     
     .dropdown-text{
-        margin: -3px 20% 0 40%;
+        margin: -4px 40% 0 40%;
+        font-size: 22px;
     }
 }
 
@@ -2370,6 +2371,15 @@ h6{
     li a{
         margin-left: 28px;
         font-size: 26px;
+    }
+    
+    .dropdown-text{
+        margin: -4px 10% 0 40%;
+        font-size: 26px;
+    }
+    
+    .dropdown-text img{
+        margin: 3px 0 0 0;
     }
 }
 
