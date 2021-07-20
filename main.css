@@ -2370,16 +2370,21 @@ h6{
 @media (min-width: 1300px){
     li a{
         margin-left: 28px;
-        font-size: 26px;
+        font-size: 25px;
     }
     
     .dropdown-text{
-        margin: -4px 10% 0 40%;
-        font-size: 26px;
+        margin: -3px 10% 0 40%;
+        font-size: 24px;
+    }
+    
+    .desknav img{
+        width: 40px;
     }
     
     .dropdown-text img{
-        margin: 3px 0 0 0;
+        height: 35px;
+        margin-top: -1px;
     }
 }
 
