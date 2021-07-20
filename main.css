@@ -446,7 +446,7 @@ li a:hover{
     display: flex;
     text-align: center;
     justify-content: center;
-    top: 8px;
+    top: 9px;
     width: 100px;
     padding: 0 10%;
 }
@@ -462,7 +462,7 @@ li a:hover{
 .dropdown-content a {
     color: #fff;
     font-family: 'federant';
-    font-size: 24px;
+    font-size: 25px;
 }
 
 .dropdown-text:hover{
@@ -479,11 +479,10 @@ li a:hover{
     top: -10px;
     border: none;
     padding: 0;
-    margin: 0 35px 0 1px;
+    margin-left: 20px;
     background: transparent;
-    text-indent: -10px;
-    height: 34px;
-    width: 120%;
+    height: 44px;
+    width: 110%;
 }
 
 .dropdown-toggle:focus {
@@ -508,8 +507,9 @@ li a:hover{
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    background: repeating-linear-gradient(#057, #046, #034, #023, #034, #046, #057 5%);
-    border-radius: 10px;
+    background: repeating-linear-gradient(to top, #057, #046, #034, #023, #034, #046, #057 5.8%);
+    border-bottom-left-radius: 10px;
+    border-bottom-right-radius: 10px;
 }
 
 .dropdown-content a {
@@ -567,6 +567,12 @@ li a:hover{
 .desknav img{
     width: 35px;
     padding: 0 8px 8px 0;
+}
+
+.dropdown-text img{
+    width: 35px;
+    height: 30px;
+    padding: 3px 8px 3px 0;
 }
 
 nav {
@@ -2274,7 +2280,12 @@ h6{
     }
     
     .dropdown-text{
-        margin: -3px 10px 0 20px;;
+        margin: -3px 0 0 0;
+    }
+    
+    .dropdown-text img{
+        width: 30px;
+        padding: 2px 8px 10px 0;
     }
 }
 
@@ -2348,6 +2359,10 @@ h6{
     
     #Btn{
         width: 210px;
+    }
+    
+    .dropdown-text{
+        margin: -3px 20% 0 40%;
     }
 }
 
