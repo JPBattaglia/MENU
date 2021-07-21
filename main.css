@@ -320,7 +320,7 @@ body {
     background-size: 115% 50%;
     overflow-x: hidden;
     transition: .8s;
-    padding-top: 100px;
+    padding-top: 50px;
     font-family: 'Federant';
     font-weight: bold;
 }
@@ -328,9 +328,9 @@ body {
 .sidenav a {
     font-size: 24px;
     color: white;
-    display: block;
     transition: 1s;
     max-width: 100%;
+    margin-bottom: 70px;
     text-align: center;
     text-shadow: 1px 1px 0 red, -1px -1px 0 #800, 1px -1px 0 #800, -1px 1px 0 #800, 1px 1px 0 #800;
     text-decoration: none;
@@ -360,7 +360,7 @@ body {
 .burger{
     transition: 1.5s;
     float: right;
-    margin: 30px 20px 0 0;
+    margin: -60px 20px 0 0;
     background: none;
     border: none;
 }
@@ -414,14 +414,14 @@ ul, li{
 }
 
 ul{
-    margin-top: 25px;
-    width: 45%;
+    margin-top: -55px;
+    margin-right: 30px;
+    width: 55%;
 }
 
 li{
-    margin: 0 40px;
+    margin: 0 0px;
     font-family: 'federant';
-    font-size: 22px;
     letter-spacing: 1px;
 }
 
@@ -479,10 +479,9 @@ li a:hover{
     top: -10px;
     border: none;
     padding: 0;
-    margin-left: 20px;
     background: transparent;
     height: 44px;
-    width: 110%;
+    width: 80%;
 }
 
 .dropdown-toggle:focus {
@@ -496,28 +495,31 @@ li a:hover{
     -o-transition: all .25s ease;
     transition: all .5s ease;
     position: absolute;
-    top: 32px;
+    top: 22px;
     padding: 0 10px;
-    margin: 0;
+    margin: 0 0 0 40px;
     opacity: 0;
     visibility:hidden;
     line-height: 32px;
-    width: 110%;
+    width: 100%;
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    background: repeating-linear-gradient(to top, #057, #046, #034, #023, #034, #046, #057 5.8%);
-    border-bottom-left-radius: 10px;
-    border-bottom-right-radius: 10px;
 }
 
 .dropdown-content a {
+    padding: 10px 60px;
+    text-align: center;
     display: flex;
     align-items: center;
     justify-content: center;
-    margin-left: 5px;
+    margin-top: -6px;
     font-size: 18px;
+    width: 100px;
+    background: repeating-linear-gradient(to top, #057, #046, #034, #023, #034, #046, #057 9.8%);
+    border-bottom-left-radius: 10px;
+    border-bottom-right-radius: 10px;
 }
 
 .dropdown-toggle:focus ~ .dropdown-text {
@@ -529,6 +531,10 @@ li a:hover{
     opacity: 1;
     visibility:visible;
     top: 42px;
+}
+
+.dropdown-content a:hover{
+    padding: 10px 60px;
 }
 
 #stage {
@@ -836,8 +842,8 @@ h1 {
 }
 
 .consult{
-    width: 150px;
     margin: 30px 0 0 40%;
+    width: 120px;
 }
 
 #Btn {
@@ -845,7 +851,7 @@ h1 {
     color: #ffeecc;
     padding: 5px 0px;
     background: repeating-linear-gradient(to top, #022, #058, #0d888f 100%);
-    width: 185px;
+    width: 120px;
     border-radius: 12px;
     font-family: 'Orbitron';
     font-weight: bolder;
@@ -1207,13 +1213,14 @@ h6{
 }
 
 .bio{
-    background: url(MENUBCKGRND.png);
+    background: linear-gradient(315deg, #001f2e, #002437);
+    box-shadow:  -10px -10px 20px #000,
+             10px 10px 20px #046;
     background-size: 100% 100%;
     width: 60%;
     height: 100%;
-    border: 2px solid #079;
     border-radius: 20px;
-    margin: 200px auto 400px;
+    margin: 200px auto 100px;
 }
 
 
@@ -1296,7 +1303,7 @@ h6{
     }
     #Btn {
         font-size: 12px;
-        width: 170px;
+        width: 120px;
         margin: 30px 12%;
     }
     
@@ -1860,7 +1867,7 @@ h6{
     
     .burger {
         float: right;
-        margin: -58px 10px 0 0;
+        margin: 20px 10px 0 0;
     }
     
     .burger span{
@@ -2101,12 +2108,12 @@ h6{
     
     .mconsult{
         margin: -55px 46%;
-        width: 110px;
+        width: 100px;
     }
     
     #Btn {
-        font-size: 8px;
-        width: 110px;
+        font-size: 10px;
+        width: 100px;
         box-shadow: 2px 4px 10px #000;
     }
     
@@ -2313,7 +2320,7 @@ h6{
     #Btn{
         margin: 0 15%;
         font-size: 14px;
-        width: 200px;
+        width: 130px;
     }
     
     .presence h2{
@@ -2385,14 +2392,14 @@ h6{
 
 @media (min-width: 1001px) and (max-width: 1200px) {
     li{
-        margin: 0 28px;
+        margin: 0 24px;
         font-size: 24px;   
     }
     
     #Btn{
         margin-left: 12%;
         font-size: 14px;
-        width: 200px;
+        width: 130px;
     }
     
     .items{
@@ -2406,6 +2413,10 @@ h6{
         margin-left: 10%;
     }
     
+    #bout{
+        margin-left: -10px;
+    }
+    
     .desknav li{
         font-size: 18px;
     }
@@ -2415,12 +2426,20 @@ h6{
     }
     
     .dropdown-text{
-        margin: -3px 0 0 0;
+        margin: -4px 15% 0 0;
     }
     
     .dropdown-text img{
         width: 30px;
         padding: 2px 8px 10px 0;
+    }
+    
+    .dropdown-toggle{
+        margin-left: 10px;
+    }
+    
+    .dropdown-content{
+        margin-left: 20px;
     }
     
     .piero{
@@ -2483,7 +2502,7 @@ h6{
     }
     
     .dconsult{
-        margin: 25px 30%;
+        margin: 25px 25%;
     }
     
     .cform input[type=submit]{
@@ -2502,8 +2521,12 @@ h6{
 
 @media (min-width: 1201px){
     li{
-        margin-left: 28px;
-        font-size: 22px;
+        margin-left: 48px;
+        font-size: 20px;
+    }
+    
+    #bout{
+        margin-left: -15px;
     }
     
     .cform input[type=submit]{
@@ -2511,16 +2534,20 @@ h6{
     }
     
     .dconsult{
-        margin: 25px 35%;
+        margin: 25px 33%;
     }
     
     #Btn{
-        width: 210px;
+        width: 130px;
     }
     
     .dropdown-text{
-        margin: -4px 40% 0 40%;
+        margin: -7px 20% 0 50%;
         font-size: 22px;
+    }
+    
+    .dropdown-toggle{
+        margin-left: 60px;
     }
     
     .piero{
@@ -2534,13 +2561,17 @@ h6{
 
 @media (min-width: 1300px){
     li a{
-        margin-left: 28px;
-        font-size: 25px;
+        margin-left: 25px;
+        font-size: 20px;
+    }
+    
+    #bout{
+        margin-left: 0px;
     }
     
     .dropdown-text{
-        margin: -3px 10% 0 40%;
-        font-size: 24px;
+        margin: -4px 0 0 35%;
+        font-size: 20px;
     }
     
     .desknav img{
@@ -2549,7 +2580,11 @@ h6{
     
     .dropdown-text img{
         height: 35px;
-        margin-top: -1px;
+        margin-top: -5px;
+    }
+    
+    .dropdown-toggle{
+        margin-left: 80px;
     }
 }
 
