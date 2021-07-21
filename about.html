@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+
+<html>
+
+<head>
+    <link rel="stylesheet" href="https://www.w3schools.com/w3css/4/w3.css">
+    <meta property="og:title" content="MENU" />
+    <meta property="og:image:type" content="image/png" />
+    <meta property="og:image:width" content="400" />
+    <meta property="og:image:height" content="300" />
+    <meta property="og:image" content="https://i.ibb.co/8PxT5y5/Menu-Preview.png" />
+    <meta property="og:image:secure_url" content="https://i.ibb.co/8PxT5y5/Menu-Preview.png" />
+    <meta name="keywords" content="Web Development">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <title>MENU - About</title>
+    <meta name="description" content="Online Presence Management">
+    <link rel="stylesheet" href="main.css">
+    <link rel="shortcut icon" type="image/png" href="MENU=.png">
+    <link href="https://fonts.googleapis.com/css?family=Federant|Lexend+Deca|Kaushan+Script|Fugaz+One|Righteous|Orbitron|Kanit|Quintessential" rel="stylesheet">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" href="https://unpkg.com/aos@next/dist/aos.css"/>
+</head>
+
+<body style="background: #012; background-size: 100% 100%;" id="animated-example" class="animated fadeOut">
+
+    <script>
+        window.addEventListener("beforeunload", function() {
+            document.body.classList.add("animate-out");
+        });
+    </script>
+
+
+    <div id="mySidenav" class="sidenav">
+        <a href="javascript:void(0)" class="closebtn" onclick="closeNav()">&#10754;</a>
+        <a class="sidelink" href="index.html">Home</a>
+        <a class="sidelink" style="text-decoration: underline; text-underline-position: under;" href="contact.html">About</a>
+        <a class="sidelink" href="services.html">Services</a>
+        <a class="sidelink" href="contact.html">Contact</a>
+    </div>
+
+    <script>
+        function openNav() {
+            document.getElementById("mySidenav").style.width = "150px";
+        }
+
+        function closeNav() {
+            document.getElementById("mySidenav").style.width = "0";
+        }
+    </script>
+
+    <nav>
+
+        <div data-aos="fade-right" data-aos-duration="1000" data-aos-anchor-placement="top-bottom">
+            <img class="logoburger" src="MENU=.png">
+        </div>
+
+        <div data-aos="fade-right" data-aos-duration="800" data-aos-anchor-placement="top-bottom" class="logo"><img src="MenuRed.png"></div>
+        
+        <div class="burger" data-aos="fade-left" data-aos-duration="1000" data-aos-anchor-placement="top-bottom" >
+            <div data-aos="fade-left" data-aos-duration="1000" data-aos-anchor-placement="top-bottom"  onclick="openNav()"> <span id="top"></span> <span id="middle"></span> <span id="bottom"></span></div> 
+        </div>
+        
+        <ul class="desknav">
+            
+            <li><a href="contact.html"><img src=Mail.png>Contact</a></li>
+            
+            <div class="dropdown">
+              <input class="dropdown-toggle">
+              <li class="dropdown-text">Options<img src=Paint-brush.png></li>
+              
+                <ul class="dropdown-content">
+                    <li><a href="services.html">Services</a></li>
+                    <li><a href="services.html#plans">Pricing</a></li>
+                </ul>
+            </div>
+            
+            <li><a href="about.html"><img src=Id-card.png>About</a></li>
+            
+            <li><a href="index.html"><img src=House.png>Home</a></li>
+        
+        </ul>
+        
+        <div class="mconsult">
+            <a href="tel:17573255866"><button id="Btn" data-aos="fade-down" data-aos-duration="800" data-aos-anchor-placement="top-bottom">Free Consultation</button></a>
+        </div>
+        
+        <div class="dconsult">
+            <a href="contact.html"><button id="Btn" data-aos="fade-down" data-aos-duration="800" data-aos-anchor-placement="top-bottom">Free Consultation</button></a>
+        </div>
+
+    </nav>
+
+    <div data-aos="flip-left" data-aos-duration="2500" data-aos-anchor-placement="top-bottom" class="bio">
+        
+        <div class="piero">
+            <img src="Piero.png">
+        </div><br><br>
+        
+        <div class="nino">
+            <img src="Nene.png">
+        </div><br><br>
+    
+        <h1>Battaglia Brothers</h1>
+        <h2>The two of us have been in the Food and Beverage industry for the majority of our lives. It's why we decided to specialize our services for restaurants, bars, cafes, diners, bakeries, donut shops, and any other hospitality provider. JP Battaglia focuses on the tech and coding side of things, while Nino Battaglia does all the graphics and design. Together we are MENU, offering online presence services. We know the business and understand how to establish a stake in the digital world.</h2>
+    
+    </div>
+    
+
+    
+    <div id="footer">
+        <p>&copy; <img id="menumade" src="MENU.png"> made 2019</p>
+    </div>
+    
+    <script src="https://unpkg.com/aos@next/dist/aos.js"></script>
+    <script>
+        AOS.init();
+    </script>
+
+</body>
+
+</html>

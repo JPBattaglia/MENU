@@ -1206,6 +1206,61 @@ h6{
     font-size: 15px;
 }
 
+.bio{
+    background: url(MENUBCKGRND.png);
+    background-size: 100% 100%;
+    width: 60%;
+    height: 100%;
+    border: 2px solid #079;
+    border-radius: 20px;
+    margin: 200px auto 400px;
+}
+
+
+.bio h1{
+    padding-top: 100px;
+    color: #b00;
+    font-family: 'federant', serif;
+    font-size: 52px;
+    letter-spacing: 3px;
+    text-shadow: 2px 3px 3px #0ac;
+    text-shadow: 1px 1px 0 #0ac, -1px -1px 0 #0ac0ac, 1px -1px 0 #0ac, -1px 1px 0 #0ac, 1px 1px 0 #0ac;
+}
+
+.bio h2{
+    color: #fff;
+    font-family: 'federant', serif;
+    font-size: 20px;
+    padding: 20px 100px 80px;
+}
+
+.nino{
+    width: 50%;
+    float: right;
+    margin: -160px 15%;
+}
+
+.nino img{
+    width: 130px;
+    height: 200px;
+    transform: rotate(-1deg);
+    filter: drop-shadow(-2px -2px 10px #800);
+}
+
+.piero img{
+    width: 120px;
+    height: 195px;
+    transform: rotate(2deg);
+    filter: drop-shadow(2px 2px 10px #057);
+}
+
+.piero{
+    width: 22%;
+    float: right;
+    margin: -35px 30%;
+    z-index: 99
+}
+
 #footer {
     position: relative;
     width: 100%;
@@ -1604,6 +1659,38 @@ h6{
     .star img{
         width: 65px;
         margin: 0 0 6px 0;
+    }
+    
+    .piero img{
+        width: 85px;
+        height: 145px;
+    }
+    
+    .nino img{
+        width: 100px;
+        height: 150px;
+    }
+    
+    .piero{
+        margin: -55px 30%;
+    }
+    
+    .nino{
+        margin: -100px 18%;
+    }
+    
+    .bio{
+        width: 85%;
+    }
+    
+    .bio h1{
+        font-size: 35px;
+        padding-top: 50px;
+    }
+    
+    .bio h2{
+        padding: 20px 50px 100px;
+        font-size: 20px;
     }
 }
 
@@ -2165,6 +2252,40 @@ h6{
         position:relative;
         margin: 50px auto 0px;
     }
+    
+    .piero img{
+        width: 65px;
+        height: 115px;
+    }
+    
+    .nino img{
+        width: 80px;
+        height: 120px;
+    }
+    
+    .piero{
+        margin: -55px 28%;
+    }
+    
+    .nino{
+        margin: -100px 20%;
+    }
+    
+    .bio{
+        width: 85%;
+    }
+    
+    .bio h1{
+        letter-spacing: 2px;
+        font-size: 28px;
+        padding-top: 20px;
+        background: none;
+    }
+    
+    .bio h2{
+        padding: 10px 20px;
+        font-size: 18px;
+    }
 }
 
 /*=======================================*/
@@ -2172,7 +2293,7 @@ h6{
 
 /*=======================================*/
 
-@media (min-width: 800px) and (max-width: 1000px){
+@media (min-width: 801px) and (max-width: 1000px){
     
     .mconsult{
         display: none;
@@ -2246,6 +2367,28 @@ h6{
     .basic, .pro, .prime{
         margin: 10px;
     }
+    
+    .piero{
+        margin-right: 30%;
+    }
+    
+    .nino{
+        margin-right: 17%;
+    }
+    
+    .bio{
+        width: 85%;
+    }
+    
+    .bio h1{
+        font-size: 45px;
+        padding-top: 100px;
+    }
+    
+    .bio h2{
+        padding: 20px 100px 100px;
+        font-size: 22px;
+    }
 }
 
 @media (min-width: 1001px) and (max-width: 1200px) {
@@ -2286,6 +2429,28 @@ h6{
     .dropdown-text img{
         width: 30px;
         padding: 2px 8px 10px 0;
+    }
+    
+    .piero{
+        margin-right: 30%;
+    }
+    
+    .nino{
+        margin-right: 16%;
+    }
+    
+    .bio{
+        width: 75%;
+    }
+    
+    .bio h1{
+        font-size: 45px;
+        padding-top: 100px;
+    }
+    
+    .bio h2{
+        padding: 20px 100px 100px;
+        font-size: 20px;
     }
 }
 
@@ -2364,6 +2529,14 @@ h6{
     .dropdown-text{
         margin: -4px 40% 0 40%;
         font-size: 22px;
+    }
+    
+    .piero{
+        margin-right: 30%;
+    }
+    
+    .nino{
+        margin-right: 15%;
     }
 }
 
