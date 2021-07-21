@@ -2268,18 +2268,19 @@ h6{
     }
     
     .nino{
-        margin: -100px 20%;
+        margin: -100px 21%;
     }
     
     .bio{
-        width: 85%;
+        width: 90%;
     }
     
     .bio h1{
         letter-spacing: 2px;
-        font-size: 28px;
-        padding-top: 20px;
+        font-size: 30px;
+        padding-top: 0px;
         background: none;
+        box-shadow: none;
     }
     
     .bio h2{
@@ -2559,7 +2560,6 @@ h6{
         height: 35px;
         margin-top: -1px;
     }
-    
 }
 
 
