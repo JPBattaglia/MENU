@@ -591,12 +591,6 @@ nav {
     z-index: 10;
 }
 
-nav p:hover {
-    border-bottom: 3px solid #079;
-    font-weight: bolder;
-    text-shadow: 1px 1px 0 #f00, -.5px -.5px 0 #fff, .5px -.5px 0 #fff, -.5px .5px 0 #fff, .5px .5px 0 #fff;
-}
-
 .logoburger {
     width: 55px;
     height: 55px;
@@ -612,15 +606,6 @@ nav p:hover {
     -webkit-transform: rotate(360deg);
     /* Safari */
     transform: rotate(360deg);
-}
-
-nav p {
-    float: right;
-    letter-spacing: 2px;
-    color: white;
-    padding: 5px 2px;
-    margin: 25px 20px;
-    font-family: 'Orbitron';
 }
 
 .logo img{
@@ -849,10 +834,10 @@ h1 {
 #Btn {
     transition: .5s;
     color: #ffeecc;
-    padding: 5px 0px;
+    padding: 5px 4px 8px 4px;
     background: repeating-linear-gradient(to top, #022, #058, #0d888f 100%);
     width: 120px;
-    border-radius: 12px;
+    border-radius: 20px;
     font-family: 'Orbitron';
     font-weight: bolder;
     font-size: 15px;
@@ -885,14 +870,15 @@ h1 {
 }
 
 #Btn:hover {
+    background: repeating-linear-gradient(to bottom, #022, #058, #0d888f 100%);
     transition: .5s;
     padding: 5px 4px 8px 4px;
-    border: 1px solid #000;
+    border: 1px solid #079;
     cursor: pointer;
     font-weight: bolder;
     color: #089;
     text-shadow: 1px 1px 0 white, -1px -1px 0 black, 1px -1px 0 black, -1px 1px 0 black, 1px 1px 0 black;
-    box-shadow: 2px 6px 10px #057, -2px 6px 10px #057;
+    box-shadow: 2px 4px 10px #0ce;
 }
 
 
@@ -1213,7 +1199,7 @@ h6{
 }
 
 .bio{
-    background: linear-gradient(315deg, #001f2e, #002437);
+    background: linear-gradient(315deg, #001c25, #00212c);
     box-shadow:  -10px -10px 20px #000,
              10px 10px 20px #046;
     background-size: 100% 100%;
@@ -1303,7 +1289,7 @@ h6{
     }
     #Btn {
         font-size: 12px;
-        width: 120px;
+        width: 200px;
         margin: 30px 12%;
     }
     
@@ -1495,6 +1481,10 @@ h6{
 @media (min-width: 601px) and (max-width: 800px){
     .dconsult{
         display: none;
+    }
+    
+    #Btn{
+        width: 130px;
     }
     
     .items{
@@ -1705,7 +1695,6 @@ h6{
 
 
 /*=======================================*/
-
 
 
 @media (max-width: 600px) {
@@ -2292,7 +2281,26 @@ h6{
 
 /*=======================================*/
 
+@media (max-width: 600px) and (min-width: 425px){
+    .piero{
+        margin: -55px 30%;
+    }
+    
+    .nino{
+        margin: -100px 18%;
+    }
+}
+
+/*=======================================*/
+
+
+/*=======================================*/
+
 @media (min-width: 801px) and (max-width: 1000px){
+    
+    .burger{
+        margin-top: -65px;
+    }
     
     .mconsult{
         display: none;
@@ -2320,7 +2328,7 @@ h6{
     #Btn{
         margin: 0 15%;
         font-size: 14px;
-        width: 130px;
+        width: 200px;
     }
     
     .presence h2{
@@ -2397,9 +2405,9 @@ h6{
     }
     
     #Btn{
-        margin-left: 12%;
+        margin-left: 5%;
         font-size: 14px;
-        width: 130px;
+        width: 200px;
     }
     
     .items{
@@ -2415,6 +2423,10 @@ h6{
     
     #bout{
         margin-left: -10px;
+    }
+    
+    .desknav{
+        margin-right: 10px;
     }
     
     .desknav li{
@@ -2538,7 +2550,7 @@ h6{
     }
     
     #Btn{
-        width: 130px;
+        width: 200px;
     }
     
     .dropdown-text{
@@ -2570,7 +2582,7 @@ h6{
     }
     
     .dropdown-text{
-        margin: -4px 0 0 35%;
+        margin: -4px 0 0 30%;
         font-size: 20px;
     }
     
