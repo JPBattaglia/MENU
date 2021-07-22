@@ -1199,9 +1199,9 @@ h6{
 }
 
 .bio{
-    background: linear-gradient(315deg, #001c25, #00212c);
+    background: linear-gradient(315deg, #046, #034);
     box-shadow:  -10px -10px 20px #000,
-             10px 10px 20px #046;
+             10px 10px 20px #068;
     background-size: 100% 100%;
     width: 60%;
     height: 100%;
@@ -1237,14 +1237,14 @@ h6{
     width: 130px;
     height: 200px;
     transform: rotate(-1deg);
-    filter: drop-shadow(-2px -2px 10px #800);
+    filter: drop-shadow(-2px -2px 20px #000);
 }
 
 .piero img{
     width: 120px;
     height: 195px;
     transform: rotate(2deg);
-    filter: drop-shadow(2px 2px 10px #057);
+    filter: drop-shadow(2px 2px 20px #000);
 }
 
 .piero{
@@ -2108,7 +2108,8 @@ h6{
     
     #Btn {
         font-size: 12px;
-        width: 120px;
+        margin-left: -3%;
+        width: 115px;
         box-shadow: 2px 4px 10px #000;
         padding: 3px;
     }
@@ -2252,37 +2253,40 @@ h6{
     }
     
     .piero img{
-        width: 65px;
-        height: 115px;
+        width: 45px;
+        height: 85px;
+        filter: drop-shadow(2px 2px 5px #000);
     }
     
     .nino img{
-        width: 80px;
-        height: 120px;
+        width: 55px;
+        height: 90px;
+        filter: none;
+        filter: drop-shadow(2px 2px 5px #000);
     }
     
     .piero{
-        margin: -55px 28%;
+        margin: -35px 25%;
     }
     
     .nino{
-        margin: -100px 21%;
+        margin: -80px 14%;
     }
     
     .bio{
-        width: 90%;
+        width: 80%;
     }
     
     .bio h1{
         letter-spacing: 2px;
         font-size: 32px;
-        padding-top: 0px;
+        margin-top: -120px;
         background: none;
         box-shadow: none;
     }
     
     .bio h2{
-        padding: 10px 20px;
+        padding: 10px 10px 50px 30px;
         font-size: 18px;
     }
 }
@@ -2294,11 +2298,11 @@ h6{
 
 @media (max-width: 600px) and (min-width: 425px){
     .piero{
-        margin: -55px 30%;
+        margin: -35px 28%;
     }
     
     .nino{
-        margin: -100px 18%;
+        margin: -80px 12%;
     }
 }
 
