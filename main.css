@@ -1216,8 +1216,8 @@ h6{
     font-family: 'federant', serif;
     font-size: 52px;
     letter-spacing: 3px;
-    text-shadow: 2px 3px 3px #0ac;
-    text-shadow: 1px 1px 0 #0ac, -1px -1px 0 #0ac0ac, 1px -1px 0 #0ac, -1px 1px 0 #0ac, 1px 1px 0 #0ac;
+    text-shadow: 2px 3px 3px #0ce;
+    text-shadow: 1px 1px 0 #0ce, -1px -1px 0 #0ac, 1px -1px 0 #0ac, -1px 1px 0 #0ac, 1px 1px 0 #0ac;
 }
 
 .bio h2{
