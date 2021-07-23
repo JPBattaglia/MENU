@@ -1207,11 +1207,12 @@ h6{
     height: 100%;
     border-radius: 20px;
     margin: 200px auto 100px;
+    border: 1px solid #046;
 }
 
 
 .bio h1{
-    padding-top: 100px;
+    padding-top: 50px;
     color: #b00;
     font-family: 'federant', serif;
     font-size: 52px;
@@ -1230,19 +1231,19 @@ h6{
 .nino{
     width: 50%;
     float: right;
-    margin: -160px 15%;
+    margin: -110px 15%;
 }
 
 .nino img{
-    width: 130px;
-    height: 200px;
+    width: 100px;
+    height: 160px;
     transform: rotate(-1deg);
     filter: drop-shadow(-2px -2px 20px #000);
 }
 
 .piero img{
-    width: 120px;
-    height: 195px;
+    width: 85px;
+    height: 150px;
     transform: rotate(2deg);
     filter: drop-shadow(2px 2px 20px #000);
 }
@@ -1250,7 +1251,7 @@ h6{
 .piero{
     width: 22%;
     float: right;
-    margin: -35px 30%;
+    margin: -65px 30%;
     z-index: 99
 }
 
@@ -1259,17 +1260,19 @@ h6{
 }
 
 .logolinks h1{
-    border-bottom: 10px double #08a;
+    background: linear-gradient(315deg, #00303d, #034);
+    box-shadow:  -5px -5px 15px #000,
+             5px 5px 15px #068;
+    border: 1px solid #046;
+    border-radius: 15px;
     width: 305px;
-    margin: auto;
-    padding: 0 0 5px 0;
+    margin: 0 auto 100px;
+    padding: 15px 0 20px 0;
 }
 
 .logolinks img{
     width: 200px;
-    margin: 0 40px 50px;
     filter: drop-shadow(2px 2px 10px #000);
-    
 }
 
 .logos{
@@ -1278,6 +1281,10 @@ h6{
     display: flex;
     align-items: center;
     justify-content: center;
+}
+
+.logos a{
+    margin: 0 50px;
 }
 
 #footer {
@@ -1297,7 +1304,8 @@ h6{
     color: #0bb;
     font-family: 'Quintessential';
     font-size: 24px;
-    margin: 0px;
+    margin: 100px 0 0;
+    filter: drop-shadow(2px 2px 1px #000);
 }
 
 
@@ -1458,6 +1466,16 @@ h6{
     
     .items h4{
         font-size: 16px;
+    }
+    
+    .logolinks h1{
+        background: linear-gradient(315deg, #00303d, #034);
+        box-shadow:  -5px -5px 15px #000,
+                 5px 5px 15px #068;
+        border-radius: 15px;
+        width: 255px;
+        margin: auto;
+        padding: 15px 0 20px 0;
     }
 }
 
@@ -1722,9 +1740,12 @@ h6{
         font-size: 20px;
     }
     
+    .logos a{
+        margin: 0 30px;
+    }
+    
     .logolinks img{
         width: 150px;
-        margin: 30px 30px;
     }
 }
 
@@ -2314,6 +2335,7 @@ h6{
         margin-top: -120px;
         background: none;
         box-shadow: none;
+        padding-top: 110px;
     }
     
     .bio h2{
@@ -2323,20 +2345,26 @@ h6{
     
     .logolinks h1{
         font-size: 24px;
-        border-bottom: 10px double #08a;
-        width: 260px;
+        background: linear-gradient(315deg, #00303d, #034);
+        box-shadow:  -5px -5px 15px #000,
+                 5px 5px 15px #068;
+        border-radius: 15px;
+        width: 215px;
         margin: auto;
-        padding: 0 0 5px 0;
+        padding: 15px 0 20px 0;
     }
 
     .logolinks img{
         width: 100%x;
-        margin: 30px 30px;
     }
     
     .logos{
         flex-direction: column;
     }
+    
+    .logos a{
+        margin: 30px 30px;
+    }  
 }
 
 /*=======================================*/
@@ -2448,7 +2476,7 @@ h6{
     }
     
     .nino{
-        margin-right: 17%;
+        margin-right: 14%;
     }
     
     .bio{
@@ -2457,7 +2485,6 @@ h6{
     
     .bio h1{
         font-size: 45px;
-        padding-top: 100px;
     }
     
     .bio h2{
@@ -2532,7 +2559,7 @@ h6{
     }
     
     .nino{
-        margin-right: 16%;
+        margin-right: 13%;
     }
     
     .bio{
@@ -2541,7 +2568,7 @@ h6{
     
     .bio h1{
         font-size: 45px;
-        padding-top: 100px;
+
     }
     
     .bio h2{
@@ -2675,6 +2702,14 @@ h6{
     
     .dropdown-toggle{
         margin-left: 80px;
+    }
+    
+    .piero{
+        margin-right: 30%;
+    }
+    
+    .nino{
+        margin-right: 12%;
     }
 }
 
