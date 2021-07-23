@@ -1254,6 +1254,25 @@ h6{
     z-index: 99
 }
 
+.logolinks{
+    margin: -20px auto;
+}
+
+.logolinks img{
+    width: 200px;
+    margin: 0 40px 50px;
+    filter: drop-shadow(2px 2px 10px #000);
+    
+}
+
+.logos{
+    width: 95%;
+    margin: 50px auto;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
 #footer {
     position: relative;
     width: 100%;
@@ -1694,6 +1713,11 @@ h6{
     .bio h2{
         padding: 20px 50px 100px;
         font-size: 20px;
+    }
+    
+    .logolinks img{
+        width: 150px;
+        margin: 30px 30px;
     }
 }
 
@@ -2288,6 +2312,19 @@ h6{
     .bio h2{
         padding: 10px 10px 50px 30px;
         font-size: 18px;
+    }
+    
+    .logolinks h1{
+        font-size: 24px;
+    }
+    
+    .logolinks img{
+        width: 100%x;
+        margin: 30px 30px;
+    }
+    
+    .logos{
+        flex-direction: column;
     }
 }
 
