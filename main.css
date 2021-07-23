@@ -1258,6 +1258,13 @@ h6{
     margin: -20px auto;
 }
 
+.logolinks h1{
+    border-bottom: 10px double #08a;
+    width: 305px;
+    margin: auto;
+    padding: 0 0 5px 0;
+}
+
 .logolinks img{
     width: 200px;
     margin: 0 40px 50px;
@@ -2316,8 +2323,12 @@ h6{
     
     .logolinks h1{
         font-size: 24px;
+        border-bottom: 10px double #08a;
+        width: 260px;
+        margin: auto;
+        padding: 0 0 5px 0;
     }
-    
+
     .logolinks img{
         width: 100%x;
         margin: 30px 30px;
