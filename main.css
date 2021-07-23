@@ -1268,6 +1268,7 @@ h6{
     width: 305px;
     margin: 0 auto 100px;
     padding: 15px 0 20px 0;
+    text-shadow: 1px 1px 0 #000, -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000;
 }
 
 .logolinks img{
