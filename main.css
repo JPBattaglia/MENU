@@ -291,13 +291,6 @@ html {
     animation-name: fadeOut;
 }
 
-article {
-    position: absolute;
-    left: 0px;
-    top: 155px;
-    text-align: center;
-}
-
 body {
     background: -moz-linear-gradient(-45deg, #600 25%, #044, #044 100%);
     background: -webkit-linear-gradient(-45deg, #600 25%, #044, #044 100%);
@@ -337,7 +330,7 @@ body {
 }
 
 .sidenav a:hover {
-    color: red;
+    color: #08a;
     text-shadow: 1px 1px 0 tan, -1px -1px 0 white, 1px -1px 0 white, -1px 1px 0 white, 1px 1px 0 white;
 }
 
@@ -437,7 +430,7 @@ li a{
 li a:hover{
     padding: 5px 0;
     transition: .5s;
-    color: #f00;
+    color: #0ce;
     text-shadow: .5px .5px 0 #fff, -1px -1px 0 #300, 1px -1px 1px #300, -1px 1px 0 #300, 1px 1px 0 #300;
 }
 
@@ -458,6 +451,12 @@ li a:hover{
     margin: -1px 40% 0 70%;
 }
 
+.dropdown-text span{
+    font-size: 20px;
+    margin: 1px 2px 0;
+    transform: rotate(-90deg)
+}
+
 .dropdown-text,
 .dropdown-content a {
     color: #fff;
@@ -467,7 +466,7 @@ li a:hover{
 
 .dropdown-text:hover{
     transition: .5s;
-    color: #f00;
+    color: #0ce;
     text-shadow: .5px .5px 0 #fff, -1px -1px 0 #300, 1px -1px 1px #300, -1px 1px 0 #300, 1px 1px 0 #300;
 }
 
@@ -541,7 +540,6 @@ li a:hover{
     position: fixed;
     margin: 3px auto;
     width: 100%;
-    max-width: 1400px;
     z-index: -1;
 }
 
@@ -550,7 +548,6 @@ li a:hover{
     animation-delay: 3s;
     animation-duration: 4s;
     z-index: 20;
-    max-width: 1400px;
 }
 
 #stage img:nth-of-type(2) {
@@ -811,7 +808,7 @@ h1 {
     box-shadow: 4px 8px 8px #000;
     background: -moz-linear-gradient(135deg, #056 5%, #800 100%);
     background: -webkit-linear-gradient(135deg, #056 5%, #800 100%);
-    background: linear-gradient(90deg, #400, #600, #800, #800, #600, #400 );
+    background: linear-gradient(90deg, #034, #057, #079, #079, #057, #034 );
     filter: progid: DXImageTransform.Microsoft.gradient( startColorstr='#056', endColorstr='#800', GradientType=1);
 }
 
@@ -875,13 +872,13 @@ h1 {
     transition: .3s;
     color: #0ac;
     text-shadow: 1px 1px 0 white, -1px -1px 0 black, 1px -1px 0 black, -1px 1px 0 black, 1px 1px 0 black;
-    box-shadow: 2px 2px 8px #800, -2px 2px 8px #f00;
+    box-shadow: 2px 2px 8px #000, -2px 2px 8px #000;
 }
 
 .cform label {
     font-size: 20px;
     text-align: center;
-    font-family: 'Lexend+Deca', serif;
+    font-family: 'Lexend', serif;
     color: white;
     list-style-type: none;
     text-shadow: 1px 1px 0 red, -1px -1px 0 red, 1px -1px 0 red, -1px 1px 0 red, 1px 1px 0 red;
@@ -889,7 +886,7 @@ h1 {
 
 .cform textarea,
 .cform input {
-    font-family: 'Lexend+Deca', serif;
+    font-family: 'Lexend', serif;
     color: red;
     text-align: center;
     font-size: 18px;
@@ -906,6 +903,7 @@ h1 {
     font-weight: bolder;
     max-width: 50%;
     box-sizing: border-box;
+    background: #fff;
 }
 
 ::placeholder {
@@ -952,10 +950,6 @@ textarea {
     /* Allow the user to vertically resize the textarea (not horizontally) */
 }
 
-textarea {
-    border-radius: 15px;
-}
-
 .cform{
     margin: 140px auto 0;
     width: 60%;
@@ -970,7 +964,7 @@ textarea {
 .cform textarea, .cform input[type=text]{
     width: 60%;
     margin: 50px 0 0 0;
-    color: deepskyblue;
+    color: #08a;
     background: #fff;
 }
 
@@ -996,7 +990,6 @@ textarea {
     box-shadow: 0px 5px 25px black;
     text-shadow: 1px 1px 0 black, -1px -1px 0 black, 1px -1px 0 black, -1px 1px 0 black, 1px 1px 0 black;
     font-family: 'Orbitron';
-    transition: 1s;
 }
 
 .cform input[type=submit]:hover{
@@ -1004,7 +997,6 @@ textarea {
     color: #0ff;
     background: #08a;
     text-shadow: 1px 1px 0 white, -1px -1px 0 black, 1px -1px 0 black, -1px 1px 0 black, 1px 1px 0 black;
-    transition: 1s;
 }
 
 .cform select{
@@ -1208,8 +1200,7 @@ h6{
     font-family: 'Lexend', serif;
     font-size: 52px;
     letter-spacing: 3px;
-    text-shadow: 2px 3px 3px #0ce;
-    text-shadow: none;
+    text-shadow: 1px 0px 1px #fff, -1px 0px 1px #fff;
 }
 
 .bio h2{
@@ -1610,7 +1601,7 @@ h6{
         align-items: center;
         justify-content: center;
         font-size: 35px;
-        top: 6px;
+        top: 8px;
         right: 6px;
         background: white;
         width: 40px;
@@ -1675,14 +1666,13 @@ h6{
     }
     
     .pandemic h2{
-        padding: 45px 25px;
+        padding: 25px 25px;
     }
     
     .media  h2{
-        padding: 5px 40px 0 310px;
         width: 100%;
         margin-left: -270px;
-        padding: 20px 50px 10px 285px;
+        padding: 7px 50px 10px 290px;
     }
     
     .commerce h2{
@@ -1868,7 +1858,7 @@ h6{
         font-family: 'Lexend';
         font-weight: bolder;
         line-height: 1.3;
-        width: 110%;
+        width: 100%;
     }
     
     .contentBox .content h3{
@@ -2178,9 +2168,9 @@ h6{
         display: flex;
         align-items: center;
         justify-content: center;
-        bottom: 10px;
+        bottom: 15px;
         margin: 0px 0 0 20%;
-        padding: 1px 15px;
+        padding: 0px 15px;
         z-index: 99999;
     }
     
@@ -2518,7 +2508,7 @@ h6{
     }
     
     #Btn:hover{
-        padding: 5px;
+        padding: 2px;
     }
     
     .items{
@@ -2533,7 +2523,7 @@ h6{
     }
     
     #bout{
-        margin-left: -10px;
+        margin-left: -20px;
     }
     
     .desknav{
@@ -2549,7 +2539,11 @@ h6{
     }
     
     .dropdown-text{
-        margin: -4px 15% 0 0;
+        margin: -4px 1% 0 0;
+    }
+    
+    .dropdown-text span{
+        margin: -1px 2px 2px;
     }
     
     .dropdown-text img{
@@ -2670,7 +2664,7 @@ h6{
     }
     
     .dropdown-text{
-        margin: -5px 20% 0 50%;
+        margin: -5px 20% 0 60%;
         font-size: 20px;
     }
     
@@ -2698,7 +2692,7 @@ h6{
     }
     
     .dropdown-text{
-        margin: -4px 0 0 30%;
+        margin: -4px 0 0 40%;
         font-size: 20px;
     }
     
