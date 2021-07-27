@@ -900,7 +900,7 @@ h1 {
 
 .cform select {
     font-family: 'Lexend', serif;
-    color: red;
+    color: #800;
     text-align: center;
     font-size: 18px;
     font-weight: bolder;
@@ -910,7 +910,7 @@ h1 {
 
 ::placeholder {
     /* Chrome, Firefox, Opera, Safari 10.1+ */
-    color: skyblue;
+    color: #800;
     opacity: 1;
     font-family: 'Lexend';
     /* Firefox */
@@ -940,7 +940,7 @@ textarea {
     /* Some padding */
     border: 6px double #600;
     /* Gray border */
-    border-radius: 30px;
+    border-radius: 15px;
     /* Rounded borders */
     box-sizing: border-box;
     /* Make sure that padding and width stays in place */
@@ -953,25 +953,18 @@ textarea {
 }
 
 textarea {
-    border-radius: 20px;
+    border-radius: 15px;
 }
 
 .cform{
     margin: 140px auto 0;
     width: 60%;
     text-align: center;
-    border: 5px solid #068;
-    border-radius: 30px;
     color: white;
 }
 
 .cform textarea{
     height: 100px;
-}
-
-.cform select{
-    color: deepskyblue;
-    background: #fff;
 }
 
 .cform textarea, .cform input[type=text]{
@@ -993,28 +986,29 @@ textarea {
     width: 25%;
     width: 35%;
     text-align: center;
-    font-size: 22px;
-    background: repeating-linear-gradient(to top, #022, #058, #0d888f 100%);
+    font-size: 20px;
+    background: #09b;
     color: white;
-    padding: 5px 30px;
-    border: 1px solid #008080;
+    padding: 2px 20px;
     cursor: pointer;
-    border-radius: 25px;
+    border: none;
+    border-radius: 10px;
     box-shadow: 0px 5px 25px black;
     text-shadow: 1px 1px 0 black, -1px -1px 0 black, 1px -1px 0 black, -1px 1px 0 black, 1px 1px 0 black;
+    font-family: 'Orbitron';
+    transition: 1s;
 }
 
 .cform input[type=submit]:hover{
     text-align: center;
-    border: 1px solid #009999;
-    color: #009999;
-    border-radius: 25px;
+    color: #0ff;
+    background: #08a;
     text-shadow: 1px 1px 0 white, -1px -1px 0 black, 1px -1px 0 black, -1px 1px 0 black, 1px 1px 0 black;
-    box-shadow: 0px 5px 25px #0cf;
+    transition: 1s;
 }
 
 .cform select{
-    color: #66c1e5;
+    color: #800;
     margin: 50px 0 0 0;
     width: 40%;
     padding: 4px 10px;
@@ -1326,7 +1320,7 @@ h6{
     }
     
     .sidenav .closebtn{
-        margin: 5px 12px;
+        margin: -5px 12px;
         height: 75px;
         width: 50px;
     }
@@ -2257,18 +2251,18 @@ h6{
     .cform h2{
         font-family: 'Lexend';
         margin: 25px auto 10px;
-        font-size: 27px;
+        font-size: 30px;
     }
     
     .cform{
         width: 85%;
         margin: 100px auto 0px;
-        border: 6px double #068;
+        margin-bottom: -50px;
     }
     
     .cform textarea, .cform input[type=text]{
-    width: 80%;
-    margin: 15px 0;
+        width: 80%;
+        margin: 15px 0;
         padding: 3px;
     }
     
