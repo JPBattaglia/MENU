@@ -2682,7 +2682,7 @@ h6{
 }
 
 @media (min-width: 1300px){
-    li a{
+        li a{
         margin-left: 25px;
         font-size: 20px;
     }
