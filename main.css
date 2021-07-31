@@ -622,6 +622,18 @@ h1 {
     letter-spacing: 1px;
 }
 
+#info {
+    background: url(Red.jpeg)top;
+    background-size: 100% 100%;
+    display: flex;
+    max-width: 100%;
+    margin: -20px auto;
+    text-align: center;
+    padding-bottom: 20px;
+    flex-direction: column;
+    padding-bottom: 50px;
+}
+
 .pandemic{
     width: 800px;
     height: 300px;
@@ -715,18 +727,6 @@ h1 {
     position: absolute;
 }
 
-#info {
-    background: url(Red.jpeg)top;
-    background-size: 100% 100%;
-    display: flex;
-    max-width: 100%;
-    margin: -20px auto;
-    text-align: center;
-    padding-bottom: 20px;
-    flex-direction: column;
-    padding-bottom: 50px;
-}
-
 .services{
     margin: 100px auto 50px;
     display: flex;
@@ -809,7 +809,7 @@ h1 {
     box-shadow: 4px 8px 8px #000;
     background: -moz-linear-gradient(135deg, #056 5%, #800 100%);
     background: -webkit-linear-gradient(135deg, #056 5%, #800 100%);
-    background: linear-gradient(90deg, #034, #057, #079, #079, #057, #034 );
+    background: linear-gradient(90deg, #012, #034, #046, #046, #034, #012 );
     filter: progid: DXImageTransform.Microsoft.gradient( startColorstr='#056', endColorstr='#800', GradientType=1);
 }
 
@@ -831,7 +831,7 @@ h1 {
     padding: 2px;
     background: #09b;
     width: 120px;
-    border-radius: 7px;
+    border-radius: 3px;
     font-family: 'Orbitron';
     font-weight: bolder;
     font-size: 15px;
@@ -861,9 +861,9 @@ h1 {
     cursor: pointer;
     padding: 1px 20px;
     color: white;
-    border-radius: 30px;
+    border-radius: 5px;
     border: 1.5px solid #068;
-    background: repeating-linear-gradient(to top, #022, #058, #0d888f 100%);
+    background: repeating-linear-gradient(to top, #046, #09b, #0ce 100%);
     box-shadow: 2px 4px 8px #000, -2px 4px 8px #000;
 }
 
@@ -871,7 +871,7 @@ h1 {
     transition: .3s;
     color: #0ac;
     text-shadow: 1px 1px 0 white, -1px -1px 0 black, 1px -1px 0 black, -1px 1px 0 black, 1px 1px 0 black;
-    box-shadow: 2px 2px 8px #000, -2px 2px 8px #000;
+    box-shadow: none;
 }
 
 .cform label {
