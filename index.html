@@ -24,36 +24,6 @@
 </head>
 
 <body id="animated-example" class="animated fadeOut">
-    
-    <script>
-    
-        
-    
-    </script>
-    
-    <div class="splash">
-        <video  class="fadeOut" width="100%" height="100%" muted id="myVideo" autoplay>
-            <source src="MENUVID.mp4" type="video/mp4">
-        </video>
-    </div>
-    
-    <script>
-    
-        const splash = document.querySelector('.splash');
-        
-        document.addEventListener('DOMContentLoaded', (e)=>{
-            setTimeout(()=>{
-                splash.classList.add('display-none');
-            }, 4000);
-        })
-    
-    </script>
-    
-    
-    <script>
-    document.getElementById('myVideo').setAttribute("autoplay", "true");
-        
-    </script>
 
     <script>
         window.addEventListener("beforeunload", function() {
@@ -86,18 +56,18 @@ background: linear-gradient(to bottom,  rgba(109,0,0,1) 14%,rgba(146,2,0,1) 61%,
 filter: progid:DXImageTransform.Microsoft.gradient( startColorstr='#6d0000', endColorstr='#b39e0000',GradientType=0 );
 ">
 
-        <div data-aos="fade-right" data-aos-duration="1000" data-aos-anchor-placement="top-bottom">
+        <div data-aos-delay="800" data-aos="fade-right" data-aos-duration="1500" data-aos-anchor-placement="top-bottom">
             <img class="logoburger" src="MENU=.png">
         </div>
 
-        <div data-aos="fade-right" data-aos-duration="800" data-aos-anchor-placement="top-bottom" class="logo"><img src="MENU1.png"></div>
+        <div data-aos-delay="600" data-aos="fade-right" data-aos-duration="1500" data-aos-anchor-placement="top-bottom" class="logo"><img src="MENU1.png"></div>
         
         <div class="mconsult">
             <a href="tel:17573255866"><button id="Btn" data-aos="fade-down" data-aos-duration="800" data-aos-anchor-placement="top-bottom">Free Quote</button></a>
         </div>
         
         <div class="dconsult">
-            <a href="contact.html"><button id="Btn" data-aos="fade-down" data-aos-duration="800" data-aos-anchor-placement="top-bottom">Free Quote</button></a>
+            <a href="contact.html"><button id="Btn" data-aos-delay="1500" data-aos="fade-down" data-aos-duration="2000" data-aos-anchor-placement="top-bottom">Free Quote</button></a>
         </div>
         
         <div class="burger" data-aos="fade-left" data-aos-duration="1000" data-aos-anchor-placement="top-bottom" >
@@ -106,11 +76,11 @@ filter: progid:DXImageTransform.Microsoft.gradient( startColorstr='#6d0000', end
         
         <ul class="desknav">
             
-            <li><a href="contact.html"><img src=Mail.png>Contact</a></li>
+            <li data-aos-delay="300" data-aos="fade-left" data-aos-duration="1200" ><a href="contact.html"><img src=Mail.png>Contact</a></li>
             
             <div class="dropdown">
               <input class="dropdown-toggle">
-              <li class="dropdown-text"><span>&#x3c;</span>Options<img src=Paint-brush.png></li>
+              <li  data-aos-delay="500" data-aos="fade-left" data-aos-duration="1200" class="dropdown-text"><span>&#x3c;</span>Options<img src=Paint-brush.png></li>
               
                 <ul class="dropdown-content">
                     <li><a style="background: #800;" href="services.html">Services</a></li>
@@ -118,9 +88,9 @@ filter: progid:DXImageTransform.Microsoft.gradient( startColorstr='#6d0000', end
                 </ul>
             </div>
             
-            <li><a id="bout" href="about.html"><img src=Id-card.png>About</a></li>
+            <li data-aos-delay="700" data-aos="fade-left" data-aos-duration="1200" ><a id="bout" href="about.html"><img src=Id-card.png>About</a></li>
             
-            <li><a href="index.html"><img src=House.png>Home</a></li>
+            <li data-aos-delay="1000" data-aos="fade-left" data-aos-duration="1200" ><a href="index.html"><img src=House.png>Home</a></li>
         
         </ul>
 
@@ -137,7 +107,6 @@ filter: progid:DXImageTransform.Microsoft.gradient( startColorstr='#6d0000', end
             <img src="Bakery.jpg">
             <img src="NinoSite.png">
             <img src="MTAS.png">
-            <img src="Waiter.png">
         </div>
 
         <script type="text/javascript">
@@ -171,9 +140,9 @@ filter: progid:DXImageTransform.Microsoft.gradient( startColorstr='#6d0000', end
     
     <div id="info">
 
-        <h1 data-aos="fade-up" data-aos-duration="800" data-aos-delay="1000" data-aos-anchor-placement="top-bottom"> Online Presence Management</h1><br><br>
+        <h1 data-aos="fade-up" data-aos-duration="1500" data-aos-delay="1000" data-aos-anchor-placement="top-bottom"> Online Presence Management</h1><br><br>
         
-        <div id="scrollup">
+        <div data-aos="fade-in" data-aos-duration="800" data-aos-delay="2500" data-aos-anchor-placement="top-bottom" id="scrollup">
         
             <div class="arrow">
                     <span></span>

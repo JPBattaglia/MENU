@@ -607,6 +607,7 @@ nav {
     float: left;
     margin: 22px 0;
     width: 150px;
+    height: 35px;
     filter: drop-shadow(2px 4px 1px #010);
 }
 
@@ -847,12 +848,11 @@ h1 {
     background: #079;
     transition: .5s;
     padding: 2px;
-    border: .5px solid #0b7075;
+    border: none;
     cursor: pointer;
     font-weight: bolder;
     color: #089;
     text-shadow: 1px 1px 0 white, -1px -1px 0 black, 1px -1px 0 black, -1px 1px 0 black, 1px 1px 0 black;
-    box-shadow: 2px 4px 10px #023;
 }
 
 
@@ -1212,19 +1212,19 @@ h6{
 .nino{
     width: 50%;
     float: right;
-    margin: -110px 15%;
+    margin: -130px 15%;
 }
 
 .nino img{
-    width: 100px;
-    height: 160px;
+    width: 80px;
+    height: 130px;
     transform: rotate(-1deg);
     filter: drop-shadow(-2px -2px 20px #000);
 }
 
 .piero img{
-    width: 85px;
-    height: 150px;
+    width: 75px;
+    height: 125px;
     transform: rotate(2deg);
     filter: drop-shadow(2px 2px 20px #000);
 }
@@ -1232,7 +1232,7 @@ h6{
 .piero{
     width: 22%;
     float: right;
-    margin: -65px 30%;
+    margin: -85px 30%;
     z-index: 99
 }
 
@@ -1699,21 +1699,21 @@ h6{
     }
     
     .piero img{
-        width: 85px;
-        height: 145px;
+        width: 60px;
+        height: 100px;
     }
     
     .nino img{
-        width: 100px;
-        height: 150px;
+        width: 70px;
+        height: 110px;
     }
     
     .piero{
-        margin: -55px 30%;
+        margin: -55px 3%;
     }
     
     .nino{
-        margin: -100px 18%;
+        margin: -100px -15%;
     }
     
     .bio{
@@ -2310,15 +2310,16 @@ h6{
     }
     
     .piero{
-        margin: -35px 25%;
+        margin: -35px 5%;
     }
     
     .nino{
-        margin: -80px 14%;
+        margin: -80px -6%;
     }
     
     .bio{
         width: 80%;
+        padding-top: 50px;
     }
     
     .bio h1{
@@ -2472,11 +2473,11 @@ h6{
     }
     
     .piero{
-        margin-right: 30%;
+        margin-right: 3%;
     }
     
     .nino{
-        margin-right: 14%;
+        margin-right: -17%;
     }
     
     .bio{
@@ -2559,11 +2560,11 @@ h6{
     }
     
     .piero{
-        margin-right: 30%;
+        margin-right: 5%;
     }
     
     .nino{
-        margin-right: 13%;
+        margin-right: -15%;
     }
     
     .bio{
@@ -2672,11 +2673,11 @@ h6{
     }
     
     .piero{
-        margin-right: 30%;
+        margin-right: 5%;
     }
     
     .nino{
-        margin-right: 15%;
+        margin-right: -14%;
     }
 }
 
@@ -2713,11 +2714,11 @@ h6{
     }
     
     .piero{
-        margin-right: 30%;
+        margin-right: 5%;
     }
     
     .nino{
-        margin-right: 12%;
+        margin-right: -15%;
     }
 }
 

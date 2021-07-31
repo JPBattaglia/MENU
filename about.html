@@ -24,6 +24,29 @@
 </head>
 
 <body style="background: linear-gradient(to left, #012, #046, #012);" id="animated-example" class="animated fadeOut">
+    
+    <div class="splash">
+        <video  class="fadeOut" width="100%" height="100%" muted id="myVideo" autoplay>
+            <source src="MENUVID.mp4" type="video/mp4">
+        </video>
+    </div>
+    
+     <script>
+    
+        const splash = document.querySelector('.splash');
+        
+        document.addEventListener('DOMContentLoaded', (e)=>{
+            setTimeout(()=>{
+                splash.classList.add('display-none');
+            }, 4000);
+        })
+    
+    </script>
+    
+    <script>
+    document.getElementById('myVideo').setAttribute("autoplay", "true");
+        
+    </script>
 
     <script>
         window.addEventListener("beforeunload", function() {
@@ -52,18 +75,18 @@
 
     <nav style="background: #034;">
 
-        <div data-aos="fade-right" data-aos-duration="1000" data-aos-anchor-placement="top-bottom">
+        <div data-aos-delay="800" data-aos="fade-right" data-aos-duration="1500" data-aos-anchor-placement="top-bottom">
             <img class="logoburger" src="MENU=.png">
         </div>
 
-        <div data-aos="fade-right" data-aos-duration="800" data-aos-anchor-placement="top-bottom" class="logo"><img src="MenuRed.png"></div>
+        <div data-aos-delay="600" data-aos="fade-right" data-aos-duration="1500" data-aos-anchor-placement="top-bottom" class="logo"><img src="MENU1.png"></div>
         
         <div class="mconsult">
             <a href="tel:17573255866"><button id="Btn" data-aos="fade-down" data-aos-duration="800" data-aos-anchor-placement="top-bottom">Free Quote</button></a>
         </div>
         
         <div class="dconsult">
-            <a href="contact.html"><button id="Btn" data-aos="fade-down" data-aos-duration="800" data-aos-anchor-placement="top-bottom">Free Quote</button></a>
+            <a href="contact.html"><button id="Btn" data-aos-delay="1500" data-aos="fade-down" data-aos-duration="2000" data-aos-anchor-placement="top-bottom">Free Quote</button></a>
         </div>
         
         <div class="burger" data-aos="fade-left" data-aos-duration="1000" data-aos-anchor-placement="top-bottom" >
@@ -72,38 +95,38 @@
         
         <ul class="desknav">
             
-            <li><a href="contact.html"><img src=Mail.png>Contact</a></li>
+            <li data-aos-delay="300" data-aos="fade-left" data-aos-duration="1200" ><a href="contact.html"><img src=Mail.png>Contact</a></li>
             
             <div class="dropdown">
               <input class="dropdown-toggle">
-              <li class="dropdown-text"><span>&#x3c;</span>Options<img src=Paint-brush.png></li>
+              <li  data-aos-delay="500" data-aos="fade-left" data-aos-duration="1200" class="dropdown-text"><span>&#x3c;</span>Options<img src=Paint-brush.png></li>
               
                 <ul class="dropdown-content">
-                    <li><a style="background: #034;" href="services.html">Services</a></li>
-                    <li><a style="background: #034;" href="services.html#plans">Pricing</a></li>
+                    <li><a style="background: #800;" href="services.html">Services</a></li>
+                    <li><a style="background: #800;" href="services.html#plans">Pricing</a></li>
                 </ul>
             </div>
             
-            <li><a id="bout" href="about.html"><img src=Id-card.png>About</a></li>
+            <li data-aos-delay="700" data-aos="fade-left" data-aos-duration="1200" ><a id="bout" href="about.html"><img src=Id-card.png>About</a></li>
             
-            <li><a href="index.html"><img src=House.png>Home</a></li>
+            <li data-aos-delay="1000" data-aos="fade-left" data-aos-duration="1200" ><a href="index.html"><img src=House.png>Home</a></li>
         
         </ul>
 
     </nav>
 
     <div data-aos="flip-left" data-aos-duration="1500" data-aos-anchor-placement="top-bottom" class="bio">
-        
-        <div class="piero">
-            <img data-aos-delay="600" data-aos="fade-right" data-aos-duration="2500" data-aos-anchor-placement="top-bottom" src="Piero1.png">
-        </div><br><br>
-        
-        <div class="nino">
-            <img data-aos-delay="600" data-aos="fade-left" data-aos-duration="2500" data-aos-anchor-placement="top-bottom" src="Nene1.png">
-        </div><br><br>
     
         <h1 data-aos-delay="1000" data-aos="flip-down" data-aos-duration="2500" data-aos-anchor-placement="top-bottom">Battaglia Brothers</h1>
         <h2 data-aos-delay="800" data-aos="fade-up" data-aos-duration="2500" data-aos-anchor-placement="top-bottom">The two of us have been in the Food and Beverage industry for the majority of our lives. It's why we decided to specialize our services for restaurants, bars, cafes, diners, bakeries, donut shops, and any other hospitality provider. JP Battaglia focuses on the tech and coding side of things, while Nino Battaglia does all the graphics and design. Together we are MENU, offering online presence services. We know the business and understand how to establish a stake in the digital world.</h2>
+        
+        <div class="piero">
+            <img data-aos-delay="3000" data-aos="fade-right" data-aos-duration="2500" data-aos-anchor-placement="bottom-bottom" src="Piero1.png">
+        </div><br><br>
+        
+        <div class="nino">
+            <img data-aos-delay="3000" data-aos="fade-left" data-aos-duration="2500" data-aos-anchor-placement="bottom-bottom" src="Nene1.png">
+        </div><br><br>
     
     </div>
     
