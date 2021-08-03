@@ -787,7 +787,7 @@ h1 {
 .cafe:hover,
 .restaurant:hover,
 .pastry:hover {
-    cursor: pointer;
+    cursor: default;
 }
 
 .cafe .details,
@@ -831,13 +831,13 @@ h1 {
     color: #fff;
     padding: 2px;
     background: #09b;
+    border: 1px solid transparent;
     width: 120px;
     border-radius: 3px;
     font-family: 'Orbitron';
     font-weight: bolder;
     font-size: 15px;
     letter-spacing: .5px;
-    border: none;
     text-shadow: 1px 1px 0 #000, -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000;
 }
 
@@ -846,10 +846,9 @@ h1 {
 }
 
 #Btn:hover {
-    background: #079;
-    transition: .5s;
+    background: #057;
+    border: 1px solid #023;
     padding: 2px;
-    border: none;
     cursor: pointer;
     font-weight: bolder;
     color: #089;
