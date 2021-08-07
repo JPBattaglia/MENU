@@ -26,10 +26,18 @@
 <body style="background: linear-gradient(90deg, #046, #068, #046);" id="animated-example" class="animated fadeOut">
     
     <script>
-    
-        
-        
-    </script>
+  $(document).ready(function()
+  $(window).scroll(function(){
+   var scroll = $(window).scrollTop();
+     if(scroll>50){
+      $("#nav").css("background", "#555");
+       }
+       else {
+      $("#nav").css("background", "transparent");
+       }
+      })
+   })
+</script>
 
     <script>
         window.addEventListener("beforeunload", function() {
