@@ -562,6 +562,10 @@ li a:hover{
     }
 }
 
+.space{
+    height: 750px;
+}
+
 .desknav img{
     width: 35px;
     padding: 0 8px 8px 0;
@@ -602,7 +606,7 @@ nav {
     float: left;
     margin: 22px 0;
     width: 150px;
-    height: 35px;
+    height: 30px;
     filter: drop-shadow(2px 4px 1px #010);
 }
 
@@ -1373,6 +1377,11 @@ h6{
         max-width: 100%;
         height: 460px;
     }
+    
+    .space{
+        height: 0;
+    }
+    
     h1 {
         font-size: 28px;
         margin: 0px;
@@ -1912,8 +1921,8 @@ h6{
     }
     
     .burger span{
-        width: 35px;
-        height: 5px;
+        width: 30px;
+        height: 3px;
         margin: 4px;
     }
     
@@ -1929,25 +1938,29 @@ h6{
     
     .logo{
         display: flex;
-        margin-top: -3px;
+        margin-top: -2px;
         width: 100px;
     }
     
     .logo img{
-        height: 22px; 
-        width: 85px;
+        height: 20px; 
+        width: 100px;
         filter: drop-shadow(2px 3px 1px #000);
     }
     
     .logoburger {
         width: 30px;
         height: 30px;
-        margin: 15px 5px 0 10px;
+        margin: 15px 5px 0 5px;
         filter: drop-shadow(0px 2px 1px #000);
     }
     
     #stage {
         margin-top: 60px;
+    }
+    
+    .space{
+        height: 0px;
     }
     
     #intro {
@@ -2137,7 +2150,7 @@ h6{
     .cafe .details p,
     .restaurant .details p,
     .pastry .details p{
-        margin: 7px 5px;
+        margin: 7px 8px;
     }
     
     .cafe:hover,
@@ -2154,7 +2167,7 @@ h6{
     
     #Btn {
         font-size: 12px;
-        margin-left: -1%;
+        margin-left: 5%;
         margin-top: 10px;
         width: 115px;
         box-shadow: 1px 1px 5px #000;
@@ -2388,7 +2401,7 @@ h6{
 @media (min-width: 801px) and (max-width: 1000px){
     
     .burger{
-        margin-top: -65px;
+        margin-top: -60px;
     }
     
     .mconsult{
@@ -2397,6 +2410,10 @@ h6{
     
     .dconsult{
         margin: 30px 45%;;
+    }
+    
+    .items{
+        width: 80%;
     }
     
     .items h4{
@@ -2422,10 +2439,6 @@ h6{
         margin: -15px 15%;
         font-size: 16px;
         width: 160px;
-        padding: 2px;
-    }
-    
-    #Btn:hover{
         padding: 2px;
     }
     
@@ -2475,6 +2488,7 @@ h6{
     
     .basic, .pro, .prime{
         margin: 10px;
+        padding-bottom: 10px;
     }
     
     .piero{
@@ -2680,6 +2694,7 @@ h6{
     #Btn{
         width: 170px;
         font-size: 16px;
+        margin-top: -2px;
     }
     
     .desknav{
