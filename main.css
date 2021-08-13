@@ -1924,6 +1924,9 @@ h6{
         width: 30px;
         height: 3px;
         margin: 4px;
+        background: linear-gradient(to left, #057, #079, #09b, #0cf, #09b, #079, #057);
+        border: .5px solid transparent;
+        filter: drop-shadow(-1px -1px 1px #034);
     }
     
     #top{
