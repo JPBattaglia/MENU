@@ -397,6 +397,7 @@ ul, li{
     flex-direction: row-reverse;
     text-decoration: none;
     color: white;
+    text-transform: uppercase;
 }
 
 ul{
@@ -514,6 +515,7 @@ li a:hover{
     background: #600;
     border-bottom-left-radius: 10px;
     border-bottom-right-radius: 10px;
+    text-transform: none;
 }
 
 .dropdown-toggle:focus ~ .dropdown-text {
@@ -2554,7 +2556,7 @@ h6{
     }
     
     .desknav li{
-        font-size: 20px;
+        font-size: 15px;
     }
     
     .desknav img{
@@ -2562,17 +2564,17 @@ h6{
     }
     
     .dropdown-text{
-        margin: -4px 1% 0 23%;
+        margin: -4px 13% 0 23%;
     }
     
     .dropdown-text span{
-        margin: -1px 2px 2px;
+        margin: -3px 2px 2px 4px;
     }
     
     .dropdown-text img{
         width: 30px;
         padding: 2px 8px 10px 0;
-        margin-top: 2px;
+        margin-top: -1px;
     }
     
     .dropdown-toggle{
@@ -2672,7 +2674,7 @@ h6{
 @media (min-width: 1201px){
     li{
         margin-left: 48px;
-        font-size: 20px;
+        font-size: 16px;
     }
     
     .arrow{
@@ -2702,12 +2704,25 @@ h6{
     }
     
     .desknav{
-        margin-top: -60px;
+        margin-top: -58px;
+    }
+    
+    .desknav img{
+        width: 30px;
     }
     
     .dropdown-text{
-        margin: -5px 20% 0 60%;
-        font-size: 20px;
+        margin: -4px 20% 0 60%;
+        font-size: 16px;
+    }
+    
+    .dropdown-text img{
+        height: 25px;
+        margin-top: -3px;
+    }
+    
+    .dropdown-text span{
+        margin: -3px 5px;
     }
     
     .dropdown-toggle{
@@ -2726,7 +2741,7 @@ h6{
 @media (min-width: 1300px){
     li a{
         margin-left: 25px;
-        font-size: 24px;
+        font-size: 18px;
     }
     
     .arrow{
@@ -2743,7 +2758,7 @@ h6{
     
     .dropdown-text{
         margin: -3px 0 0 50%;
-        font-size: 23px;
+        font-size: 18px;
     }
     
     .dropdown-text span{
@@ -2751,20 +2766,20 @@ h6{
     }
     
     .desknav img{
-        width: 35px;
+        width: 30px;
     }
     
     .desknav{
-        margin-top: -63px;
+        margin-top: -60px;
     }
     
     .dropdown-text img{
-        height: 30px;
-        margin-top: 1px;
+        height: 25px;
+        margin-top: -1px;
     }
     
     .dropdown-toggle{
-        margin-left: 100px;
+        margin-left: 70px;
         width: 150px;
     }
     
