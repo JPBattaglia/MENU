@@ -876,6 +876,26 @@ h1 {
     box-shadow: 0px 0px 10px #0ce;
 }
 
+.ninoSite{
+    width: 450px;
+    margin: auto;
+}
+
+.servLink button{
+    background: #0ce;
+    text-shadow: 2px 2px 4px #000;
+    width: 450px;
+    margin:auto;
+    border-radius: 10px;
+    font-size: 30px;
+    box-shadow: 0px 2px 8px #012;
+}
+
+.servLink img{
+    width: 45px;
+    margin: 5px;
+}
+
 .cform label {
     font-size: 20px;
     text-align: center;
@@ -1174,6 +1194,19 @@ textarea {
 
 .plans sup{
     font-size: 20px;
+}
+
+.servLink{
+    text-decoration: none;
+}
+
+.servLink h1{
+    width: 350px;
+    background: #034;
+    padding: 5px;
+    border-radius: 35px;
+    box-shadow:  -12px -8px 28px #000,
+                12px 8px 28px #079;
 }
 
 h6{
