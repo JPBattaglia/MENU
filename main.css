@@ -332,7 +332,7 @@ html {
     align-items: center;
     justify-content: center;
     position: absolute;
-    top: 0px;
+    top: -5px;
     right: 2px;
     font-size: 40px;
     text-decoration: none;
@@ -1953,13 +1953,13 @@ h6{
     
     .burger {
         float: right;
-        margin: 15px 10px 0 0;
+        margin: 10px 7px 0 0;
     }
     
     .burger span{
-        width: 25px;
-        height: 3px;
-        margin: 5px;
+        width: 35px;
+        height: 5px;
+        margin: 6px;
         background: linear-gradient(to left, #057, #079, #09b, #0cf, #09b, #079, #057);
         border: .5px solid transparent;
         filter: drop-shadow(-1px -1px 1px #034);
