@@ -2132,7 +2132,6 @@ h6{
     #info h1{
         background: linear-gradient(to top, #034, #046, #068, #046, #034);
         background-size: 100% 7.2%;
-        border-bottom: .5px solid #023;
         width: 300px;
         font-size: 17px;
         padding: 8px;
