@@ -9,6 +9,10 @@ html {
     scroll-behavior: smooth;
 }
 
+.logos a:hover{
+        filter: drop-shadow(1px 1px 10px #0df);
+    }
+
 .splash{
     position: fixed;
     top: 0;
@@ -1509,9 +1513,6 @@ h6{
         margin: 15px;
     }
     
-    .logos a:hover{
-        filter: drop-shadow(1px 1px 10px #0df);
-    }
 }
 
 
