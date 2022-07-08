@@ -1504,6 +1504,14 @@ h6{
         margin: auto;
         padding: 15px 0 20px 0;
     }
+    
+    .logos a{
+        margin: 15px;
+    }
+    
+    .logos a:hover{
+        filter: drop-shadow(1px 1px 10px #0df);
+    }
 }
 
 
@@ -1615,7 +1623,7 @@ h6{
     .contentBox .content p{
         font-size: 20px;
         margin: 10px auto 30px;
-        font-family: 'Philosopher;
+        font-family: 'Philosopher';
         font-weight: bolder;
         line-height: 1.3;
     }
