@@ -9,6 +9,11 @@ html {
     scroll-behavior: smooth;
 }
 
+#site{
+    max-width: 1500px;
+    margin: auto;
+}
+
 .logos a:hover{
         filter: drop-shadow(1px 1px 10px #0df);
     }
@@ -587,6 +592,8 @@ nav {
     top:0;
     position: fixed;
     width: 100%;
+    max-width: 1500px;
+    margin: auto;
     height: 80px;
     z-index: 10;
 }
@@ -720,6 +727,7 @@ h1 {
 
 #intro {
     width: 100%;
+    max-width: 1500px;
     height: 550px;
     margin: auto;
     margin-bottom: 198px;
@@ -727,6 +735,7 @@ h1 {
 
 #intro img {
     width: 100%;
+    max-width: 1500px;
     margin: 76px auto;
     height: 668px;
     position: absolute;
