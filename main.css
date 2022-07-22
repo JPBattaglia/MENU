@@ -1794,19 +1794,33 @@ h6{
     }
     
     .logos a{
-        margin: 0 30px;
+        margin: 0 15px;
     }
     
     .logolinks img{
-        width: 150px;
+        width: 130px;
     }
     
     #pinecrest img{
-        width: 130px;
+        width: 110px;
     }
 }
 
 /*=======================================*/
+
+@media (max-width: 1000px) and (min-width: 801px){
+    .logos img{
+        width: 170px;
+    }
+    
+    .logos a{
+        margin: 0 25px;
+    }
+    
+    #pinecrest img{
+        width: 145px;
+    }
+}
 
 
 /*=======================================*/
