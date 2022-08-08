@@ -18,7 +18,9 @@ html {
 }
 
 .social img{
-    width: 50px;
+    width: 35px;
+    margin: 5px 0;
+    filter: drop-shadow(2px 2px 5px #000);
 }
 
 #site{
