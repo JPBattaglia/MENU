@@ -9,6 +9,24 @@ html {
     scroll-behavior: smooth;
 }
 
+.social{
+    float:left;
+    margin-top: 30%;
+    display: flex;
+    flex-direction: column;
+    width: 80px;
+    position: fixed;
+}
+
+.social img{
+    width: 50px;
+    margin-left: -5px;
+}
+
+.social a{
+    margin: 10px;
+}
+
 #site{
     max-width: 1500px;
     margin: auto;
@@ -2466,6 +2484,16 @@ h6{
     .logos a{
         margin: 30px 30px;
     }  
+    
+    .social{
+        margin-top: 65%;
+        z-index: 9;
+    }
+    
+    .social img{
+        width: 35px;
+        margin-left: -10px;
+    }
 }
 
 /*=======================================*/
