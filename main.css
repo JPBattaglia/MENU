@@ -1,30 +1,27 @@
+
 *:focus {
     outline: none;
-    background: transparent;
+    background: none;
    }
 
-html {
-    min-height: 100%;
-    overflow: auto;
-    scroll-behavior: smooth;
+html{
+    min-height:100%;
+    overflow:auto;
 }
 
-.social{
-    float:left;
-    margin-top: 30%;
-    display: flex;
-    flex-direction: column;
-    width: 80px;
+body{
+    background: #000;
+}
+
+.overlay {
     position: fixed;
-}
-
-.social img{
-    width: 50px;
-    margin-left: -5px;
-}
-
-.social a{
-    margin: 10px;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: url("SITEUNDERMAINTENANCE.png");
+    background-size: 49%;
+    z-index: 9999999999;
 }
 
 #site{
@@ -32,201 +29,20 @@ html {
     margin: auto;
 }
 
-.logos a:hover{
-        filter: drop-shadow(1px 1px 10px #0df);
-    }
-
-.splash{
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100vh;
-    background: #540c21;
-    z-index: 999999999999999;
-}
-
-.splash.display-none{
-    position: fixed;
-    opacity: 0;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100vh;
-    background: #540c21;
-    z-index: -9999;
-    transition: all 1.5s;
-}
-
-.popup{
-    position: fixed;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    display: none;
-}
-
-.contentBox{
-    position: relative;
-    width: 600px;
-    height: 400px;
-    background: #fff;
-    border-radius: 20px;
-    display: flex;
-    box-shadow: 0 5px 15px #000;
-}
-
-.contentBox .imgBx{
-    position: relative;
-    width: 300px;
-    height: 500px;
-    display: flex;
-    justify-content: center;
-    align-items: center;  
-}
-
-.contentBox .imgBx::before{
-    content: '';
-    position: absolute;
-    top: 30px;
-    left: 18px;
-    width: 255px;
-    height: 250px;
-    background: #068;
-    border-radius: 50%;
-    box-shadow: 6px 8px 15px #000;
-}
-
-.contentBox .imgBx img{
-    position: relative;
-    top: -45px;
-    max-width: 240px;
-    height: 300px;
-}
-
-.contentBox .content{
-    position: relative;
-    width: 300px;
-    height: 400px;
-    display: flex;
-    justify-content: center;
-    align-items: center; 
-    padding: 0px;
-}
-
-.contentBox .content h3{
-    margin-bottom: 25px;
-    letter-spacing: -2px;
-    color: #e00;
-    line-height: 1.5em;
-    font-size: 3.3em;
-    font-weight: bolder;
-    text-shadow: 2px 2px 2px #000;
-}
-
-.contentBox .content h2{
-    letter-spacing: 2px;
-    font-size: 4.5em;
-    color: #0ac;
-    line-height: .8em;
-    font-family: 'righteous';
-    text-shadow: 2px 2px 2px #000;
-    font-weight: bolder;
-    margin-bottom: 10px;
-}
-
-.contentBox .content h2 sup{
-    font-size: 40px;
-}
-
-.contentBox .content h2 span{
-    color: #000;
-    font-size: .8em;
-    text-transform: uppercase; 
-    font-weight: bolder;
-    text-shadow: 0px 1px 0px #000;
-    letter-spacing: 0px;
-}
-
-.contentBox .content p{
-    font-weight: bolder;
-    letter-spacing: -.5px;
-    margin-top: -5px;
-    font-weight: bold;
-    font-size: 20px;
-    font-family: 'Philosopher';
-    width: 95%;
-}
-
-.contentBox .content a{
-    margin-top: 5px;
-    transition: .5s;
-    font-family: 'Philosopher';
-    font-weight: bolder;
-    display: inline-block;
-    padding: 11px 20px 8px;
-    background: repeating-linear-gradient(to bottom, #022, #058, #0d888f 100%);
-    color: #fff;
-    margin-left: 60px;
-    text-decoration: none;
-    border-radius: 50px;
-    border: .5px solid #079;
-    box-shadow: 1px 6px 10px #000;
-    text-shadow: 1px 1px 0 black, -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000;
-}
-
-.contentBox .content a:hover{
-    transition: .5s;
-    color: #0ac;
-    border: 1px solid #0ac;
-    background: repeating-linear-gradient(to top, #022, #058, #0d888f 100%);
-    text-shadow: 1px 1px 0 white, -1px -1px 0 black, 1px -1px 0 black, -1px 1px 0 black, 1px 1px 0 black;
-    box-shadow: 2px 6px 18px #057;
-}
-
-.closex{
-    transition: .5s;
-    color: #f00;
-    position: absolute;
-    top: -5px;
-    right: -18px;
-    width: 60px;
-    font-size: 35px;
-    cursor: pointer;
-    border-radius: 50%;
-    z-index: 10;
-    filter: drop-shadow(0px 0px 1px #f00);
-    text-shadow: 1px 1px 0px #000, -1px 1px 0px #000,  -1px -1px 0px #000,  1px -1px 0px #000;
-}
-
-.closex:hover{
-    transition: .5s;
-    color: #000;
-    text-shadow: 1px 1px 0px #f00, -1px 1px 0px #f00,  -1px -1px 0px #f00,  1px -1px 0px #f00;
-}
-
-.animated {
-    background-color: #034;
-    background-position: left top;
-    margin-bottom: 30px;
-    -webkit-animation-duration: 3s;
-    animation-duration: 3s;
-    -webkit-animation-fill-mode: both;
-    animation-fill-mode: both;
-}
-
 .arrow{
     position: absolute;
-    top: 97%;
-    left: 69%;
+    top: 90%;
+    left: 95%;
     transform: translate(-50%,-50%);
+    z-index: 999;
 }
 
 .arrows{
     position: absolute;
-    top: 97%;
-    left: 31%;
+    top: 90%;
+    left: 5%;
     transform: translate(-50%,-50%);
+    z-index: 999;
 }
 
 .arrow span, .arrows span{
@@ -235,8 +51,8 @@ html {
     height: 30px;
     border-radius: 5px;
     border-radius: 5px;
-    border-bottom: 5px solid #0ac;
-    border-right: 5px solid #0ac;
+    border-bottom: 5px solid #ffc800;
+    border-right: 5px solid #ffeb7a;
     transform: rotate(45deg);
     margin: -15px;
     animation: animate 7.5s infinite;
@@ -261,2653 +77,1543 @@ html {
     }
 }
 
-#myBtn {
-    color: #0ac;
-    transform: rotate(180deg);
-    font-size: 40px;
-    margin-right: 20px;
-    display: none;
-    /* Hidden by default */
+
+#contact{
+    text-align: center;
+    margin: auto;
+}
+
+.sub-menu-parent { 
+  position: relative;
+  margin-top: 0px;
+}
+
+.sub-menu { 
+  visibility: hidden; /* hides sub-menu */
+  opacity: 0;
+  position: absolute;
+  top: 0px;
+  left: 25px;
+  margin: 20px -10px;
+  width: 80%;
+  transform: translateY(-2em);
+  z-index: -5;
+  transition: all .5s ease-in-out 0s, visibility 0s linear 0.3s, z-index 0s linear 0.01s;
+}
+
+
+.sub-menu-parent:focus .sub-menu,
+.sub-menu-parent:focus-within .sub-menu,
+.sub-menu-parent:hover .sub-menu {
+  visibility: visible; /* shows sub-menu */
+  opacity: 1;
+  z-index: 1;
+  transform: translateY(0%);
+  transition-delay: 0s, 0s, .3s; /* this removes the transition delay so the menu will be visible while the other styles transition */
+}
+
+ul,
+ul li { list-style-type: none; padding: 0; margin: 0; float: left;}
+
+
+ul li{
+    margin: 20px 0;
+}
+
+ul li:nth-child(2){
+    margin: -15px 0;
+}
+
+.cb-slideshow,
+.cb-slideshow:after { 
     position: fixed;
-    /* Fixed/sticky position */
-    bottom: 20px;
-    /* Place the button at the bottom of the page */
-    right: 5px;
-    /* Place the button 5px from the right */
-    z-index: 99;
-    /* Make sure it does not overlap */
-    outline: none;
-    /* Remove outline */
-    cursor: pointer;
-    /* Add a mouse pointer on hover */
-    padding: 0 9px;
-    /* Some padding */
-    border-radius: 50px;
-    /* Rounded corners */
-    border: 1px solid transparent;
-    background: transparent;
+    width: 100%;
+    height: 100%;
+    top: -15px;
+    left: 0px;
+    z-index: -99999; 
+}
+.cb-slideshow:after { 
+    content: '';
+    background: transparent url(../images/pattern.png) repeat top left; 
 }
 
-#myBtn:hover {
+.cb-slideshow li span { 
+    width: 100%;
+    height: 100%;
+    position: absolute;
+    top: 0px;
+    left: 0px;
+    color: transparent;
+    background-size: cover;
+    background-position: 50% 50%;
+    background-repeat: none;
+    opacity: 0;
+    z-index: 0;
+    animation: imageAnimation 50s linear infinite 0s; 
+}
+
+.cb-slideshow li:nth-child(1) span { 
+    background-image: url(WindowNight.jpeg) 
+}
+.cb-slideshow li:nth-child(2) span { 
+    background-image: url(BehindBar.jpeg);
+    animation-delay: 10s; 
+}
+.cb-slideshow li:nth-child(3) span { 
+    background-image: url(CornerTable.jpeg);
+    animation-delay: 20s; 
+}
+.cb-slideshow li:nth-child(4) span { 
+    background-image: url(OutsideDay.jpeg);
+    animation-delay: 30s; 
+}
+.cb-slideshow li:nth-child(5) span { 
+    background-image: url(WindowAwning.jpeg);
+    animation-delay: 40s; 
+}
+
+
+@keyframes imageAnimation { 
+    0% { opacity: 0; animation-timing-function: ease-in; }
+    10% { opacity: 1; animation-timing-function: ease-out; }
+    17% { opacity: 1 }
+    35% { opacity: 0 }
+    100% { opacity: 0 }
+}
+
+.no-cssanimations .cb-slideshow li span{
+	opacity: 1;
+}
+
+@media screen and (max-width: 1140px) { 
+    .cb-slideshow li div h3 { font-size: 140px }
+}
+@media screen and (max-width: 600px) { 
+    .cb-slideshow li div h3 { font-size: 80px }
+}
+
+
+.modalDialog {
+    margin: auto;
+	position:fixed;
+	top: 0px;
+	right: 0px;
+	bottom: 0px;
+	left: 0px;
+	background: rgba(0,0,0,0.8);
+	z-index: 99999999999;
+	opacity:0;
+	-webkit-transition: opacity 600ms ease-in;
+	-moz-transition: opacity 600ms ease-in;
+	transition: opacity 400ms ease-in;
+	pointer-events: none;
+}
+
+.modalDialog:target {
+	opacity: 1;
+	pointer-events: auto;
+}
+
+.close { 
+    font-family: 'federant';
+	background: -webkit-radial-gradient( orange, red, #200);
+    max-width:100%;
+    border: .5px hidden black;
+	color: white;
+	line-height: 29px;
+	position: fixed;
+	right: 305px;
+	text-align: center;
+	top: 40px;
+	width: 30px;
+	text-decoration: none;
+	font-weight: bold;
+    font-size: 20px;
+	-webkit-border-radius: 12px;
+	-moz-border-radius: 12px;
+	border-radius: 25px;
+	-moz-box-shadow: 1px 1px 3px #000;
+	-webkit-box-shadow: 1px 1px 3px #000;
+	box-shadow: 1px 1px 3px #000;
+    text-shadow:
+       1px 1px 0 black,
+      -1px -1px 0 black,  
+       1px -1px 0 black,
+      -1px 1px 0 black,
+       1px 1px 0 black;
+}
+
+.close:hover { 
+    background: black;
+    max-width:100%;
+    border: .5px solid red;
+	color: black;
+    text-shadow:
+       1px 1px 0 red,
+      -1px -1px 0 red,  
+       1px -1px 0 red,
+      -1px 1px 0 red,
+       1px 1px 0 red;
+}
+
+
+.modalDialog > div {
+        color: #f1ffc4;
+        font-family: Federant;
+        line-height: 2;
+        font-size: 22px;
+        text-align: center;
+        width: 55%;
+        position: relative;
+        margin: 150px auto;
+        padding: 50px;
+        border-radius: 15px;
+        background:url();
+        background-size: 100% 120%;
+        border: red double 5px;
+        max-width:100%;
+        max-height: calc(100vh - 6rem);
+        overflow-y: auto;
+        text-shadow:
+          -2px -1px 0 black,  
+           2px -1px 0 black,
+          -2px 1px 0 black,
+           2px 1px 0 black;
+        }
+
+
+
+h4:hover{
     transition: 1s;
-    border-color: white;
-    background: transparent;
-    color: white;
+    background: #f00;
+    box-shadow: inset -14px -14px 23px #600,
+            1px 1px 10px #fff,
+            inset 14px 14px 23px #f00;
+    color: #fff0c7;
+    text-shadow:
+       1px 1px 0 black,
+      -1px -1px 0 black,  
+       1px -1px 0 black,
+      -1px 1px 0 black,
+       1px 1px 0 black;
+    text-decoration: none;
+    }
+
+h3:hover{
+    transition: 1s;
+    font-weight: bolder;
+    color: #fff;
+    text-shadow:
+       2px 1px 0 red;
 }
 
-@-webkit-keyframes fadeOut {
-    100% {
-        opacity: 1;
-    }
-    0% {
-        opacity: 0;
-    }
+#menumade {
+    padding: 15px 0 10px 0;
+    width: 75px;
+    filter: drop-shadow(2px 2px 1px #010);
 }
 
-@keyframes fadeOut {
-    100% {
-        opacity: 1;
-    }
-    0% {
-        opacity: 0;
-    }
+h2{
+    font-size: 35px;
+    font-family: 'Kanit', serif;
+    font-weight: bolder;
+    text-align: center;
+    color: #f1ffc4;
+    text-shadow:
+       -1px -1px 0 red,
+       -1px 1px 0 red,
+       1px -1px 0 red,
+       1px 1px 0 red;
+    margin: 40px 0;
 }
 
-.fadeOut {
-    -webkit-animation-name: fadeOut;
-    animation-name: fadeOut;
+h3{
+    transition: 1s;
+    font-size: 32px;
+    width: 250px;
+    font-family: 'Quintessential', serif;
+    font-weight: bolder;
+    text-align: center;
+    margin: 20px auto;
+    color: #f1ffc4;
+    text-shadow:
+       -1px -1px 0 red,
+       -1px 1px 0 red,
+       1px -1px 0 red,
+       1px 1px 0 red;   
+}
+
+h4{
+    transition: 1s;
+    z-index: 999999;
+    position: absolute;
+    left: 45%;
+    font-weight: bolder;
+    margin: -65px auto;
+    color: #fff;
+    padding: 4px 6px;
+    width: 155px;
+    border-radius: 30px;
+    font-family: 'Kanit';     
+    text-decoration: none;
+    border: 1px solid #fff;
+    box-shadow: -2px 4px 20px #000;
+    background: #f00;
+    box-shadow: inset -14px -14px 23px #600,
+            13px 13px 35px #002,
+            inset 14px 14px 23px #f00;
+}
+
+h5{
+    color: #f1ffc4;
+    font-family: 'Kanit';
+    font-size: 26px;
+    line-height: 1.7;
+}
+
+h6{
+    font-family: Corinthia;
+    font-size: 146px;
+    color: #fff;
+    text-shadow:
+    0 0 7px #eaff00,
+    0 0 10px #eaff00,
+    0 0 21px #eaff00,
+    0 0 42px #eaff00,
+    0 0 82px #eaff00;
+    width: 400px;
+    margin: auto;
+}
+
+p{
+    color: #fff;
+    font-size: 17px;
+    width:250px;
+    margin: auto;
+    font-family: serif;
+}
+
+#map{
+    width: 606px;
+    height: 356px;
+    margin: 50px auto;
+    border: 3px solid red;
 }
 
 .sidenav {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
     height: 100%;
     width: 0;
     position: fixed;
-    z-index: 100;
+    z-index: 1;
     top: 0;
     right: 0;
-    background: url(Wide2.jpg)center top no-repeat, url(Wide.jpg)center bottom no-repeat;
-    background-size: 115% 50%;
+    background: url("MarioSlideOut.png") center;
+    background-repeat: no-repeat;
+    background-size: 100% 103%;
+    border-left: .5px solid #b00;
     overflow-x: hidden;
     transition: .8s;
-    padding-top: 50px;
-    font-family: 'Philosopher';
+    padding-top: 125px;
+    font-family: 'Quintessential';
     font-weight: bold;
 }
 
 .sidenav a {
-    font-size: 24px;
-    color: white;
+    letter-spacing: 2px;
+    font-family: 'Corinthia';
+    margin: 85px 10px;
+    color: #f1ffc4;
+    display: block;
     transition: 1s;
     max-width: 100%;
-    margin-bottom: 60px;
     text-align: center;
-    text-shadow: 1px 1px 0 red, -1px -1px 0 #800, 1px -1px 0 #800, -1px 1px 0 #800, 1px 1px 0 #800;
     text-decoration: none;
+    text-shadow:
+       2px 2px 4px black,
+      -2px 2px 4px black,  
+       2px -2px 4px black,
+      -2px 2px 4px black,
+       2px 2px 4px black;
 }
 
 .sidenav a:hover {
-    color: #08a;
-    text-shadow: 1px 1px 0 tan, -1px -1px 0 white, 1px -1px 0 white, -1px 1px 0 white, 1px 1px 0 white;
+    color: #f4ff94;
+    text-shadow:
+       1px 1px 0 red,
+      -1px -1px 0 red,  
+       1px -1px 0 red,
+      -1px 1px 0 red,
+       1px 1px 0 red;
 }
 
 .sidenav .closebtn {
-    display: flex;
-    align-items: center;
-    justify-content: center;
+    margin: 10px 30px;
+    padding: 75px 25px 28px 22px;
     position: absolute;
-    top: -5px;
-    right: 2px;
-    font-size: 40px;
+    top: 0px;
+    right: 0px;
+    font-size: 45px;
     text-decoration: none;
 }
 
-.sidelink{
-        width: 85px;
-        margin: 0px auto 96px;
-    }
-
-.burger{
-    transition: 1.5s;
-    float: right;
-    margin: -60px 20px 0 0;
+.sidenav .closebtn:hover{
     background: none;
-    border: none;
 }
 
-.burger span{
-    display: block;
-    width: 43px;
-    height: 7px;
-    margin-bottom: 5px;
-    background: linear-gradient(to left, #034, #068, #09b, #0cf, #09b, #068, #034);
-    z-index: 1;
-    box-shadow: 0px 0px 2px #000;
-    border: .5px solid #000;
+nav{
+    z-index: 999999;
+    margin: 30px auto;
+    margin-bottom: 50px;
+    width: 95%;
+    height: 150px;
+    text-align: center;
 }
 
-.burger:hover{
-    cursor: pointer;
-    filter: drop-shadow(0px 0px 10px #0ac);
-    transition: 1.5s;
+nav img{
+    float:left;
 }
 
-#top{
-    border-top-right-radius: 5px;
-    border-top-left-radius: 5px;
+
+#call{
+    width: 150px;
+    margin: auto;
 }
 
-#middle{
-    border-radius: 3px;
-}
-
-#bottom{
-    border-bottom-right-radius: 5px;
-    border-bottom-left-radius: 5px;
+#togo{
+    width: 100px;
+    margin: 5px 0;
+    text-align: center;
 }
 
 .navicon {
     float: right;
-    width: 44px;
-    height: 35px;
-    margin: 28px 20px 10px 0;
-    cursor: pointer;
-    filter: drop-shadow(0px 0px 0px #000);
+    width: 53px;
+    height: 40px;
+    margin: 50px 25px;
+    z-index: 100;
 }
 
-ul, li{
-    float:right;
-    display: flex;
-    flex-direction: row-reverse;
-    text-decoration: none;
-    color: white;
-    text-transform: uppercase;
+.navicon:hover{
+    filter: drop-shadow(2px 4px 5px red);
 }
 
-ul{
-    margin-top: -55px;
-    margin-right: 30px;
-    width: 55%;
-}
-
-li{
-    margin: 0 0px;
-    font-family: 'Philosopher';
-    letter-spacing: 1px;
-}
-
-li a{
-    transition: 1s;
-    padding: 5px 0;
-    text-decoration: none;
-    text-shadow: 1px 1px 0 #000, -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000;
-    text-decoration: none;
-    
-}
-
-li a:hover{
-    padding: 5px 0;
-    transition: .5s;
-    color: #0ff;
-    text-shadow: .5px .5px 0 #fff, -1px -1px 0 #300, 1px -1px 1px #300, -1px 1px 0 #300, 1px 1px 0 #300;
-}
-
-.dropdown {
-    position: relative;
-    display: flex;
-    text-align: center;
-    justify-content: center;
-    top: 9px;
-    width: 100px;
-    padding: 0 10%;
-}
-
-.dropdown-text {
-    cursor: pointer;
-    position: absolute;
-    width: 100%;
-    margin: -1px 40% 0 70%;
-}
-
-.dropdown-text span{
-    font-size: 20px;
-    margin: 1px 2px 0;
-    transform: rotate(-90deg);
-    color: #0ff;
-}
-
-.dropdown-text,
-.dropdown-content a {
-    color: #fff;
-    font-family: 'Philosopher';
-    font-size: 25px;
-    text-shadow: 1px 1px 0 #000, -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000;
-}
-
-.dropdown-text:hover{
-    transition: .5s;
-    color: #0ce;
-    text-shadow: .5px .5px 0 #fff, -1px -1px 0 #300, 1px -1px 1px #300, -1px 1px 0 #300, 1px 1px 0 #300;
-}
-
-.dropdown-toggle {
-    font-size: 0;
-    z-index: 1;
-    cursor: pointer;
-    position: absolute;
-    top: -10px;
-    border: none;
-    padding: 0;
-    background: transparent;
-    height: 44px;
-    width: 80%;
-}
-
-.dropdown-toggle:focus {
-    outline: 0;
-}
-
-.dropdown-content {
-    -webkit-transition: all .25s ease;
-    -moz-transition: all .25s ease;
-    -ms-transition: all .25s ease;
-    -o-transition: all .25s ease;
-    transition: all .5s ease;
-    position: absolute;
-    top: 22px;
-    padding: 0 10px;
-    margin: 0 0 0 40px;
-    opacity: 0;
-    visibility:hidden;
-    line-height: 32px;
-    width: 100%;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-}
-
-.dropdown-content a {
-    padding: 10px 60px;
-    text-align: center;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    margin-top: -9.5px;
-    font-size: 18px;
-    width: 100px;
-    background: #600;
-    border-bottom-left-radius: 10px;
-    border-bottom-right-radius: 10px;
-    text-transform: none;
-}
-
-.dropdown-toggle:focus ~ .dropdown-text {
-    z-index: 2;
-}
-
-.dropdown-content:hover,
-.dropdown-toggle:focus ~ .dropdown-content {
-    opacity: 1;
-    visibility:visible;
-    top: 42px;
-}
-
-.dropdown-content a:hover{
-    padding: 10px 60px;
-}
-
-#stage {
-    position: fixed;
-    margin: 3px auto;
-    width: 100%;
-    z-index: -1;
-}
-
-#stage img:nth-of-type(1) {
-    animation-name: fader;
-    animation-delay: 3s;
-    animation-duration: 4s;
-    z-index: 20;
-}
-
-#stage img:nth-of-type(2) {
-    z-index: 10;
-}
-
-#stage img:nth-of-type(n+3) {
-    display: none;
-}
-
-@keyframes fader {
-    from {
-        opacity: 1.0;
-    }
-    to {
-        opacity: 0.0;
-    }
-}
-
-.space{
-    height: 750px;
-}
-
-.desknav img{
-    width: 35px;
-    padding: 0 8px 8px 0;
-}
-
-.dropdown-text img{
-    width: 35px;
-    height: 30px;
-    padding: 3px 8px 3px 0;
-}
-
-nav {
-    top:0;
-    position: fixed;
-    width: 100%;
-    max-width: 1500px;
-    margin: auto;
-    height: 80px;
-    z-index: 10;
-}
-
-.logoburger {
-    width: 55px;
-    height: 55px;
-    margin: 11px 10px 0 20px;
-    float: left;
-    filter: drop-shadow(1px 4px 1px #000);
-    -webkit-transition: width 2s, height 2s, -webkit-transform 1.5s;
-    /* Safari */
+.logo{
+    width: 225px;
+    margin: -15px 0 12px 50px;
+    -webkit-transition: width 2s, height 2s, 
+    -webkit-transform 1.5s; /* Safari */
     transition: width 2s, height 2s, transform 1.5s;
+    filter: drop-shadow(1px 1px 3px #800);
 }
 
-.logoburger:hover {
-    -webkit-transform: rotate(360deg);
-    /* Safari */
+.logo:hover{
+    -webkit-transform: rotate(360deg); /* Safari */
     transform: rotate(360deg);
 }
 
-.logo img{
-    float: left;
-    margin: 22px 0;
-    width: 150px;
-    height: 30px;
-    filter: drop-shadow(2px 4px 1px #010);
+img {
+    -webkit-user-select: none;
+    -khtml-user-select: none;
+    -moz-user-select: none;
+    -o-user-select: none;
+    user-select: none;
 }
 
-h1 {
-    width: 100%;
-    color: white;
-    text-align: center;
-    font-family: 'Philosopher';
-    padding: 15px 20px 0px 20px;
-    font-weight: bolder;
-    margin: 0px auto;
-    letter-spacing: 1px;
-}
-
-#info {
-    background: linear-gradient(to top, #034, #046, #068, #046, #034);
-    background-size: 100% .25%;
-    display: flex;
-    max-width: 100%;
-    margin: 0px auto;
+#info{
     text-align: center;
     padding-bottom: 20px;
-    flex-direction: column;
-    padding-bottom: 50px;
+    color: #700;
 }
 
-.pandemic{
-    width: 800px;
-    height: 300px;
-    margin: 20px auto;
-    background: url(Pandemic.jpeg);
-    background-size: 100% 100%;
-    border-radius: 20px;
-    box-shadow: 4px 6px 8px #000;
-}
-
-.pandemic h2 {
-    margin-top: 40px;
-    color: #fff;
-    font-family: 'Philosopher';
-    font-size: 24px;
-    width: 350px;
-    padding-left: 65px;
-    text-shadow: 
-        1px 1px 0px #000;
-}
-
-.media h2{
-    margin-top: 40px;
-    margin-left: -450px;
-    color: #fff;
-    font-family: 'Philosopher';
-    font-size: 24px;
-    width: 350px;
-    padding-left: 65px;
-    text-shadow: 
-        1px 1px 0px #000;
-}
-
-.presence{
-    background: url(Presence.jpeg);
-}
-
-.media{
-    background: url(Online.jpeg) 20% 30%;
-}
-
-.commerce{
-    background: url(Ecommerce.jpg);
-    background-size: 100% 110%;
-}
-
-.presence, .media, .commerce{
-    width: 800px;
-    height: 300px;
-    margin: 75px auto;
-    border-radius: 20px;
-    box-shadow: 4px 6px 8px #000;
-}
-
-.presence h2{
-    margin-top: 40px;
-    color: #fff;
-    font-family: 'Philosopher';
-    font-size: 24px;
-    width: 800px;
-    padding-left: 495px;
-    padding-right: 20px;
-    text-shadow: 
-        2px 1px 0px #000;
-}
-
-.commerce h2{
-    margin-top: 40px;
-    color: #fff;
-    font-family: 'Philosopher';
-    font-size: 24px;
-    width: 800px;
-    padding-top: 50px;
-    padding-left: 495px;
-    padding-right: 20px;
-    text-shadow: 
-        2px 1px 0px #000;
-}
-
-#intro {
-    width: 100%;
-    max-width: 1500px;
-    height: 550px;
+#number {
+    width: 200px;
     margin: auto;
-    margin-bottom: 198px;
-}
-
-#intro img {
-    width: 100%;
-    max-width: 1500px;
-    margin: 76px auto;
-    height: 668px;
-    position: absolute;
-}
-
-.services{
-    margin: 100px auto 50px;
-    display: flex;
-    flex-direction: row;
-    align-items: center;
-    justify-content: center;
-    text-align: center;
-    padding: 50px;
-}
-
-.cafe h4,
-.restaurant h4,
-.pastry h4{
-    font-family: 'Philosopher';
-    margin: 0 0 -10px;
-    
 } 
 
-.cafe,
-.restaurant,
-.pastry {
-    width: 75%;
-    padding: 30px;
-    text-align: center;
-    font-family: 'Philosopher';
-    font-size: 22px;
-    font-weight: bolder;
-    color: white;
-    border: 2px double transparent;
-    border-radius: 30px;
-    box-shadow: 15px 15px 1px transparent;
+#form h2{
+    font-size: 45px;
+    margin-bottom: -40px;
 }
 
-.restaurant img {
-    width: 130px;
-    height: 65px;
-    padding: 8px;
-    margin: 20px auto 0;
-    filter: drop-shadow(2px 4px 1px #010);
-}
-
-.cafe img {
-    width: 100px;
-    height: 80px;
-    padding: 10px;
-    filter: drop-shadow(2px 4px 1px #010);
-}
-
-.pastry img {
-    width: 72px;
-    height: 75px;
-    padding: 10px 8px;
-    margin: 8px 0 0;
-    filter: drop-shadow(2px 4px 1px #010);
-}
-
-.cafe:hover,
-.restaurant:hover,
-.pastry:hover {
-    cursor: default;
-}
-
-.cafe .details,
-.restaurant .details,
-.pastry .details {
-    width: 95%;
-    border: 1.5px solid #000;
-    height: auto;
-    padding: 5px 15px 10px;
-    position: absolute;
-    content: "";
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%) rotateY(90deg);
-    transform-origin: 50%;
-    opacity: 0;
-    transition: all 0.6s ease-in;
-    font-size: 20px;
-    border-radius: 24px;
-    box-shadow: 4px 8px 8px #000;
-    background: -moz-linear-gradient(135deg, #056 5%, #800 100%);
-    background: -webkit-linear-gradient(135deg, #056 5%, #800 100%);
-    background: linear-gradient(90deg, #012, #034, #046, #046, #034, #012 );
-    filter: progid: DXImageTransform.Microsoft.gradient( startColorstr='#056', endColorstr='#800', GradientType=1);
-}
-
-.cafe:hover .details,
-.restaurant:hover .details,
-.pastry:hover .details {
-    transform: translate(-50%, -50%) rotateY(0deg);
-    opacity: 1;
-}
-
-.consult{
-    margin: 30px 0 0 40%;
-    width: 120px;
-}
-
-#Btn {
-    transition: .5s;
-    color: #fff;
-    padding: 2px;
-    background: #09b;
-    border: .5px solid transparent;
-    width: 120px;
-    border-radius: 3px;
-    font-family: 'Orbitron';
-    font-weight: bolder;
-    font-size: 15px;
-    letter-spacing: .5px;
-    text-shadow: 1px 1px 0 #000, -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000;
-}
-
-#Btn a{
-    text-decoration: none;
-}
-
-#Btn:hover {
-    background: #023;
-    border: .5px solid #079;
-    padding: 2px;
-    cursor: pointer;
-    font-weight: bolder;
-    color: #0ce;
-    text-shadow: 1px 1px 0 white, -1px -1px 0 black, 1px -1px 0 black, -1px 1px 0 black, 1px 1px 0 black;
-    box-shadow: 1px 1px 10px #0ce;
-}
-
-
-.Btn1{
-    transition: .3s;
-    cursor: pointer;
-    padding: 1px 20px;
-    color: white;
-    border-radius: 5px;
-    border: 1.5px solid #068;
-    background: repeating-linear-gradient(to top, #046, #09b, #0ce 100%);
-    box-shadow: 2px 4px 8px #000, -2px 4px 8px #000;
-}
-
-.Btn1:hover{
-    transition: .3s;
-    color: #0ac;
-    background: #023;
-    text-shadow: 1px 1px 0 white, -1px -1px 0 black, 1px -1px 0 black, -1px 1px 0 black, 1px 1px 0 black;
-    box-shadow: 0px 0px 10px #0ce;
-}
-
-.ninoSite{
-    width: 450px;
-    margin: auto;
-}
-
-.servLink button{
-    background: #0ce;
-    text-shadow: 2px 2px 4px #000;
-    width: 450px;
-    margin:auto;
-    border-radius: 10px;
-    font-size: 30px;
-    box-shadow: 0px 2px 8px #012;
-}
-
-.servLink img{
-    width: 45px;
-    margin: 5px;
-}
-
-.cform label {
-    font-size: 20px;
-    text-align: center;
-    font-family: 'Philosopher', serif;
-    color: white;
-    list-style-type: none;
-    text-shadow: 1px 1px 0 red, -1px -1px 0 red, 1px -1px 0 red, -1px 1px 0 red, 1px 1px 0 red;
-}
-
-.cform textarea,
-.cform input {
-    font-family: 'Philosopher', serif;
-    color: red;
-    text-align: center;
-    font-size: 18px;
-    font-weight: bolder;
-    width: 300px;
-    opacity: .8;
-}
-
-.cform select {
-    font-family: 'Philosopher', serif;
-    color: #800;
-    text-align: center;
-    font-size: 18px;
-    font-weight: bolder;
-    max-width: 50%;
-    box-sizing: border-box;
-    background: #fff;
-}
-
-::placeholder {
-    /* Chrome, Firefox, Opera, Safari 10.1+ */
-    color: #800;
-    opacity: 1;
-    font-family: 'Philosopher';
-    /* Firefox */
-}
-
-:-ms-input-placeholder {
-    /* Internet Explorer 10-11 */
-    color: red;
-}
-
-::-ms-input-placeholder {
-    /* Microsoft Edge */
-    color: red;
-}
-
-
-/* Style inputs with type="text", select elements and textareas */
-
-input[type=text],
-select,
-textarea {
-    margin: auto;
-    text-align: center;
-    width: 85%;
-    /* Full width */
-    padding: 5px;
-    /* Some padding */
-    border: 6px double #600;
-    /* Gray border */
-    border-radius: 15px;
-    /* Rounded borders */
-    box-sizing: border-box;
-    /* Make sure that padding and width stays in place */
-    margin-top: 10px;
-    /* Add a top margin */
-    margin-bottom: 20px;
-    /* Bottom margin */
-    resize: vertical;
-    /* Allow the user to vertically resize the textarea (not horizontally) */
-}
-
-.cform{
-    margin: 140px auto 0;
-    width: 60%;
-    text-align: center;
-    color: white;
-}
-
-.cform textarea{
-    height: 100px;
-}
-
-.cform textarea, .cform input[type=text]{
-    width: 60%;
-    margin: 50px 0 0 0;
-    color: #08a;
-    background: #fff;
-}
-
-.cform textarea:hover, .cform input[type=text]:hover,.cform selct:hover{
-    border: 6px double #068;
-}
-
-.cform textarea:focus, .cform input[type=text]:focus,.cform selct:focus{
-    border: 6px double #068;
-}
-
-.cform input[type=submit]{
-    width: 25%;
-    width: 35%;
-    text-align: center;
-    font-size: 20px;
-    background: linear-gradient(45deg, #0ac, #f00);
-    color: white;
-    padding: 2px 20px;
-    cursor: pointer;
-    border: none;
-    border-radius: 10px;
-    box-shadow: 0px 5px 25px black;
-    text-shadow: 1px 1px 0 black, -1px -1px 0 black, 1px -1px 0 black, -1px 1px 0 black, 1px 1px 0 black;
-    font-family: 'Orbitron';
-}
-
-.cform input[type=submit]:hover{
-    text-align: center;
-    color: #0ff;
-    background: linear-gradient(45deg, #f00, #0ac);
-    text-shadow: 1px 1px 0 black, -1px -1px 0 black, 1px -1px 0 black, -1px 1px 0 black, 1px 1px 0 black;
-}
-
-.cform select{
-    color: #800;
-    margin: 50px 0 0 0;
-    width: 40%;
-    padding: 4px 10px;
-}
-
-.cform h2{
-    font: 35px 'Philosopher';
-    margin: 20px 0 -20px 0;
-}
-
-.website {
-    color: #fff;
-    width: 75%;
-    font-size: 25px;
-    background: linear-gradient(315deg, #002632, #002d3c);
-    box-shadow:  -12px -8px 28px #000,
-                12px 8px 28px #079;
-    margin: -15px auto;
-    padding: 20px;
-    border-radius: 20px;
-}
-
-.website h1{
-    color: #e00;
-    font-size: 34px;
-    text-align: center;
-    background: transparent;
-    box-shadow: none;
-    padding: 10px 0 0;
-    text-decoration: underline;
-    text-shadow: 1px 1px 0px #fff,
-                -1px -1px 0px #000;
-    text-underline-position: under;
-}
-
-.website h2{
-    font-family: 'Philosopher';
-    margin: 25px;
-}
-
-.plans{
+.menu{
     width: 100%;
-    display: flex;
-    justify-content: center;
-    margin-bottom: 100px;
+    text-align: center;
+    margin: 80px 0;
 }
 
-.stars{
-    width: 100%;
-    display: flex;
-    flex-direction: row;
-    align-items: center;
-    justify-content: center;
-    float: left;
-    margin-top: -70px;
+.menu img{
+    width: 80%;
+    margin: 0 auto;
 }
 
-.star-1, .star-3{
-    width: 60px;
-    height: 60px;
-    margin-top: 20px;
+.center{
+    width: 80%;
+    margin: 0 auto;
+    border: 8px double red;
 }
 
-.star-2{
-    width: 75px;
-    height: 75px;
-    z-index: 9;
+.top{
+    border: 8px double red;
+    border-top-right-radius: 25px;
+    border-top-left-radius: 25px;
 }
 
-.star-3{
-    margin-left: -25px;
-    transform: rotate(25deg)
+.bottom{
+    border: 8px double red;
+    border-bottom-right-radius: 25px;
+    border-bottom-left-radius: 25px;
 }
 
-.star-1{
-    margin-right: -25px;
-    transform: rotate(-25deg)
+.desknav{
+    z-index: 999999;
+    float: right;
+    font-size: 20px;
+    margin: 50px;
 }
 
-.star{
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    width: 65px;
-    height: 65px;
-    margin: 20px auto;
-    border-radius: 50px;
-    padding: 10px;
-    border: 4px solid #08a;
-    filter: drop-shadow(0px 3px 1px #010);
-}
 
-.star img{
-    margin: 0 0 5px 0px;
-    width: 75px;
-    -webkit-transition: width 2s, height 2s, -webkit-transform 1.5s;
-    /* Safari */
-    transition: width 2s, height 2s, transform 1.5s;
-}
-
-.star img:hover {
-    -webkit-transform: rotate(360deg);
-    /* Safari */
-    transform: rotate(360deg);
-    filter: drop-shadow(0px 0px 0px transparent);
-}
-
-.check{
-    width: 35px;
-    height: 25px;
-    filter: drop-shadow(2px 2px 1px #000);
-}
-
-.items{
-    text-align: left;
-    margin: 20px auto 50px;
-    width: 75%;
-    background: linear-gradient(90deg, #023, #034, #057, #057, #034, #023);
-    padding: 10px 25px 0px 25px;
-    border-radius: 15px;
-    text-shadow: 2px 2px 1px #000;
-    box-shadow: 2px 4px 8px #000;
-}
-
-.items h4{
-    font-family: 'Philosopher';
-    color: #fff;
-    margin-left: 18%;
-}
-
-.basic, .pro, .prime{
-    text-decoration: none;
+.desktop a{
+    text-transform: uppercase;
+    transition: 1s;
     margin: 20px;
-    width: 33%;
-    color: white;
-    text-align: center;
-    border-radius: 20px;
-    background: #057;
-    box-shadow: inset 6px 6px 12px #002230,
-            inset -6px -6px 12px #0088be;
-}
-
-.basic h1{
-    color: #0bf;
-}
-
-.prime h1{
-    color: #fc0;
-}
-
-.plans h1{
-    text-shadow: 2px 2px 0px #000;
-    letter-spacing: 2.5px;
-    font-weight: bolder;
-    text-decoration: underline;
-    padding: 0px;
-}
-
-.plans h3{
-    letter-spacing: 2.5px;
-    margin: 0;
-    color: #0f0;
-    font-family: 'Orbitron';
-    font-size: 35px;
-    margin-bottom: -10px;
-    font-weight: bolder;
-    text-shadow: 2px 2px 1px #000;
-    
-}
-
-.plans sup{
-    font-size: 20px;
-}
-
-.servLink{
     text-decoration: none;
+    padding: 8px 30px;
+    border: 1px solid #c99300;
+    border-radius: 20px; 
+    color: white;
+    transition: 1s;
+    border: 1px solid #fff0c7;
+    text-shadow: 1px 1px 0px black, -1px -1px 0px black, -1px 1px 0px black, 1px -1px 0px black;
+    background: black;
 }
 
-.servLink h1{
-    width: 350px;
-    background: #034;
-    padding: 5px;
-    border-radius: 35px;
-    box-shadow:  -12px -8px 28px #000,
-                12px 8px 28px #079;
+.desktop a:hover{
+    color: #fff;
+    background: #f00;
+    box-shadow: inset -5px -5px 23px #000,
+            1px 1px 25px #c99300,
+            inset 5px 5px 23px #f00;
 }
 
-h6{
-    font-family: 'Philosopher';
-    margin: 0;
+.sub-menu li a{
     font-size: 15px;
+    padding: 5px 15px;
 }
 
-.bio{
-    background: linear-gradient(315deg, #00303d, #034);
-    box-shadow:  -10px -10px 20px #000,
-             10px 10px 20px #004769;
-    background-size: 100% 100%;
-    width: 60%;
-    height: 100%;
-    border-radius: 20px;
-    margin: 200px auto 100px;
-    border: 1px solid #046;
+.sub-menu li a:hover{
+    box-shadow: inset -5px -5px 23px #700,
+            inset 5px 5px 23px #300;
 }
 
-
-.bio h1{
-    padding-top: 50px;
-    color: #fff;
-    font-family: 'Philosopher', serif;
-    font-size: 52px;
-    letter-spacing: 3px;
-    text-shadow: 1px 0px 1px #fff, -1px 0px 1px #fff;
-    font-weight: lighter;
-}
-
-.bio h2{
-    color: #fff;
-    font-family: 'Philosopher', serif;
-    font-size: 20px;
-    padding: 20px 100px 80px;
-}
-
-.nino{
-    width: 50%;
-    float: right;
-    margin: -130px 15%;
-}
-
-.nino img{
-    width: 80px;
-    height: 130px;
-    transform: rotate(-1deg);
-    filter: drop-shadow(-2px -2px 20px #000);
-}
-
-.piero img{
-    width: 75px;
-    height: 125px;
-    transform: rotate(2deg);
-    filter: drop-shadow(2px 2px 20px #000);
-}
-
-.piero{
-    width: 22%;
-    float: right;
-    margin: -85px 30%;
-    z-index: 99
-}
-
-.logolinks{
-    margin: -20px auto;
-}
-
-.logolinks h1{
-    background: linear-gradient(315deg, #00303d, #034);
-    box-shadow:  -5px -5px 15px #000,
-             5px 5px 15px #068;
-    border: 1px solid #046;
-    border-radius: 15px;
-    width: 305px;
-    margin: 0 auto 100px;
-    padding: 15px 0 20px 0;
-    text-shadow: 1px 1px 0 #000, -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000;
-}
-
-.logolinks img{
-    width: 200px;
-    filter: drop-shadow(2px 2px 10px #000);
-}
-
-.logos{
-    width: 95%;
-    margin: 50px auto;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-}
-
-.logos a{
-    margin: 0 50px;
-}
-
-#pinecrest img{
-    width: 175px;
-}
-
-#footer {
-    position: relative;
-    width: 100%;
-    margin: 20px auto;
-    bottom: 0;
-    z-index: -1;
-}
-
-#footer img {
-    width: 75px;
-}
-
-#footer p {
-    text-align: center;
-    color: #0bb;
-    font-family: 'Quintessential';
-    font-size: 24px;
-    margin: 100px 0 0;
-    filter: drop-shadow(2px 2px 1px #000);
-}
-
-
-/*=======================================*/
-
-
-/*=======================================*/
-
-@media (max-width: 1000px) and (min-width: 601px) {
-    .mconsult
-    article,
-    .mobile,
-    ul {
-        display: none;
-    }
-    #Btn {
-        font-size: 12px;
-        width: 200px;
-        margin: 30px 12%;
-    }
-    
-    .sidenav .closebtn{
-        margin: -5px 12px;
-        height: 75px;
-        width: 50px;
-    }
-    
-    .dconsult {
-        width: 70px;
-    }
-    
-    .pandemic{
-        width: 550px;
-        background-size: 105% 100%;
-    }
-    
-    .pandemic h2{
-        width: 280px;
-        font-size: 23px;
-        padding: 0 0 0 30px;
-        margin-top: 40px;
-    }
-    
-    .presence{
-        width: 550px;
-        background: url('Presence.jpeg') 40%;
-    }
-    
-    .media{
-        width: 550px;
-        background: url('Online.jpeg') 32% 45%;
-    }
-    
-    .commerce{
-        width: 550px;
-    }
-    
-    .presence h2{
-        width: 530px;
-        font-size: 23px;
-        padding: 0 0 0 330px;
-        margin-top: 30px;
-    }
-    
-    .media h2{
-        width: 600px;
-        padding: 0 65px 0 295px;
-        margin-top: 5px;
-    }
-    
-    #intro {
-        margin: auto;
-        height: 535px;
-        max-width: 100%;
-    }
-    #intro h1 {
-        font-size: 32px;
-        margin: 20px auto;
-        max-width: 100%;
-    }
-    #intro img {
-        margin: 76px auto;
-        max-width: 100%;
-        height: 460px;
-    }
-    
-    .space{
-        height: 0;
-    }
-    
-    h1 {
-        font-size: 28px;
-        margin: 0px;
-    }
-    
-    .website{
-        margin-bottom: 50px;
-    }
-    
-    .website h2{
-        font-family: 'Philosopher';
-        margin: 20px;
-        font-size: 24px
-    }
-    
-    .items{
-        margin-bottom: 20px;
-    }
-    
-    .items h4{
-        line-height: .5;
-        margin: 10px 0 0 -20px;
-    }
-    
-    .items img{
-        width: 28px;
-        height: 20px;
-    }
-    
-    .services{
-        flex-direction: row;
-        margin: 150px 10px 70px 0;
-        padding: 0;
-    }
-    
-    #info {
-        flex-direction: column;
-        width: 100%;
-    }
-    
-    
-    .cafe,
-    .restaurant,
-    .pastry {
-        width: 400px;
-        margin: auto;
-        margin-bottom: 20px;
-        border: 
-    }
-    .cafe .details,
-    .restaurant .details,
-    .pastry .details {
-        padding: 10px;
-        max-width: 100%;
-        height: auto;
-    }
-    
-    .cafe:hover,
-    .restaurant:hover,
-    .pastry:hover {
-        border: 2px solid transparent;
-        cursor: pointer;
-        box-shadow: 15px 15px 5px transparent;
-    }
-    
-    .cform{
-        width: 75%;
-    }
-    
-    .items{
-        width: 90%;
-    }
-    
-    .items h4{
-        font-size: 16px;
-    }
-    
-    .logolinks h1{
-        background: linear-gradient(315deg, #00303d, #034);
-        box-shadow:  -5px -5px 15px #000,
-                 5px 5px 15px #068;
-        border-radius: 15px;
-        width: 255px;
-        margin: auto;
-        padding: 15px 0 20px 0;
-    }
-    
-    .logos a{
-        margin: 15px;
-    }
-    
-}
-
-
-/*=======================================*/
-
-
-/*=======================================*/
-
-@media (max-width: 801px){
-    
-    .splash{
-        background: #4c131e;
-    }
-    
-    .plans{
-        flex-direction: column;
-    }
-    
-    .basic, .pro, .prime{
-        width: 90%;
-        margin: 50px auto;
-    }
-    
-    .items{
+.about{
+        background: url(MariosStorefront.png);
+        height: 100%;
         width: 80%;
-    }
-    
-    .plans h1{
-        background: transparent;
-        box-shadow: none;
-        width: 100px;
-        font-size: 30px;
-        margin: 0px auto;
-    }
-    
-    .services{
-        margin-bottom: 50px;
-    }
-}
-
-/*=======================================*/
-
-
-/*=======================================*/
-
-@media (min-width: 601px) and (max-width: 800px){
-    .dconsult{
-        display: none;
-    }
-    
-    #Btn{
-        margin-top: 22px;
-        width: 130px;
-        font-size: 14px;
-        padding: 3px;
-    }
-    
-    #Btn:hover{
-        padding: 4px;
-    }
-    
-    .items{
-        width: 65%;
-        padding: 30px 0px 10px 120px;
-    }
-    
-    .items h4{
-        font-size: 18px;
-    }
-    
-    .contentBox{
-        margin-top: 70px;
-        width: 400px;
-        height: auto;
-        flex-direction: column;
-    }
-    
-    .contentBox .imgBx{
-        height: 220px;
-        margin: auto;
-        transform: translateY(-50px);
-    }
-    
-    .contentBox .imgBx::before{
-        background: #fff;
-        box-shadow: none;
-        width: 300px;
-        left: 0px;
-        top: 5px;
-    }
-    
-    .contentBox .imgBx img{
-        position: relative;
-        top: 18px;
-        left: 0px;
-        width: 175px;
-        height: 210px;
-    }
-    
-    .contentBox .content{
-        height: auto;
-        text-align: center;
-        padding: 50px 20px;
-        padding-top: 10px;
-        font-size: 16px;
-        margin: -5px auto;
-    }
-    
-    .contentBox .content p{
-        font-size: 20px;
-        margin: 10px auto 30px;
-        font-family: 'Philosopher';
-        font-weight: bolder;
-        line-height: 1.3;
-    }
-    
-    .contentBox .content h3{
-        font-weight: bolder;
-        font-size: 50px;
-        margin: -40px 0 15px;
-    }
-    
-    .contentBox .content h2{
-        font-family: 'righteous';
-        font-weight: bolder;
-        width: 300px;
-        margin-bottom: -5px;
-        letter-spacing: 4px;
-    }
-    
-    .contentBox .content a{
-        margin: 10px auto 0;
-        font-weight: bolder;
-        font-size: 18px;
-    }
-    
-    .closex{
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-size: 35px;
-        top: 8px;
-        right: 6px;
-        background: white;
-        width: 40px;
-        height: 40px;
-        padding-bottom: 8px;
-        filter: drop-shadow(0px 0px 1px transparent);
-    }
-    
-    #info{
-        margin-top: 4px;
-    }
-    
-    #info h1{
-        width: 480px;
-        background: linear-gradient(to top, #034, #046, #068, #046, #034);
-        background-size: 100% 7.1%;
-        border-bottom: 2px solid #023;
-        margin: -25px auto;
-        border-radius: 50px;
-        padding: 5px 0px;
-    }
-    
-    .plans{
-        width: 90%;
-        margin: 0px auto 50px;
-    }
-    
-    .basic, .pro, .prime{
-        padding-bottom: 50px;
-    }
-    
-    .services{
-        margin: 120px 0 75px 0;
-    }
-    
-    .cafe .details,
-    .restaurant .details,
-    .pastry .details {
-        padding: 0px 10px 20px;
-        border-radius: 15px;
-        font-size: 16px;
-        width: 320px;
-        height: auto;
-    }
-    
-    .cform input[type=submit]{
-        width: 30%;
-        margin: 30px;
-    }
-    
-    .cform{
-        margin-bottom: -50px;
-    }
-    
-    .mconsult{
-        margin: 0px 50%;
-    }
-    
-    .presence h2{
-        padding: 25px 16px 0 345px;
-        width: 100%;
-    }
-    
-    .pandemic h2{
-        padding: 45px 25px;
-    }
-    
-    .media  h2{
-        width: 100%;
-        margin-left: -270px;
-        padding: 27px 50px 10px 290px;
-    }
-    
-    .commerce h2{
-        width: 100%;
-        padding: 25px 10px 10px 320px;
-    }
-    
-    .website{
-        width: 85%
-    }
-    
-    .star{
-        margin: 25px auto 10px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        width: 54px;
-        height: 54px;
-        border: 2px solid #0ac;
-    }
-    
-    .star img{
-        width: 65px;
-        margin: 0 0 6px 0;
-    }
-    
-    .piero img{
-        width: 60px;
-        height: 100px;
-    }
-    
-    .nino img{
-        width: 70px;
-        height: 110px;
-    }
-    
-    .piero{
-        margin: -55px 3%;
-    }
-    
-    .nino{
-        margin: -100px -15%;
-    }
-    
-    .bio{
-        width: 85%;
-    }
-    
-    .bio h1{
-        font-size: 35px;
-        padding-top: 50px;
-    }
-    
-    .bio h2{
-        padding: 20px 50px 100px;
-        font-size: 20px;
-    }
-    
-    .logos a{
-        margin: 0 15px;
-    }
-    
-    .logolinks img{
-        width: 130px;
-    }
-    
-    #pinecrest img{
-        width: 110px;
-    }
-}
-
-/*=======================================*/
-
-@media (max-width: 1000px) and (min-width: 801px){
-    .logos img{
-        width: 170px;
-    }
-    
-    .logos a{
-        margin: 0 25px;
-    }
-    
-    #pinecrest img{
-        width: 145px;
-    }
-}
-
-
-/*=======================================*/
-
-
-@media (max-width: 600px) {
-    label,
-    .desktop,
-    ul,
-    .dconsult,
-    article {
-        display: none;
-    }
-    
-    .arrows{
-        left: 35%;
-    }
-    
-    .arrow{
-        left: 65%
-    }
-    
-    .arrow span, .arrows span{
-        display: block;
-        width: 20px;
-        height: 20px;
-        border-radius: 5px;
-        border-radius: 5px;
-        border-bottom: 3px solid #0ac;
-        border-right: 3px solid #0ac;
-        transform: rotate(45deg);
-        margin: -12px;
-        animation: animate 5.5s infinite;
-}
-    
-    .splash{
-        padding-bottom: 100px;
-        width: 160%;
-        position: absolute;
-        left: 50%;
-        transform: translateX(-50%);
-    }
-    
-    .plans{
-        width: 90%;
-        margin: auto;
-    }
-    
-    .prime{
-        margin-bottom: 100px;
-    }
-    
-    .stars{
-        float: inherit;
-        width: 100px;
-        margin: -65px auto 0px;
-    }
-    
-    .star-1, .star-3{
-        width: 45px;
-        height: 45px;
-    }
-    
-    .star-2{
-        width: 55px;
-        height: 55px;
-        margin-top: -10px;
-    }
-    
-    .star-1{
-        margin-right: -20px;
-    }
-    
-    .star-3{
-        margin-left: -20px;
-    }
-    
-    .contentBox{
-        margin-top: 70px;
-        width: 280px;
-        height: auto;
-        flex-direction: column;
-    }
-    
-    .contentBox .imgBx{
-        height: 200px;
-        transform: translateY(-50px);
-    }
-    
-    .contentBox .imgBx::before{
-        background: #fff;
-        box-shadow: none;
-        left: 4%;
-    }
-    .contentBox .imgBx img{
-        position: relative;
-        top: 15px;
-        left: -9px;
-        max-width: 160px;
-        height: 150px;
-    }
-    
-    .contentBox .content{
-        height: auto;
-        text-align: center;
-        padding: 30px;
-        padding-top: 0;
-        font-size: 14px;
-        margin: -10px auto;
-    }
-    
-    .contentBox .content p{
-        font-size: 16px;
-        margin: 5px 0px 20px -10px;
-        font-family: 'Philosopher';
-        font-weight: bolder;
-        line-height: 1.3;
-        width: 100%;
-    }
-    
-    .contentBox .content h3{
-        font-weight: bolder;
-        font-size: 40px;
-        margin: -55px 10px 5px -10px;
-    }
-    
-    .contentBox .content h2{
-        font-family: 'righteous';
-        font-weight: bolder;
-        font-size: 55px;
-        margin: 0px 10px 0px -10px;
-    }
-    
-    .contentBox .content a{
-        margin: 5px 10px 15px -10px;
-        font-weight: bolder;
-    }
-    
-    .contentBox .content h2 sup{
-        font-size: 30px;
-    }
-    
-    .closex{
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
-        font-size: 30px;
-        top: 10px;
-        right: 5px;
-        background: white;
-        width: 35px;
-        height: 35px;
-        padding: 0px 0px 6px .5px;
-        filter: drop-shadow(0px 0px 1px transparent);
-    }
-    
-    nav {
-        width: 100%;
-        height: 60px;
-    }
-    
-    
-    .burger {
-        float: right;
-        margin: 10px 7px 0 0;
-    }
-    
-    .burger span{
-        width: 33px;
-        height: 4px;
-        margin: 6px;
-        background: linear-gradient(to left, #057, #079, #09b, #0cf, #09b, #079, #057);
-        border: .5px solid transparent;
-        filter: drop-shadow(-1px 0px 2px #000);
-    }
-    
-    #top{
-        border-top-right-radius: 3.5px;
-        border-top-left-radius: 3.5px;
-    }
-    
-    #bottom{
-        border-bottom-right-radius: 3.5px;
-        border-bottom-left-radius: 3.5px;
-    }
-    
-    .logo{
-        display: flex;
-        margin-top: -2px;
-        width: 100px;
-    }
-    
-    .logo img{
-        height: 20px; 
-        width: 100px;
-        filter: drop-shadow(2px 3px 1px #000);
-    }
-    
-    .logoburger {
-        width: 30px;
-        height: 30px;
-        margin: 15px 5px 0 5px;
-        filter: drop-shadow(0px 2px 1px #000);
-    }
-    
-    #stage {
-        margin-top: 60px;
-    }
-    
-    .space{
-        height: 0px;
-    }
-    
-    #intro {
-        margin: auto;
-        height: 315px;
-        max-width: 100%;
-    }
-    
-    #intro img {
-        margin: auto;
-        max-width: 100%;
-        height: 250px;
-    }
-    
-    .basic, .pro, .prime{
-        width: 100%;
-    }
-    
-    .basic, .pro{
-        margin-bottom: 0px;
-    }
-    
-    .website{
-        margin-top: 55px;
-        padding: 20px 10px 35px;
-        width: 85%;
-    }
-    
-    .website h1{
-        width: 200px;
-        font-size: 25px;
-        text-align: center;
-        background: transparent;
-        box-shadow: none;
-        padding: 10px 0;
-        text-decoration: underline;
-        text-shadow: .5px .5px 0px #fff;
-        text-underline-position: under;
-    }
-    
-    .website h2{
-        font-size: 16px;
-        margin: 20px 5px 0 15px;
-    }
-    
-    
-    .items h4{
-        font-size: 16px;
-        margin: 5px 0 0 22%;
-    }
-    
-    .items img{
-        width: 28px;
-        height: 20px;
-        margin-bottom: 3px;
-    }
-    
-    .items{
-        padding-top: 20px;
-        background: linear-gradient(90deg, #023, #034, #057, #057, #034, #023);
-        width: 80%;
-    }
-    
-    .pandemic{
-        width: 300px;
-        height: 200px;
-    }
-    
-    .pandemic h2, .commerce h2{
-        width: 300px;
-        font-size: 18px;
-        padding: 30px 20px;
-        margin-top: 10px;
-    }
-    
-    .presence{
-        background: url(Presence.jpeg);
-        margin: 20px auto;
-        
-    }
-    
-    .commerce{
-        background: url(Ecommerce.jpg);
-        width: 300px;
-        height: 200px;
-    }
-    
-    .media{
-        background: url(Online.jpeg);
-    }
-    
-    .media h2{
-        width: 300px;
-        margin: 0;
-        font-size: 18px;
-        padding: 30px 35px;
-    }
-    
-    .presence, .media, .commerce{
-        width: 300px;
-        height: 200px;
-        background-size: 130% 100%;
-    }
-    
-    .presence h2{
-        width: 300px;
-        font-size: 18px;
-        padding: 40px 20px;
-        margin-top: 20px;
-    }
-    
-    .presence, .pandemic, .media, .commerce{
-        margin-top: 10px;
-    }
-    
-    .media{
-        margin-top: 70px;
-    }
-    
-    #info {
-        background: linear-gradient(to top, #034, #046, #068, #046, #034);
-        background-size: 100% .22%;
-        margin-top: -5px;
-        flex-direction: column;
-        max-width: 100%;
-        padding-bottom: 100px;
-        
-    }
-    
-    #info h1{
-        background: linear-gradient(to top, #034, #046, #068, #046, #034);
-        background-size: 100% 7.2%;
-        width: 300px;
-        font-size: 17px;
-        padding: 8px;
-        margin-top: -16px;
-        border-radius: 20px;
-    }
-    
-    .services{
-        flex-direction: row;
-        margin: 125px 0px 40px;
-        padding: 20px;
-        justify-content: space-evenly;
-    }
-    
-    .services img{
-        float: left;
-        left: 0;
-        width: 35px;
-        height: 35px;
-        margin: -10px 0 0 10px;
-        padding: 0;
-    }
-    
-    .services h4{
-        font-size: 15px;
-        margin-top: 20px;
-    }
-    
-    .cafe,
-    .restaurant,
-    .pastry {
-        background: linear-gradient(0deg, #023, #046, #057, #057, #046, #023);
-        font-size: 18px;
-        margin: 10px;
-        width: 100px;
-        height: 70px;
-        border-radius: 50%;
-        padding: 25px;
-        box-shadow: 4px 4px 8px #000;
-        border: 1px solid #000;
-    }
-    
-    .cafe .details,
-    .restaurant .details,
-    .pastry .details {
-        padding: 0px 2px 40px;
-        border-radius: 15px;
-        font-size: 13px;
-        width: 130px;
-        height: auto;
-        margin-top: 18px;
-    }
-    
-    .cafe .details p,
-    .restaurant .details p,
-    .pastry .details p{
-        margin: 7px 8px;
-    }
-    
-    .cafe:hover,
-    .restaurant:hover,
-    .pastry:hover {
-        cursor: pointer;
-        box-shadow: none;
-    }
-    
-    .mconsult{
-        margin: -55px 46%;
-        width: 100px;
-    }
-    
-    #Btn {
-        font-size: 12px;
-        margin-left: 5%;
-        margin-top: 10px;
-        width: 115px;
-        box-shadow: 1px 1px 5px #000;
-        padding: 2px;
-    }
-    
-    #Btn:hover{
-        padding: 2px;
-        box-shadow: 1px 1px 10px #0ce;
-    }
-    
-    .Btn1{
-        position: fixed;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        bottom: 15px;
-        margin: 0px 0 0 20%;
-        padding: 0px 15px;
-        z-index: 99999;
-    }
-    
-    #myBtn{
-        margin: 0 -5px -15px 0;
-        font-size: 35px;
-        padding: 0 6px;
-        color: #0ce;
-        border: 1px solid transparent;
-    }
-    
-    #myBtn:hover{
-        border: 1px solid transparent;
-    }
-    
-    .ninoSite{
-        width: 300px;
-        margin: 50px auto;
-}
-
-    .servLink button{
-        background: #0ce;
-        text-shadow: 2px 2px 4px #000;
-        width: 300px;
-        margin:auto;
+        margin: 100px auto;
+        border: 3px double red;
         border-radius: 10px;
-        font-size: 20px;
-        box-shadow: 0px 2px 8px #012;
+    }
+
+.about h2{
+    margin: 70px 5%;
+    font-size: 24px;
+    text-align: left;
+}
+
+.about h6{
+    font-size: 70px;
+    margin: 20px auto -35px;
+    border-bottom: 2px solid #f4ff61;
+    width: 370px;
+}
+
+/*=======================================*/
+/*=======================================*/
+
+@media (max-width: 1000px) and (min-width: 701px){
+     #rotate, .mobile, .navicon, .mobiletype, #togo{
+        display: none;
     }
     
-    .servLink img{
-        width: 35px;
-        margin: 10px;
+    .overlay{
+        background-size: 33%; 
     }
     
-    .cafe{
-        margin-right: 30%;
+    
+    .desknav{
+        margin: 40px 30px 0 0;
+        padding: 0px;
     }
     
-    .cafe .details{
-        margin-top: 0px;
-        margin-left: -5px;
+    .desktop a{
+        font-size: 14px;
+        padding: 5px 15px;
+        border-radius: 15px;
+        margin: 30px 5px;
     }
     
-    .pastry{
-        margin-left: 30%;
+    .sub-menu{
+        margin: 7px 0 0 -5px;
     }
     
-    .pastry img{
-        margin-top: -5px;
-        margin-left: 2px;
-        width: 45px;
-        height: 30px;
+    ul li:nth-child(2){
+        margin: -25px 0;
     }
     
-    .pastry .details{
-        margin-top: 0px;
-        margin-left: 5px;
-    }
-    
-    .restaurant{
-        margin-top: -100px;
-    }
-    
-    .restaurant .details{
-        margin-top: 35px;
-        width: 140px;
-        padding: 0px 0px 40px;
-    }
-    
-    .restaurant .Btn1{
-        margin: 0px 23% 0;
-    }
-    
-    .cafe img{
-        width: 47px;
-        margin-left: 1px;
-        height: 36px;
-    }
-    
-    .restaurant img {
-        width: 65px;
-        height: 30px;
-        margin-left: -5px;
-        margin-top: -2px;
-    }
-    
-    .cform h2{
-        font-family: 'Philosopher';
-        margin: 25px auto 10px;
-        font-size: 30px;
-    }
-    
-    .cform{
-        width: 85%;
-        margin: 100px auto 0px;
-        margin-bottom: -50px;
-    }
-    
-    .cform textarea, .cform input[type=text]{
-        width: 80%;
-        margin: 15px 0;
-        padding: 3px;
-    }
-    
-    .cform input[type=submit]{
-        width: 150px;
-        margin: 10px auto 30px;
-    }
-    
-    .cform select{
-        margin: 10px;
-        padding: 3px 20px;
-        width: 50%;
+    .sub-menu li a{
+        font-size: 10px;
+        margin-left: -7px;
+        padding: 3px 10px;
     }
     
     .sidenav .closebtn {
-        padding: 11px 15px 28px 22px;
+        margin: 15px;
+        padding: 42px 23px 28px 22px;
+    }
+    
+    p{
+        color: #fff;
+        font-size: 15px;
+        width:250px;
+        margin: auto;
+        font-family: serif;
+    }
+    
+    #logo{
+        font-size: 18px;
+        color: #800;
+        font-style: italic;
+        font-weight: bolder;
+        width: 360px;
+        margin: auto;
+        text-align: center;
+    }
+    
+    #sociallink img{
+        width: 45px;
+        margin: 50px 20px 0;
+        filter: drop-shadow(2px 1px 1px #000);
+    }
+    
+    h1{
+        font-size: 25px;
+        margin: 10px auto;
+        max-width:100%;
+        padding: 0;
+        border: 8px double #775;
+    }
+    
+    h4{
+        font-size: 20px;
+        background: #300;
+        padding: 4px 8px;
+        width: 160px;
+        left: 44%;
+        position: absolute; 
+        top: 900px;
+        margin: auto;
+        z-index: 99999999;
+    }
+    
+    
+    textarea, input{
+        font-family: 'federant', serif;
+        color: red;
+        text-align: center;
+        font-size: 18px;
+        font-weight: bolder;
+        max-width: 500px;
+        background-color: #fff0c7;
+    }
+    
+    #message{
+        height: 200px;
+        background-color: #fff0c7;
+    }
+
+    select{
+        font-family: 'federant', serif;
+        color: red;
+        text-align: center;
+        font-size: 18px;
+        font-weight: bolder;
+        max-width: 30%;
+        box-sizing: border-box;
+    }
+
+    ::placeholder { /* Chrome, Firefox, Opera, Safari 10.1+ */
+        color: red;
+        opacity: 1; /* Firefox */
+        background-color: #fff0c7;
+    }
+
+    :-ms-input-placeholder { /* Internet Explorer 10-11 */
+        color: red;
+    }
+
+    ::-ms-input-placeholder { /* Microsoft Edge */
+        color: red;
+    }
+
+    /* Style inputs with type="text", select elements and textareas */
+    input[type=text], select, textarea {
+        background-color: #fff0c7;
+        margin: auto;
+        text-align: center;
+        width: 60%; /* Full width */
+        padding: 8px; /* Some padding */  
+        border: 5px double #a00; /* Gray border */
+        border-radius: 25px; /* Rounded borders */
+        box-sizing: border-box; /* Make sure that padding and width stays in place */
+        margin-top: 30px; /* Add a top margin */
+        margin-bottom: 30px; /* Bottom margin */
+        resize: vertical; /* Allow the user to vertically resize the textarea (not horizontally) */
+    }
+
+    /* Style the submit button with a specific background color etc */
+    input[type=submit] {
+        color:  #fff0c7;
+        margin: 20px 0;
+        padding: 8px;
+        background: #f00;
+        box-shadow: inset -14px -14px 23px #600,
+            13px 13px 35px #002,
+            inset 14px 14px 23px #f00;
+        width: 140px;
+        border-radius: 30px;
+        font-family: 'Federant';
+        font-size: 20px;
+        text-decoration: none;
+        border: 1px solid  #fff0c7;
+        text-shadow:
+        1px 1px 0 red,
+        -1px -1px 0 red,  
+        1px -1px 0 red,
+        -1px 1px 0 red,
+        1px 1px 0 red;
+        -webkit-transition: background-color 1s ease-out;
+        -moz-transition: background-color 1s ease-out;
+        -o-transition: background-color 1s ease-out;
+        transition: background-color 1s ease-out;
+    }
+
+    /* When moving the mouse over the submit button, add a blue color */
+    input[type=submit]:hover {
+        background: #f00;
+        box-shadow: inset -14px -14px 23px #f00,
+            13px 13px 35px #002,
+            inset 14px 14px 23px #600;
+        color: antiquewhite;
+        border: 1px solid  #fff;
+        cursor: pointer;  
+    }
+    
+    #fname{
+        margin-top: 10px;
+    }
+
+    /* Add a background color and some padding around the form */
+    .container{
+        background: url(Vines.png);
+        background-size:100% 100%;
+        background-repeat: no-repeat;
+        max-width: 95%;
+        margin: auto;
+    }
+
+    #form {
+        padding: 20px 0px 40px;
+        text-align: center;
+        width: 100%;
+    }
+    
+    #form h2{
+        margin: 20px auto 20px;
+        font-size: 40px;
+        text-align: center;
+        width: 300px;
+    }
+
+    footer{
+        margin-top: 50px;
+        text-align: center;
+        font-size: 20PX;
+    }
+    
+    footer p{
+        width: 100%;
+        font-weight: bolder;
+        color: red;
+        font-size: 22px;
+    }
+
+    .logo{
+        float: left;
+        width: 180px;
+        margin: 0px 0 0 40px;
+    }
+    
+    nav{
+        margin: 17px auto 45px;      
+        width: 96%;
+        height: 130px;
+    }
+    
+    .navicon{
+        margin: 25px 15px 0px 0px;
+        width: 48px;
+        height: 36px;
+        
+    }
+
+    
+    .modalDialog > div{
+        width: 80%;
+    }
+    
+    .close{
+        right: 70px;
+        top: 40px;
+    }
+    
+    #map{
+        width: 482px;
+        height: 305px;
+        margin: 50px auto;
+        border: 2px double red;
+        border-radius: 12px;
+    }
+    
+    iframe{
+        width: 478px;
+        height: 300px;
+        border-radius: 10px;
+    }
+    
+    .menu{
+        margin-top: 120px;
+    }
+    
+    .menu img{
+        width: 90%;
+    }
+    
+    .menu h2{
+        margin-top: -40px;
         font-size: 30px;
     }
     
-    .star{
+    .top, .center, .bottom{
+        border: 5px double red;
+    }
+    
+    .top{
+        border-top-left-radius: 20px;
+        border-top-right-radius: 20px;
+    }
+    
+    .bottom{
+        border-bottom-left-radius: 20px;
+        border-bottom-right-radius: 20px;
+    }
+    
+    .gallery{
         display: flex;
-        align-items: center;
-        justify-content: center;
-        width: 55px;
-        height: 55px;
-        border: 2px solid #0ac;
-        margin-bottom: 5px;
+        flex-direction: row;
+        flex-wrap: wrap;
+        width: 100%;
     }
     
-    .star img{
-        margin: 0 0px 6px 0;
-        width: 65px;
+    .gallery img{
+        width: 300px;
+        margin: 50px;
+        display: flex;
+        flex-direction: column;
+        flex-basis: 100%;
+        border: 3px double #fff0c7;
+        border-radius: 10px;
     }
     
-    .items{
-        margin: 20px auto 30px;
+    #gallery{
+        font-size: 85px;
+        left: 45%;
+        width: 200px;
     }
     
-    
-    #footer{
-        position:relative;
-        margin: 50px auto 0px;
+    .about h6{
+        font-size: 60px;
+        text-align: center;
+        margin-bottom: -10px;
+        border-bottom: 2px solid #f00;
+        width: 350px;
+;
     }
     
-    .piero img{
-        width: 45px;
-        height: 85px;
-        filter: drop-shadow(2px 2px 5px #000);
+    .about h2{
+        font-size: 22px;
+        margin-top: 40px;
+    }
+}
+
+/*=======================================*/
+/*=======================================*/
+
+
+@media (max-width: 700px){
+    
+    .desktop, .desktoptype, #contact{
+        display: none;
     }
     
-    .nino img{
-        width: 55px;
-        height: 90px;
-        filter: none;
-        filter: drop-shadow(2px 2px 5px #000);
+    .overlay {
+        position:fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: url("SITEUNDERMAINTENANCE.png");
+        background-size: 50%;
+        z-index: 9999999999;
     }
     
-    .piero{
-        margin: -35px 5%;
+    #rotate{
+        width: 50px;
+        float: left;
+        margin-left: 15%;
     }
     
-    .nino{
-        margin: -80px -6%;
+    .about{
+        width: 90%;
     }
     
-    .bio{
-        width: 80%;
-        padding-top: 50px;
-        margin-top: 100px;
-    }
-    
-    .bio h1{
-        letter-spacing: 2px;
-        font-size: 32px;
-        margin-top: -120px;
-        background: none;
-        box-shadow: none;
-        padding-top: 110px;
-    }
-    
-    .bio h2{
-        padding: 10px 10px 50px 30px;
+    .about h2{
         font-size: 18px;
+        margin: 70px 25px;
+        line-height: 1.4;
     }
     
-    .logolinks h1{
-        font-size: 24px;
-        background: linear-gradient(315deg, #00303d, #034);
-        box-shadow:  -5px -5px 15px #000,
-                 5px 5px 15px #068;
-        border-radius: 15px;
-        width: 215px;
+    .about h6{
+        font-size: 50px;
+        width: 260px;
+        text-align: center;
+        border-bottom: 2px solid #f4ff61;
+    }
+    
+    .logo{
+        max-width: 140px;
+        filter: drop-shadow(1px 1px 3px #800);
+        margin: -8px 0 0 -6px;
+    }
+    
+    nav{
+        width: 97%;
+        margin: 11px auto 30px;
+        padding: 10px 12px;
+        height: 100px;
+    }
+    
+    h4{
+        z-index: 0;
+        font-size: 12px;
+        padding: 2px;
+        width: 80px;
+        position: absolute; 
+        top: 25px;
+        left: 51%;
+        border: 1px solid #fff0c7;
+        border-radius: 20px;
+        box-shadow: inset -14px -14px 23px #700,
+            inset 14px 14px 23px #f00;
+    }
+    
+    h6{
+        font-size: 80px;
+        width: 100px;
+    }
+    
+    .sidenav .closebtn {
+        margin: 38px 33px -20px 0;
+        font-size: 45px;
+        padding: 0;
+    }
+    
+    .sidenav a{
+        margin: 30% auto;
+        font-size: 40px;
+    }
+    
+    .navicon {
+        width: 40px;
+        height: 35px;
+        margin: 6px 5px 0px 0px;
+        filter: drop-shadow(-3px -2px 8px #fff0c7);
+    }
+    
+    #number{
+        margin-top: -50px;
+    }
+    
+    #map{
+        width: 260px;
+        height: 128px;
+        margin: 50px auto;
+        border: 1px solid red;
+    }
+    
+    iframe{
+        width: 258px;
+        height: 125px;
+    }
+    
+   h1{
+        line-height: 22px;
+        letter-spacing: -.5px;
+        font-size: 16px;
+        margin: 25px auto 0px;
+        max-width: 100%;
+        border-top-right-radius: 17px;
+        border-top-left-radius: 17px;
+        border: 3px double #775;
+    }
+    
+    #logo{
+        font-size: 12px;
+        color: #800;
+        font-style: italic;
+        font-weight: bolder;
+        width: 230px;
         margin: auto;
-        padding: 15px 0 20px 0;
+        text-align: center;
+    }
+    
+    #logo img{
+        max-width: 185px;
+        margin: auto;
+    }
+    
+    #menumade {
+        padding: 10px 0;
+        width: 55px;
+    }
+    
+    #map{
+        margin: 30px auto 40px;
     }
 
-    .logolinks img{
-        width: 100%x;
+    h2{
+        font-size: 22px;
     }
     
-    .logos{
-        flex-direction: column;
+    h3{
+        font-size: 20px;
+        margin: auto;
+        width: 150px;
     }
     
-    .logos a{
-        margin: 30px 30px;
-    }  
-    
-    .social{
-        margin-top: 65%;
-        z-index: 9;
+    h5{
+        font-size: 20px; 
+        margin: -3px auto;
+        color: #f1ffc4;;
     }
     
-    .social img{
+    p{
+        color:#fff;
+        font-size: 12px;
+        width: 225px;
+        margin: auto;
+        font-family: serif;
+        text-align: center;
+    }
+    
+    #sociallink img{
         width: 35px;
+        margin: 0px 50px;
+        filter: drop-shadow(2px 1px 1px #000);
+    }
+    
+    #form h2{
+        font-size: 30px;
+        margin: 10px 0 25px;
+    }
+    
+    select{
+        padding: 0px;
+        font-family: 'federant', serif;
+        color: #c90082;
+        text-align: center;
+        font-size: 18px;
+        font-weight:bolder;
+        max-width: 50%;
+        box-sizing: border-box;
+        background-color: #ffc7eb;
+    }
+
+    #message{
+        height: 100px;
+        background-color: #fff0c7;
+    }
+    
+    #fname{
+        margin-top: -25px;
+    }
+    
+    ::placeholder { /* Chrome, Firefox, Opera, Safari 10.1+ */
+        color: red;
+        opacity: 1; /* Firefox */
+        font-family: 'federant';
+        font-size: 17px;
+    }
+
+    :-ms-input-placeholder { /* Internet Explorer 10-11 */
+        color: red;
+    }
+
+    ::-ms-input-placeholder { /* Microsoft Edge */
+        color: red;
+    }
+
+    /* Style inputs with type="text", select elements and textareas */
+    input[type=text], select, textarea {
+        background-color: #fff0c7;
+        margin: auto;
+        font-family: 'federant';
+        font-size: 18px;
+        color: red;
+        text-align: center;
+        width: 80%;
+        padding: 4px; /* Some padding */  
+        border: 4.5px double #a00; /* Gray border */
+        border-radius: 20px; /* Rounded borders */
+        box-sizing: border-box; /* Make sure that padding and width stays in place */
+        margin-top: 25px; /* Add a top margin */
+        margin-bottom: 10px; /* Bottom margin */
+        resize: vertical; /* Allow the user to vertically resize the textarea (not horizontally) */
+    }
+
+     /* Style the submit button with a specific background color etc */
+    input[type=submit] {
+        color: #fff0c7;
+        margin: 20px 0;
+        padding: 5px;
+        width: 120px;
+        border-radius: 30px;
+        font-family: 'Federant';
+        font-size: 20px;
+        text-decoration: none;
+        border: 1px solid #fff0c7;
+        text-shadow:
+        1px 1px 0 red,
+        -1px -1px 0 red,  
+        1px -1px 0 red,
+        -1px 1px 0 red,
+        1px 1px 0 red;
+        -webkit-transition: background-color 1s ease-out;
+        -moz-transition: background-color 1s ease-out;
+        -o-transition: background-color 1s ease-out;
+        transition: background-color 1s ease-out;
+        box-shadow: 2px 2px 20px transparent;
+        background: #f00;
+        box-shadow: inset -14px -14px 23px #600,
+            13px 13px 35px #002,
+            inset 14px 14px 23px #f00;
+    }
+
+    /* When moving the mouse over the submit button, add a blue color */
+    input[type=submit]:hover {
+        box-shadow: 2px 2px 20px #fff0c7;
+        color: #fff0c7;
+        border: 1px solid #fff0c7;
+        cursor: pointer;  
+        text-shadow:
+        1px 1px 0 red,
+        -1px -1px 0 red,  
+        1px -1px 0 red,
+        -1px 1px 0 red,
+        1px 1px 0 red;
+        background: #f00;
+        box-shadow: inset -14px -14px 23px #f00,
+            13px 13px 35px #002,
+            inset 14px 14px 23px #600;
+    }
+
+    /* Add a background color and some padding around the form */
+    .container{
+        width: 850px;
+        max-width: 98%;
+        margin: auto;
+    }
+
+    #form {
+        text-align: center;
+        margin-bottom: -50px;
+    }
+    
+    .top, .bottom, .center{
+        border: 3px double red;
+    }
+    
+    .top{
+        border-top-left-radius: 10px;
+        border-top-right-radius: 10px;
+    }
+    
+    .bottom{
+        border-bottom-left-radius: 10px;
+        border-bottom-right-radius: 10px;
+    }
+
+    footer{
+        float: left;
+        width: 100%;
+        text-align: center;
+        font-size: 20PX;
+    }
+    
+    footer p{
+        width: 100%;
+        font-weight: bolder;
+        font-size: 16px;
+        color: red;
+    }
+    
+    .modalDialog > div {
+        font-family: federant;
+        font-size: 18px;
+        text-align: center;
+        width: 90%;
+        position: relative;
+        margin: 30% auto;
+        padding: 30px 20px;
+        border-radius: 15px;
+        background: url(SkylineSLIDE.png);
+        background-size: 100% 130%;
+        border: red double 3px;
+        max-width: 80%;
+        max-height: calc(100vh - 6rem);
+        overflow-y: auto;
+        }
+    
+    .close{
+        right: 20px;
+        top: 20px;
+    }
+    
+    .menu{
+        margin-top: 20px;
+    }
+    
+    .menu img{
+        width: 90%;
+    }
+    
+    .gallery{
+        display: flex;
+        flex-direction: row;
+        flex-wrap: wrap;
+        width: 100%;
+    }
+    
+    .gallery img{
+        width: 300px;
+        margin: 20px;
+        display: flex;
+        flex-direction: column;
+        flex-basis: 100%;
+        flex: 1;
+        border: 3px double #fff0c7;
+        border-radius: 10px;
+    }
+    
+    #gallery{
+        width: 150px;
+        font-size: 70px;
+    }
+}
+
+
+/*=======================================*/
+/*=======================================*/
+
+@media (max-width: 1200px) and (min-width: 1000px){
+    
+    .mobile, .mobiletype, #togo{
+        display: none;
+    }
+    
+    .logo{
+        width: 210px;
+        margin: -12px 0 0 25px;
+    }
+    
+    h1{
+        border: 10px double #775;
+        font-size: 40px;
+    }
+    
+    h4{
+        left: 44%;
+        width: 160px;
+        background: #300;
+    }
+    
+    .close{
+        right: 240px;
+    }
+    
+    .gallery{
+        display: flex;
+        flex-direction: row;
+        flex-wrap: wrap;
+        width: 100%;
+    }
+    
+    .gallery img{
+        width: 300px;
+        margin: 50px;
+        display: flex;
+        flex-direction: column;
+        flex-basis: 100%;
+        flex: 1;
+        border: 3px double #fff0c7;
+        border-radius: 10px;
+    }
+    
+    .desknav a{
+        font-size: 18px;
+        padding: 8px 20px;
+        margin: 0 14px;
+    }
+    
+    .sub-menu li{
+        margin: 20px 0 0 -12px;
+    }
+    
+    ul li:nth-child(2){
+        margin: 5px -12px;
+    }
+}
+
+/*=======================================*/
+/*=======================================*/
+
+@media (min-width: 1000px){
+     #rotate, .navicon, .mobile, .mobiletype, #togo{
+        display: none;
+    }
+    
+    #sociallink img{
+        width: 50px;
+        margin: 0px 30px;
+        filter: drop-shadow(2px 1px 1px #000);
+    }
+    
+    #sociallink:hover{
+        filter: drop-shadow(-2px -1px 3px red);
+    }
+    
+    #info{
+        display:flex;
+        max-width: 100%;
+    }
+    
+    #number{
+        margin-top: 30px;
+        width: 500px;
+    }
+    
+    h1{
+        font-size: 38px;
+        border: 10px double #775;
+    }
+    
+    p{
+        font-size: 22px;
+        width:375px;
+        margin: auto;
+        font-family: serif;
+    }
+    
+    
+    textarea, input{
+        font-family: 'federant', serif;
+        color: red;
+        text-align: center;
+        font-size: 18px;
+        font-weight:bolder;
+        max-width: 550px;
+        background-color: #fff0c7;
+    }
+
+    select{
+        font-family: 'federant', serif;
+        color: red;
+        text-align: center;
+        font-size: 18px;
+        font-weight:bolder;
+        max-width: 30%;
+        box-sizing: border-box;
+        background-color: #fff0c7;
+    }
+
+    #message{
+        height: 200px;
+        background-color: #fff0c7;
+    }
+    
+    ::placeholder { /* Chrome, Firefox, Opera, Safari 10.1+ */
+        color: red;
+        opacity: 1; /* Firefox */
+    }
+
+    :-ms-input-placeholder { /* Internet Explorer 10-11 */
+        color: red;
+    }
+
+    ::-ms-input-placeholder { /* Microsoft Edge */
+        color: red;
+    }
+
+    /* Style inputs with type="text", select elements and textareas */
+    input[type=text], select, textarea {
+        background-color: #fff0c7;
+        margin: auto;
+        text-align: center;
+        width: 90%; /* Full width */
+        padding: 8px; /* Some padding */  
+        border: 5px double #a00; /* Gray border */
+        border-radius: 25px; /* Rounded borders */
+        box-sizing: border-box; /* Make sure that padding and width stays in place */
+        margin-top: 50px; /* Add a top margin */
+        margin-bottom: 30px; /* Bottom margin */
+        resize: vertical; /* Allow the user to vertically resize the textarea (not horizontally) */
+    }
+
+     /* Style the submit button with a specific background color etc */
+    input[type=submit] {
+        color: #fff0c7;
+        margin: 20px 0;
+        padding: 8px;
+        width: 140px;
+        border-radius: 30px;
+        font-family: 'Federant';
+        font-size: 20px;
+        text-decoration: none;
+        border: 1px solid #fff0c7;
+        text-shadow:
+        1px 1px 0 red,
+        -1px -1px 0 red,  
+        1px -1px 0 red,
+        -1px 1px 0 red,
+        1px 1px 0 red;
+        -webkit-transition: background-color 1s ease-out;
+        -moz-transition: background-color 1s ease-out;
+        -o-transition: background-color 1s ease-out;
+        transition: background-color 1s ease-out;
+        background: #f00;
+        box-shadow: inset -14px -14px 23px #600,
+            13px 13px 35px #002,
+            inset 14px 14px 23px #f00;
+    }
+
+    /* When moving the mouse over the submit button, add a blue color */
+    input[type=submit]:hover {
+        box-shadow: 2px 2px 20px #fff0c7;
+        color: antiquewhite;
+        border: 1px solid #fff0c7;
+        cursor: pointer; 
+        background: #f00;
+        box-shadow: inset -14px -14px 23px #f00,
+            13px 13px 35px #002,
+            inset 14px 14px 23px #600;
+    }
+    
+    #fname{
+        margin-top: 100px;
+    }
+
+    /* Add a background color and some padding around the form */
+    .container{
+        background: url(Vines.png);
+        background-size:100% 100%;
+        background-repeat: no-repeat;
+        width: 950px;
+        max-width: 100%;
+        margin: auto;
+    }
+
+    #form {
+        padding:20px 0px 40px;
+        text-align: center;
+    }
+    
+    .gallery{
+        display: flex;
+        flex-direction: row;
+        flex-wrap: wrap;
+        width: 100%;
+    }
+    
+    .gallery img{
+        width: 300px;
+        margin: 50px;
+        display: flex;
+        flex-direction: column;
+        flex-basis: 100%;
+        flex: 1;
+        border: 3px double #fff0c7;
+        border-radius: 10px;
+    }
+    
+
+    footer{
+        margin-top: 100px;
+        text-align: center;
+        font-size: 20PX;
+        color: #fff;
+    }
+    
+    footer p{
+        width: 100%;
+        font-weight: bolder;
+        color: red;
+    }
+}
+
+/*=======================================*/
+/*=======================================*/
+
+@media (max-width: 300px){
+    
+    h4{
+        font-size: 14px;
+        width: 75px;
+        margin: 22px -2px;
+        padding: 3px;
+    }
+    
+    .logo{
         margin-left: -10px;
     }
 }
 
 /*=======================================*/
+/*=======================================*/
+
+@media (max-width: 1001px) and (min-width: 800px){
+    
+    .desknav {
+        margin-right: 50px;
+    }
+    
+    .desktop a{
+        margin-right: 20px;
+    }
+    
+    
+}
+
 
 
 /*=======================================*/
-
-@media (max-width: 600px) and (min-width: 425px){
-    .piero{
-        margin: -35px 28%;
-    }
-    
-    .nino{
-        margin: -80px 12%;
-    }
-}
-
 /*=======================================*/
-
-
-/*=======================================*/
-
-@media (min-width: 801px) and (max-width: 1000px){
-    
-    .burger{
-        margin-top: -60px;
-    }
-    
-    .mconsult{
-        display: none;
-    }
-    
-    .dconsult{
-        margin: 30px 45%;;
-    }
-    
-    .items{
-        width: 80%;
-    }
-    
-    .items h4{
-        margin-left: 10%;
-    }
-    
-    #info{
-        margin-top: 5px;
-    }
-    
-    #info h1{
-        width: 450px;
-        background: linear-gradient(to top, #034, #046, #068, #046, #034);
-        background-size: 100% 8.1%;
-        border-bottom: 2px solid #023;
-        margin: -25px auto;
-        border-radius: 30px;
-        padding: 5px 0px;
-        font-size: 26px;
-    }
-    
-    #Btn{
-        margin: -15px 15%;
-        font-size: 16px;
-        width: 160px;
-        padding: 2px;
-    }
-    
-    .presence h2{
-        padding: 35px 16px 0 345px;
-        width: 100%;
-    }
-    
-    .pandemic h2{
-        padding: 45px 25px;
-    }
-    
-    .media  h2{
-        width: 100%;
-        margin-left: -250px;
-        padding: 30px 50px 10px 267px;
-    }
-    
-    .commerce h2{
-        padding: 30px 10px 0 300px;
-        width: 100%;
-    }
-    
-    .cform input[type=submit]{
-        margin: 50px auto;
-        width: 25%;
-    }
-    
-    .cform{
-        margin-bottom: -80px;
-    }
-    
-    .star{
-        width: 70px;
-        height: 70px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        border: 2px solid #0ac;
-    }
-    
-    .star img{
-        width: 50px;
-        height: 50px;
-        margin: 0 auto 5px;   
-    }
-    
-    .basic, .pro, .prime{
-        margin: 10px;
-        padding-bottom: 10px;
-    }
-    
-    .piero{
-        margin-right: 3%;
-    }
-    
-    .nino{
-        margin-right: -17%;
-    }
-    
-    .bio{
-        width: 85%;
-    }
-    
-    .bio h1{
-        font-size: 45px;
-    }
-    
-    .bio h2{
-        padding: 20px 100px 100px;
-        font-size: 22px;
-    }
-}
-
-@media (min-width: 1001px) and (max-width: 1200px) {
-    li{
-        margin: 0 24px;
-        font-size: 24px;   
-    }
-    
-    #Btn{
-        margin: -10px 0 0 10%;
-        font-size: 16px;
-        width: 150px;
-        padding: 2px;
-    }
-    
-    #Btn:hover{
-        padding: 2px;
-    }
-    
-    .items{
-        width: 80%;
-    }
-    
-    .pro, .basic, .prime{
-        margin: 10px
-    }
-    .items h4{
-        margin-left: 10%;
-    }
-    
-    #bout{
-        margin-left: -20px;
-    }
-    
-    .desknav{
-        margin-right: 0px;
-    }
-    
-    .desknav li{
-        font-size: 15px;
-    }
-    
-    .desknav img{
-        width: 30px;
-    }
-    
-    .dropdown-text{
-        margin: -4px 13% 0 23%;
-    }
-    
-    .dropdown-text span{
-        margin: -3px 2px 2px 4px;
-    }
-    
-    .dropdown-text img{
-        width: 30px;
-        padding: 2px 8px 10px 0;
-        margin-top: -1px;
-    }
-    
-    .dropdown-toggle{
-        margin-left: 10px;
-    }
-    
-    .dropdown-content{
-        margin-left: 20px;
-    }
-    
-    .piero{
-        margin-right: 5%;
-    }
-    
-    .nino{
-        margin-right: -15%;
-    }
-    
-    .bio{
-        width: 75%;
-    }
-    
-    .bio h1{
-        font-size: 45px;
-
-    }
-    
-    .bio h2{
-        padding: 20px 100px 100px;
-        font-size: 20px;
-    }
-}
-
-@media (min-width: 1001px) {
-    .burger,
-    .mconsult,
-    .mobile{
-        display: none;
-    }
-    
-    .arrow{
-        left: 76%;
-    }
-    
-    .arrows{
-        left: 24%;
-    }
-    
-    .website{
-        margin-bottom: 50px;
-    }
-    
-    #info h1{
-        width: 620px;
-        background: linear-gradient(to top, #034, #046, #068, #046, #034);
-        border-bottom: 2px solid #023;
-        background-size: 100% 7.1%;
-        margin: -32px auto;
-        border-radius: 40px;
-        padding: 5px 0px;
-        transition: 1s;
-    }
-    
-    .presence h2{
-        padding: 35px 20px 0 520px;
-        width: 100%;
-    }
-    
-    .pandemic h2{
-        padding: 35px 500px 0 60px;
-        width: 100%
-    }
-    
-    .media  h2{
-        padding: 55px 34px 0 480px;
-        width: 100%;
-    }
-    
-    .dconsult{
-        margin: 25px 25%;
-    }
-    
-    .cform input[type=submit]{
-        margin: 50px auto;
-        width: 25%;
-    }
-    
-    .cform{
-        margin-bottom: -50px;
-    }
-    
-    #footer{
-        margin: -20px 0;
-    }
-}
-
-@media (min-width: 1201px){
-    li{
-        margin-left: 48px;
-        font-size: 16px;
-    }
-    
-    .arrow{
-        left: 72%;
-    }
-    
-    .arrows{
-        left: 28%;
-    }
-    
-    #bout{
-        margin-left: -15px;
-    }
-    
-    .cform input[type=submit]{
-        width: 20%;
-    }
-    
-    .dconsult{
-        margin: 25px 33%;
-    }
-    
-    #Btn{
-        width: 170px;
-        font-size: 16px;
-        margin-top: -2px;
-    }
-    
-    .desknav{
-        margin-top: -58px;
-    }
-    
-    .desknav img{
-        width: 30px;
-    }
-    
-    .dropdown-text{
-        margin: -4px 20% 0 60%;
-        font-size: 16px;
-    }
-    
-    .dropdown-text img{
-        height: 25px;
-        margin-top: -3px;
-    }
-    
-    .dropdown-text span{
-        margin: -3px 5px;
-    }
-    
-    .dropdown-toggle{
-        margin-left: 60px;
-    }
-    
-    .piero{
-        margin-right: 5%;
-    }
-    
-    .nino{
-        margin-right: -14%;
-    }
-}
-
-@media (min-width: 1300px){
-    li a{
-        margin-left: 25px;
-        font-size: 18px;
-    }
-    
-    .arrow{
-        left: 70%;
-    }
-    
-    .arrows{
-        left: 30%;
-    }
-    
-    #bout{
-        margin-left: 0px;
-    }
-    
-    .dropdown-text{
-        margin: -4px 0 0 50%;
-        font-size: 18px;
-    }
-    
-    .dropdown-text span{
-        margin-left: 5px;
-    }
-    
-    .desknav img{
-        width: 30px;
-    }
-    
-    .desknav{
-        margin-top: -60px;
-    }
-    
-    .dropdown-text img{
-        height: 25px;
-        margin-top: -1px;
-    }
-    
-    .dropdown-toggle{
-        margin-left: 70px;
-        width: 150px;
-    }
-    
-    .piero{
-        margin-right: 5%;
-    }
-    
-    .nino{
-        margin-right: -15%;
-    }
-}
-
-@media (min-width: 1400px){
-    .dropdown-text{
-        margin: -4px 0 0 40%;
-}
-
-
-    
