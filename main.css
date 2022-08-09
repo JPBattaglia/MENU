@@ -9,6 +9,17 @@ html {
     scroll-behavior: smooth;
 }
 
+[data-aos=spin]{
+    transform: rotate(360deg);
+    opacity: 0;
+    transition-property: transform, opacity;
+}
+
+[data-aos=spin].aos-animate {
+    transform: rotate(0);
+    opacity: 1;
+}
+
 .social{
     margin-top: 30%;
     display: flex;
