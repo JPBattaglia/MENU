@@ -25,6 +25,8 @@
 
 <body style="background: linear-gradient(45deg, #800, #400 40%, #034, #045 100%);" id="animated-example" class="animated fadeOut">
     
+    <div id="preloader">Loading</div>
+    
     <div id="site">
         
         <div data-aos-delay="2700" data-aos="slide-right" data-aos-duration="1000" class="social" style="margin-top: 20%; background: #800;">
@@ -145,6 +147,14 @@
     <script src="https://unpkg.com/aos@next/dist/aos.js"></script>
     <script>
         AOS.init();
+    </script>
+        
+        <script>
+        
+        var loader = document.getElementById("preloader");
+        
+        window.addEventListener("load", function(){loader.style.display = "none"})
+        
     </script>
         
         </div>
