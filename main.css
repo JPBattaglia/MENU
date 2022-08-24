@@ -1378,6 +1378,15 @@ h6{
     filter: drop-shadow(2px 2px 1px #000);
 }
 
+#preloader{
+    background: #000 url(menugif.gif) no-repeat center center;
+    height: 100%;
+    width: 100%;
+    position: fixed;
+    z-index: 9999999999999999;
+    top: 0;
+}
+
 
 /*=======================================*/
 
