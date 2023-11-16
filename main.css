@@ -1637,6 +1637,19 @@ h6{
         display: none;
     }
     
+    nav{
+        display: flex;
+    }
+    
+    .burger{
+        align-self: flex-start;
+        margin: 20px;
+    }
+    
+    .mconsult{
+        margin: auto;
+    }
+    
     #Btn{
         margin-top: 22px;
         width: 130px;
@@ -1782,10 +1795,7 @@ h6{
     .cform{
         margin-bottom: -50px;
     }
-    
-    .mconsult{
-        margin: 0px 50%;
-    }
+
     
     .presence h2{
         padding: 25px 16px 0 345px;
