@@ -638,7 +638,7 @@ nav {
     height: 55px;
     margin: 11px 10px 0 20px;
     float: left;
-    filter: drop-shadow(1px 4px 1px #000);
+    filter: drop-shadow(1px 2px 1px #000);
     -webkit-transition: width 2s, height 2s, -webkit-transform 1.5s;
     /* Safari */
     transition: width 2s, height 2s, transform 1.5s;
@@ -937,6 +937,13 @@ h1 {
     border-radius: 10px;
     font-size: 30px;
     box-shadow: 0px 2px 8px #012;
+}
+
+.cform{
+    border: 5px double #700;
+    border-radius: 20px;
+    background: url("cformBack.png");
+    background-size: 100% 100%;
 }
 
 .servLink img{
