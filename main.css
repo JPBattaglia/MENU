@@ -944,6 +944,7 @@ h1 {
     border-radius: 20px;
     background: url("cformBack.png");
     background-size: 100% 100%;
+    box-shadow: -10px 5px 15px #000;
 }
 
 .servLink img{
@@ -1369,8 +1370,8 @@ h6{
     margin: 0 50px;
 }
 
-#pinecrest img{
-    width: 175px;
+#ellas img{
+    width: 160px;
 }
 
 #footer {
@@ -1883,7 +1884,7 @@ h6{
         width: 130px;
     }
     
-    #pinecrest img{
+    #ellas img{
         width: 110px;
     }
 }
@@ -1899,7 +1900,7 @@ h6{
         margin: 0 25px;
     }
     
-    #pinecrest img{
+    #ellas img{
         width: 145px;
     }
 }
