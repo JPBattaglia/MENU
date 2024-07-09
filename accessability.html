@@ -14,41 +14,37 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta charset="utf-8">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
-    <title>M&#926;NU - About</title>
+    <title>M&#926;NU - Accessability</title>
     <meta name="description" content="Online Presence Management">
     <link rel="stylesheet" href="main.css">
     <link rel="shortcut icon" type="image/png" href="MENU=.png">
-    <link href="https://fonts.googleapis.com/css?family=Federant|Philosopher|Electrolize|Kaushan+Script|Lexend|Righteous|Orbitron|Belleza|Amarante|Quintessential" rel="stylesheet">
+   <link href="https://fonts.googleapis.com/css?family=Federant|Philosopher|Electrolize|Kaushan+Script|Lexend|Righteous|Orbitron|Belleza|Amarante|Quintessential" rel="stylesheet">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <link rel="stylesheet" href="https://unpkg.com/aos@next/dist/aos.css"/>
+    <link rel="stylesheet" href="https://unpkg.com/aos@next/dist/aos.css" />
 </head>
 
-<body style="background: linear-gradient(to left, #012, #046, #012);" id="animated-example" class="animated fadeOut">
+<body style="background-color:#034;
+" id="animated-example" class="animated fadeOut">
+    
+    <div id="preloader">Loading</div>
     
     <div id="site">
-    
-    <div class="splash">
-        <video  class="fadeOut" width="100%" height="100%" muted id="myVideo" autoplay>
-            <source src="MENUVID.mp4" type="video/mp4">
-        </video>
-    </div>
-    
-     <script>
-    
-        const splash = document.querySelector('.splash');
         
-        document.addEventListener('DOMContentLoaded', (e)=>{
-            setTimeout(()=>{
-                splash.classList.add('display-none');
-            }, 4000);
-        })
-    
-    </script>
-    
-    <script>
-    document.getElementById('myVideo').setAttribute("autoplay", "true");
-        
-    </script>
+        <div data-aos-delay="2700" data-aos="slide-right" data-aos-duration="1000" class="social" style="margin-top: 20%; background: #800;">
+            
+            <a  data-aos-delay="2800" data-aos="slide-right" data-aos-duration="1000" href="https://www.facebook.com/MenuMade.OnlinePresence">
+                <img src="facebook.png">
+            </a>
+            
+            <a  data-aos-delay="2900" data-aos="slide-right" data-aos-duration="1000" href="https://www.instagram.com/menumade.gram/">
+                <img src="instagram.png">
+            </a>
+            
+            <a  data-aos-delay="3000" data-aos="slide-right" data-aos-duration="1000" href="https://www.linkedin.com/company/menu-made/">
+                <img src="linkedin.png">
+            </a>
+
+        </div>
 
     <script>
         window.addEventListener("beforeunload", function() {
@@ -60,8 +56,8 @@
     <div id="mySidenav" class="sidenav">
         <a href="javascript:void(0)" class="closebtn" onclick="closeNav()">&#10754;</a>
         <a class="sidelink" href="index.html">Home</a>
-        <a style="text-decoration: underline; text-underline-position: under;" class="sidelink" href="about.html">About</a>
-        <a class="sidelink" href="contact.html">Contact</a>
+        <a class="sidelink" href="about.html">About</a>
+        <a style="text-decoration: underline; text-underline-position: under;" class="sidelink" href="contact.html">Contact</a>
         <a class="sidelink" href="services.html">Services</a>
         <a style="font-size:20px;" class="sidelink" href="https://ninobattaglia.com/services.html"><img style="width: 55px; margin-top:-40px;" src="LogoBluRed1.png">Graphic Design</a>
     </div>
@@ -76,7 +72,7 @@
         }
     </script>
 
-    <nav style="background: #034;">
+    <nav style="background: #600;">
 
         <div data-aos-delay="800" data-aos="fade-right" data-aos-duration="1500" data-aos-anchor-placement="top-bottom">
             <a href="about.html"><img class="logoburger" src="MENU=.png"></a>
@@ -93,7 +89,7 @@
         </div>
         
         <div class="burger" data-aos="fade-left" data-aos-duration="1000" data-aos-anchor-placement="top-bottom" >
-            <div data-aos="fade-left" data-aos-duration="1000" data-aos-anchor-placement="top-bottom"  onclick="openNav()"> <span id="top"></span> <span id="middle"></span> <span id="bottom"></span></div> 
+            <div data-aos-delay="500" data-aos="fade-left" data-aos-duration="1500" data-aos-anchor-placement="top-bottom"  onclick="openNav()"> <span id="top"></span> <span id="middle"></span> <span id="bottom"></span></div> 
         </div>
         
         <ul class="desknav">
@@ -105,9 +101,9 @@
               <li  data-aos-delay="500" data-aos="fade-left" data-aos-duration="1200" class="dropdown-text"><span>&#x3c;</span>Services</li>
               
                 <ul class="dropdown-content">
-                    <li><a style="background: #034;" href="services.html">Options</a></li>
-                    <li><a style="background: #034;" href="services.html#plans">Plans</a></li>
-                    <li><a style="background: #034;" href="https://ninobattaglia.com/services.html">Design</a></li>
+                    <li><a style="background: #600;" href="services.html">Options</a></li>
+                    <li><a style="background: #600;" href="services.html#plans">Plans</a></li>
+                    <li><a style="background: #600;" href="https://ninobattaglia.com/services.html">Design</a></li>
                 </ul>
             </div>
             
@@ -120,47 +116,50 @@
         </ul>
 
     </nav>
+        
+        <div><img data-aos="flip-up" data-aos-duration="2000" data-aos-delay="500" data-aos-anchor-placement="top-bottom" id="partner" src=AccessiBePartner.png></div>
 
-    <div data-aos="flip-left" data-aos-duration="1500" data-aos-anchor-placement="top-bottom" class="bio">
-    
-        <h1 data-aos-delay="1000" data-aos="flip-down" data-aos-duration="2500" data-aos-anchor-placement="top-bottom">Battaglia Brothers</h1>
-        <h2 data-aos-delay="800" data-aos="fade-up" data-aos-duration="2500" data-aos-anchor-placement="top-bottom">The two of us have been in the Food and Beverage industry for the majority of our lives. It's why we decided to specialize our services for restaurants, bars, cafes, diners, bakeries, donut shops, and any other hospitality provider. JP Battaglia focuses on the tech and coding side of things, while Nino Battaglia does all the graphics and design. Together we are MENU, offering online presence services. We know the business and understand how to establish a stake in the digital world.</h2><br>
+<div data-aos="zoom-in-up" data-aos-duration="2000" data-aos-delay="500" data-aos-anchor-placement="top-bottom" id="partnership"><h1><img id="menuword" src=MENU1.png> is proud to partner with AccessaBe to assist with any website in achieving ADA compliance by using their AI widget. It's the leading
+automated  web accessibility
+solution.  Powered by AI
+AccessiBe is a game-changer in web accessibility, simplifying and streamlining the process of becoming accessible and compliant using AI, machine learning, and computer vision.
+</h1><br>
+        <h1 data-aos="zoom-in-up" data-aos-duration="2000" data-aos-delay="500" data-aos-anchor-placement="top-bottom" >Follow this link to get the widget on your site &#10139; <a href="https://accessibe.com/a/a4osf7y"> <img data-aos="flip-right" data-aos-duration="2000" data-aos-delay="2000" data-aos-anchor-placement="top-bottom" id="brainard" src=BrainardIconLight.png></a></h1> </div><br><br>
         
-        <div class="piero">
-            <img data-aos-delay="3000" data-aos="fade-right" data-aos-duration="2500" data-aos-anchor-placement="bottom-bottom" src="Piero1.png">
-        </div><br><br>
-        
-        <div class="nino">
-            <img data-aos-delay="3000" data-aos="fade-left" data-aos-duration="2500" data-aos-anchor-placement="bottom-bottom" src="Nene1.png">
-        </div><br><br>
-    
-    </div>
-    
-    <div class="logolinks">
-        
-        <h1 data-aos="flip-down" data-aos-duration="1500">Recent Client Projects</h1>
-        
-        <div class="logos">
-        
-            <a id="ellas" data-aos="flip-right" data-aos-duration="2000" href="https://ellaspizza.site/" target="_blank"><img src="Ella'sPizzaSign.png"></a>
+        <div id="widgetvid">
             
-            <a data-aos="flip-right" data-aos-duration="2000" href="https://mangia-tutti.com/" target="_blank"><img src="LogoOriginal.png"></a>
-
-            <a data-aos="flip-right" data-aos-duration="2000" href="https://myhappydonut.com/" target="_blank"><img src="Logo.png"></a>
+            <h1 data-aos="zoom-in-up" data-aos-duration="2000" data-aos-delay="500" data-aos-anchor-placement="top-bottom" >Check out this short demo video to get an idea of what the widget can do.</h1>
             
-            <a data-aos="flip-right" data-aos-duration="2000" href="https://mariosbohemian.com/" target="_blank"><img src="MariosLogo3.png"></a> 
+            <iframe data-aos="flip-up" data-aos-duration="2000" data-aos-delay="500" data-aos-anchor-placement="top-bottom" width="560" height="315" src="https://www.youtube.com/embed/e2vOikvCWJ4?si=Fpkzwzgdw-QYepHK" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe>
+        
         </div>
-    </div>
     
     <div id="footer">
         <p>&copy; <img id="menumade" src="MENU1.png"> made 2019</p>
     </div>
+        
+     <script>
+            document.querySelector("#files").onchange = function() {
+            const fileName = this.files[0]?.name;
+            const label = document.querySelector("label[for=files]");
+            label.innerText = fileName ?? "Browse Files";
+            };
+        
+    </script>
     
     <script src="https://unpkg.com/aos@next/dist/aos.js"></script>
     <script>
         AOS.init();
     </script>
-
+        
+        <script>
+        
+        var loader = document.getElementById("preloader");
+        
+        window.addEventListener("load", function(){loader.style.display = "none"})
+        
+    </script>
+        
         </div>
     
     <script>
