@@ -2011,7 +2011,8 @@ h6{
     }
     
     #widgetvid{
-        width: 90%
+        width: 90%;
+        margin-top: 50px;
     }
     
     #widgetvid h1{
