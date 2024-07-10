@@ -350,7 +350,6 @@ html {
     background-size: 115% 50%;
     overflow-x: hidden;
     transition: .8s;
-    padding-top: 50px;
     font-family: 'Philosopher';
     font-weight: bold;
 }
@@ -360,7 +359,7 @@ html {
     color: white;
     transition: 1s;
     max-width: 100%;
-    margin-bottom: 60px;
+    margin-bottom: 50px;
     text-align: center;
     text-shadow: 1px 1px 0 red, -1px -1px 0 #800, 1px -1px 0 #800, -1px 1px 0 #800, 1px 1px 0 #800;
     text-decoration: none;
@@ -383,9 +382,9 @@ html {
 }
 
 .sidelink{
-        width: 85px;
-        margin: 0px auto 96px;
-    }
+    width: 85px;
+    margin: 0px auto 96px;
+}
 
 .burger{
     transition: 1.5s;
@@ -397,9 +396,9 @@ html {
 
 .burger span{
     display: block;
-    width: 43px;
-    height: 7px;
-    margin-bottom: 5px;
+    width: 40px;
+    height: 4px;
+    margin-bottom: 7px;
     background: linear-gradient(to left, #034, #068, #09b, #0cf, #09b, #068, #034);
     z-index: 1;
     box-shadow: 0px 0px 2px #000;
@@ -1445,7 +1444,7 @@ h6{
     background: #600;
     width: 80%;
     margin: auto;
-    border: 5px solid #0ac;
+    border: 2px solid #0ac;
     border-radius: 20px;
     padding: 50px;
 }
@@ -2017,11 +2016,13 @@ h6{
         width: 100%;
         line-height: 25px;
         padding: 10px;
+        text-align: left;
+        margin-bottom: 20px;
     }
     
     #widgetvid iframe{
-        width: 250px;
-        height: 150px;
+        width: 300px;
+        height: 200px;
         border-radius: 10px;
     }
     
@@ -2375,7 +2376,6 @@ h6{
         flex-direction: row;
         margin: 125px 0px 40px;
         padding: 20px;
-        justify-content: space-evenly;
     }
     
     .services img{
@@ -2836,6 +2836,12 @@ h6{
         font-size: 24px;   
     }
     
+    #widgetvid iframe{
+        width: 600px;
+        height: 400px;
+        margin-bottom: 50px;
+    }
+    
     #brainard{
         width: 70px;
     }
@@ -2990,6 +2996,12 @@ h6{
     li{
         margin-left: 48px;
         font-size: 16px;
+    }
+    
+    #widgetvid iframe{
+        width: 800px;
+        height: 500px;
+        margin-bottom: 50px;
     }
     
     .arrow{
