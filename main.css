@@ -1990,6 +1990,10 @@ h6{
 
 @media (max-width: 600px) {
     
+    .social{
+        display:none;
+    }
+    
     #partnership h1{
         font-size: 18px;
         padding: 0;
@@ -2017,7 +2021,7 @@ h6{
     
     #widgetvid h1{
         font-size: 17px;
-        width: 100%;
+        width: 120%;
         line-height: 25px;
         padding: 10px;
         text-align: left;
@@ -2025,7 +2029,7 @@ h6{
     }
     
     #widgetvid iframe{
-        width: 100%;
+        width: 120%;
         height: 200px;
         border-radius: 10px;
     }
