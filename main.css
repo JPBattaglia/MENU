@@ -1412,6 +1412,55 @@ h6{
     top: 0;
 }
 
+#partner{
+    width: 55%;
+    margin: 100px auto;
+    display: flex;
+    filter: drop-shadow(0px 0px 5px #0ac);
+    
+}
+
+#partnership{
+    width: 80%;
+    margin: auto;
+}
+
+#partnership h1{
+    text-align: left;
+}
+
+#menuword{
+    width: 150px;
+}
+
+#brainard{
+    width: 130px;
+}
+
+#widgetvid{
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
+    background: #600;
+    width: 80%;
+    margin: auto;
+    border: 5px solid #0ac;
+    border-radius: 20px;
+    padding: 50px;
+}
+
+#widgetvid h1{
+    width: 80%;
+    padding: 50px;
+    line-height: 40px;
+    font-size: 30px;
+}
+
+#widgetvid iframe{
+    border: 2px solid #0ac;
+    border-radius: 20px;
+}
 
 /*=======================================*/
 
@@ -1641,6 +1690,36 @@ h6{
 /*=======================================*/
 
 @media (min-width: 601px) and (max-width: 800px){
+    
+    #partner{
+        width: 300px;
+        margin: 120px auto 20px;
+        
+    }
+    
+    #brainard{
+        width: 40px;
+    }
+    
+    #partnership h1{
+        font-size: 17px;
+    }
+    
+    #menuword{
+        width: 80px;
+    }
+    
+    #widgetvid h1{
+        font-size: 20px;
+        line-height: 30px;
+        padding: 25px;
+    }
+    
+    #widgetvid iframe{
+        width: 400px;
+        height: 250px;
+    }
+    
     .dconsult{
         display: none;
     }
@@ -1892,6 +1971,7 @@ h6{
 /*=======================================*/
 
 @media (max-width: 1000px) and (min-width: 801px){
+    
     .logos img{
         width: 170px;
     }
@@ -1910,6 +1990,42 @@ h6{
 
 
 @media (max-width: 600px) {
+    
+    #partnership h1{
+        font-size: 18px;
+    }
+    
+    #menuword{
+        width: 100px; 
+    }
+    
+    #brainard{
+        width: 50px;
+        margin: 0px;
+    }
+    
+    #partner{
+        margin-bottom: 20px;
+    }
+    
+    #widgetvid{
+        width: 90%
+    }
+    
+    #widgetvid h1{
+        font-size: 17px;
+        width: 100%;
+        line-height: 25px;
+        padding: 10px;
+    }
+    
+    #widgetvid iframe{
+        width: 250px;
+        height: 150px;
+        border-radius: 10px;
+    }
+    
+    
     label,
     .desktop,
     ul,
@@ -2585,6 +2701,22 @@ h6{
 
 @media (min-width: 801px) and (max-width: 1000px){
     
+    #partnership h1{
+        font-size: 23px;
+    }
+    
+    #menuword{
+        width: 100px;
+    }
+    
+    #brainard{
+        width: 70px;
+    }
+    
+    #widgetvid iframe{
+        width: 500px;
+    }
+    
     .burger{
         margin-top: -60px;
     }
@@ -2704,6 +2836,18 @@ h6{
         font-size: 24px;   
     }
     
+    #brainard{
+        width: 70px;
+    }
+    
+    #menuword{
+        width: 110px;
+    }
+    
+    #partnership h1{
+        font-size: 28px;
+    }
+    
     #Btn{
         margin: -10px 0 0 10%;
         font-size: 16px;
@@ -2728,6 +2872,7 @@ h6{
     
     #bout{
         margin-left: -20px;
+        margin-right: -20px;
     }
     
     .desknav{
@@ -2736,10 +2881,7 @@ h6{
     
     .desknav li{
         font-size: 15px;
-    }
-    
-    .desknav img{
-        width: 30px;
+        margin: 10 20px;
     }
     
     .dropdown-text{
@@ -2747,13 +2889,7 @@ h6{
     }
     
     .dropdown-text span{
-        margin: -3px 2px 2px 4px;
-    }
-    
-    .dropdown-text img{
-        width: 30px;
-        padding: 2px 8px 10px 0;
-        margin-top: -1px;
+        margin: -3px 2px 2px 14px;
     }
     
     .dropdown-toggle{
@@ -2919,7 +3055,7 @@ h6{
 
 @media (min-width: 1300px){
     li a{
-        margin-left: 25px;
+        margin-left: 0px;
         font-size: 18px;
     }
     
@@ -2944,9 +3080,6 @@ h6{
         margin-left: 5px;
     }
     
-    .desknav img{
-        width: 30px;
-    }
     
     .desknav{
         margin-top: -60px;
