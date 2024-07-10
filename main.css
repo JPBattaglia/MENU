@@ -2026,12 +2026,14 @@ h6{
         padding: 10px;
         text-align: left;
         margin-bottom: 20px;
+        margin-left: -20px;
     }
     
     #widgetvid iframe{
         width: 120%;
         height: 200px;
         border-radius: 10px;
+        margin-bottom: -20px;
     }
     
     
