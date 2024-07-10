@@ -1434,6 +1434,7 @@ h6{
 
 #brainard{
     width: 130px;
+    filter: drop-shadow(0px 0px 20px #f00);
 }
 
 #widgetvid{
@@ -2007,6 +2008,7 @@ h6{
     #brainard{
         width: 50px;
         margin: 0px;
+        filter: drop-shadow(0px 0px 10px #f00);
     }
     
     #partner{
