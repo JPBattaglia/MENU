@@ -1412,8 +1412,8 @@ h6{
 }
 
 #partner{
-    width: 55%;
-    margin: 100px auto;
+    width: 45%;
+    margin: 150px auto 100px;
     display: flex;
     filter: drop-shadow(0px 0px 5px #0ac);
     
@@ -2010,6 +2010,7 @@ h6{
     }
     
     #partner{
+        margin-top: 100px;
         margin-bottom: 40px;
         filter: drop-shadow(0px 0px 10px #0ac);
     }
@@ -2196,13 +2197,13 @@ h6{
     
     .burger {
         align-self: flex-start;
-        margin: 10px 7px 0 0;
+        margin: 12px 10px 0 0;
     }
     
     .burger span{
         width: 33px;
-        height: 4px;
-        margin: 6px;
+        height: 2px;
+        margin: 7px;
         background: linear-gradient(to left, #057, #079, #09b, #0cf, #09b, #079, #057);
         border: .5px solid transparent;
         filter: drop-shadow(-1px 0px 2px #000);
@@ -2221,6 +2222,7 @@ h6{
     .logo{
         display: flex;
         margin-top: -2px;
+        margin-left: 10px;
         width: 100px;
     }
     
@@ -2231,9 +2233,9 @@ h6{
     }
     
     .logoburger {
-        width: 30px;
-        height: 30px;
-        margin: 15px 5px 0 5px;
+        width: 40px;
+        height: 40px;
+        margin: 10px 0px 0 10px;
         filter: drop-shadow(0px 2px 1px #000);
     }
     
@@ -2901,7 +2903,7 @@ h6{
     }
     
     .dropdown-text{
-        margin: -4px 13% 0 23%;
+        margin: -4px 13% 0 3%;
     }
     
     .dropdown-text span{
@@ -3031,7 +3033,7 @@ h6{
     }
     
     .dconsult{
-        margin: 25px 33%;
+        margin: 25px 26%;
     }
     
     #Btn{
@@ -3049,14 +3051,10 @@ h6{
     }
     
     .dropdown-text{
-        margin: -4px 20% 0 60%;
+        margin: -4px 20% 0 40%;
         font-size: 16px;
     }
     
-    .dropdown-text img{
-        height: 25px;
-        margin-top: -3px;
-    }
     
     .dropdown-text span{
         margin: -3px 5px;
@@ -3094,7 +3092,7 @@ h6{
     }
     
     .dropdown-text{
-        margin: -4px 0 0 50%;
+        margin: -4px 0 0 20%;
         font-size: 18px;
     }
     
@@ -3128,7 +3126,7 @@ h6{
 
 @media (min-width: 1400px){
     .dropdown-text{
-        margin: -4px 0 0 40%;
+        margin: -4px 0 0 10%;
 }
 
 
