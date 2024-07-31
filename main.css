@@ -1293,8 +1293,9 @@ h6{
 
 
 .bio h1{
+    color: #a00;
+    text-decoration: underline;
     padding-top: 50px;
-    color: #fff;
     font-family: 'Philosopher', serif;
     font-size: 52px;
     letter-spacing: 3px;
@@ -1307,6 +1308,7 @@ h6{
     font-family: 'Philosopher', serif;
     font-size: 20px;
     padding: 20px 100px 80px;
+    line-height: 2;
 }
 
 .nino{
@@ -1368,6 +1370,21 @@ h6{
 
 .logos a{
     margin: 0 50px;
+    text-decoration: none;
+}
+
+.logos h2 {
+    color: #fff;
+    font-size: 26px;
+    text-align: center;
+    font-family: 'Philosopher';
+    font-weight: lighter;
+    text-decoration: none;
+}
+
+.logos a h2:hover{
+    color: #f00;
+    transition: 1s;
 }
 
 #ninositelogo img{
@@ -1659,6 +1676,10 @@ h6{
     
     .logos a{
         margin: 15px;
+    }
+    
+    .logos h2{
+        font-size: 16px;
     }
     
 }
@@ -2709,6 +2730,10 @@ h6{
     .logos a{
         margin: 30px 30px;
     }  
+    
+    .logos h2{
+        font-size: 18px;
+    }
     
     .social{
         margin-top: 95%;
