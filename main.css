@@ -1310,6 +1310,10 @@ h6{
     padding: 20px 100px 80px;
     line-height: 2;
 }
+.bio h2 span{
+    font-size: 26px;
+    letter-spacing: -1px;
+}
 
 .nino{
     width: 50%;
@@ -1724,6 +1728,7 @@ h6{
     #preloader{
         font-size: 16px;
     }
+    
 }
 
 /*=======================================*/
@@ -3037,9 +3042,20 @@ h6{
         transition: 1s;
     }
     
+    .presence, .media, .commerce, .pandemic{
+        transition: 1s;
+    }
+    
     .presence h2{
         padding: 35px 20px 0 520px;
         width: 100%;
+        transition: 1s;
+    }
+    
+    .presence:hover, .media:hover,.commerce:hover, .pandemic:hover{
+        box-shadow: 2px 4px 6px #000;
+        transition: 1s;
+        filter: brightness(85%)
     }
     
     .pandemic h2{
