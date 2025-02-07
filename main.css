@@ -1504,6 +1504,14 @@ h6{
     border-radius: 20px;
 }
 
+#MT h2{
+    margin-top: 30px;
+}
+
+#MT {
+    margin-top: 70px;
+}
+
 /*=======================================*/
 
 
@@ -1684,6 +1692,14 @@ h6{
     
     .logos h2{
         font-size: 16px;
+    }
+
+    #MT h2{
+        margin-top: 30px;
+    }
+    
+    #MT {
+        margin-top: 40px;
     }
     
 }
@@ -2022,6 +2038,7 @@ h6{
         width: 110px;
         height: 110px;
     }
+
 }
 
 /*=======================================*/
@@ -2750,6 +2767,14 @@ h6{
     
     .social img{
         width: 20px;
+    }
+
+    #MT h2{
+        margin-top: 10px;
+    }
+    
+    #MT {
+        margin-top: 30px;
     }
 }
 
