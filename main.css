@@ -1344,6 +1344,7 @@ h6{
 
 .logolinks{
     margin: -20px auto;
+    max-width: 1200px;
 }
 
 .logolinks h1{
@@ -2020,6 +2021,10 @@ h6{
     
     .logos a{
         margin: 0 15px;
+    }
+    
+    .logolinks{
+        max-width: 700px;
     }
     
     .logolinks img{
