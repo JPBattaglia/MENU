@@ -49,6 +49,13 @@ html {
     margin: auto;
 }
 
+.logos a img{
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: auto;
+}
+
 .logos a:hover{
         filter: drop-shadow(1px 1px 10px #0df);
     }
