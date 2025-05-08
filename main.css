@@ -2124,8 +2124,6 @@ h6{
         margin-bottom: -20px;
     }
     
-    
-    label,
     .desktop,
     ul,
     .dconsult,
@@ -2787,6 +2785,14 @@ h6{
     
     #MT {
         margin-top: 30px;
+    }
+    
+    #submit{
+        margin-top: 40px;
+        padding: 8px;
+        border-radius: 15px;
+        width: 175px;
+        border: 1px solid orangered;
     }
 }
 
