@@ -38,10 +38,20 @@ html {
 .social img{
     width: 25px;
     filter: drop-shadow(2px 2px 5px #000);
+    transition: .5s;
+}
+
+.social img:hover{
+    width: 27px;
+    transition: .5s;
 }
 
 .social a{
-    margin: 5px 3px;
+    margin: 6px 3px;
+}
+
+.social a:hover{
+    filter: drop-shadow(2px 2px 2px cyan);
 }
 
 #site{
@@ -194,17 +204,17 @@ html {
     margin-left: 60px;
     text-decoration: none;
     border-radius: 50px;
-    border: .5px solid #079;
+    border: 1px solid #079;
     box-shadow: 1px 6px 10px #000;
     text-shadow: 1px 1px 0 black, -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000;
 }
 
 .contentBox .content a:hover{
     transition: .5s;
-    color: #0ac;
+    color: cyan;
     border: 1px solid #0ac;
     background: repeating-linear-gradient(to top, #022, #058, #0d888f 100%);
-    text-shadow: 1px 1px 0 white, -1px -1px 0 black, 1px -1px 0 black, -1px 1px 0 black, 1px 1px 0 black;
+    text-shadow: 1px .5px 0 white, -1px -.5px 0 black, 1px -.5px 0 black, -1px .5px 0 black, 1px .5px 0 black;
     box-shadow: 2px 6px 18px #057;
 }
 
@@ -566,6 +576,10 @@ li a:hover{
     border-bottom-left-radius: 10px;
     border-bottom-right-radius: 10px;
     text-transform: none;
+    border-left: 1px solid #0ac;
+    border-right: 1px solid #0ac;
+    border-bottom: 1px solid #0ac;
+}
 }
 
 .dropdown-toggle:focus ~ .dropdown-text {
@@ -887,9 +901,9 @@ h1 {
     color: #fff;
     padding: 2px;
     background: #09b;
-    border: .5px solid transparent;
+    border: 1px solid white;
     width: 120px;
-    border-radius: 3px;
+    border-radius: 30px;
     font-family: 'Orbitron';
     font-weight: bolder;
     font-size: 15px;
@@ -903,7 +917,7 @@ h1 {
 
 #Btn:hover {
     background: #023;
-    border: .5px solid #079;
+    border: 1px solid #079;
     padding: 2px;
     cursor: pointer;
     font-weight: bolder;
@@ -3068,9 +3082,10 @@ h6{
     
     .desknav{
         padding: 10px 0;
-        margin-right: -15px;
+        margin-right: -20px;
         border-radius: 50px;
         margin-top: -61px;
+        border: .5px solid #0ac;
         box-shadow: 2px 2px 4px #000;
     }
     
