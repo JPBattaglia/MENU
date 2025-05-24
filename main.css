@@ -583,6 +583,8 @@ li a:hover{
     padding: 10px 60px;
 }
 
+
+
 #stage {
     position: fixed;
     margin: 3px auto;
@@ -676,7 +678,7 @@ h1 {
 }
 
 #info {
-    background: linear-gradient(to top, #034, #046, #068, #046, #034);
+    background: #034;
     background-size: 100% .25%;
     display: flex;
     max-width: 100%;
@@ -3003,10 +3005,6 @@ h6{
         margin-right: -20px;
     }
     
-    .desknav{
-        margin-right: 0px;
-    }
-    
     .desknav li{
         font-size: 15px;
         margin: 10 20px;
@@ -3055,6 +3053,12 @@ h6{
     }
 }
 
+@media (min-width: 1001px) and (max-width: 1200px){
+    ul li{
+        margin-right: 20px;
+    }
+}
+
 @media (min-width: 1001px) {
     .burger,
     .mconsult,
@@ -3062,6 +3066,22 @@ h6{
         display: none;
     }
     
+    .desknav{
+        padding: 10px 0;
+        margin-right: -15px;
+        border-radius: 50px;
+        margin-top: -61px;
+        box-shadow: 2px 2px 4px #000;
+    }
+    
+    ul li:first-child{
+        margin-right: 35px;
+    }
+    
+    #options{
+        margin-left: 15px;
+    }
+
     .arrow{
         left: 76%;
     }
@@ -3128,12 +3148,36 @@ h6{
     #footer{
         margin: -20px 0;
     }
+    
+    .dropdown span{
+        margin: 1px 5px;
+        font-size: 15px;
+    }
+    
+    .dropdown{
+        margin-left: -5px;
+        margin-right: -8px;
+    }
+}
+
+@media (min-width: 1100px){
+    li{
+        margin-left: 35px;
+    }
+    
+    .dropdown{
+        margin-right: -10px;
+    }
 }
 
 @media (min-width: 1201px){
     li{
         margin-left: 48px;
         font-size: 16px;
+    }
+    
+    #options{
+        margin-left: 35px;
     }
     
     #brainard{
@@ -3175,7 +3219,7 @@ h6{
     }
     
     .desknav{
-        margin-top: -58px;
+        margin-top: -64px;
     }
     
     .desknav img{
@@ -3188,12 +3232,17 @@ h6{
     }
     
     
-    .dropdown-text span{
-        margin: -3px 5px;
+    .dropdown span{
+        margin: -2px 6px;
+        margin-bottom: -5px;
     }
     
     .dropdown-toggle{
         margin-left: 60px;
+    }
+    
+    .dropdown{
+        margin-left: -10px
     }
     
     .piero{
@@ -3233,6 +3282,10 @@ h6{
         margin-right: 2px;
     }
     
+    .dropdown{
+        margin-right: 10px;
+    }
+    
     .dropdown-text{
         margin: -4px 0 0 20%;
         font-size: 18px;
@@ -3240,11 +3293,12 @@ h6{
     
     .dropdown-text span{
         margin-left: 5px;
+        font-size: 18px;
     }
     
     
     .desknav{
-        margin-top: -60px;
+        margin-top: -65px;
     }
     
     .dropdown-text img{
@@ -3267,12 +3321,23 @@ h6{
 }
 
 @media (min-width: 1400px){
-    .dropdown-text{
-        margin: -4px 0 0 10%;
-}
+    
     #brainard{
         margin: 0 80px;
     }
+    
+    ul li{
+        margin-right: 20px;
+    }
+    
+    #options{
+        margin-left: 15px;
+    }
+    
+    .dropdown{
+        margin-left: -20px;
+        margin-right: 20px;
+    }
 
-
+}
     
