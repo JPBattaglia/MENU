@@ -1,38 +1,67 @@
 // netlify/functions/create-checkout-session.js
+
 const Stripe = require("stripe");
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
+// HARDCODED KEY (removes Netlify env variable dependency)
+const stripe = new Stripe("sk_live_51L18crHw7f6jhUv8UZey98pm0lBr7SqGNRkF
+ffqEJya26Jsfll2Mhhh53decg6dIFnro9yRR7daDqzPFA
+wJp3Int00j8KeRpwx");
 
 exports.handler = async (event) => {
   try {
     if (event.httpMethod !== "POST") {
-      return { statusCode: 405, body: "Method Not Allowed" };
+      return {
+        statusCode: 405,
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ error: "Method Not Allowed" }),
+      };
     }
 
     const { items, successUrl, cancelUrl } = JSON.parse(event.body || "{}");
 
     if (!Array.isArray(items) || items.length === 0) {
-      return { statusCode: 400, body: "Missing or invalid items[]" };
-    }
-    if (!successUrl || !cancelUrl) {
-      return { statusCode: 400, body: "Missing successUrl/cancelUrl" };
+      return {
+        statusCode: 400,
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ error: "Missing or invalid items[]" }),
+      };
     }
 
-    // Normalize + basic guardrails
+    if (!successUrl || !cancelUrl) {
+      return {
+        statusCode: 400,
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ error: "Missing successUrl/cancelUrl" }),
+      };
+    }
+
+    // Normalize items
     const normalizedItems = items.map((i) => ({
       priceId: String(i.priceId || "").trim(),
-      quantity: Number.isFinite(i.quantity) ? i.quantity : parseInt(i.quantity, 10),
+      quantity: Number.isFinite(i.quantity)
+        ? i.quantity
+        : parseInt(i.quantity, 10),
     }));
 
     for (const i of normalizedItems) {
-      if (!i.priceId) return { statusCode: 400, body: "Invalid priceId in items[]" };
+      if (!i.priceId) {
+        return {
+          statusCode: 400,
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ error: "Invalid priceId in items[]" }),
+        };
+      }
+
       if (!Number.isInteger(i.quantity) || i.quantity < 1) {
-        return { statusCode: 400, body: "Invalid quantity in items[]" };
+        return {
+          statusCode: 400,
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ error: "Invalid quantity in items[]" }),
+        };
       }
     }
 
-    // Determine whether any item is a recurring price (subscription).
-    // If YES -> mode "subscription" (supports recurring + one-time together).
+    // Check if any price is recurring
     const priceLookups = await Promise.all(
       normalizedItems.map((i) => stripe.prices.retrieve(i.priceId))
     );
@@ -54,6 +83,7 @@ exports.handler = async (event) => {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ url: session.url }),
     };
+
   } catch (err) {
     return {
       statusCode: 500,
