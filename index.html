@@ -1,278 +1,207 @@
+<!-- index.html — FULL FILE
+     Change requested:
+     - Premium section image now uses MenuApp.png (portrait)
+     - Markup includes a portrait-friendly wrapper so it fits cleanly
+     Nothing else changed.
+-->
 <!DOCTYPE html>
-
-<html>
-
+<html lang="en">
 <head>
-    <meta name="google-site-verification" content="IrD2UK93D4tY9VtDmDNBuhq5hsGYfWjObaQT89aQCls" />
-    <link rel="stylesheet" href="https://www.w3schools.com/w3css/4/w3.css">
-    <meta property="og:title" content="MENU Website Design" />
-    <meta property="og:image:type" content="image/png" />
-    <meta property="og:image:width" content="400" />
-    <meta property="og:image:height" content="300" />
-    <meta property="og:image" content="https://i.ibb.co/8PxT5y5/Menu-Preview.png" />
-    <meta property="og:image:secure_url" content="https://i.ibb.co/8PxT5y5/Menu-Preview.png" />
-    <meta name="keywords" content="Web Development">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta charset="utf-8">
-    <meta http-equiv="X-UA-Compatible" content="IE=edge">
-    <title>M&#926;NU - Home</title>
-    <meta name="description" content="Online Presence Management">
-    <link rel="stylesheet" href="main.css">
-    <link rel="shortcut icon" type="image/png" href="MENU=.png">
-    <link href="https://fonts.googleapis.com/css?family=Federant|Philosopher|Electrolize|Kaushan+Script|Lexend|Righteous|Orbitron|Belleza|Amarante|Quintessential" rel="stylesheet">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <link rel="stylesheet" href="https://unpkg.com/aos@next/dist/aos.css" />
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>MENU-MADE — Premium Digital Presence for Food & Beverage</title>
+  <meta name="description" content="Premium menus, visibility, and mobile apps for food & beverage businesses.">
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Philosopher:wght@400;700&family=Righteous&display=swap" rel="stylesheet">
+
+  <link rel="stylesheet" href="main.css">
 </head>
 
-<body id="animated-example" class="animated fadeOut">
-    <div id="preloader">Loading</div>
-    
-    <div id="site">
-        
-        <div data-aos-delay="2700" data-aos="slide-right" data-aos-duration="1000" class="social">
-            
-            <a  data-aos-delay="2800" data-aos="fade-right" data-aos-duration="1000" href="https://www.facebook.com/MenuMade.OnlinePresence">
-                <img src="facebook.png">
-            </a>
-            
-            <a  data-aos-delay="2900" data-aos="fade-right" data-aos-duration="1000" href="https://www.instagram.com/menumade.gram/">
-                <img src="instagram.png">
-            </a>
-            
-            <a  data-aos-delay="3000" data-aos="fade-right" data-aos-duration="1000" href="https://www.linkedin.com/company/menu-made/">
-                <img src="linkedin.png">
-            </a>
+<body>
 
-        </div>
+<header class="header">
+  <div class="container header-inner">
 
-    <script>
-        window.addEventListener("beforeunload", function() {
-            document.body.classList.add("animate-out");
-        });
-    </script>
+    <div class="brand">
+      <a class="gear-link" href="index.html" aria-label="Home">
+        <img src="MENU=.png" class="brand-mark" alt="Menu-Made gear">
+      </a>
 
-
-    <div id="mySidenav" class="sidenav">
-        <a href="javascript:void(0)" class="closebtn" onclick="closeNav()">&#10754;</a>
-        <a style="text-decoration: underline; text-underline-position: under;" class="sidelink" href="index.html">Home</a>
-        <a class="sidelink" href="about.html">About</a>
-        <a class="sidelink" href="accessability.html">Access</a>
-        <a class="sidelink" href="contact.html">Contact</a>
-        <a class="sidelink" href="services.html">Services</a>
-        <a style="font-size:20px;" class="sidelink" href="https://ninobattaglia.com/services.html">Graphic Design<img style="width: 40px; margin-top:5px;" src="LogoBluRed1.png"></a>
+      <a class="word-link" href="about.html" aria-label="About">
+        <img src="MENU1.png" class="brand-word" alt="Menu-Made">
+      </a>
     </div>
 
-    <script>
-        function openNav() {
-            document.getElementById("mySidenav").style.width = "150px";
-        }
+    <input class="nav-toggle" type="checkbox" id="navToggle" aria-label="Toggle menu">
 
-        function closeNav() {
-            document.getElementById("mySidenav").style.width = "0";
-        }
-    </script>
-        
-    <nav>
+    <label class="gear-burger" for="navToggle" aria-label="Open menu" role="button">
+      <img src="MENU=.png" alt="Menu">
+    </label>
 
-        <div data-aos-delay="800" data-aos="fade-right" data-aos-duration="1500" data-aos-anchor-placement="top-bottom">
-            <a href="about.html"><img class="logoburger" src="MENU=.png"></a>
-        </div>
-
-        <div data-aos-delay="600" data-aos="fade-right" data-aos-duration="1500" data-aos-anchor-placement="top-bottom" class="logo"><img src="MENU1.png"></div>
-        
-        <div class="mconsult">
-            <a href="tel:17573255866"><button id="Btn">Free Quote</button></a>
-        </div>
-        
-        <div data-aos-delay="2200" data-aos="fade-in" data-aos-duration="500" data-aos-anchor-placement="top-bottom"  class="dconsult">
-            <a href="contact.html"><button id="Btn">Free Quote</button></a>
-        </div>
-        
-        <div data-aos-delay="500" class="burger" data-aos="fade-left" data-aos-duration="1500" data-aos-anchor-placement="top-bottom" >
-            <div data-aos="fade-left" data-aos-duration="1000" data-aos-anchor-placement="top-bottom"  onclick="openNav()"> <span id="top"></span> <span id="middle"></span> <span id="bottom"></span></div> 
-        </div>
-        
-        <ul data-aos-delay="500" data-aos="zoom-in-left" data-aos-duration="2200" style="background: linear-gradient(to top, #034, #046, #068, #046, #034); background-size: 100% 10%;" class="desknav">
-            
-            <li data-aos-delay="500" data-aos="fade-left" data-aos-duration="1200" ><a href="contact.html">Contact</a></li>
-            
-            <div class="dropdown">
-              <input class="dropdown-toggle">
-              <li  data-aos-delay="700" data-aos="fade-left" data-aos-duration="1200" class="dropdown-text"><span>&#x3c;</span>Services</li>
-              
-                <ul class="dropdown-content">
-                    <li><a id="options" style="background: linear-gradient(to top, #023, #046, #068, #046, #023); background-size: 100% 8%;" href="services.html">Options</a></li>
-                    <li><a style="background: linear-gradient(to top, #023, #046, #068, #046, #023); background-size: 100% 8%;" href="services.html#plans">Plans</a></li>
-                    <li><a style="background: linear-gradient(to top, #023, #046, #068, #046, #023); background-size: 100% 8%;" href="https://ninobattaglia.com/services.html">Design</a></li>
-                </ul>
-            </div>
-            
-            <li data-aos-delay="900" data-aos="fade-left" data-aos-duration="1200" ><a href="accessability.html">Accessability</a></li>
-            
-            <li data-aos-delay="1100" data-aos="fade-left" data-aos-duration="1200" ><a id="bout" href="about.html">About</a></li>
-            
-            <li data-aos-delay="1300" data-aos="fade-left" data-aos-duration="1200" ><a href="index.html">Home</a></li>
-        
-        </ul>
-
+    <nav class="nav" aria-label="Primary">
+      <a class="active" href="index.html">Home</a>
+      <a href="services.html">Services</a>
+      <a href="about.html">About</a>
+      <a href="accessability.html">Access</a>
+      <a class="nav-cta" href="contact.html">Start</a>
     </nav>
 
-    <div id="intro">
+  </div>
+</header>
 
-        <div data-aos="zoom-out" data-aos-duration="2000" data-aos-anchor-placement="top-bottom" id="stage">
-            <img src="WebDesign.jpg">
-            <img src="Tutti.png">
-            <img src="DonutShop.png">
-            <img src="KateSite.png">
-            <img src="Ellas.png">
-            <img src="CasaroSite1.png">
-            <img src="NinoSite.png">
-            <img src="MariosSite.png">
-        </div>
+<section class="hero">
+  <div class="container hero-grid">
 
-        <script type="text/javascript">
-            window.addEventListener("DOMContentLoaded", function(e) {
+    <div class="hero-copy">
+      <span class="pill">Built for the food &amp; beverage industry</span>
+      <h1>Menus, Visibility,<br>and Mobile Apps — Done Properly</h1>
+      <p>
+        Clean online menus, conversion fixes, Google visibility,
+        and premium native apps for bars, cafés, restaurants,
+        and food &amp; beverage brands that care about quality.
+      </p>
 
-                var stage = document.getElementById("stage");
-                var fadeComplete = function(e) {
-                    stage.appendChild(arr[0]);
-                };
-                var arr = stage.getElementsByTagName("img");
-                for (var i = 0; i < arr.length; i++) {
-                    arr[i].addEventListener("animationend", fadeComplete, false);
-                }
-            }, false);
-        </script>
-    </div>
-    
-    <script>
-  
-            // When the user scrolls down 20px from the top of the document, show the button
-            window.onscroll = function() {scrollFunction()};
-
-            function scrollFunction() {
-            if (document.body.scrollTop > 0 || document.documentElement.scrollTop > 0) {
-           
-            document.getElementById("scrollup").style.display = "none";
-                }
-            }
-
-        </script>
-    
-    <div id="info">
-        
-        <h1 data-aos="zoom-in-up" data-aos-duration="1500" data-aos-delay="1000" data-aos-anchor-placement="top-bottom"> Online Presence Management</h1><br><br>
-        
-        <div data-aos="fade-in" data-aos-duration="2800" data-aos-delay="2500" data-aos-anchor-placement="top-bottom" id="scrollup">
-        
-            <div class="arrow">
-                    <span></span>
-                    <span></span>
-                    <span></span>
-            </div>
-
-            <div class="arrows">
-                    <span></span>
-                    <span></span>
-                    <span></span>
-            </div>
-            
-        </div>
-        
-        
-        <div data-aos="zoom-in-up" data-aos-duration="2000" data-aos-delay="500" data-aos-anchor-placement="top-bottom" class="desktop"><div class="presence">
-        <h2 data-aos="fade-right" data-aos-duration="2000" data-aos-delay="1000" data-aos-anchor-placement="top-bottom">Establishing and maintaining an online presence can be difficult but done correctly can also be incredibly lucrative.</h2>
-        </div></div>
-        
-        <div data-aos="zoom-in-up" data-aos-duration="1500" data-aos-anchor-placement="top-bottom" class="mobile"><div class="presence">
-        <h2 data-aos="zoom-in-up" data-aos-duration="1000" data-aos-delay="1000" data-aos-anchor-placement="top-bottom">Establishing and maintaining an online presence can be difficult but done correctly can also be incredibly lucrative.</h2>
-        </div></div>
-        
-        <div data-aos="zoom-in-up" data-aos-duration="2000" data-aos-anchor-placement="top-bottom" class="desktop"><div class="media">
-        <h2 data-aos="fade-left" data-aos-duration="2000" data-aos-delay="1000" data-aos-anchor-placement="top-bottom">Managing a site's needs with periodic postings on social media can be time consuming; but in the right hands, stress free.</h2>
-        </div></div>
-        
-        <div data-aos="zoom-in-up" data-aos-duration="1500" data-aos-delay="500" data-aos-anchor-placement="top-bottom" class="mobile"><div class="media">
-        <h2 data-aos="zoom-in-up" data-aos-duration="1000" data-aos-delay="800" data-aos-anchor-placement="top-bottom">Managing a site's needs with periodic postings on social media can be time consuming; but in the right hands, stress free.</h2>
-        </div></div>
-        
-        <div data-aos="zoom-in-up" data-aos-duration="2000" data-aos-delay="500" data-aos-anchor-placement="top-bottom" class="desktop"><div class="commerce">
-        <h2 data-aos="fade-right" data-aos-duration="2000" data-aos-delay="1000" data-aos-anchor-placement="top-bottom">Online selling continues to grow in today's fast paced world because it helps save time and can take place 24 hours a day.</h2>
-        </div></div>
-        
-        <div data-aos="zoom-in-up" data-aos-duration="2000" data-aos-delay="500" data-aos-anchor-placement="top-bottom" class="mobile"><div class="commerce">
-        <h2 data-aos="zoom-in-up" data-aos-duration="2000" data-aos-delay="800" data-aos-anchor-placement="top-bottom">Online selling continues to grow in today's fast paced world because it helps save time and can take place 24 hours a day.</h2>
-        </div></div>
-        
-        <div data-aos="zoom-in-up" data-aos-duration="2000" data-aos-delay="500" data-aos-anchor-placement="top-bottom" class="desktop"><div class="pandemic">
-        <h2 data-aos="fade-left" data-aos-duration="2000" data-aos-delay="1000" data-aos-anchor-placement="top-bottom">After recent events, it is imperative now more than ever that a business have an online presence in order to be successful.</h2>
-        </div></div>
-        
-        <div data-aos="zoom-in-up" data-aos-duration="2000" data-aos-delay="500" data-aos-anchor-placement="top-bottom" class="mobile"><div class="pandemic">
-        <h2 data-aos="zoom-in-up" data-aos-duration="2000" data-aos-delay="800" data-aos-anchor-placement="top-bottom">After recent events, it is imperative now more than ever that a business have an online presence in order to be successful.</h2>
-        </div></div>
-        
-    </div>
-    
-    <div class="space"></div>
-
-    
-    <div id="footer" style="margin-top: -80px;">
-        <p>&copy; <img id="menumade" src="MENU1.png"> made 2019</p>
+      <div class="hero-actions">
+        <a class="btn primary" href="contact.html?service=menu">Launch My Menu</a>
+        <a class="btn ghost" href="contact.html?service=conversion">Improve My Website</a>
+      </div>
     </div>
 
-    <script src="https://unpkg.com/aos@next/dist/aos.js"></script>
-    <script>
-        AOS.init();
-    </script>
-        
-        <script>
-        
-        var loader = document.getElementById("preloader");
-        
-        window.addEventListener("load", function(){loader.style.display = "none"})
-        
-    </script>
-        
+    <div class="hero-visual">
+      <div class="media-frame">
+        <img src="ServicesCTA.png" alt="MENUS preview" class="hero-image">
+        <div class="media-overlay">
+          <strong>Premium, practical execution</strong>
+          <span>Clear actions. Clean layout. Fast load.</span>
         </div>
-    
-<script>
-    (function(){
-        var s    = document.createElement('script');
-        var h    = document.querySelector('head') || document.body;
-        s.src    = 'https://acsbapp.com/apps/app/dist/js/app.js';
-        s.async  = true;
-        s.onload = function(){
-            acsbJS.init({
-                statementLink    : '',
-                footerHtml       : '',
-                hideMobile       : false,
-                hideTrigger      : false,
-                disableBgProcess : false,
-                language         : 'en',
-                position         : 'left',
-                leadColor        : '#009eb3',
-                triggerColor     : '#0095b3',
-                triggerRadius    : '50%',
-                triggerPositionX : 'right',
-                triggerPositionY : 'bottom',
-                triggerIcon      : 'wheels',
-                triggerSize      : 'medium',
-                triggerOffsetX   : 20,
-                triggerOffsetY   : 20,
-                mobile           : {
-                    triggerSize      : 'small',
-                    triggerPositionX : 'right',
-                    triggerPositionY : 'bottom',
-                    triggerOffsetX   : 10,
-                    triggerOffsetY   : 10,
-                    triggerRadius    : '50%'
-                }
-            });
-        };
-        h.appendChild(s);
-    })();
-</script>
-    
-    </body>
+      </div>
+    </div>
+
+  </div>
+</section>
+
+<section class="section section-image" aria-label="Services">
+  <div class="container">
+
+    <header class="section-head">
+      <h2>What do you need right now?</h2>
+      <p>Focused services that improve clarity, action, and revenue.</p>
+    </header>
+
+    <div class="cards">
+      <article class="service-card">
+        <h3>Online Menu + QR</h3>
+        <p>Mobile-first menus customers access instantly.</p>
+        <div class="service-bottom">
+          <span class="price">From $129</span>
+          <a class="cta-pill" href="contact.html?service=menu">Start</a>
+        </div>
+      </article>
+
+      <article class="service-card">
+        <h3>Conversion Fix</h3>
+        <p>Fix what’s costing you calls, orders, and reservations.</p>
+        <div class="service-bottom">
+          <span class="price">From $299</span>
+          <a class="cta-pill" href="contact.html?service=conversion">Fix</a>
+        </div>
+      </article>
+
+      <article class="service-card">
+        <h3>Google Visibility</h3>
+        <p>Turn Search &amp; Maps views into real customer action.</p>
+        <div class="service-bottom">
+          <span class="price">From $149</span>
+          <a class="cta-pill" href="contact.html?service=google">Optimize</a>
+        </div>
+      </article>
+    </div>
+
+  </div>
+</section>
+
+<section class="section premium" id="premium">
+  <div class="container premium-grid">
+
+    <div class="premium-copy">
+      <span class="pill gold">Premium upgrade</span>
+      <h2>Native Menu App (iOS + Android)</h2>
+      <p>
+        A dedicated app customers keep on their phone.
+        Offline access, push notifications, and updates included.
+      </p>
+
+      <ul class="bullets">
+        <li>Offline menu</li>
+        <li>Push notifications</li>
+        <li>Native navigation</li>
+        <li>Store publishing handled</li>
+      </ul>
+
+      <div class="premium-actions hero-actions">
+        <a class="btn primary" href="services.html#app">See App Details</a>
+        <a class="btn ghost" href="contact.html?service=app">Request App Upgrade</a>
+      </div>
+    </div>
+
+    <div class="premium-media">
+      <!-- Portrait-friendly frame -->
+      <div class="media-frame premium-frame">
+        <div class="portrait-stage">
+          <img src="MenuApp.png" alt="Menu app preview" class="premium-image">
+        </div>
+        <div class="media-overlay">
+          <strong>From $999</strong>
+          <span>Premium build + publishing support.</span>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</section>
+
+<section class="section section-image" aria-label="Call to action">
+  <div class="container cta">
+    <div>
+      <h2>Ready to start?</h2>
+      <p>Choose what you need and we’ll move quickly with clear scope.</p>
+    </div>
+
+    <div class="cta-actions">
+      <a class="btn primary" href="contact.html">Start</a>
+      <a class="btn ghost" href="services.html">View Services</a>
+    </div>
+  </div>
+</section>
+
+<footer class="footer">
+  <div class="container footer-inner">
+    <div class="footer-copy">© 2019 MENU-MADE</div>
+
+    <a class="footer-logo" href="index.html" aria-label="Home">
+      <img src="MENU1.png" alt="MENU-MADE">
+    </a>
+
+    <div class="footer-social" aria-label="Social links">
+      <a class="social-icon" href="https://www.facebook.com/MenuMade.OnlinePresence" target="_blank" rel="noopener" aria-label="Facebook">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14 8.5V7c0-.8.5-1 1-1h2V3h-3c-2.8 0-4 1.7-4 4v1.5H8V12h2v9h4v-9h2.7l.3-3.5H14z"/></svg>
+      </a>
+
+      <a class="social-icon" href="https://www.linkedin.com/company/menu-made/" target="_blank" rel="noopener" aria-label="LinkedIn">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6.5 6.5A2.5 2.5 0 1 1 6.5 1.5a2.5 2.5 0 0 1 0 5zM4 22V8h5v14H4zm7.5-14H16v1.9c.7-1.2 2-2.3 4.2-2.3 3 0 4.8 2 4.8 6.2V22h-5v-6.3c0-2-.6-3.1-2.1-3.1-1.1 0-1.7.8-2 1.5-.1.3-.1.8-.1 1.2V22h-5V8z"/></svg>
+      </a>
+
+      <a class="social-icon" href="https://www.instagram.com/menumade.gram/" target="_blank" rel="noopener" aria-label="Instagram">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 2h10a5 5 0 0 1 5 5v10a5 5 0 0 1-5 5H7a5 5 0 0 1-5-5V7a5 5 0 0 1 5-5zm10 2H7a3 3 0 0 0-3 3v10a3 3 0 0 0 3 3h10a3 3 0 0 0 3-3V7a3 3 0 0 0-3-3zm-5 4.2a3.8 3.8 0 1 1 0 7.6 3.8 3.8 0 0 1 0-7.6zm0 2a1.8 1.8 0 1 0 0 3.6 1.8 1.8 0 0 0 0-3.6zM18 6.3a.9.9 0 1 1 0 1.8.9.9 0 0 1 0-1.8z"/></svg>
+      </a>
+    </div>
+  </div>
+</footer>
+
+<link rel="stylesheet" href="mm-a11y-widget.css">
+<script src="mm-a11y-widget.js" defer></script>
+
+</body>
 </html>

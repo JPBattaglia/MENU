@@ -1,3358 +1,418 @@
-*:focus {
-    outline: none;
-    background: transparent;
-   }
-
-html {
-    min-height: 100%;
-    overflow: auto;
-    scroll-behavior: smooth;
-}
-
-[data-aos=spin]{
-    transform: rotate(360deg);
-    opacity: 0;
-    transition-property: transform, opacity;
-}
-
-[data-aos=spin].aos-animate {
-    transform: rotate(0);
-    opacity: 1;
-}
-
-.social{
-    background: linear-gradient(to top, #034, #046, #068, #046, #034);
-    background-size: 100% 3%;
-    border: 1px solid #068;
-    border-top-right-radius: 15px;
-    border-bottom-right-radius: 15px;
-    padding: 5px 0;
-    margin-top: 30%;
-    display: flex;
-    flex-direction: column;
-    width: 37px;
-    position: fixed;
-    z-index: 999999;
-}
-
-.social img{
-    width: 25px;
-    filter: drop-shadow(2px 2px 5px #000);
-    transition: .5s;
-}
-
-.social img:hover{
-    width: 27px;
-    transition: .5s;
-}
-
-.social a{
-    margin: 6px 3px;
-}
-
-.social a:hover{
-    filter: drop-shadow(2px 2px 2px cyan);
-}
-
-#site{
-    max-width: 1500px;
-    margin: auto;
-}
-
-.logos a img{
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    margin: auto;
-}
-
-.logos a:hover{
-        filter: drop-shadow(1px 1px 10px #0df);
-    }
-
-.splash{
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100vh;
-    background: #540c21;
-    z-index: 999999999999999;
-}
-
-.splash.display-none{
-    position: fixed;
-    opacity: 0;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100vh;
-    background: #540c21;
-    z-index: -9999;
-    transition: all 1.5s;
-}
-
-.popup{
-    position: fixed;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    display: none;
-}
-
-.contentBox{
-    position: relative;
-    width: 600px;
-    height: 400px;
-    background: #fff;
-    border-radius: 20px;
-    display: flex;
-    box-shadow: 0 5px 15px #000;
-}
-
-.contentBox .imgBx{
-    position: relative;
-    width: 300px;
-    height: 500px;
-    display: flex;
-    justify-content: center;
-    align-items: center;  
-}
-
-.contentBox .imgBx::before{
-    content: '';
-    position: absolute;
-    top: 30px;
-    left: 18px;
-    width: 255px;
-    height: 250px;
-    background: #068;
-    border-radius: 50%;
-    box-shadow: 6px 8px 15px #000;
-}
-
-.contentBox .imgBx img{
-    position: relative;
-    top: -45px;
-    max-width: 240px;
-    height: 300px;
-}
-
-.contentBox .content{
-    position: relative;
-    width: 300px;
-    height: 400px;
-    display: flex;
-    justify-content: center;
-    align-items: center; 
-    padding: 0px;
-}
-
-.contentBox .content h3{
-    margin-bottom: 25px;
-    letter-spacing: -2px;
-    color: #e00;
-    line-height: 1.5em;
-    font-size: 3.3em;
-    font-weight: bolder;
-    text-shadow: 2px 2px 2px #000;
-}
-
-.contentBox .content h2{
-    letter-spacing: 2px;
-    font-size: 4.5em;
-    color: #0ac;
-    line-height: .8em;
-    font-family: 'righteous';
-    text-shadow: 2px 2px 2px #000;
-    font-weight: bolder;
-    margin-bottom: 10px;
-}
-
-.contentBox .content h2 sup{
-    font-size: 40px;
-}
-
-.contentBox .content h2 span{
-    color: #000;
-    font-size: .8em;
-    text-transform: uppercase; 
-    font-weight: bolder;
-    text-shadow: 0px 1px 0px #000;
-    letter-spacing: 0px;
-}
-
-.contentBox .content p{
-    font-weight: bolder;
-    letter-spacing: -.5px;
-    margin-top: -5px;
-    font-weight: bold;
-    font-size: 20px;
-    font-family: 'Philosopher';
-    width: 95%;
-}
-
-.contentBox .content a{
-    margin-top: 5px;
-    transition: .5s;
-    font-family: 'Philosopher';
-    font-weight: bolder;
-    display: inline-block;
-    padding: 11px 20px 8px;
-    background: repeating-linear-gradient(to bottom, #022, #058, #0d888f 100%);
-    color: #fff;
-    margin-left: 60px;
-    text-decoration: none;
-    border-radius: 50px;
-    border: 1px solid #079;
-    box-shadow: 1px 6px 10px #000;
-    text-shadow: 1px 1px 0 black, -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000;
-}
-
-.contentBox .content a:hover{
-    transition: .5s;
-    color: cyan;
-    border: 1px solid #0ac;
-    background: repeating-linear-gradient(to top, #022, #058, #0d888f 100%);
-    text-shadow: 1px .5px 0 white, -1px -.5px 0 black, 1px -.5px 0 black, -1px .5px 0 black, 1px .5px 0 black;
-    box-shadow: 2px 6px 18px #057;
-}
-
-.closex{
-    transition: .5s;
-    color: #f00;
-    position: absolute;
-    top: -5px;
-    right: -18px;
-    width: 60px;
-    font-size: 35px;
-    cursor: pointer;
-    border-radius: 50%;
-    z-index: 10;
-    filter: drop-shadow(0px 0px 1px #f00);
-    text-shadow: 1px 1px 0px #000, -1px 1px 0px #000,  -1px -1px 0px #000,  1px -1px 0px #000;
-}
-
-.closex:hover{
-    transition: .5s;
-    color: #000;
-    text-shadow: 1px 1px 0px #f00, -1px 1px 0px #f00,  -1px -1px 0px #f00,  1px -1px 0px #f00;
-}
-
-.animated {
-    background-color: #034;
-    background-position: left top;
-    margin-bottom: 30px;
-    -webkit-animation-duration: 3s;
-    animation-duration: 3s;
-    -webkit-animation-fill-mode: both;
-    animation-fill-mode: both;
-}
-
-.arrow{
-    position: absolute;
-    top: 97%;
-    left: 69%;
-    transform: translate(-50%,-50%);
-}
-
-.arrows{
-    position: absolute;
-    top: 97%;
-    left: 31%;
-    transform: translate(-50%,-50%);
-}
-
-.arrow span, .arrows span{
-    display: block;
-    width: 30px;
-    height: 30px;
-    border-radius: 5px;
-    border-radius: 5px;
-    border-bottom: 5px solid #0ac;
-    border-right: 5px solid #0ac;
-    transform: rotate(45deg);
-    margin: -15px;
-    animation: animate 7.5s infinite;
-}
-.arrow span:nth-child(2), .arrows span:nth-child(2){
-    animation-delay: -0.2s;
-}
-.arrow span:nth-child(3), .arrows span:nth-child(3){
-    animation-delay: -0.4s;
-}
-@keyframes animate {
-    0%{
-        opacity: 0;
-        transform: rotate(45deg) translate(-20px,-20px);
-    }
-    50%{
-        opacity: 1;
-    }
-    100%{
-        opacity: 0;
-        transform: rotate(45deg) translate(20px,20px);
-    }
-}
-
-#myBtn {
-    color: #0ac;
-    transform: rotate(180deg);
-    font-size: 40px;
-    margin-right: 20px;
-    display: none;
-    /* Hidden by default */
-    position: fixed;
-    /* Fixed/sticky position */
-    bottom: 20px;
-    /* Place the button at the bottom of the page */
-    right: 5px;
-    /* Place the button 5px from the right */
-    z-index: 99;
-    /* Make sure it does not overlap */
-    outline: none;
-    /* Remove outline */
-    cursor: pointer;
-    /* Add a mouse pointer on hover */
-    padding: 0 9px;
-    /* Some padding */
-    border-radius: 50px;
-    /* Rounded corners */
-    border: 1px solid transparent;
-    background: transparent;
-}
-
-#myBtn:hover {
-    transition: 1s;
-    border-color: white;
-    background: transparent;
-    color: white;
-}
-
-@-webkit-keyframes fadeOut {
-    100% {
-        opacity: 1;
-    }
-    0% {
-        opacity: 0;
-    }
-}
-
-@keyframes fadeOut {
-    100% {
-        opacity: 1;
-    }
-    0% {
-        opacity: 0;
-    }
-}
-
-.fadeOut {
-    -webkit-animation-name: fadeOut;
-    animation-name: fadeOut;
-}
-
-.sidenav {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    height: 100%;
-    width: 0;
-    position: fixed;
-    z-index: 100;
-    top: 0;
-    right: 0;
-    background: url(Wide2.jpg)center top no-repeat, url(Wide.jpg)center bottom no-repeat;
-    background-size: 115% 50%;
-    overflow-x: hidden;
-    transition: .8s;
-    font-family: 'Philosopher';
-    font-weight: bold;
-}
-
-.sidenav a {
-    font-size: 24px;
-    color: white;
-    transition: 1s;
-    max-width: 100%;
-    margin-bottom: 35px;
-    text-align: center;
-    text-shadow: 1px 1px 0 red, -1px -1px 0 #800, 1px -1px 0 #800, -1px 1px 0 #800, 1px 1px 0 #800;
-    text-decoration: none;
-}
-
-.sidenav a:hover {
-    color: #08a;
-    text-shadow: 1px 1px 0 tan, -1px -1px 0 white, 1px -1px 0 white, -1px 1px 0 white, 1px 1px 0 white;
-}
-
-.sidenav .closebtn {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    position: absolute;
-    top: -5px;
-    right: 2px;
-    font-size: 40px;
-    text-decoration: none;
-}
-
-.sidelink{
-    width: 85px;
-    margin: 0px auto 96px;
-}
-
-.burger{
-    transition: 1.5s;
-    float: right;
-    margin: -60px 20px 0 0;
-    background: none;
-    border: none;
-}
-
-.burger span{
-    display: block;
-    width: 40px;
-    height: 4px;
-    margin-bottom: 7px;
-    background: linear-gradient(to left, #034, #068, #09b, #0cf, #09b, #068, #034);
-    z-index: 1;
-    box-shadow: 0px 0px 2px #000;
-    border: .5px solid #000;
-}
-
-.burger:hover{
-    cursor: pointer;
-    filter: drop-shadow(0px 0px 10px #0ac);
-    transition: 1.5s;
-}
-
-#top{
-    border-top-right-radius: 5px;
-    border-top-left-radius: 5px;
-}
-
-#middle{
-    border-radius: 3px;
-}
-
-#bottom{
-    border-bottom-right-radius: 5px;
-    border-bottom-left-radius: 5px;
-}
-
-.navicon {
-    float: right;
-    width: 44px;
-    height: 35px;
-    margin: 28px 20px 10px 0;
-    cursor: pointer;
-    filter: drop-shadow(0px 0px 0px #000);
-}
-
-ul, li{
-    float:right;
-    display: flex;
-    flex-direction: row-reverse;
-    text-decoration: none;
-    color: white;
-    text-transform: uppercase;
-}
-
-ul{
-    margin-top: -55px;
-    margin-right: 30px;
-    width: 55%;
-}
-
-li{
-    margin: 0 0px;
-    font-family: 'Philosopher';
-    letter-spacing: 1px;
-}
-
-li a{
-    transition: 1s;
-    padding: 5px 0;
-    text-decoration: none;
-    text-shadow: 1px 1px 0 #000, -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000;
-    text-decoration: none;
-    
-}
-
-li a:hover{
-    padding: 5px 0;
-    transition: .5s;
-    color: #0ff;
-    text-shadow: .5px .5px 0 #fff, -1px -1px 0 #300, 1px -1px 1px #300, -1px 1px 0 #300, 1px 1px 0 #300;
-}
-
-.dropdown {
-    position: relative;
-    display: flex;
-    text-align: center;
-    justify-content: center;
-    top: 9px;
-    width: 100px;
-    padding: 0 10%;
-}
-
-.dropdown-text {
-    cursor: pointer;
-    position: absolute;
-    width: 100%;
-    margin: -1px 40% 0 70%;
-}
-
-.dropdown-text span{
-    font-size: 20px;
-    margin: 1px 2px 0;
-    transform: rotate(-90deg);
-    color: #0ff;
-}
-
-.dropdown-text,
-.dropdown-content a {
-    color: #fff;
-    font-family: 'Philosopher';
-    font-size: 25px;
-    text-shadow: 1px 1px 0 #000, -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000;
-}
-
-.dropdown-text:hover{
-    transition: .5s;
-    color: #0ce;
-    text-shadow: .5px .5px 0 #fff, -1px -1px 0 #300, 1px -1px 1px #300, -1px 1px 0 #300, 1px 1px 0 #300;
-}
-
-.dropdown-toggle {
-    font-size: 0;
-    z-index: 1;
-    cursor: pointer;
-    position: absolute;
-    top: -10px;
-    border: none;
-    padding: 0;
-    background: transparent;
-    height: 44px;
-    width: 80%;
-}
-
-.dropdown-toggle:focus {
-    outline: 0;
-}
-
-.dropdown-content {
-    -webkit-transition: all .25s ease;
-    -moz-transition: all .25s ease;
-    -ms-transition: all .25s ease;
-    -o-transition: all .25s ease;
-    transition: all .5s ease;
-    position: absolute;
-    top: 22px;
-    padding: 0 10px;
-    margin: 0 0 0 40px;
-    opacity: 0;
-    visibility:hidden;
-    line-height: 32px;
-    width: 100%;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-}
-
-.dropdown-content a {
-    padding: 10px 60px;
-    text-align: center;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    margin-top: -9.5px;
-    font-size: 18px;
-    width: 100px;
-    background: #600;
-    border-bottom-left-radius: 10px;
-    border-bottom-right-radius: 10px;
-    text-transform: none;
-    border-left: 1px solid #0ac;
-    border-right: 1px solid #0ac;
-    border-bottom: 1px solid #0ac;
-}
-}
-
-.dropdown-toggle:focus ~ .dropdown-text {
-    z-index: 2;
-}
-
-.dropdown-content:hover,
-.dropdown-toggle:focus ~ .dropdown-content {
-    opacity: 1;
-    visibility:visible;
-    top: 42px;
-}
-
-.dropdown-content a:hover{
-    padding: 10px 60px;
-}
-
-
-
-#stage {
-    position: fixed;
-    margin: 3px auto;
-    width: 100%;
-    z-index: -1;
-}
-
-#stage img:nth-of-type(1) {
-    animation-name: fader;
-    animation-delay: 3s;
-    animation-duration: 4s;
-    z-index: 20;
-}
-
-#stage img:nth-of-type(2) {
-    z-index: 10;
-}
-
-#stage img:nth-of-type(n+3) {
-    display: none;
-}
-
-@keyframes fader {
-    from {
-        opacity: 1.0;
-    }
-    to {
-        opacity: 0.0;
-    }
-}
-
-.space{
-    height: 750px;
-}
-
-.desknav img{
-    width: 35px;
-    padding: 0 8px 8px 0;
-}
-
-.dropdown-text img{
-    width: 35px;
-    height: 30px;
-    padding: 3px 8px 3px 0;
-}
-
-nav {
-    top:0;
-    position: fixed;
-    width: 100%;
-    max-width: 1500px;
-    margin: auto;
-    height: 80px;
-    z-index: 10;
-}
-
-.logoburger {
-    width: 55px;
-    height: 55px;
-    margin: 11px 10px 0 20px;
-    float: left;
-    filter: drop-shadow(1px 2px 1px #000);
-    -webkit-transition: width 2s, height 2s, -webkit-transform 1.5s;
-    /* Safari */
-    transition: width 2s, height 2s, transform 1.5s;
-}
-
-.logoburger:hover {
-    -webkit-transform: rotate(360deg);
-    /* Safari */
-    transform: rotate(360deg);
-}
-
-.logo img{
-    float: left;
-    margin: 22px 0;
-    width: 150px;
-    height: 30px;
-    filter: drop-shadow(2px 4px 1px #010);
-}
-
-h1 {
-    width: 100%;
-    color: white;
-    text-align: center;
-    font-family: 'Philosopher';
-    padding: 15px 20px 0px 20px;
-    font-weight: bolder;
-    margin: 0px auto;
-    letter-spacing: 1px;
-}
-
-#info {
-    background: #034;
-    background-size: 100% .25%;
-    display: flex;
-    max-width: 100%;
-    margin: 0px auto;
-    text-align: center;
-    padding-bottom: 20px;
-    flex-direction: column;
-    padding-bottom: 50px;
-}
-
-.pandemic{
-    width: 800px;
-    height: 300px;
-    margin: 20px auto;
-    background: url(Pandemic.jpeg);
-    background-size: 100% 100%;
-    border-radius: 20px;
-    box-shadow: 4px 6px 8px #000;
-}
-
-.pandemic h2 {
-    margin-top: 40px;
-    color: #fff;
-    font-family: 'Philosopher';
-    font-size: 24px;
-    width: 350px;
-    padding-left: 65px;
-    text-shadow: 
-        1px 1px 0px #000;
-}
-
-.media h2{
-    margin-top: 40px;
-    margin-left: -450px;
-    color: #fff;
-    font-family: 'Philosopher';
-    font-size: 24px;
-    width: 350px;
-    padding-left: 65px;
-    text-shadow: 
-        1px 1px 0px #000;
-}
-
-.presence{
-    background: url(Presence.jpeg);
-}
-
-.media{
-    background: url(Online.jpeg) 20% 30%;
-}
-
-.commerce{
-    background: url(Ecommerce.jpg);
-    background-size: 100% 110%;
-}
-
-.presence, .media, .commerce{
-    width: 800px;
-    height: 300px;
-    margin: 75px auto;
-    border-radius: 20px;
-    box-shadow: 4px 6px 8px #000;
-}
-
-.presence h2{
-    margin-top: 40px;
-    color: #fff;
-    font-family: 'Philosopher';
-    font-size: 24px;
-    width: 800px;
-    padding-left: 495px;
-    padding-right: 20px;
-    text-shadow: 
-        2px 1px 0px #000;
-}
-
-.commerce h2{
-    margin-top: 40px;
-    color: #fff;
-    font-family: 'Philosopher';
-    font-size: 24px;
-    width: 800px;
-    padding-top: 50px;
-    padding-left: 495px;
-    padding-right: 20px;
-    text-shadow: 
-        2px 1px 0px #000;
-}
-
-#intro {
-    width: 100%;
-    max-width: 1500px;
-    height: 550px;
-    margin: auto;
-    margin-bottom: 198px;
-}
-
-#intro img {
-    width: 100%;
-    max-width: 1500px;
-    margin: 76px auto;
-    height: 668px;
-    position: absolute;
-}
-
-.services{
-    margin: 100px auto 50px;
-    display: flex;
-    flex-direction: row;
-    align-items: center;
-    justify-content: center;
-    text-align: center;
-    padding: 50px;
-}
-
-.cafe h4,
-.restaurant h4,
-.pastry h4{
-    font-family: 'Philosopher';
-    margin: 0 0 -10px;
-    
-} 
-
-.cafe,
-.restaurant,
-.pastry {
-    width: 75%;
-    padding: 30px;
-    text-align: center;
-    font-family: 'Philosopher';
-    font-size: 22px;
-    font-weight: bolder;
-    color: white;
-    border: 2px double transparent;
-    border-radius: 30px;
-    box-shadow: 15px 15px 1px transparent;
-}
-
-.restaurant img {
-    width: 130px;
-    height: 65px;
-    padding: 8px;
-    margin: 20px auto 0;
-    filter: drop-shadow(2px 4px 1px #010);
-}
-
-.cafe img {
-    width: 100px;
-    height: 80px;
-    padding: 10px;
-    filter: drop-shadow(2px 4px 1px #010);
-}
-
-.pastry img {
-    width: 72px;
-    height: 75px;
-    padding: 10px 8px;
-    margin: 8px 0 0;
-    filter: drop-shadow(2px 4px 1px #010);
-}
-
-.cafe:hover,
-.restaurant:hover,
-.pastry:hover {
-    cursor: default;
-}
-
-.cafe .details,
-.restaurant .details,
-.pastry .details {
-    width: 95%;
-    border: 1.5px solid #000;
-    height: auto;
-    padding: 5px 15px 10px;
-    position: absolute;
-    content: "";
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%) rotateY(90deg);
-    transform-origin: 50%;
-    opacity: 0;
-    transition: all 0.6s ease-in;
-    font-size: 20px;
-    border-radius: 24px;
-    box-shadow: 4px 8px 8px #000;
-    background: -moz-linear-gradient(135deg, #056 5%, #800 100%);
-    background: -webkit-linear-gradient(135deg, #056 5%, #800 100%);
-    background: linear-gradient(90deg, #012, #034, #046, #046, #034, #012 );
-    filter: progid: DXImageTransform.Microsoft.gradient( startColorstr='#056', endColorstr='#800', GradientType=1);
-}
-
-.cafe:hover .details,
-.restaurant:hover .details,
-.pastry:hover .details {
-    transform: translate(-50%, -50%) rotateY(0deg);
-    opacity: 1;
-}
-
-.consult{
-    margin: 30px 0 0 40%;
-    width: 120px;
-}
-
-#Btn {
-    transition: .5s;
-    color: #fff;
-    padding: 2px;
-    background: #09b;
-    border: 1px solid white;
-    width: 120px;
-    border-radius: 30px;
-    font-family: 'Orbitron';
-    font-weight: bolder;
-    font-size: 15px;
-    letter-spacing: .5px;
-    text-shadow: 1px 1px 0 #000, -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000;
-}
-
-#Btn a{
-    text-decoration: none;
-}
-
-#Btn:hover {
-    background: #023;
-    border: 1px solid #079;
-    padding: 2px;
-    cursor: pointer;
-    font-weight: bolder;
-    color: #0ce;
-    text-shadow: 1px 1px 0 white, -1px -1px 0 black, 1px -1px 0 black, -1px 1px 0 black, 1px 1px 0 black;
-    box-shadow: 1px 1px 10px #0ce;
-}
-
-
-.Btn1{
-    transition: .3s;
-    cursor: pointer;
-    padding: 1px 20px;
-    color: white;
-    border-radius: 5px;
-    border: 1.5px solid #068;
-    background: repeating-linear-gradient(to top, #046, #09b, #0ce 100%);
-    box-shadow: 2px 4px 8px #000, -2px 4px 8px #000;
-}
-
-.Btn1:hover{
-    transition: .3s;
-    color: #0ac;
-    background: #023;
-    text-shadow: 1px 1px 0 white, -1px -1px 0 black, 1px -1px 0 black, -1px 1px 0 black, 1px 1px 0 black;
-    box-shadow: 0px 0px 10px #0ce;
-}
-
-.ninoSite{
-    width: 450px;
-    margin: auto;
-}
-
-.servLink button{
-    background: #0ce;
-    text-shadow: 2px 2px 4px #000;
-    width: 450px;
-    margin:auto;
-    border-radius: 10px;
-    font-size: 30px;
-    box-shadow: 0px 2px 8px #012;
-}
-
-.cform{
-    border: 5px double #700;
-    border-radius: 20px;
-    background: url("cformBack.png");
-    background-size: 100% 100%;
-    box-shadow: -10px 5px 15px #000;
-}
-
-.servLink img{
-    width: 45px;
-    margin: 5px;
-}
-
-.cform label {
-    font-size: 20px;
-    text-align: center;
-    font-family: 'Philosopher', serif;
-    color: white;
-    list-style-type: none;
-    text-shadow: 1px 1px 0 red, -1px -1px 0 red, 1px -1px 0 red, -1px 1px 0 red, 1px 1px 0 red;
-}
-
-.cform textarea,
-.cform input {
-    font-family: 'Philosopher', serif;
-    color: red;
-    text-align: center;
-    font-size: 18px;
-    font-weight: bolder;
-    width: 300px;
-    opacity: .8;
-}
-
-.cform select {
-    font-family: 'Philosopher', serif;
-    color: #800;
-    text-align: center;
-    font-size: 18px;
-    font-weight: bolder;
-    max-width: 50%;
-    box-sizing: border-box;
-    background: #fff;
-}
-
-::placeholder {
-    /* Chrome, Firefox, Opera, Safari 10.1+ */
-    color: #800;
-    opacity: 1;
-    font-family: 'Philosopher';
-    /* Firefox */
-}
-
-:-ms-input-placeholder {
-    /* Internet Explorer 10-11 */
-    color: red;
-}
-
-::-ms-input-placeholder {
-    /* Microsoft Edge */
-    color: red;
-}
-
-
-/* Style inputs with type="text", select elements and textareas */
-
-input[type=text],
-select,
-textarea {
-    margin: auto;
-    text-align: center;
-    width: 85%;
-    /* Full width */
-    padding: 5px;
-    /* Some padding */
-    border: 6px double #600;
-    /* Gray border */
-    border-radius: 15px;
-    /* Rounded borders */
-    box-sizing: border-box;
-    /* Make sure that padding and width stays in place */
-    margin-top: 10px;
-    /* Add a top margin */
-    margin-bottom: 20px;
-    /* Bottom margin */
-    resize: vertical;
-    /* Allow the user to vertically resize the textarea (not horizontally) */
-}
-
-.cform{
-    margin: 140px auto 0;
-    width: 60%;
-    text-align: center;
-    color: white;
-}
-
-.cform textarea{
-    height: 100px;
-}
-
-.cform textarea, .cform input[type=text]{
-    width: 60%;
-    margin: 50px 0 0 0;
-    color: #08a;
-    background: #fff;
-}
-
-.cform textarea:hover, .cform input[type=text]:hover,.cform selct:hover{
-    border: 6px double #068;
-}
-
-.cform textarea:focus, .cform input[type=text]:focus,.cform selct:focus{
-    border: 6px double #068;
-}
-
-.cform input[type=submit]{
-    width: 25%;
-    width: 35%;
-    text-align: center;
-    font-size: 20px;
-    background: linear-gradient(45deg, #0ac, #f00);
-    color: white;
-    padding: 2px 20px;
-    cursor: pointer;
-    border: none;
-    border-radius: 10px;
-    box-shadow: 0px 5px 25px black;
-    text-shadow: 1px 1px 0 black, -1px -1px 0 black, 1px -1px 0 black, -1px 1px 0 black, 1px 1px 0 black;
-    font-family: 'Orbitron';
-}
-
-.cform input[type=submit]:hover{
-    text-align: center;
-    color: #0ff;
-    background: linear-gradient(45deg, #f00, #0ac);
-    text-shadow: 1px 1px 0 black, -1px -1px 0 black, 1px -1px 0 black, -1px 1px 0 black, 1px 1px 0 black;
-}
-
-.cform select{
-    color: #800;
-    margin: 50px 0 0 0;
-    width: 40%;
-    padding: 4px 10px;
-}
-
-.cform h2{
-    font: 35px 'Philosopher';
-    margin: 20px 0 -20px 0;
-}
-
-.website {
-    color: #fff;
-    width: 75%;
-    font-size: 25px;
-    background-color:hsla(210,85%,11%,1);
-    background-color:hsla(217,69%,16%,1);
-    background-image:
-    radial-gradient(at 40% 20%, hsla(193,79%,10%,1) 0px, transparent 50%),
-    radial-gradient(at 80% 0%, hsla(197,74%,15%,1) 0px, transparent 50%),
-    radial-gradient(at 0% 50%, hsla(199,62%,11%,1) 0px, transparent 50%),
-    radial-gradient(at 80% 50%, hsla(197,64%,13%,1) 0px, transparent 50%),
-    radial-gradient(at 0% 100%, hsla(195,55%,16%,1) 0px, transparent 50%),
-    radial-gradient(at 80% 100%, hsla(197,67%,11%,1) 0px, transparent 50%),
-    radial-gradient(at 0% 0%, hsla(193,71%,12%,1) 0px, transparent 50%);
-    box-shadow:  -8px -8px 30px #000,
-                12px 8px 28px #079;
-    margin: -15px auto;
-    padding: 20px;
-    border-radius: 20px;
-}
-
-.website h1{
-    color: #e00;
-    font-size: 34px;
-    text-align: center;
-    background: transparent;
-    box-shadow: none;
-    padding: 10px 0 0;
-    text-decoration: underline;
-    text-shadow: .5px .5px 0px #fff,
-                -.5px -.5px 0px #000;
-    text-underline-position: under;
-}
-
-.website h2{
-    font-family: 'Philosopher';
-    margin: 25px;
-}
-
-.plans{
-    width: 100%;
-    display: flex;
-    justify-content: center;
-    margin-bottom: 100px;
-}
-
-.stars{
-    width: 100%;
-    display: flex;
-    flex-direction: row;
-    align-items: center;
-    justify-content: center;
-    float: left;
-    margin-top: -70px;
-}
-
-.star-1, .star-3{
-    width: 60px;
-    height: 60px;
-    margin-top: 20px;
-}
-
-.star-2{
-    width: 75px;
-    height: 75px;
-    z-index: 9;
-}
-
-.star-3{
-    margin-left: -25px;
-    transform: rotate(25deg)
-}
-
-.star-1{
-    margin-right: -25px;
-    transform: rotate(-25deg)
-}
-
-.star{
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    width: 65px;
-    height: 65px;
-    margin: 20px auto;
-    border-radius: 50px;
-    padding: 10px;
-    border: 4px solid #08a;
-    filter: drop-shadow(0px 3px 1px #010);
-}
-
-.star img{
-    margin: 0 0 5px 0px;
-    width: 75px;
-    -webkit-transition: width 2s, height 2s, -webkit-transform 1.5s;
-    /* Safari */
-    transition: width 2s, height 2s, transform 1.5s;
-}
-
-.star img:hover {
-    -webkit-transform: rotate(360deg);
-    /* Safari */
-    transform: rotate(360deg);
-    filter: drop-shadow(0px 0px 0px transparent);
-}
-
-.check{
-    width: 35px;
-    height: 25px;
-    filter: drop-shadow(2px 2px 1px #000);
-}
-
-.items{
-    text-align: left;
-    margin: 20px auto 50px;
-    width: 75%;
-    background: linear-gradient(90deg, #023, #034, #057, #057, #034, #023);
-    padding: 10px 25px 0px 25px;
-    border-radius: 15px;
-    text-shadow: 2px 2px 1px #000;
-    box-shadow: 2px 4px 8px #000;
-}
-
-.items h4{
-    font-family: 'Philosopher';
-    color: #fff;
-    margin-left: 18%;
-}
-
-.basic, .pro, .prime{
-    text-decoration: none;
-    margin: 20px;
-    width: 33%;
-    color: white;
-    text-align: center;
-    border-radius: 20px;
-    background: #057;
-    box-shadow: inset 6px 6px 12px #002230,
-            inset -6px -6px 12px #0088be;
-}
-
-.basic h1{
-    color: #0bf;
-}
-
-.prime h1{
-    color: #fc0;
-}
-
-.plans h1{
-    text-shadow: 2px 2px 0px #000;
-    letter-spacing: 2.5px;
-    font-weight: bolder;
-    text-decoration: underline;
-    padding: 0px;
-}
-
-.plans h3{
-    letter-spacing: 2.5px;
-    margin: 0;
-    color: #0f0;
-    font-family: 'Orbitron';
-    font-size: 35px;
-    margin-bottom: -10px;
-    font-weight: bolder;
-    text-shadow: 2px 2px 1px #000;
-    
-}
-
-.plans sup{
-    font-size: 20px;
-}
-
-.servLink{
-    text-decoration: none;
-}
-
-.servLink h1{
-    width: 350px;
-    background: #034;
-    padding: 5px;
-    border-radius: 35px;
-    box-shadow:  -12px -8px 28px #000,
-                12px 8px 28px #079;
-}
-
-h6{
-    font-family: 'Philosopher';
-    margin: 0;
-    font-size: 15px;
-}
-
-.bio{
-    background: linear-gradient(315deg, #00303d, #034);
-    box-shadow:  -10px -10px 20px #000,
-             10px 10px 20px #004769;
-    background-size: 100% 100%;
-    width: 60%;
-    height: 100%;
-    border-radius: 20px;
-    margin: 200px auto 100px;
-    border: 1px solid #046;
-}
-
-
-.bio h1{
-    color: #a00;
-    text-decoration: underline;
-    padding-top: 50px;
-    font-family: 'Philosopher', serif;
-    font-size: 52px;
-    letter-spacing: 3px;
-    text-shadow: 1px 0px 1px #fff, -1px 0px 1px #fff;
-    font-weight: lighter;
-}
-
-.bio h2{
-    color: #fff;
-    font-family: 'Philosopher', serif;
-    font-size: 20px;
-    padding: 20px 100px 80px;
-    line-height: 2;
-}
-.bio h2 span{
-    font-size: 26px;
-    letter-spacing: -1px;
-}
-
-.nino{
-    width: 50%;
-    float: right;
-    margin: -130px 15%;
-}
-
-.nino img{
-    width: 80px;
-    height: 130px;
-    transform: rotate(-1deg);
-    filter: drop-shadow(-2px -2px 20px #000);
-}
-
-.piero img{
-    width: 75px;
-    height: 125px;
-    transform: rotate(2deg);
-    filter: drop-shadow(2px 2px 20px #000);
-}
-
-.piero{
-    width: 22%;
-    float: right;
-    margin: -85px 30%;
-    z-index: 99
-}
-
-.logolinks{
-    margin: -20px auto;
-    max-width: 1200px;
-}
-
-.logolinks h1{
-    background: linear-gradient(315deg, #00303d, #034);
-    box-shadow:  -5px -5px 15px #000,
-             5px 5px 15px #068;
-    border: 1px solid #046;
-    border-radius: 15px;
-    width: 305px;
-    margin: 0 auto 100px;
-    padding: 15px 0 20px 0;
-    text-shadow: 1px 1px 0 #000, -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000;
-}
-
-.logolinks img{
-    width: 200px;
-    filter: drop-shadow(2px 2px 10px #000);
-}
-
-.logos{
-    width: 100%;
-    flex-flow: wrap;
-    margin: 50px auto;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-}
-
-.logos a{
-    margin: 0 50px;
-    text-decoration: none;
-}
-
-.logos h2 {
-    color: #fff;
-    font-size: 26px;
-    text-align: center;
-    font-family: 'Philosopher';
-    font-weight: lighter;
-    text-decoration: none;
-}
-
-.logos a h2:hover{
-    color: #f00;
-    transition: 1s;
-}
-
-#ninositelogo img{
-    height: 160px;
-    width: 160px;
-}
-
-#ellas img{
-    width: 150px;
-}
-
-#footer {
-    position: relative;
-    width: 100%;
-    margin: 20px auto;
-    bottom: 0;
-    z-index: -1;
-}
-
-#footer img {
-    width: 75px;
-}
-
-#footer p {
-    text-align: center;
-    color: #0bb;
-    font-family: 'Quintessential';
-    font-size: 24px;
-    margin: 100px 0 0;
-    filter: drop-shadow(2px 2px 1px #000);
-}
-
-#preloader{
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    color: #0ff;
-    font-size: 25px;
-    padding-top: 25%;
-    font-family: 'Philosopher' ;
-    background: #000 url(menugif.gif) no-repeat center center;
-    background-size: 20%;
-    height: 100%;
-    width: 100%;
-    position: fixed;
-    z-index: 9999999999999999;
-    top: 0;
-}
-
-#partner{
-    width: 40%;
-    margin: 150px auto 50px;
-    display: flex;
-    filter: drop-shadow(0px 0px 5px #0ac);
-    
-}
-
-#partnership{
-    width: 80%;
-    margin: auto;
-}
-
-#partnership h1{
-    text-align: left;
-}
-
-#menuword{
-    width: 150px;
-}
-
-#brainard{
-    width: 130px;
-    filter: drop-shadow(0px 0px 10px #000);
-    transition: 1s;
-}
-
-#brainard:hover{
-    filter: drop-shadow(0px 0px 20px #f00);
-    animation: rotateImage 1s;
-        }
-
-@keyframes rotateImage {
-    0% {
-    transform: rotate3d(0, 0, 0, 0deg);
-    }
-
-    100% {
-    transform: rotate3d(0, 0, 1, 360deg);
-        }
-    }
-
-#widgetvid{
-    display: flex;    align-items: center;
-    justify-content: center;
-    flex-direction: column;
-    background: #600;
-    width: 80%;
-    margin: auto;
-    border: 2px solid #0ac;
-    border-radius: 20px;
-    padding: 50px;
-}
-
-#widgetvid h1{
-    width: 80%;
-    padding: 50px;
-    line-height: 40px;
-    font-size: 30px;
-}
-
-#widgetvid iframe{
-    border: 2px solid #0ac;
-    border-radius: 20px;
-}
-
-#MT h2{
-    margin-top: 30px;
-}
-
-#MT {
-    margin-top: 70px;
-}
-
-/*=======================================*/
-
-
-/*=======================================*/
-
-@media (max-width: 1000px) and (min-width: 601px) {
-    .mconsult
-    article,
-    .mobile,
-    ul {
-        display: none;
-    }
-    #Btn {
-        font-size: 12px;
-        width: 200px;
-        margin: 30px 12%;
-    }
-    
-    .sidenav .closebtn{
-        margin: -5px 12px;
-        height: 75px;
-        width: 50px;
-    }
-    
-    .dconsult {
-        width: 70px;
-    }
-    
-    .pandemic{
-        width: 550px;
-        background-size: 105% 100%;
-    }
-    
-    .pandemic h2{
-        width: 280px;
-        font-size: 23px;
-        padding: 0 0 0 30px;
-        margin-top: 40px;
-    }
-    
-    .presence{
-        width: 550px;
-        background: url('Presence.jpeg') 40%;
-    }
-    
-    .media{
-        width: 550px;
-        background: url('Online.jpeg') 32% 45%;
-    }
-    
-    .commerce{
-        width: 550px;
-    }
-    
-    .presence h2{
-        width: 530px;
-        font-size: 23px;
-        padding: 0 0 0 330px;
-        margin-top: 30px;
-    }
-    
-    .media h2{
-        width: 600px;
-        padding: 0 65px 0 295px;
-        margin-top: 5px;
-    }
-    
-    #intro {
-        margin: auto;
-        height: 537px;
-        max-width: 100%;
-    }
-    #intro h1 {
-        font-size: 32px;
-        margin: 20px auto;
-        max-width: 100%;
-    }
-    #intro img {
-        margin: 76px auto;
-        max-width: 100%;
-        height: 460px;
-    }
-    
-    .space{
-        height: 0;
-    }
-    
-    h1 {
-        font-size: 28px;
-        margin: 0px;
-    }
-    
-    .website{
-        margin-bottom: 50px;
-    }
-    
-    .website h2{
-        font-family: 'Philosopher';
-        margin: 20px;
-        font-size: 24px
-    }
-    
-    .items{
-        margin-bottom: 20px;
-    }
-    
-    .items h4{
-        line-height: .5;
-        margin: 10px 0 0 -20px;
-    }
-    
-    .items img{
-        width: 28px;
-        height: 20px;
-    }
-    
-    .services{
-        flex-direction: row;
-        margin: 150px 10px 70px 0;
-        padding: 0;
-    }
-    
-    #info {
-        flex-direction: column;
-        width: 100%;
-    }
-    
-    
-    .cafe,
-    .restaurant,
-    .pastry {
-        width: 400px;
-        margin: auto;
-        margin-bottom: 20px;
-        border: 
-    }
-    .cafe .details,
-    .restaurant .details,
-    .pastry .details {
-        padding: 10px;
-        max-width: 100%;
-        height: auto;
-    }
-    
-    .cafe:hover,
-    .restaurant:hover,
-    .pastry:hover {
-        border: 2px solid transparent;
-        cursor: pointer;
-        box-shadow: 15px 15px 5px transparent;
-    }
-    
-    .cform{
-        width: 75%;
-    }
-    
-    .items{
-        width: 90%;
-    }
-    
-    .items h4{
-        font-size: 16px;
-    }
-    
-    .logolinks h1{
-        background: linear-gradient(315deg, #00303d, #034);
-        box-shadow:  -5px -5px 15px #000,
-                 5px 5px 15px #068;
-        border-radius: 15px;
-        width: 255px;
-        margin: auto;
-        padding: 15px 0 20px 0;
-    }
-    
-    .logos a{
-        margin: 15px;
-    }
-    
-    .logos h2{
-        font-size: 16px;
-    }
-
-    #MT h2{
-        margin-top: 30px;
-    }
-    
-    #MT {
-        margin-top: 40px;
-    }
-    
-}
-
-
-/*=======================================*/
-
-
-/*=======================================*/
-
-@media (max-width: 801px){
-    
-    .splash{
-        background: #4c131e;
-    }
-    
-    .plans{
-        flex-direction: column;
-    }
-    
-    .basic, .pro, .prime{
-        width: 90%;
-        margin: 50px auto;
-    }
-    
-    .items{
-        width: 80%;
-    }
-    
-    .plans h1{
-        background: transparent;
-        box-shadow: none;
-        width: 100px;
-        font-size: 30px;
-        margin: 0px auto;
-    }
-    
-    .services{
-        margin-bottom: 50px;
-    }
-    
-    #preloader{
-        font-size: 16px;
-    }
-    
-}
-
-/*=======================================*/
-
-
-/*=======================================*/
-
-@media (min-width: 601px) and (max-width: 800px){
-    
-    #partner{
-        width: 300px;
-        margin: 120px auto 20px;
-        
-    }
-    
-    #brainard{
-        width: 40px;
-    }
-    
-    #partnership h1{
-        font-size: 17px;
-    }
-    
-    #menuword{
-        width: 80px;
-    }
-    
-    #widgetvid h1{
-        font-size: 20px;
-        line-height: 30px;
-        padding: 25px;
-    }
-    
-    #widgetvid iframe{
-        width: 400px;
-        height: 250px;
-    }
-    
-    .dconsult{
-        display: none;
-    }
-    
-    nav{
-        display: flex;
-    }
-    
-    .burger{
-        align-self: flex-start;
-        margin: 20px;
-    }
-    
-    .mconsult{
-        margin: auto;
-    }
-    
-    #Btn{
-        margin-top: 22px;
-        width: 130px;
-        font-size: 14px;
-        padding: 3px;
-    }
-    
-    #Btn:hover{
-        padding: 4px;
-    }
-    
-    .items{
-        width: 65%;
-        padding: 30px 0px 10px 120px;
-    }
-    
-    .items h4{
-        font-size: 18px;
-    }
-    
-    .contentBox{
-        margin-top: 70px;
-        width: 400px;
-        height: auto;
-        flex-direction: column;
-    }
-    
-    .contentBox .imgBx{
-        height: 220px;
-        margin: auto;
-        transform: translateY(-50px);
-    }
-    
-    .contentBox .imgBx::before{
-        background: #fff;
-        box-shadow: none;
-        width: 300px;
-        left: 0px;
-        top: 5px;
-    }
-    
-    .contentBox .imgBx img{
-        position: relative;
-        top: 18px;
-        left: 0px;
-        width: 175px;
-        height: 210px;
-    }
-    
-    .contentBox .content{
-        height: auto;
-        text-align: center;
-        padding: 50px 20px;
-        padding-top: 10px;
-        font-size: 16px;
-        margin: -5px auto;
-    }
-    
-    .contentBox .content p{
-        font-size: 20px;
-        margin: 10px auto 30px;
-        font-family: 'Philosopher';
-        font-weight: bolder;
-        line-height: 1.3;
-    }
-    
-    .contentBox .content h3{
-        font-weight: bolder;
-        font-size: 50px;
-        margin: -40px 0 15px;
-    }
-    
-    .contentBox .content h2{
-        font-family: 'righteous';
-        font-weight: bolder;
-        width: 300px;
-        margin-bottom: -5px;
-        letter-spacing: 4px;
-    }
-    
-    .contentBox .content a{
-        margin: 10px auto 0;
-        font-weight: bolder;
-        font-size: 18px;
-    }
-    
-    .closex{
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-size: 35px;
-        top: 8px;
-        right: 6px;
-        background: white;
-        width: 40px;
-        height: 40px;
-        padding-bottom: 8px;
-        filter: drop-shadow(0px 0px 1px transparent);
-    }
-    
-    #info{
-        margin-top: 4px;
-    }
-    
-    #info h1{
-        width: 480px;
-        background: linear-gradient(to top, #034, #046, #068, #046, #034);
-        background-size: 100% 7.1%;
-        border-bottom: 2px solid #023;
-        margin: -25px auto;
-        border-radius: 50px;
-        padding: 5px 0px;
-    }
-    
-    .plans{
-        width: 90%;
-        margin: 0px auto 50px;
-    }
-    
-    .basic, .pro, .prime{
-        padding-bottom: 50px;
-    }
-    
-    .services{
-        margin: 120px 0 75px 0;
-    }
-    
-    .cafe .details,
-    .restaurant .details,
-    .pastry .details {
-        padding: 0px 10px 20px;
-        border-radius: 15px;
-        font-size: 16px;
-        width: 320px;
-        height: auto;
-    }
-    
-    .cform input[type=submit]{
-        width: 30%;
-        margin: 30px;
-    }
-    
-    .cform{
-        margin-bottom: -50px;
-    }
-
-    
-    .presence h2{
-        padding: 25px 16px 0 345px;
-        width: 100%;
-    }
-    
-    .pandemic h2{
-        padding: 45px 25px;
-    }
-    
-    .media  h2{
-        width: 100%;
-        margin-left: -270px;
-        padding: 27px 50px 10px 290px;
-    }
-    
-    .commerce h2{
-        width: 100%;
-        padding: 25px 10px 10px 320px;
-    }
-    
-    .website{
-        width: 85%
-    }
-    
-    .star{
-        margin: 25px auto 10px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        width: 54px;
-        height: 54px;
-        border: 2px solid #0ac;
-    }
-    
-    .star img{
-        width: 65px;
-        margin: 0 0 6px 0;
-    }
-    
-    .piero img{
-        width: 60px;
-        height: 100px;
-    }
-    
-    .nino img{
-        width: 70px;
-        height: 110px;
-    }
-    
-    .piero{
-        margin: -55px 3%;
-    }
-    
-    .nino{
-        margin: -100px -15%;
-    }
-    
-    .bio{
-        width: 85%;
-    }
-    
-    .bio h1{
-        font-size: 35px;
-        padding-top: 50px;
-    }
-    
-    .bio h2{
-        padding: 20px 50px 100px;
-        font-size: 20px;
-    }
-    
-    .logos a{
-        margin: 0 15px;
-    }
-    
-    .logolinks{
-        max-width: 700px;
-    }
-    
-    .logolinks img{
-        width: 130px;
-    }
-    
-    #ellas img{
-        width: 110px;
-    }
-    
-    .logos a{
-        margin: 10px 2%;
-    }
-    
-    #ninositelogo img{
-        width: 110px;
-        height: 110px;
-    }
-
-}
-
-/*=======================================*/
-
-@media (max-width: 1000px) and (min-width: 801px){
-    
-    .logos img{
-        width: 170px;
-    }
-    
-    .logos a{
-        margin: 0 15px;
-    }
-    
-    #ellas img{
-        width: 145px;
-    }
-}
-
-
-/*=======================================*/
-
-
-@media (max-width: 600px) {
-    
-    .social{
-        display:none;
-    }
-    
-    #partnership h1{
-        font-size: 18px;
-        padding: 0;
-        line-height: 35px;
-    }
-    
-    #menuword{
-        width: 110px; 
-    }
-    
-    #brainard{
-        width: 50px;
-        margin: 0px;
-        filter: drop-shadow(0px 0px 10px #f00);
-    }
-    
-    #partner{
-        margin-top: 100px;
-        margin-bottom: 40px;
-        filter: drop-shadow(0px 0px 10px #0ac);
-    }
-    
-    #widgetvid{
-        width: 90%;
-        margin-top: 50px;
-    }
-    
-    #widgetvid h1{
-        font-size: 17px;
-        width: 120%;
-        line-height: 25px;
-        padding: 10px;
-        text-align: left;
-        margin-bottom: 20px;
-        margin-left: -20px;
-    }
-    
-    #widgetvid iframe{
-        width: 120%;
-        height: 200px;
-        border-radius: 10px;
-        margin-bottom: -20px;
-    }
-    
-    .desktop,
-    ul,
-    .dconsult,
-    article {
-        display: none;
-    }
-    
-    .arrows{
-        left: 35%;
-    }
-    
-    .arrow{
-        left: 65%
-    }
-    
-    .arrow span, .arrows span{
-        display: block;
-        width: 20px;
-        height: 20px;
-        border-radius: 5px;
-        border-radius: 5px;
-        border-bottom: 3px solid #0ac;
-        border-right: 3px solid #0ac;
-        transform: rotate(45deg);
-        margin: -12px;
-        animation: animate 5.5s infinite;
-}
-    
-    .splash{
-        padding-bottom: 100px;
-        width: 160%;
-        position: absolute;
-        left: 50%;
-        transform: translateX(-50%);
-    }
-    
-    .plans{
-        width: 90%;
-        margin: auto;
-    }
-    
-    .prime{
-        margin-bottom: 100px;
-    }
-    
-    .stars{
-        float: inherit;
-        width: 100px;
-        margin: -65px auto 0px;
-    }
-    
-    .star-1, .star-3{
-        width: 45px;
-        height: 45px;
-    }
-    
-    .star-2{
-        width: 55px;
-        height: 55px;
-        margin-top: -10px;
-    }
-    
-    .star-1{
-        margin-right: -20px;
-    }
-    
-    .star-3{
-        margin-left: -20px;
-    }
-    
-    .contentBox{
-        margin-top: 70px;
-        width: 280px;
-        height: auto;
-        flex-direction: column;
-    }
-    
-    .contentBox .imgBx{
-        height: 200px;
-        transform: translateY(-50px);
-    }
-    
-    .contentBox .imgBx::before{
-        background: #fff;
-        box-shadow: none;
-        left: 4%;
-    }
-    .contentBox .imgBx img{
-        position: relative;
-        top: 15px;
-        left: -9px;
-        max-width: 160px;
-        height: 150px;
-    }
-    
-    .contentBox .content{
-        height: auto;
-        text-align: center;
-        padding: 30px;
-        padding-top: 0;
-        font-size: 14px;
-        margin: -10px auto;
-    }
-    
-    .contentBox .content p{
-        font-size: 16px;
-        margin: 5px 0px 20px -10px;
-        font-family: 'Philosopher';
-        font-weight: bolder;
-        line-height: 1.3;
-        width: 100%;
-    }
-    
-    .contentBox .content h3{
-        font-weight: bolder;
-        font-size: 40px;
-        margin: -55px 10px 5px -10px;
-    }
-    
-    .contentBox .content h2{
-        font-family: 'righteous';
-        font-weight: bolder;
-        font-size: 55px;
-        margin: 0px 10px 0px -10px;
-    }
-    
-    .contentBox .content a{
-        margin: 5px 10px 15px -10px;
-        font-weight: bolder;
-    }
-    
-    .contentBox .content h2 sup{
-        font-size: 30px;
-    }
-    
-    .closex{
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
-        font-size: 30px;
-        top: 10px;
-        right: 5px;
-        background: white;
-        width: 35px;
-        height: 35px;
-        padding: 0px 0px 6px .5px;
-        filter: drop-shadow(0px 0px 1px transparent);
-    }
-    
-    nav {
-        display: flex;
-        width: 100%;
-        height: 60px;
-    }
-    
-    
-    .burger {
-        align-self: flex-start;
-        margin: 12px 10px 0 0;
-    }
-    
-    .burger span{
-        width: 33px;
-        height: 2px;
-        margin: 7px;
-        background: linear-gradient(to left, #057, #079, #09b, #0cf, #09b, #079, #057);
-        border: .5px solid transparent;
-        filter: drop-shadow(-1px 0px 2px #000);
-    }
-    
-    #top{
-        border-top-right-radius: 3.5px;
-        border-top-left-radius: 3.5px;
-    }
-    
-    #bottom{
-        border-bottom-right-radius: 3.5px;
-        border-bottom-left-radius: 3.5px;
-    }
-    
-    .logo{
-        display: flex;
-        margin-top: -2px;
-        margin-left: 10px;
-        width: 100px;
-    }
-    
-    .logo img{
-        height: 20px; 
-        width: 100px;
-        filter: drop-shadow(2px 3px 1px #000);
-    }
-    
-    .logoburger {
-        width: 40px;
-        height: 40px;
-        margin: 10px 0px 0 10px;
-        filter: drop-shadow(0px 2px 1px #000);
-    }
-    
-    #stage {
-        margin-top: 60px;
-    }
-    
-    .space{
-        height: 0px;
-    }
-    
-    #intro {
-        margin: auto;
-        height: 315px;
-        max-width: 100%;
-    }
-    
-    #intro img {
-        margin: auto;
-        max-width: 100%;
-        height: 250px;
-    }
-    
-    .basic, .pro, .prime{
-        width: 100%;
-    }
-    
-    .basic, .pro{
-        margin-bottom: 0px;
-    }
-    
-    .website{
-        margin-top: 55px;
-        padding: 20px 10px 35px;
-        width: 85%;
-    }
-    
-    .website h1{
-        width: 200px;
-        font-size: 25px;
-        text-align: center;
-        background: transparent;
-        box-shadow: none;
-        padding: 10px 0;
-        text-decoration: underline;
-        text-shadow: .5px .5px 0px #fff;
-        text-underline-position: under;
-    }
-    
-    .website h2{
-        font-size: 16px;
-        margin: 20px 5px 0 15px;
-    }
-    
-    
-    .items h4{
-        font-size: 16px;
-        margin: 5px 0 0 22%;
-    }
-    
-    .items img{
-        width: 28px;
-        height: 20px;
-        margin-bottom: 3px;
-    }
-    
-    .items{
-        padding-top: 20px;
-        background: linear-gradient(90deg, #023, #034, #057, #057, #034, #023);
-        width: 80%;
-    }
-    
-    .pandemic{
-        width: 300px;
-        height: 200px;
-    }
-    
-    .pandemic h2, .commerce h2{
-        width: 300px;
-        font-size: 18px;
-        padding: 30px 20px;
-        margin-top: 10px;
-    }
-    
-    .presence{
-        background: url(Presence.jpeg);
-        margin: 20px auto;
-        
-    }
-    
-    .commerce{
-        background: url(Ecommerce.jpg);
-        width: 300px;
-        height: 200px;
-    }
-    
-    .media{
-        background: url(Online.jpeg);
-    }
-    
-    .media h2{
-        width: 300px;
-        margin: 0;
-        font-size: 18px;
-        padding: 30px 35px;
-    }
-    
-    .presence, .media, .commerce{
-        width: 300px;
-        height: 200px;
-        background-size: 130% 100%;
-    }
-    
-    .presence h2{
-        width: 300px;
-        font-size: 18px;
-        padding: 40px 20px;
-        margin-top: 20px;
-    }
-    
-    .presence, .pandemic, .media, .commerce{
-        margin-top: 10px;
-    }
-    
-    .media{
-        margin-top: 70px;
-    }
-    
-    #info {
-        background: linear-gradient(to top, #034, #046, #068, #046, #034);
-        background-size: 100% .22%;
-        margin-top: -5px;
-        flex-direction: column;
-        max-width: 100%;
-        padding-bottom: 100px;
-        
-    }
-    
-    #info h1{
-        background: linear-gradient(to top, #034, #046, #068, #046, #034);
-        background-size: 100% 7.2%;
-        width: 300px;
-        font-size: 17px;
-        padding: 8px;
-        margin-top: -16px;
-        border-radius: 20px;
-    }
-    
-    .services{
-        flex-direction: row;
-        margin: 125px 0px 40px;
-        padding: 20px;
-    }
-    
-    .services img{
-        float: left;
-        left: 0;
-        width: 35px;
-        height: 35px;
-        margin: -10px 0 0 10px;
-        padding: 0;
-    }
-    
-    .services h4{
-        font-size: 15px;
-        margin-top: 20px;
-    }
-    
-    .cafe,
-    .restaurant,
-    .pastry {
-        background: linear-gradient(0deg, #023, #046, #057, #057, #046, #023);
-        font-size: 18px;
-        margin: 10px;
-        width: 100px;
-        height: 70px;
-        border-radius: 50%;
-        padding: 25px;
-        box-shadow: 4px 4px 8px #000;
-        border: 1px solid #000;
-    }
-    
-    .cafe .details,
-    .restaurant .details,
-    .pastry .details {
-        padding: 0px 2px 40px;
-        border-radius: 15px;
-        font-size: 13px;
-        width: 130px;
-        height: auto;
-        margin-top: 18px;
-    }
-    
-    .cafe .details p,
-    .restaurant .details p,
-    .pastry .details p{
-        margin: 7px 8px;
-    }
-    
-    .cafe:hover,
-    .restaurant:hover,
-    .pastry:hover {
-        cursor: pointer;
-        box-shadow: none;
-    }
-    
-    .mconsult{
-        margin: 10px auto;
-        width: 115px;
-    }
-    
-    #Btn {
-        font-size: 12px;
-        margin-top: 10px;
-        width: 115px;
-        box-shadow: 1px 1px 5px #000;
-        padding: 2px;
-    }
-    
-    #Btn:hover{
-        padding: 2px;
-        box-shadow: 1px 1px 10px #0ce;
-    }
-    
-    .Btn1{
-        position: fixed;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        bottom: 15px;
-        margin: 0px 0 0 20%;
-        padding: 0px 15px;
-        z-index: 99999;
-    }
-    
-    #myBtn{
-        margin: 0 -5px -15px 0;
-        font-size: 35px;
-        padding: 0 6px;
-        color: #0ce;
-        border: 1px solid transparent;
-    }
-    
-    #myBtn:hover{
-        border: 1px solid transparent;
-    }
-    
-    .ninoSite{
-        width: 300px;
-        margin: 50px auto;
-}
-
-    .servLink button{
-        background: #0ce;
-        text-shadow: 2px 2px 4px #000;
-        width: 300px;
-        margin:auto;
-        border-radius: 10px;
-        font-size: 20px;
-        box-shadow: 0px 2px 8px #012;
-    }
-    
-    .servLink img{
-        width: 35px;
-        margin: 10px;
-    }
-    
-    .cafe{
-        margin-right: 30%;
-    }
-    
-    .cafe .details{
-        margin-top: 0px;
-        margin-left: -5px;
-    }
-    
-    .pastry{
-        margin-left: 30%;
-    }
-    
-    .pastry img{
-        margin-top: -5px;
-        margin-left: 2px;
-        width: 45px;
-        height: 30px;
-    }
-    
-    .pastry .details{
-        margin-top: 0px;
-        margin-left: 5px;
-    }
-    
-    .restaurant{
-        margin-top: -100px;
-    }
-    
-    .restaurant .details{
-        margin-top: 35px;
-        width: 140px;
-        padding: 0px 0px 40px;
-    }
-    
-    .restaurant .Btn1{
-        margin: 0px 23% 0;
-    }
-    
-    .cafe img{
-        width: 47px;
-        margin-left: 1px;
-        height: 36px;
-    }
-    
-    .restaurant img {
-        width: 65px;
-        height: 30px;
-        margin-left: -5px;
-        margin-top: -2px;
-    }
-    
-    .cform h2{
-        font-family: 'Philosopher';
-        margin: 25px auto 10px;
-        font-size: 30px;
-    }
-    
-    .cform{
-        width: 85%;
-        margin: 100px auto 0px;
-        margin-bottom: -50px;
-    }
-    
-    .cform textarea, .cform input[type=text]{
-        width: 80%;
-        margin: 15px 0;
-        padding: 3px;
-    }
-    
-    .cform input[type=submit]{
-        width: 150px;
-        margin: 10px auto 30px;
-    }
-    
-    .cform select{
-        margin: 10px;
-        padding: 3px 20px;
-        width: 50%;
-    }
-    
-    .sidenav .closebtn {
-        padding: 11px 15px 28px 22px;
-        font-size: 30px;
-    }
-    
-    .star{
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        width: 55px;
-        height: 55px;
-        border: 2px solid #0ac;
-        margin-bottom: 5px;
-    }
-    
-    .star img{
-        margin: 0 0px 6px 0;
-        width: 65px;
-    }
-    
-    .items{
-        margin: 20px auto 30px;
-    }
-    
-    
-    #footer{
-        position:relative;
-        margin: 50px auto 0px;
-    }
-    
-    .piero img{
-        width: 45px;
-        height: 85px;
-        filter: drop-shadow(2px 2px 5px #000);
-    }
-    
-    .nino img{
-        width: 55px;
-        height: 90px;
-        filter: none;
-        filter: drop-shadow(2px 2px 5px #000);
-    }
-    
-    .piero{
-        margin: -35px 5%;
-    }
-    
-    .nino{
-        margin: -80px -6%;
-    }
-    
-    .bio{
-        width: 80%;
-        padding-top: 50px;
-        margin-top: 100px;
-    }
-    
-    .bio h1{
-        letter-spacing: 2px;
-        font-size: 32px;
-        margin-top: -120px;
-        background: none;
-        box-shadow: none;
-        padding-top: 110px;
-    }
-    
-    .bio h2{
-        padding: 10px 10px 50px 30px;
-        font-size: 18px;
-    }
-    
-    .logolinks h1{
-        font-size: 24px;
-        background: linear-gradient(315deg, #00303d, #034);
-        box-shadow:  -5px -5px 15px #000,
-                 5px 5px 15px #068;
-        border-radius: 15px;
-        width: 215px;
-        margin: auto;
-        padding: 15px 0 20px 0;
-    }
-
-    .logolinks img{
-        width: 100%x;
-    }
-    
-    .logos{
-        flex-direction: column;
-    }
-    
-    .logos a{
-        margin: 30px 30px;
-    }  
-    
-    .logos h2{
-        font-size: 18px;
-    }
-    
-    .social{
-        margin-top: 95%;
-        z-index: 9;
-        width: 32px;
-        padding: 0;
-        background-size: 100% 2%;
-    }
-    
-    .social img{
-        width: 20px;
-    }
-
-    #MT h2{
-        margin-top: 10px;
-    }
-    
-    #MT {
-        margin-top: 30px;
-    }
-    
-    #submit{
-        margin-top: 40px;
-        padding: 8px;
-        border-radius: 15px;
-        width: 175px;
-        border: 1px solid orangered;
-    }
-}
-
-/*=======================================*/
-
-
-/*=======================================*/
-
-@media (max-width: 600px) and (min-width: 425px){
-    .piero{
-        margin: -35px 28%;
-    }
-    
-    .nino{
-        margin: -80px 12%;
-    }
-}
-
-/*=======================================*/
-
-
-/*=======================================*/
-
-@media (min-width: 801px) and (max-width: 1000px){
-    
-    #partnership h1{
-        font-size: 23px;
-    }
-    
-    #menuword{
-        width: 100px;
-    }
-    
-    #brainard{
-        width: 70px;
-    }
-    
-    #widgetvid iframe{
-        width: 500px;
-    }
-    
-    .burger{
-        margin-top: -60px;
-    }
-    
-    .mconsult{
-        display: none;
-    }
-    
-    .dconsult{
-        margin: 30px 45%;;
-    }
-    
-    .items{
-        width: 80%;
-    }
-    
-    .items h4{
-        margin-left: 10%;
-    }
-    
-    #info{
-        margin-top: 5px;
-    }
-    
-    #info h1{
-        width: 450px;
-        background: linear-gradient(to top, #034, #046, #068, #046, #034);
-        background-size: 100% 8.1%;
-        border-bottom: 2px solid #023;
-        margin: -25px auto;
-        border-radius: 30px;
-        padding: 5px 0px;
-        font-size: 26px;
-    }
-    
-    #Btn{
-        margin: -15px 15%;
-        font-size: 16px;
-        width: 160px;
-        padding: 2px;
-    }
-    
-    .presence h2{
-        padding: 35px 16px 0 345px;
-        width: 100%;
-    }
-    
-    .pandemic h2{
-        padding: 45px 25px;
-    }
-    
-    .media  h2{
-        width: 100%;
-        margin-left: -250px;
-        padding: 30px 50px 10px 267px;
-    }
-    
-    .commerce h2{
-        padding: 30px 10px 0 300px;
-        width: 100%;
-    }
-    
-    .cform input[type=submit]{
-        margin: 50px auto;
-        width: 25%;
-    }
-    
-    .cform{
-        margin-bottom: -80px;
-    }
-    
-    .star{
-        width: 70px;
-        height: 70px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        border: 2px solid #0ac;
-    }
-    
-    .star img{
-        width: 50px;
-        height: 50px;
-        margin: 0 auto 5px;   
-    }
-    
-    .basic, .pro, .prime{
-        margin: 10px;
-        padding-bottom: 10px;
-    }
-    
-    .piero{
-        margin-right: 3%;
-    }
-    
-    .nino{
-        margin-right: -17%;
-    }
-    
-    .bio{
-        width: 85%;
-    }
-    
-    .bio h1{
-        font-size: 45px;
-    }
-    
-    .bio h2{
-        padding: 20px 100px 100px;
-        font-size: 22px;
-    }
-    
-    .logos a{
-        margin: 10px 2%;
-    }
-}
-
-@media (min-width: 1001px) and (max-width: 1200px) {
-    li{
-        margin: 0 24px;
-        font-size: 24px;   
-    }
-    
-    #widgetvid iframe{
-        width: 600px;
-        height: 400px;
-        margin-bottom: 50px;
-    }
-    
-    #brainard{
-        width: 70px;
-        margin: 0 34px;
-    }
-    
-    #menuword{
-        width: 110px;
-    }
-    
-    #partnership h1{
-        font-size: 28px;
-    }
-    
-    #Btn{
-        margin: -10px 0 0 10%;
-        font-size: 16px;
-        width: 150px;
-        padding: 2px;
-    }
-    
-    #Btn:hover{
-        padding: 2px;
-    }
-    
-    .items{
-        width: 80%;
-    }
-    
-    .pro, .basic, .prime{
-        margin: 10px
-    }
-    .items h4{
-        margin-left: 10%;
-    }
-    
-    #bout{
-        margin-left: -20px;
-        margin-right: -20px;
-    }
-    
-    .desknav li{
-        font-size: 15px;
-        margin: 10 20px;
-    }
-    
-    .dropdown-text{
-        margin: -4px 13% 0 3%;
-    }
-    
-    .dropdown-text span{
-        margin: -3px 2px 2px 14px;
-    }
-    
-    .dropdown-toggle{
-        margin-left: 10px;
-    }
-    
-    .dropdown-content{
-        margin-left: 20px;
-    }
-    
-    .piero{
-        margin-right: 5%;
-    }
-    
-    .nino{
-        margin-right: -15%;
-    }
-    
-    .bio{
-        width: 75%;
-    }
-    
-    .bio h1{
-        font-size: 45px;
-
-    }
-    
-    .bio h2{
-        padding: 20px 100px 100px;
-        font-size: 20px;
-    }
-    
-    .logos a{
-        margin: 30px;
-    }
-}
-
-@media (min-width: 1001px) and (max-width: 1200px){
-    ul li{
-        margin-right: 20px;
-    }
-}
-
-@media (min-width: 1001px) {
-    .burger,
-    .mconsult,
-    .mobile{
-        display: none;
-    }
-    
-    .desknav{
-        padding: 10px 0;
-        margin-right: -20px;
-        border-radius: 50px;
-        margin-top: -61px;
-        border: .5px solid #0ac;
-        box-shadow: 2px 2px 4px #000;
-    }
-    
-    ul li:first-child{
-        margin-right: 35px;
-    }
-    
-    #options{
-        margin-left: 15px;
-    }
-
-    .arrow{
-        left: 76%;
-    }
-    
-    .arrows{
-        left: 24%;
-    }
-    
-    .website{
-        margin-bottom: 50px;
-    }
-    
-    #info h1{
-        width: 620px;
-        background: linear-gradient(to top, #034, #046, #068, #046, #034);
-        border-bottom: 2px solid #023;
-        background-size: 100% 7.1%;
-        margin: -32px auto;
-        border-radius: 40px;
-        padding: 5px 0px;
-        transition: 1s;
-    }
-    
-    .presence, .media, .commerce, .pandemic{
-        transition: 1s;
-    }
-    
-    .presence h2{
-        padding: 35px 20px 0 520px;
-        width: 100%;
-        transition: 1s;
-    }
-    
-    .presence:hover, .media:hover,.commerce:hover, .pandemic:hover{
-        box-shadow: 2px 4px 6px #000;
-        transition: 1s;
-        filter: brightness(85%)
-    }
-    
-    .pandemic h2{
-        padding: 35px 500px 0 60px;
-        width: 100%
-    }
-    
-    .media  h2{
-        padding: 55px 34px 0 480px;
-        width: 100%;
-    }
-    
-    .dconsult{
-        margin: 25px 25%;
-        margin-right: 450px;
-    }
-    
-    .cform input[type=submit]{
-        margin: 50px auto;
-        width: 25%;
-    }
-    
-    .cform{
-        margin-bottom: -50px;
-    }
-    
-    #footer{
-        margin: -20px 0;
-    }
-    
-    .dropdown span{
-        margin: 1px 5px;
-        font-size: 15px;
-    }
-    
-    .dropdown{
-        margin-left: -5px;
-        margin-right: -8px;
-    }
-}
-
-@media (min-width: 1100px){
-    li{
-        margin-left: 35px;
-    }
-    
-    .dropdown{
-        margin-right: -10px;
-    }
-}
-
-@media (min-width: 1201px){
-    li{
-        margin-left: 48px;
-        font-size: 16px;
-    }
-    
-    #options{
-        margin-left: 35px;
-    }
-    
-    #brainard{
-        width: 85px;
-        margin: 0 24px;
-    }
-    
-    #widgetvid iframe{
-        width: 800px;
-        height: 500px;
-        margin-bottom: 50px;
-    }
-    
-    .arrow{
-        left: 72%;
-    }
-    
-    .arrows{
-        left: 28%;
-    }
-    
-    #bout{
-        margin-left: -12px;
-        margin-right: -10px;
-    }
-    
-    .cform input[type=submit]{
-        width: 20%;
-    }
-    
-    .dconsult{
-        margin: 25px 28%;
-    }
-    
-    #Btn{
-        width: 170px;
-        font-size: 16px;
-        margin-top: -2px;
-    }
-    
-    .desknav{
-        margin-top: -64px;
-    }
-    
-    .desknav img{
-        width: 30px;
-    }
-    
-    .dropdown-text{
-        margin: -4px 20% 0 40%;
-        font-size: 16px;
-    }
-    
-    
-    .dropdown span{
-        margin: -2px 6px;
-        margin-bottom: -5px;
-    }
-    
-    .dropdown-toggle{
-        margin-left: 60px;
-    }
-    
-    .dropdown{
-        margin-left: -10px
-    }
-    
-    .piero{
-        margin-right: 5%;
-    }
-    
-    .nino{
-        margin-right: -14%;
-    }
-    
-    .logos a{
-        margin: 20px 50px;
-    }
-}
-
-@media (min-width: 1300px){
-    li a{
-        margin-left: 0px;
-        font-size: 18px;
-    }
-    
-    #brainard{
-        width: 110px;
-        margin: 0 42px;
-    }
-    
-    .arrow{
-        left: 70%;
-    }
-    
-    .arrows{
-        left: 30%;
-    }
-    
-    #bout{
-        margin-left: 2px;
-        margin-right: 2px;
-    }
-    
-    .dropdown{
-        margin-right: 10px;
-    }
-    
-    .dropdown-text{
-        margin: -4px 0 0 20%;
-        font-size: 18px;
-    }
-    
-    .dropdown-text span{
-        margin-left: 5px;
-        font-size: 18px;
-    }
-    
-    
-    .desknav{
-        margin-top: -65px;
-    }
-    
-    .dropdown-text img{
-        height: 25px;
-        margin-top: -1px;
-    }
-    
-    .dropdown-toggle{
-        margin-left: 70px;
-        width: 150px;
-    }
-    
-    .piero{
-        margin-right: 5%;
-    }
-    
-    .nino{
-        margin-right: -15%;
-    }
-}
-
-@media (min-width: 1400px){
-    
-    #brainard{
-        margin: 0 80px;
-    }
-    
-    ul li{
-        margin-right: 20px;
-    }
-    
-    #options{
-        margin-left: 15px;
-    }
-    
-    .dropdown{
-        margin-left: -20px;
-        margin-right: 20px;
-    }
-
+/* main.css — FULL FILE
+   Change requested:
+   - Premium section portrait image fitting (MenuApp.png) so it looks correct.
+   Everything else retained.
+*/
+
+:root{
+  --bg:#013f45;
+  --bg-deep:#012f34;
+  --nav:#003344;
+  --cyan:#00d6e6;
+
+  --panel:#086871;
+  --panel-strong:#0a7b85;
+
+  --brand:#00d6e6;
+  --brand-soft:#5ff2ff;
+  --gold:#d9b25a;
+
+  --text:#ffffff;
+  --muted:#d9f3f6;
+
+  --radius:18px;
+  --radius-lg:26px;
+}
+
+/* RESET */
+*{ box-sizing:border-box; }
+html,body{ margin:0; padding:0; }
+body{
+  font-family:'Philosopher',sans-serif;
+  color:var(--text);
+  background:
+    radial-gradient(900px 520px at 15% 10%, rgba(0,214,230,.12), transparent 60%),
+    radial-gradient(760px 520px at 82% 22%, rgba(95,242,255,.08), transparent 65%),
+    linear-gradient(180deg,var(--bg),var(--bg-deep));
+}
+img{ display:block; max-width:100%; height:auto; }
+
+/* LAYOUT */
+.container{
+  max-width:1120px;
+  margin:0 auto;
+  padding:0 28px;
+}
+
+/* NAV */
+.header{
+  position:sticky;
+  top:0;
+  z-index:10;
+  background:rgba(0,51,68,.96);
+  border-bottom:2px solid var(--cyan);
+}
+.header .container{
+  padding-left:36px;
+  padding-right:36px;
+}
+@media (max-width:1150px) and (min-width:701px){
+  .header .container{
+    padding-left:56px;
+    padding-right:56px;
+  }
+}
+.header-inner{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  padding:22px 0;
+  gap:16px;
+  position:relative;
+}
+
+.brand{
+  display:flex;
+  align-items:center;
+  gap:14px;
+}
+.brand-mark{
+  width:42px;
+  transition:transform .4s ease;
+}
+.gear-link:hover .brand-mark{ transform:rotate(180deg); }
+.brand-word{ width:140px; }
+
+/* desktop nav */
+.nav{
+  display:flex;
+  align-items:center;
+}
+.nav a{
+  margin-left:20px;
+  color:#fff;
+  text-decoration:none;
+  font-weight:600;
+}
+.nav a.active{ color:var(--brand-soft); }
+.nav-cta{
+  margin-left:20px;
+  background:linear-gradient(135deg,var(--brand),var(--brand-soft));
+  color:#001b22 !important;
+  padding:10px 18px;
+  border-radius:14px;
+  font-weight:900;
+  white-space:nowrap;
+}
+
+/* BURGER */
+.nav-toggle{
+  position:absolute;
+  opacity:0;
+  pointer-events:none;
+}
+.gear-burger{
+  display:none;
+  width:42px;
+  height:42px;
+  background:none;
+  border:none;
+  padding:0;
+  margin:0;
+  align-items:center;
+  justify-content:center;
+  cursor:pointer;
+}
+.gear-burger img{
+  width:42px;
+  height:42px;
+  background:none;
+  border:none;
+  transform-origin:50% 50%;
+  transition:transform 560ms cubic-bezier(.18,.90,.20,1);
+  will-change:transform;
+}
+.nav-toggle:checked + .gear-burger img{
+  transform:rotate(180deg);
+}
+
+/* HERO */
+.hero{ padding:90px 0; }
+.hero-grid{
+  display:grid;
+  grid-template-columns:1.2fr .8fr;
+  gap:60px;
+  align-items:center;
+}
+.hero h1{
+  font-family:'Righteous',sans-serif;
+  font-size:52px;
+  margin:16px 0;
+  line-height:1.06;
+}
+.hero p{ color:var(--muted); }
+.pill{
+  display:inline-block;
+  padding:6px 14px;
+  border-radius:999px;
+  background:rgba(0,214,230,.15);
+  color:var(--brand-soft);
+  font-size:14px;
+}
+.hero-actions{
+  margin-top:28px;
+  display:flex;
+  gap:16px;
+  flex-wrap:wrap;
+}
+
+/* BUTTONS */
+.btn{
+  display:inline-block;
+  padding:14px 22px;
+  border-radius:16px;
+  text-decoration:none;
+  font-weight:900;
+  transition: transform .18s ease, box-shadow .18s ease, filter .18s ease;
+}
+.btn.primary{
+  background:linear-gradient(135deg,var(--brand),var(--brand-soft));
+  color:#001b22;
+}
+.btn.ghost{
+  border:2px solid var(--brand);
+  color:var(--brand-soft);
+}
+.btn:hover{
+  transform:translateY(-2px);
+  box-shadow:0 10px 22px rgba(0,0,0,.25);
+  filter:brightness(1.05);
+}
+
+/* MEDIA */
+.media-frame{
+  position:relative;
+  overflow:hidden;
+  border-radius:var(--radius-lg);
+}
+.media-overlay{
+  position:absolute;
+  left:0; right:0; bottom:0;
+  padding:14px;
+  background:linear-gradient(transparent,rgba(0,0,0,.7));
+}
+
+/* SECTIONS */
+.section{ padding:90px 0; }
+.section-image{
+  background:
+    linear-gradient(rgba(0,0,0,.35),rgba(0,0,0,.55)),
+    url("Tech1.jpg") center/cover no-repeat;
+}
+.section-head{
+  max-width:640px;
+  margin-bottom:50px;
+}
+.section-head h2{
+  font-family:'Righteous',sans-serif;
+  font-size:40px;
+  margin:0 0 10px;
+}
+
+/* CARDS */
+.cards{
+  display:grid;
+  grid-template-columns:repeat(3,1fr);
+  gap:32px;
+}
+.service-card{
+  background:linear-gradient(180deg,var(--panel-strong),var(--panel));
+  padding:32px;
+  border-radius:var(--radius);
+}
+.service-bottom{
+  margin-top:24px;
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  gap:14px;
+}
+.price{ font-weight:900; }
+.cta-pill{
+  padding:8px 14px;
+  border-radius:999px;
+  background:var(--brand);
+  color:#001b22;
+  text-decoration:none;
+  font-weight:900;
+  transition: transform .18s ease, box-shadow .18s ease, filter .18s ease;
+}
+.cta-pill:hover{
+  transform:translateY(-2px);
+  box-shadow:0 8px 18px rgba(0,0,0,.22);
+  filter:brightness(1.05);
+}
+
+/* PREMIUM */
+.premium-grid{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:60px;
+  align-items:center;
+}
+.bullets{
+  margin:20px 0;
+  padding-left:20px;
+}
+.bullets li{ margin:8px 0; }
+.pill.gold{
+  background:rgba(217,178,90,.18);
+  color:var(--gold);
+}
+
+/* PORTRAIT IMAGE FIT (requested) */
+.premium-frame{
+  /* Keep overlay; allow portrait image to breathe */
+  overflow:hidden;
+}
+.portrait-stage{
+  /* Center the portrait asset and prevent awkward cropping */
+  width:100%;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+
+  /* Give it a stable visual footprint */
+  min-height:420px;
+  padding:22px 18px 54px; /* bottom padding leaves room for overlay text */
+}
+.premium-image{
+  width:auto;
+  height:520px;           /* portrait-friendly height */
+  max-width:100%;
+  object-fit:contain;
+  image-rendering:auto;
+}
+
+/* CTA */
+.cta{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:32px;
+  flex-wrap:wrap;
+}
+.cta-actions{
+  display:flex;
+  gap:14px;
+  flex-wrap:wrap;
+}
+
+/* FOOTER */
+.footer{
+  background:#003344;
+  padding:40px 0;
+  text-align:center;
+}
+.footer-inner{
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  gap:14px;
+}
+.footer-logo{ width:120px; }
+.footer-social{
+  display:flex;
+  gap:16px;
+}
+.footer-social svg{
+  width:22px;
+  height:22px;
+  fill:var(--brand);
+}
+
+/* RESPONSIVE */
+@media(max-width:900px){
+  .hero-grid,
+  .premium-grid,
+  .cards{
+    grid-template-columns:1fr;
+  }
+  .hero h1{ font-size:44px; }
+
+  /* portrait image scales down cleanly */
+  .portrait-stage{
+    min-height:380px;
+    padding:18px 14px 54px;
+  }
+  .premium-image{
+    height:500px;
+  }
+}
+@media(max-width:520px){
+  .portrait-stage{
+    min-height:340px;
+    padding:16px 12px 56px;
+  }
+  .premium-image{
+    height:460px;
+  }
+}
+
+/* MOBILE NAV (≤700px) */
+@media(max-width:700px){
+  .header .container{
+    padding-left:26px;
+    padding-right:26px;
+  }
+  .gear-link{ display:none; }
+  .gear-burger{
+    display:flex;
+    margin-left:auto;
+  }
+  .nav{
+    position:absolute;
+    top:100%;
+    left:26px;
+    right:26px;
+    display:flex;
+    flex-direction:column;
+    align-items:stretch;
+    background:rgba(0,51,68,.96);
+    border:1px solid rgba(0,214,230,.35);
+    border-radius:16px;
+    padding:12px 0;
+    opacity:0;
+    pointer-events:none;
+    transform:translateY(-8px);
+    transition:opacity .18s ease, transform .18s ease;
+  }
+  .nav a{
+    margin-left:0;
+    padding:12px 18px;
+  }
+  .nav-cta{
+    margin-left:0;
+    display:inline-block;
+    width:auto;
+    text-align:center;
+    align-self:center;
+    margin:14px 0 8px 0;
+    padding:8px 14px;
+  }
+  .nav-toggle:checked ~ .nav{
+    opacity:1;
+    pointer-events:auto;
+    transform:translateY(0);
+  }
+}
+
+/* Ensure service cards align CTAs at the bottom */
+.service-card {
+  display: flex;
+  flex-direction: column;
+}
+
+.service-card .service-bottom {
+  margin-top: auto;
 }
-    
