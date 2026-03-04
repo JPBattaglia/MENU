@@ -1,205 +1,268 @@
 <!DOCTYPE html>
-
-<html>
-
+<html lang="en">
 <head>
-    <link rel="stylesheet" href="https://www.w3schools.com/w3css/4/w3.css">
-    <meta property="og:title" content="MENU" />
-    <meta property="og:image:type" content="image/png" />
-    <meta property="og:image:width" content="400" />
-    <meta property="og:image:height" content="300" />
-    <meta property="og:image" content="https://i.ibb.co/8PxT5y5/Menu-Preview.png" />
-    <meta property="og:image:secure_url" content="https://i.ibb.co/8PxT5y5/Menu-Preview.png" />
-    <meta name="keywords" content="Web Development">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta charset="utf-8">
-    <meta http-equiv="X-UA-Compatible" content="IE=edge">
-    <title>M&#926;NU - Accessability</title>
-    <meta name="description" content="Online Presence Management">
-    <link rel="stylesheet" href="main.css">
-    <link rel="shortcut icon" type="image/png" href="MENU=.png">
-   <link href="https://fonts.googleapis.com/css?family=Federant|Philosopher|Electrolize|Kaushan+Script|Lexend|Righteous|Orbitron|Belleza|Amarante|Quintessential" rel="stylesheet">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <link rel="stylesheet" href="https://unpkg.com/aos@next/dist/aos.css" />
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>MENU-MADE — Accessibility</title>
+  <meta name="description" content="Accessibility statement and service options (Menu-Made toolkit or accessiBe integration).">
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Philosopher:wght@400;700&family=Righteous&display=swap" rel="stylesheet">
+
+  <link rel="stylesheet" href="main.css">
+
+  <style>
+    /* page-only: skip link (does not affect other pages) */
+    .skip-link{
+      position:absolute;
+      left:-9999px;
+      top:auto;
+      width:1px;
+      height:1px;
+      overflow:hidden;
+    }
+    .skip-link:focus{
+      left:14px;
+      top:14px;
+      width:auto;
+      height:auto;
+      padding:10px 12px;
+      border-radius:12px;
+      background:rgba(0,214,230,.18);
+      border:2px solid var(--cyan);
+      z-index:9999;
+      color:#fff;
+      text-decoration:none;
+      font-weight:900;
+    }
+    .tiny-note{ font-size: .95rem; opacity:.92; }
+
+    /* page-only: top CTA (hero) right-side image */
+    .hero-split{
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:40px;
+    }
+    .hero-left{ flex: 1 1 auto; min-width: 0; }
+    .hero-right{
+      flex: 0 0 auto;
+      width: min(520px, 44%);
+      display:flex;
+      align-items:center;
+      justify-content:flex-end;
+    }
+    .hero-cta-art{
+      width:100%;
+      height:auto;
+      display:block;
+      user-select:none;
+      -webkit-user-drag:none;
+    }
+    @media (max-width: 980px){
+      .hero-split{
+        flex-direction:column;
+        align-items:flex-start;
+        gap:22px;
+      }
+      .hero-right{
+        width:min(560px, 100%);
+        justify-content:flex-start;
+      }
+    }
+  </style>
 </head>
 
-<body style="background-color:#034;
-" id="animated-example" class="animated fadeOut">
-    
-    <div id="preloader">Loading</div>
-    
-    <div id="site">
-        
-        <div data-aos-delay="2700" data-aos="slide-right" data-aos-duration="1000" class="social" style="margin-top: 20%; background: #800;">
-            
-            <a  data-aos-delay="2800" data-aos="slide-right" data-aos-duration="1000" href="https://www.facebook.com/MenuMade.OnlinePresence">
-                <img src="facebook.png">
-            </a>
-            
-            <a  data-aos-delay="2900" data-aos="slide-right" data-aos-duration="1000" href="https://www.instagram.com/menumade.gram/">
-                <img src="instagram.png">
-            </a>
-            
-            <a  data-aos-delay="3000" data-aos="slide-right" data-aos-duration="1000" href="https://www.linkedin.com/company/menu-made/">
-                <img src="linkedin.png">
-            </a>
+<body>
 
-        </div>
+<a class="skip-link" href="#main">Skip to content</a>
 
-    <script>
-        window.addEventListener("beforeunload", function() {
-            document.body.classList.add("animate-out");
-        });
-    </script>
+<header class="header">
+  <div class="container header-inner">
 
+    <div class="brand">
+      <a class="gear-link" href="index.html" aria-label="Home">
+        <img src="MENU=.png" class="brand-mark" alt="Menu-Made gear">
+      </a>
 
-    <div id="mySidenav" class="sidenav">
-        <a href="javascript:void(0)" class="closebtn" onclick="closeNav()">&#10754;</a>
-        <a class="sidelink" href="index.html">Home</a>
-        <a class="sidelink" href="about.html">About</a>
-        <a style="text-decoration: underline; text-underline-position: under;" class="sidelink" href="accessability.html">Access</a>
-        <a class="sidelink" href="contact.html">Contact</a>
-        <a class="sidelink" href="services.html">Services</a>
-        <a style="font-size:20px;" class="sidelink" href="https://ninobattaglia.com/services.html">Graphic Design<img style="width: 40px; margin-top:5px;" src="LogoBluRed1.png"></a>
+      <a class="word-link" href="about.html" aria-label="About">
+        <img src="MENU1.png" class="brand-word" alt="Menu-Made">
+      </a>
     </div>
 
-    <script>
-        function openNav() {
-            document.getElementById("mySidenav").style.width = "150px";
-        }
+    <input class="nav-toggle" type="checkbox" id="navToggle" aria-label="Toggle menu">
 
-        function closeNav() {
-            document.getElementById("mySidenav").style.width = "0";
-        }
-    </script>
+    <label class="gear-burger" for="navToggle" aria-label="Open menu" role="button">
+      <img src="MENU=.png" alt="Menu">
+    </label>
 
-    <nav style="background: #600;">
-
-        <div data-aos-delay="800" data-aos="fade-right" data-aos-duration="1500" data-aos-anchor-placement="top-bottom">
-            <a href="about.html"><img class="logoburger" src="MENU=.png"></a>
-        </div>
-
-        <div data-aos-delay="600" data-aos="fade-right" data-aos-duration="1500" data-aos-anchor-placement="top-bottom" class="logo"><img src="MENU1.png"></div>
-        
-        <div class="mconsult">
-            <a href="tel:17573255866"><button id="Btn" data-aos="fade-down" data-aos-duration="800" data-aos-anchor-placement="top-bottom">Free Quote</button></a>
-        </div>
-        
-        <div data-aos-delay="2200" data-aos="fade-in" data-aos-duration="500" data-aos-anchor-placement="top-bottom"  class="dconsult">
-            <a href="contact.html"><button id="Btn">Free Quote</button></a>
-        </div>
-        
-        <div data-aos-delay="500" class="burger" data-aos="fade-left" data-aos-duration="1500" data-aos-anchor-placement="top-bottom" >
-            <div data-aos="fade-left" data-aos-duration="1000" data-aos-anchor-placement="top-bottom"  onclick="openNav()"> <span id="top"></span> <span id="middle"></span> <span id="bottom"></span></div> 
-        </div>
-        
-        <ul data-aos-delay="500" data-aos="zoom-in-left" data-aos-duration="2200" style="background: linear-gradient(to top, #034, #046, #068, #046, #034); background-size: 100% 10%;" class="desknav">
-            
-            <li data-aos-delay="500" data-aos="fade-left" data-aos-duration="1200" ><a href="contact.html">Contact</a></li>
-            
-            <div class="dropdown">
-              <input class="dropdown-toggle">
-              <li  data-aos-delay="700" data-aos="fade-left" data-aos-duration="1200" class="dropdown-text"><span>&#x3c;</span>Services</li>
-              
-                <ul class="dropdown-content">
-                    <li><a id="options" style="background: linear-gradient(to top, #023, #046, #068, #046, #023); background-size: 100% 8%;" href="services.html">Options</a></li>
-                    <li><a style="background: linear-gradient(to top, #023, #046, #068, #046, #023); background-size: 100% 8%;" href="services.html#plans">Plans</a></li>
-                    <li><a style="background: linear-gradient(to top, #023, #046, #068, #046, #023); background-size: 100% 8%;" href="https://ninobattaglia.com/services.html">Design</a></li>
-                </ul>
-            </div>
-            
-            <li data-aos-delay="900" data-aos="fade-left" data-aos-duration="1200" ><a href="accessability.html">Accessability</a></li>
-            
-            <li data-aos-delay="1100" data-aos="fade-left" data-aos-duration="1200" ><a id="bout" href="about.html">About</a></li>
-            
-            <li data-aos-delay="1300" data-aos="fade-left" data-aos-duration="1200" ><a href="index.html">Home</a></li>
-        
-        </ul>
-
+    <nav class="nav" aria-label="Primary">
+      <a href="index.html">Home</a>
+      <a href="services.html">Services</a>
+      <a href="about.html">About</a>
+      <a class="active" href="accessability.html">Access</a>
+      <a class="nav-cta" href="contact.html">Start</a>
     </nav>
-        
-        <div><img data-aos="flip-up" data-aos-duration="2000" data-aos-delay="500" data-aos-anchor-placement="top-bottom" id="partner" src=AccessiBePartner.png></div>
 
-<div id="partnership"><h1 data-aos="zoom-in-up" data-aos-duration="2000" data-aos-delay="500" data-aos-anchor-placement="top-bottom" ><img data-aos="flip-right" data-aos-duration="2000" data-aos-delay="1000" data-aos-anchor-placement="top-bottom" id="menuword" src=MENU1.png> has partnered with AccessiBe to assist with all websites in achieving ADA compliance by using their AI widget.</h1><br><br><h1 data-aos="zoom-in-up" data-aos-duration="2000" data-aos-delay="700" data-aos-anchor-placement="top-bottom" >Powered by AI
-AccessiBe is a game-changer in web accessibility, simplifying and streamlining the process of becoming accessible and ADA compliant using AI, machine learning, and computer vision. It's the leading
-automated  web accessibility
-solution.  
-</h1><br><br>
-        <h1 data-aos="zoom-in-up" data-aos-duration="2000" data-aos-delay="500" data-aos-anchor-placement="top-bottom" >Follow this link to get the widget on your site &#10139; <a href="https://accessibe.com/a/a4osf7y"> <img data-aos="flip-right" data-aos-duration="2000" data-aos-delay="2000" data-aos-anchor-placement="top-bottom" id="brainard" src=BrainardIconLight.png></a></h1> </div><br><br>
-        
-        <div id="widgetvid">
-            
-            <h1 data-aos="zoom-in-up" data-aos-duration="2000" data-aos-delay="500" data-aos-anchor-placement="top-bottom" >Check out this short demo video to get an idea of what the widget can do.</h1>
-            
-            <iframe data-aos="zoom-in-up" data-aos-duration="2000" data-aos-delay="500" data-aos-anchor-placement="top-bottom" width="560" height="315" src="https://www.youtube.com/embed/e2vOikvCWJ4?si=Fpkzwzgdw-QYepHK" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe>
-        
+  </div>
+</header>
+
+<main id="main">
+
+  <section class="hero" aria-label="Accessibility">
+    <div class="container hero-split">
+
+      <div class="hero-left">
+        <span class="pill">Accessibility service + statement</span>
+        <h1>Accessibility</h1>
+        <p>
+          We aim to make this website usable for everyone. If anything blocks access (keyboard navigation,
+          screen reader labeling, contrast, form errors, or media controls), tell us and we’ll fix it fast.
+        </p>
+
+        <div class="hero-actions">
+          <a class="btn primary" href="contact.html?service=accessibility">Request accessibility help</a>
+          <a class="btn ghost" href="services.html">View Services</a>
         </div>
-    
-    <div id="footer">
-        <p>&copy; <img id="menumade" src="MENU1.png"> made 2019</p>
+
+        <p class="tiny-note" style="margin-top:14px;">
+          Note: a widget alone is not “compliance.” Real accessibility comes from auditing and fixing the underlying site.
+          We offer both.
+        </p>
+      </div>
+
+      <div class="hero-right" aria-hidden="true">
+        <img class="hero-cta-art" src="AccessCTA.png" alt="">
+      </div>
+
     </div>
-        
-     <script>
-            document.querySelector("#files").onchange = function() {
-            const fileName = this.files[0]?.name;
-            const label = document.querySelector("label[for=files]");
-            label.innerText = fileName ?? "Browse Files";
-            };
-        
-    </script>
-    
-    <script src="https://unpkg.com/aos@next/dist/aos.js"></script>
-    <script>
-        AOS.init();
-    </script>
-        
-        <script>
-        
-        var loader = document.getElementById("preloader");
-        
-        window.addEventListener("load", function(){loader.style.display = "none"})
-        
-    </script>
-        
-        </div>
-    
-    <script>
-    (function(){
-        var s    = document.createElement('script');
-        var h    = document.querySelector('head') || document.body;
-        s.src    = 'https://acsbapp.com/apps/app/dist/js/app.js';
-        s.async  = true;
-        s.onload = function(){
-            acsbJS.init({
-                statementLink    : '',
-                footerHtml       : '',
-                hideMobile       : false,
-                hideTrigger      : false,
-                disableBgProcess : false,
-                language         : 'en',
-                position         : 'left',
-                leadColor        : '#009eb3',
-                triggerColor     : '#0095b3',
-                triggerRadius    : '50%',
-                triggerPositionX : 'right',
-                triggerPositionY : 'bottom',
-                triggerIcon      : 'wheels',
-                triggerSize      : 'medium',
-                triggerOffsetX   : 20,
-                triggerOffsetY   : 20,
-                mobile           : {
-                    triggerSize      : 'small',
-                    triggerPositionX : 'right',
-                    triggerPositionY : 'bottom',
-                    triggerOffsetX   : 10,
-                    triggerOffsetY   : 10,
-                    triggerRadius    : '50%'
-                }
-            });
-        };
-        h.appendChild(s);
-    })();
-</script>
-    
-    </body>
+  </section>
+
+  <section class="section section-image" aria-label="Options">
+    <div class="container">
+
+      <header class="section-head">
+        <h2>Two ways to implement accessibility support</h2>
+        <p>Choose the approach that matches your budget + risk tolerance.</p>
+      </header>
+
+      <div class="cards">
+
+        <article class="service-card">
+          <h3>Menu-Made Accessibility Toolkit</h3>
+          <p>
+            Our site-wide accessibility widget (user controls) plus a practical remediation plan.
+            We fix what matters: labels, focus order, contrast, keyboard navigation, and form errors.
+          </p>
+          <p class="tiny-note">
+            Best for owners who want credible improvements and measurable usability outcomes.
+          </p>
+        </article>
+
+        <article class="service-card">
+          <h3>accessiBe Integration (optional)</h3>
+          <p>
+            Prefer a third-party overlay? We can install and configure accessiBe for your site
+            and connect it to your accessibility statement page.
+          </p>
+          <p class="tiny-note">
+            We still recommend baseline remediation work to reduce friction and edge-case failures.
+          </p>
+        </article>
+
+        <article class="service-card">
+          <h3>What we fix (the real work)</h3>
+          <p>
+            Semantic structure, headings, alt text, interactive controls, focus management,
+            color contrast, and predictable navigation—so the site works with keyboards and assistive tech.
+          </p>
+        </article>
+
+      </div>
+    </div>
+  </section>
+
+  <section class="section" aria-label="How to report an issue">
+    <div class="container">
+
+      <header class="section-head">
+        <h2>Report an accessibility issue</h2>
+        <p>Send this info so we can reproduce and resolve quickly.</p>
+      </header>
+
+      <div class="cards">
+        <article class="service-card">
+          <h3>Include</h3>
+          <p>
+            Page URL, device (iPhone/Android/Desktop), browser (Safari/Chrome/etc), and what happened.
+            If possible: screenshot or a short screen recording.
+          </p>
+        </article>
+
+        <article class="service-card">
+          <h3>Response</h3>
+          <p>
+            If it blocks access, it’s prioritized. We respond quickly and ship fixes with minimal scope creep.
+          </p>
+        </article>
+
+        <article class="service-card">
+          <h3>Start here</h3>
+          <p>
+            Use the Start form and select “Accessibility”. We’ll follow up with next steps or an audit proposal.
+          </p>
+          <div style="margin-top:12px;">
+            <a class="btn primary" href="contact.html?service=accessibility">Start accessibility request</a>
+          </div>
+        </article>
+      </div>
+
+    </div>
+  </section>
+
+  <section class="section section-image" aria-label="Final CTA">
+    <div class="container cta">
+      <div>
+        <h2>Want this implemented on your site?</h2>
+        <p>We can install the Menu-Made toolkit, run an audit, and fix issues that impact real users.</p>
+      </div>
+
+      <div class="cta-actions">
+        <a class="btn primary" href="contact.html?service=accessibility">Start</a>
+        <a class="btn ghost" href="services.html">View Services</a>
+      </div>
+    </div>
+  </section>
+
+</main>
+
+<footer class="footer">
+  <div class="container footer-inner">
+    <div class="footer-copy">© 2019 MENU-MADE</div>
+
+    <a class="footer-logo" href="index.html" aria-label="Home">
+      <img src="MENU1.png" alt="MENU-MADE">
+    </a>
+
+    <div class="footer-social" aria-label="Social links">
+      <a class="social-icon" href="https://www.facebook.com/MenuMade.OnlinePresence" target="_blank" rel="noopener" aria-label="Facebook">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14 8.5V7c0-.8.5-1 1-1h2V3h-3c-2.8 0-4 1.7-4 4v1.5H8V12h2v9h4v-9h2.7l.3-3.5H14z"/></svg>
+      </a>
+
+      <a class="social-icon" href="https://www.linkedin.com/company/menu-made/" target="_blank" rel="noopener" aria-label="LinkedIn">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6.5 6.5A2.5 2.5 0 1 1 6.5 1.5a2.5 2.5 0 0 1 0 5zM4 22V8h5v14H4zm7.5-14H16v1.9c.7-1.2 2-2.3 4.2-2.3 3 0 4.8 2 4.8 6.2V22h-5v-6.3c0-2-.6-3.1-2.1-3.1-1.1 0-1.7.8-2 1.5-.1.3-.1.8-.1 1.2V22h-5V8z"/></svg>
+      </a>
+
+      <a class="social-icon" href="https://www.instagram.com/menumade.gram/" target="_blank" rel="noopener" aria-label="Instagram">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 2h10a5 5 0 0 1 5 5v10a5 5 0 0 1-5 5H7a5 5 0 0 1-5-5V7a5 5 0 0 1 5-5zm10 2H7a3 3 0 0 0-3 3v10a3 3 0 0 0 3 3h10a3 3 0 0 0 3-3V7a3 3 0 0 0-3-3zm-5 4.2a3.8 3.8 0 1 1 0 7.6 3.8 3.8 0 0 1 0-7.6zm0 2a1.8 1.8 0 1 0 0 3.6 1.8 1.8 0 0 0 0-3.6zM18 6.3a.9.9 0 1 1 0 1.8.9.9 0 0 1 0-1.8z"/></svg>
+      </a>
+    </div>
+  </div>
+</footer>
+
+<link rel="stylesheet" href="mm-a11y-widget.css">
+<script src="mm-a11y-widget.js" defer></script>
+
+</body>
 </html>

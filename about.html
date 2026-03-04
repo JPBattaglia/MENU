@@ -1,213 +1,181 @@
 <!DOCTYPE html>
-
-<html>
-
+<html lang="en">
 <head>
-    <link rel="stylesheet" href="https://www.w3schools.com/w3css/4/w3.css">
-    <meta property="og:title" content="MENU" />
-    <meta property="og:image:type" content="image/png" />
-    <meta property="og:image:width" content="400" />
-    <meta property="og:image:height" content="300" />
-    <meta property="og:image" content="https://i.ibb.co/8PxT5y5/Menu-Preview.png" />
-    <meta property="og:image:secure_url" content="https://i.ibb.co/8PxT5y5/Menu-Preview.png" />
-    <meta name="keywords" content="Web Development">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta charset="utf-8">
-    <meta http-equiv="X-UA-Compatible" content="IE=edge">
-    <title>M&#926;NU - About</title>
-    <meta name="description" content="Online Presence Management">
-    <link rel="stylesheet" href="main.css">
-    <link rel="shortcut icon" type="image/png" href="MENU=.png">
-    <link href="https://fonts.googleapis.com/css?family=Federant|Philosopher|Electrolize|Kaushan+Script|Lexend|Righteous|Orbitron|Belleza|Amarante|Quintessential" rel="stylesheet">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <link rel="stylesheet" href="https://unpkg.com/aos@next/dist/aos.css"/>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>MENU-MADE — About</title>
+  <meta name="description" content="Menu-Made delivers premium, practical digital upgrades for food & beverage businesses—built for clarity, speed, and conversion.">
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Philosopher:wght@400;700&family=Righteous&display=swap" rel="stylesheet">
+
+  <link rel="stylesheet" href="main.css">
+
+<style>
+.hero-grid{
+  display:grid;
+  grid-template-columns:1.1fr .9fr;
+  align-items:center;
+  gap:40px;
+}
+
+.hero-image{
+  display:flex;
+  justify-content:center;
+}
+
+.hero-image img{
+  max-width:460px;
+  width:100%;
+  height:auto;
+}
+
+@media (max-width:900px){
+  .hero-grid{
+    grid-template-columns:1fr;
+    text-align:center;
+  }
+
+  .hero-image{
+    margin-top:20px;
+  }
+}
+</style>
+
 </head>
 
-<body style="background: linear-gradient(to left, #012, #046, #012);" id="animated-example" class="animated fadeOut">
-    
-    <div id="site">
-    
-    <div class="splash">
-        <video  class="fadeOut" width="100%" height="100%" muted id="myVideo" autoplay>
-            <source src="MENUVID.mp4" type="video/mp4">
-        </video>
-    </div>
-    
-     <script>
-    
-        const splash = document.querySelector('.splash');
-        
-        document.addEventListener('DOMContentLoaded', (e)=>{
-            setTimeout(()=>{
-                splash.classList.add('display-none');
-            }, 4000);
-        })
-    
-    </script>
-    
-    <script>
-    document.getElementById('myVideo').setAttribute("autoplay", "true");
-        
-    </script>
+<body>
 
-    <script>
-        window.addEventListener("beforeunload", function() {
-            document.body.classList.add("animate-out");
-        });
-    </script>
+<header class="header">
+  <div class="container header-inner">
 
+    <div class="brand">
+      <a class="gear-link" href="index.html" aria-label="Home">
+        <img src="MENU=.png" class="brand-mark" alt="Menu-Made gear">
+      </a>
 
-    <div id="mySidenav" class="sidenav">
-        <a href="javascript:void(0)" class="closebtn" onclick="closeNav()">&#10754;</a>
-        <a class="sidelink" href="index.html">Home</a>
-        <a style="text-decoration: underline; text-underline-position: under;" class="sidelink" href="about.html">About</a>
-        <a class="sidelink" href="accessability.html">Access</a>
-        <a class="sidelink" href="contact.html">Contact</a>
-        <a class="sidelink" href="services.html">Services</a>
-        <a style="font-size:20px;" class="sidelink" href="https://ninobattaglia.com/services.html">Graphic Design<img style="width: 40px; margin-top:5px;" src="LogoBluRed1.png"></a>
+      <a class="word-link" href="about.html" aria-label="About">
+        <img src="MENU1.png" class="brand-word" alt="Menu-Made">
+      </a>
     </div>
 
-    <script>
-        function openNav() {
-            document.getElementById("mySidenav").style.width = "150px";
-        }
+    <input class="nav-toggle" type="checkbox" id="navToggle" aria-label="Toggle menu">
 
-        function closeNav() {
-            document.getElementById("mySidenav").style.width = "0";
-        }
-    </script>
+    <label class="gear-burger" for="navToggle" aria-label="Open menu" role="button">
+      <img src="MENU=.png" alt="Menu">
+    </label>
 
-    <nav>
-
-        <div data-aos-delay="800" data-aos="fade-right" data-aos-duration="1500" data-aos-anchor-placement="top-bottom">
-            <a href="about.html"><img class="logoburger" src="MENU=.png"></a>
-        </div>
-
-        <div data-aos-delay="600" data-aos="fade-right" data-aos-duration="1500" data-aos-anchor-placement="top-bottom" class="logo"><img src="MENU1.png"></div>
-        
-        <div class="mconsult">
-            <a href="tel:17573255866"><button id="Btn" data-aos="fade-down" data-aos-duration="800" data-aos-anchor-placement="top-bottom">Free Quote</button></a>
-        </div>
-        
-        <div data-aos-delay="2200" data-aos="fade-in" data-aos-duration="500" data-aos-anchor-placement="top-bottom"  class="dconsult">
-            <a href="contact.html"><button id="Btn">Free Quote</button></a>
-        </div>
-        
-        <div data-aos-delay="500" class="burger" data-aos="fade-left" data-aos-duration="1500" data-aos-anchor-placement="top-bottom" >
-            <div data-aos="fade-left" data-aos-duration="1000" data-aos-anchor-placement="top-bottom"  onclick="openNav()"> <span id="top"></span> <span id="middle"></span> <span id="bottom"></span></div> 
-        </div>
-        
-        <ul data-aos-delay="500" data-aos="zoom-in-left" data-aos-duration="2200" style="background: linear-gradient(to top, #034, #046, #068, #046, #034); background-size: 100% 10%;" class="desknav">
-            
-            <li data-aos-delay="500" data-aos="fade-left" data-aos-duration="1200" ><a href="contact.html">Contact</a></li>
-            
-            <div class="dropdown">
-              <input class="dropdown-toggle">
-              <li  data-aos-delay="700" data-aos="fade-left" data-aos-duration="1200" class="dropdown-text"><span>&#x3c;</span>Services</li>
-              
-                <ul class="dropdown-content">
-                    <li><a id="options" style="background: linear-gradient(to top, #023, #046, #068, #046, #023); background-size: 100% 8%;" href="services.html">Options</a></li>
-                    <li><a style="background: linear-gradient(to top, #023, #046, #068, #046, #023); background-size: 100% 8%;" href="services.html#plans">Plans</a></li>
-                    <li><a style="background: linear-gradient(to top, #023, #046, #068, #046, #023); background-size: 100% 8%;" href="https://ninobattaglia.com/services.html">Design</a></li>
-                </ul>
-            </div>
-            
-            <li data-aos-delay="900" data-aos="fade-left" data-aos-duration="1200" ><a href="accessability.html">Accessability</a></li>
-            
-            <li data-aos-delay="1100" data-aos="fade-left" data-aos-duration="1200" ><a id="bout" href="about.html">About</a></li>
-            
-            <li data-aos-delay="1300" data-aos="fade-left" data-aos-duration="1200" ><a href="index.html">Home</a></li>
-        
-        </ul>
-
+    <nav class="nav" aria-label="Primary">
+      <a href="index.html">Home</a>
+      <a href="services.html">Services</a>
+      <a class="active" href="about.html">About</a>
+      <a href="accessability.html">Access</a>
+      <a class="nav-cta" href="contact.html">Start</a>
     </nav>
 
-    <div data-aos-delay="3000" data-aos="flip-left" data-aos-duration="3000" data-aos-anchor-placement="top-bottom" class="bio">
-    
-        <h1 data-aos-delay="3000" data-aos="flip-down" data-aos-duration="3000" data-aos-anchor-placement="top-bottom">Battaglia Brothers</h1>
-        <h2 data-aos-delay="3000" data-aos="fade-up" data-aos-duration="3000" data-aos-anchor-placement="top-bottom">The two of us have been in the Food and Beverage industry for the majority of our lives. &nbsp;It's why we decided to specialize our services for restaurants, bars, cafes, diners, bakeries, donut shops, and any other hospitality provider. &nbsp;JP Battaglia focuses on the tech and coding side of things, while Nino Battaglia does all the graphics and design. &nbsp;Together we are M<span>&#9776;</span>NU, offering online presence services and graphic design. &nbsp;We know the business and understand how to establish a stake in the digital world.</h2><br>
-        
-        <div class="piero">
-            <img data-aos-delay="3000" data-aos="fade-right" data-aos-duration="3000" data-aos-anchor-placement="bottom-bottom" src="Piero1.png">
-        </div><br><br>
-        
-        <div class="nino">
-            <img data-aos-delay="3000" data-aos="fade-left" data-aos-duration="3000" data-aos-anchor-placement="bottom-bottom" src="Nene1.png">
-        </div><br><br>
-    
-    </div>
-    
-    <div class="logolinks">
-        
-        <h1 data-aos="flip-down" data-aos-duration="1500">Recent Client Projects</h1>
-        
-        <div class="logos">
+  </div>
+</header>
 
-            <a id="MT" data-aos="flip-right" data-aos-duration="2000" href="https://mangia-tutti.com/" target="_blank"><img src="MangiaTuttiLogo.png"><h2>Mangia Tutti</h2></a>
-            
-            <a data-aos="flip-right" data-aos-duration="2000" href="https://myhappydonut.com/" target="_blank"><img src="Logo.png"><h2>Happy Donut</h2></a>
-            
-            <a data-aos="flip-right" data-aos-duration="2000" href="https://mariosbohemian.com/" target="_blank"><img src="MariosLogo3.png"><h2>Mario's Cafe</h2></a> 
-            
-            <a id="ellas" data-aos="flip-right" data-aos-duration="2000" href="https://joyhingbbq.com/" target="_blank"><img src="JoyHingLogo.png"><h2>Joy Hing BBQ</h2></a>
-            
-            <a id="ellas" data-aos="flip-right" data-aos-duration="2000" href="https://ellaspizza.site/" target="_blank"><img src="Ella'sPizzaSign.png"><h2>Ella's Pizza</h2></a>
-            
-            <a id="ellas" data-aos="flip-right" data-aos-duration="2000" href="https://ninobattaglia.com/" target="_blank"><img src="NinoSiteLogo.png"><h2>Nino's Portfolio</h2></a>
-            
-            <a id="ellas" data-aos="flip-right" data-aos-duration="2000" href="https://battagliatony.com/" target="_blank"><img src="DadsIcon.png"><h2>Tony's Memorial</h2></a>
-            
-        </div>
-    </div>
-    
-    <div id="footer">
-        <p>&copy; <img id="menumade" src="MENU1.png"> made 2019</p>
-    </div>
-    
-    <script src="https://unpkg.com/aos@next/dist/aos.js"></script>
-    <script>
-        AOS.init();
-    </script>
+<section class="hero" aria-label="About">
+  <div class="container hero-grid">
 
+    <div>
+      <span class="pill">Premium-polished. Still practical.</span>
+      <h1>About Menu-Made</h1>
+      <p>
+        Menu-Made exists to ship clean digital upgrades for Food &amp; Beverage businesses—fast.
+        The priority is simple: make it easier for customers to find you, trust you, and take action.
+      </p>
+
+      <div class="hero-actions">
+        <a class="btn primary" href="contact.html">Start</a>
+        <a class="btn ghost" href="services.html">View Services</a>
+      </div>
+    </div>
+
+    <div class="hero-image">
+      <img src="AboutCTA.png" alt="Menu-Made technology illustration">
+    </div>
+
+  </div>
+</section>
+
+<section class="section section-image" aria-label="Positioning">
+  <div class="container">
+
+    <header class="section-head">
+      <h2>What we do (in one sentence)</h2>
+      <p>We remove friction from your digital presence so it converts—calls, directions, reservations, orders.</p>
+    </header>
+
+    <div class="cards">
+      <article class="service-card">
+        <h3>Premium presentation</h3>
+        <p>
+          The site should look like the business is serious. Visual polish is credibility.
+          Clean typography, strong hierarchy, and deliberate spacing.
+        </p>
+        <div class="service-bottom">
+          <span class="price">Credibility</span>
+          <a class="cta-pill" href="services.html">Services</a>
         </div>
-    
-    <script>
-    (function(){
-        var s    = document.createElement('script');
-        var h    = document.querySelector('head') || document.body;
-        s.src    = 'https://acsbapp.com/apps/app/dist/js/app.js';
-        s.async  = true;
-        s.onload = function(){
-            acsbJS.init({
-                statementLink    : '',
-                footerHtml       : '',
-                hideMobile       : false,
-                hideTrigger      : false,
-                disableBgProcess : false,
-                language         : 'en',
-                position         : 'left',
-                leadColor        : '#009eb3',
-                triggerColor     : '#0095b3',
-                triggerRadius    : '50%',
-                triggerPositionX : 'right',
-                triggerPositionY : 'bottom',
-                triggerIcon      : 'wheels',
-                triggerSize      : 'medium',
-                triggerOffsetX   : 20,
-                triggerOffsetY   : 20,
-                mobile           : {
-                    triggerSize      : 'small',
-                    triggerPositionX : 'right',
-                    triggerPositionY : 'bottom',
-                    triggerOffsetX   : 10,
-                    triggerOffsetY   : 10,
-                    triggerRadius    : '50%'
-                }
-            });
-        };
-        h.appendChild(s);
-    })();
-</script>
-    
-    </body>
+      </article>
+
+      <article class="service-card">
+        <h3>Practical execution</h3>
+        <p>
+          No bloated scope. No “agency process theater.”
+          Deliverables are narrow, fast, and tied directly to outcomes.
+        </p>
+        <div class="service-bottom">
+          <span class="price">Speed</span>
+          <a class="cta-pill" href="contact.html">Start</a>
+        </div>
+      </article>
+
+      <article class="service-card">
+        <h3>Conversion-first</h3>
+        <p>
+          Every page should answer: what is this, why should I trust it, and what do I do next?
+          If that’s unclear, conversion dies.
+        </p>
+        <div class="service-bottom">
+          <span class="price">Action</span>
+          <a class="cta-pill" href="services.html#conversion">Fix</a>
+        </div>
+      </article>
+    </div>
+
+  </div>
+</section>
+
+<section class="section section-image" aria-label="Call to action">
+  <div class="container cta">
+    <div>
+      <h2>Ready to start?</h2>
+      <p>Pick a service and we’ll respond with scope and next steps.</p>
+    </div>
+
+    <div class="cta-actions">
+      <a class="btn primary" href="contact.html">Start</a>
+      <a class="btn ghost" href="services.html">View Services</a>
+    </div>
+  </div>
+</section>
+
+<footer class="footer">
+  <div class="container footer-inner">
+    <div class="footer-copy">© 2019 MENU-MADE</div>
+
+    <a class="footer-logo" href="index.html" aria-label="Home">
+      <img src="MENU1.png" alt="MENU-MADE">
+    </a>
+  </div>
+</footer>
+
+<link rel="stylesheet" href="mm-a11y-widget.css">
+<script src="mm-a11y-widget.js" defer></script>
+
+</body>
 </html>
