@@ -1,0 +1,8 @@
+{
+  "devDependencies": {
+    "netlify-cli": "^24.0.1"
+  },
+  "dependencies": {
+    "stripe": "^20.4.0"
+  }
+}

@@ -1,362 +1,255 @@
 <!DOCTYPE html>
-
-<html>
-
+<html lang="en">
 <head>
-    <link rel="stylesheet" href="https://www.w3schools.com/w3css/4/w3.css">
-    <meta property="og:title" content="MENU" />
-    <meta property="og:image:type" content="image/png" />
-    <meta property="og:image:width" content="400" />
-    <meta property="og:image:height" content="300" />
-    <meta property="og:image" content="https://i.ibb.co/8PxT5y5/Menu-Preview.png" />
-    <meta property="og:image:secure_url" content="https://i.ibb.co/8PxT5y5/Menu-Preview.png" />
-    <meta name="keywords" content="Web Development">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta charset="utf-8">
-    <meta http-equiv="X-UA-Compatible" content="IE=edge">
-    <title>M&#926;NU - Services</title>
-    <meta name="description" content="Online Presence Management">
-    <link rel="stylesheet" href="main.css">
-    <link rel="shortcut icon" type="image/png" href="MENU=.png">
-    <link href="https://fonts.googleapis.com/css?family=Federant|Philosopher|Rambla|Kaushan+Script|Arya|Lexend|Righteous|Orbitron|Federo|Economica|Quintessential" rel="stylesheet">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <link rel="stylesheet" href="https://unpkg.com/aos@next/dist/aos.css" />
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>MENU-MADE — Services</title>
+  <meta name="description" content="Online menus, conversion fixes, Google visibility, accessibility upgrades, and premium app upgrades for food & beverage businesses.">
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Philosopher:wght@400;700&family=Righteous&display=swap" rel="stylesheet">
+
+  <link rel="stylesheet" href="main.css">
+
+  <style>
+    /* ===== SERVICES GRID ===== */
+    .services-grid{
+      display:grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 28px;
+    }
+
+    @media (max-width: 700px){
+      .services-grid{
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .services-grid .service-card{
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .services-grid .service-bottom{
+      margin-top: auto;
+    }
+
+    /* ===== HERO TITLE + ART (TIGHTER SPACING) ===== */
+    .services-hero .services-hero-title{
+      display: flex;
+      align-items: center;
+      gap: 18px;
+      flex-wrap: nowrap;
+    }
+
+    .services-hero .services-hero-title h1{
+      margin: 0;
+      line-height: 1;
+      white-space: nowrap;
+    }
+
+    .services-hero .services-hero-art{
+      width: min(420px, 40vw);
+      height: auto;
+      display: block;
+      pointer-events: none;
+      user-select: none;
+      filter: drop-shadow(0 0 14px rgba(120, 255, 255, .22));
+    }
+
+    @media (max-width: 900px){
+      .services-hero .services-hero-title{
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 14px;
+      }
+
+      .services-hero .services-hero-art{
+        width: min(420px, 85vw);
+      }
+    }
+  </style>
 </head>
 
-<body style="background: linear-gradient(90deg, #046, #068, #046);" id="animated-example" class="animated fadeOut">
-    
-    <div id="preloader">Loading</div>
-    
-    <div id="site">
-        
-        <div data-aos-delay="2700" data-aos="slide-right" data-aos-duration="1000" class="social" style="margin-top: 20%; background: #068; border: .5px solid red;">
-            
-            <a  data-aos-delay="2800" data-aos="slide-right" data-aos-duration="1000" href="https://www.facebook.com/MenuMade.OnlinePresence">
-                <img src="facebook.png">
-            </a>
-            
-            <a  data-aos-delay="2900" data-aos="slide-right" data-aos-duration="1000" href="https://www.instagram.com/menumade.gram/">
-                <img src="instagram.png">
-            </a>
-            
-            <a  data-aos-delay="3000" data-aos="slide-right" data-aos-duration="1000" href="https://www.linkedin.com/company/menu-made/">
-                <img src="linkedin.png">
-            </a>
+<body>
 
-        </div>
-    
-    <script>
-  $(document).ready(function()
-  $(window).scroll(function(){
-   var scroll = $(window).scrollTop();
-     if(scroll>50){
-      $("#nav").css("background", "#555");
-       }
-       else {
-      $("#nav").css("background", "transparent");
-       }
-      })
-   })
-    </script>
+<header class="header">
+  <div class="container header-inner">
 
-    <script>
-        window.addEventListener("beforeunload", function() {
-            document.body.classList.add("animate-out");
-        });
-    </script>
+    <div class="brand">
+      <a class="gear-link" href="index.html" aria-label="Home">
+        <img src="MENU=.png" class="brand-mark" alt="Menu-Made gear">
+      </a>
 
-
-    <div id="mySidenav" class="sidenav">
-        <a href="javascript:void(0)" class="closebtn" onclick="closeNav()">&#10754;</a>
-        <a class="sidelink" href="index.html">Home</a>
-        <a class="sidelink" href="about.html">About</a>
-        <a class="sidelink" href="accessability.html">Access</a>
-        <a class="sidelink" href="contact.html">Contact</a>
-        <a style="text-decoration: underline; text-underline-position: under;" class="sidelink" href="services.html">Services</a>
-        <a style="font-size:20px;" class="sidelink" href="https://ninobattaglia.com/services.html">Graphic Design<img style="width: 40px; margin-top:5px;" src="LogoBluRed1.png"></a>
+      <a class="word-link" href="about.html" aria-label="About">
+        <img src="MENU1.png" class="brand-word" alt="Menu-Made">
+      </a>
     </div>
 
-    <script>
-        function openNav() {
-            document.getElementById("mySidenav").style.width = "150px";
-        }
+    <input class="nav-toggle" type="checkbox" id="navToggle" aria-label="Toggle menu">
 
-        function closeNav() {
-            document.getElementById("mySidenav").style.width = "0";
-        }
-    </script>
+    <label class="gear-burger" for="navToggle" aria-label="Open menu" role="button">
+      <img src="MENU=.png" alt="Menu">
+    </label>
 
-    <nav style="background: #057;">
-
-        <div data-aos-delay="800" data-aos="fade-right" data-aos-duration="1500" data-aos-anchor-placement="top-bottom">
-            <a href="about.html"><img class="logoburger" src="MENU=.png"></a>
-        </div>
-
-        <div data-aos-delay="600" data-aos="fade-right" data-aos-duration="1500" data-aos-anchor-placement="top-bottom" class="logo"><img src="MENU1.png"></div>
-        
-        <div class="mconsult">
-            <a href="tel:17573255866"><button id="Btn" data-aos="fade-down" data-aos-duration="800" data-aos-anchor-placement="top-bottom">Free Quote</button></a>
-        </div>
-        
-        <div data-aos-delay="2200" data-aos="fade-in" data-aos-duration="500" data-aos-anchor-placement="top-bottom"  class="dconsult">
-            <a href="contact.html"><button id="Btn">Free Quote</button></a>
-        </div>
-        
-        <div data-aos-delay="500" class="burger" data-aos="fade-left" data-aos-duration="1500" data-aos-anchor-placement="top-bottom" >
-            <div data-aos="fade-left" data-aos-duration="1000" data-aos-anchor-placement="top-bottom"  onclick="openNav()"> <span id="top"></span> <span id="middle"></span> <span id="bottom"></span></div> 
-        </div>
-        
-        <ul data-aos-delay="500" data-aos="zoom-in-left" data-aos-duration="2200" style="background: linear-gradient(to top, #034, #046, #068, #046, #034); background-size: 100% 10%;" class="desknav">
-            
-            <li data-aos-delay="500" data-aos="fade-left" data-aos-duration="1200" ><a href="contact.html">Contact</a></li>
-            
-            <div class="dropdown">
-              <input class="dropdown-toggle">
-              <li  data-aos-delay="700" data-aos="fade-left" data-aos-duration="1200" class="dropdown-text"><span>&#x3c;</span>Services</li>
-              
-                <ul class="dropdown-content">
-                    <li><a id="options" style="background: linear-gradient(to top, #023, #046, #068, #046, #023); background-size: 100% 8%;" href="services.html">Options</a></li>
-                    <li><a style="background: linear-gradient(to top, #023, #046, #068, #046, #023); background-size: 100% 8%;" href="services.html#plans">Plans</a></li>
-                    <li><a style="background: linear-gradient(to top, #023, #046, #068, #046, #023); background-size: 100% 8%;" href="https://ninobattaglia.com/services.html">Design</a></li>
-                </ul>
-            </div>
-            
-            <li data-aos-delay="900" data-aos="fade-left" data-aos-duration="1200" ><a href="accessability.html">Accessability</a></li>
-            
-            <li data-aos-delay="1100" data-aos="fade-left" data-aos-duration="1200" ><a id="bout" href="about.html">About</a></li>
-            
-            <li data-aos-delay="1300" data-aos="fade-left" data-aos-duration="1200" ><a href="index.html">Home</a></li>
-        
-        </ul>
-
+    <nav class="nav" aria-label="Primary">
+      <a href="index.html">Home</a>
+      <a class="active" href="services.html">Services</a>
+      <a href="about.html">About</a>
+      <a href="accessability.html">Access</a>
+      <a class="nav-cta" href="contact.html">Start</a>
     </nav>
-    
-    <button onclick="topFunction()" id="myBtn" title="Go to top">&#x261F;</button>
-        
-        <script>
-            
-            // When the user scrolls down 20px from the top of the document, show the button
-            window.onscroll = function() {scrollFunction()};
 
-            function scrollFunction() {
-            if (document.body.scrollTop > 20 || document.documentElement.scrollTop > 20) {
-            document.getElementById("myBtn").style.display = "block";
-            } else {
-            document.getElementById("myBtn").style.display = "none";
-                }
-            }
+  </div>
+</header>
 
-            // When the user clicks on the button, scroll to the top of the document
-            function topFunction() {
-            document.body.scrollTop = 0;
-            document.documentElement.scrollTop = 0;
-            } 
-            
-        </script>
-    
-    
-<div class="services">
+<main>
 
-        <div class="pastry" data-aos="zoom-in-up" data-aos-duration="1000" data-aos-delay="400"><img data-aos="fade-in" data-aos-anchor-placement="center-bottom" data-aos-duration="1000" data-aos-delay="1200" src="Retail.png"><br><h4 data-aos="zoom-in-down" data-aos-duration="800" data-aos-delay="600" >Retail</h4>
+<section class="hero services-hero">
+  <div class="container">
+    <span class="pill">Clear scope. Fast ROI.</span>
 
-            <div class="details">
-                <p>We Can Set Up An E-commerce Section For You So You Can Increase Sales And Focus On Your Craft.</p><a href="#e-commerce"><button class="Btn1">Details</button></a>
-            </div>
-        </div>
-    
-        <div class="restaurant" data-aos="zoom-in-up" data-aos-duration="1000" data-aos-delay="600" ><img data-aos="fade-in" data-aos-anchor-placement="center-bottom" data-aos-duration="1000" data-aos-delay="1400" src="ServNapkinTray.png"><br><h4 data-aos="zoom-in-down" data-aos-duration="800" data-aos-delay="800" >Service</h4>
-
-            <div class="details">
-                <p>All Dining Establishments Need A Digital Presence These Days. We Can Provide And Manage It All For You.</p><a href="#food"><button class="Btn1">Details</button></a>
-            </div>
-        </div>
-
-        <div class="cafe" data-aos="zoom-in-up" data-aos-duration="1000" data-aos-delay="800"><img data-aos="fade-in" data-aos-duration="1000" data-aos-delay="1600" src="Portfolio.png"><br><h4 data-aos="zoom-in-down" data-aos-duration="800" data-aos-anchor-placement="center-bottom" data-aos-delay="1000" >Personal</h4>
-            <div class="details">
-                <p>Every Portfolio Has Its Own Style And Feel. We Strive To Showcase That Uniqueness For Each Individual.</p><a href="#personal"><button class="Btn1">Details</button></a>
-            </div>
-        </div>
+    <div class="services-hero-title">
+      <h1>Services</h1>
+      <img class="services-hero-art" src="Services4.png" alt="Service highlights">
     </div>
-    
-    <div data-aos="zoom-in-up" data-aos-duration="2000" data-aos-delay="500" class="website">
-        
-        <div data-aos="zoom-out-up" data-aos-delay="1000" data-aos-duration="1800" class="stars">
-            
-            <img class="star-1" src="Star-1.png">
-            <img data-aos="zoom-in-up" data-aos-duration="2000" data-aos-delay="1000" class="star-2" src="Star-2.png">
-            <img class="star-3" src="Star-3.png">
-        </div>
-    
-        <h2 data-aos="zoom-in-up" data-aos-duration="1000" data-aos-delay="1500" data-aos-anchor-placement="top-bottom">Each site will have its own unique requirements so the plans listed below are only meant to give an idea of what we offer. We much prefer to build each plan for each individual need so contact our team now and let us build a plan for you with no initial obligation.</h2><span id="plans"></span>
-    
-    </div>
-    
-    <div class="plans">
-        
-        <div data-aos="zoom-in-up" data-aos-delay="300" data-aos-duration="1800" data-aos-anchor-placement="top-bottom" class="basic"> 
-            <div class="star"><img src="Star-1.png"></div>
-            <h1>Basic</h1>
-            
-                    <div data-aos="fade-up" data-aos-delay="1000" data-aos-duration="1800" data-aos-anchor-placement="top-bottom" class="items">
-                        <h4><img class="check" src="CheckBox.png"> 3 - 4 Pages</h4>
-                        <h4><img class="check" src="CheckBox.png"> Hosting</h4>
-                        <h4><img class="check" src="CheckBox.png"> Maintanence</h4>
-                        <h4><img class="check" src="CheckBox.png"> SEO</h4>
-                        <h4><img class="check" src="CheckBox-1.png"> E-Commerce</h4>
-                        <h4><img class="check" src="CheckBox-1.png"> Branding/Logo</h4>
-                        <h4><img class="check" src="CheckBox-1.png"> Social Media</h4>
-                        <h4><img class="check" src="CheckBox-1.png"> Mobile App</h4><br>
-                    </div>
-        </div>
-        
-        <div data-aos="zoom-in-up" data-aos-delay="500" data-aos-duration="2000" data-aos-anchor-placement="top-bottom" class="pro">
-            <div class="star"><img src="Star-2.png"></div>
-            <h1>Pro</h1>
-                 
-                    <div data-aos="fade-up" data-aos-delay="1200" data-aos-duration="1800" data-aos-anchor-placement="top-bottom" class="items">
-                        <h4><img class="check" src="CheckBox.png"> 5 - 10 Pages</h4>
-                        <h4><img class="check" src="CheckBox.png"> Hosting</h4>
-                        <h4><img class="check" src="CheckBox.png"> Maintanence</h4>
-                        <h4><img class="check" src="CheckBox.png"> SEO</h4>
-                        <h4><img class="check" src="CheckBox.png"> E-Commerce</h4>
-                        <h4><img class="check" src="CheckBox-1.png"> Branding/Logo </h4>
-                        <h4><img class="check" src="CheckBox-1.png"> Social Media</h4>
-                        <h4><img class="check" src="CheckBox-1.png"> Mobile App</h4><br>
-                    </div>
-    </div>
-        
-        <div data-aos="zoom-in-up" data-aos-delay="800" data-aos-duration="2500" data-aos-anchor-placement="top-bottom" class="prime">
-            <div class="star"><img src="Star-3.png"></div>
-            <h1>Prime</h1>
-                 
-                    <div data-aos="fade-up" data-aos-delay="1400" data-aos-duration="1800" data-aos-anchor-placement="top-bottom" class="items">
-                        <h4><img class="check" src="CheckBox.png"> 10+ Pages</h4>
-                        <h4><img class="check" src="CheckBox.png"> Hosting</h4>
-                        <h4><img class="check" src="CheckBox.png"> Maintanence</h4>
-                        <h4><img class="check" src="CheckBox.png"> SEO</h4>
-                        <h4><img class="check" src="CheckBox.png"> E-Commerce</h4>
-                        <h4><img class="check" src="CheckBox.png"> Branding/Logo</h4>
-                        <h4><img class="check" src="CheckBox.png"> Social Media</h4>
-                        <h4><img class="check" src="CheckBox.png"> Mobile App</h4>
-                        <br id="food">
-                    </div>
-        </div>
-    
-    </div>
-    
-    <div data-aos="zoom-in-up" data-aos-duration="2000" data-aos-anchor-placement="top-bottom" class="website">
-        
-        <h1 data-aos="flip-right" data-aos-duration="3000" data-aos-delay="300" data-aos-anchor-placement="top-bottom">Food Service</h1>
-        <h2 data-aos="zoom-in-up" data-aos-duration="2000" data-aos-delay="500" data-aos-anchor-placement="top-bottom">Since 2020, Restaurants, cafes, diners, bakeries etc. all now recognize the absolute necessity to maintain an online presence. We specialize in this specific niche especially small business 'mom and pop' locations. We specifically relate because we come from over 20 years of working in food and beverage ourselves. </h2><h2 data-aos="zoom-in-up" data-aos-duration="2000" data-aos-delay="800" data-aos-anchor-placement="top-bottom">From casual to fine dining, it's imperative that people be able to find your establishment online in order to increase reservations and new prospective future regulars. Relying solely on word of mouth and neighborhood foot traffic is no longer enough to survive. We'll help put you on the map both literally and figuratively.</h2>
 
-    </div><br id="e-commerce"><br><br><br>
-    
-    <div data-aos="zoom-in-up" data-aos-duration="2000" data-aos-anchor-placement="top-bottom" class="website">
-        
-        <h1 data-aos="flip-right" data-aos-duration="3000" data-aos-delay="300" data-aos-anchor-placement="top-bottom">E-Commerce</h1>
-        <h2 data-aos="zoom-in-up" data-aos-duration="2000" data-aos-delay="500" data-aos-anchor-placement="top-bottom" >Selling online has continued to increase in popularity every year. More people are buying from online providers now especially since 2020. We can seemlessly integrate a catalogue of items, your own customizable shopping cart, a checkout page and even shipping all into your website using a third party provider that handles all of your transactions and even provides reports to let you see how your products are selling.</h2>
+    <p>
+      Premium-polished execution designed to convert visitors into real action.
+      No bloat. No retainers. Just what you need now.
+    </p>
 
-    </div><br id="personal"><br><br><br>
-    
-    <div data-aos="zoom-in-up" data-aos-duration="2000" data-aos-anchor-placement="top-bottom" class="website">
-        
-        <h1 data-aos="flip-right" data-aos-duration="3000" data-aos-delay="300" data-aos-anchor-placement="top-bottom">Personal</h1>
-        <h2 data-aos="zoom-in-up" data-aos-duration="2000" data-aos-delay="500" data-aos-anchor-placement="top-bottom" >Creating your own portfolio or service providing website is essential for artists, entrepreneurs, personal trainers, instructors, etc. A good website can help break into the freelancing arena. We like to make every personal website reflect the personality and style of each service provider.</h2>
-
-    </div><br><br><br><br>
-    
-    <div data-aos="zoom-in-up" data-aos-duration="2000" data-aos-anchor-placement="top-bottom" class="ninoSite"><a class="servLink" href="https://ninobattaglia.com/services.html"><button class="Btn1"><img src="LogoBluRed1.png"> Graphic Design <img src="LogoBluRed1.png"></button></a></div>
-    
-    <div class="popup">
-        <div class="contentBox">
-            <div class="closex"><span>&#10754;</span></div>
-            <div class="imgBx">
-                <img src="MenuLeft.png">
-            </div>
-            <div class="content">
-                <div>
-                <h3>Special Offer</h3>
-                <h2>50<sup>%</sup><span> Off</span></h2>
-                <p>Initial design & build with free consultation and quote.</p>
-                <a href="contact.html">Get This Deal</a>
-                </div>
-            </div>
-        </div>
+    <div class="hero-actions">
+      <a class="btn primary" href="contact.html">Start</a>
+      <a class="btn ghost" href="#app">App Upgrade</a>
     </div>
-        
-        <script>
-        
-        const popup = document.querySelector('.popup');
-        const closex = document.querySelector('.closex');
-            
-            window.onload = function(){
-                setTimeout(function(){
-                    popup.style.display = "block";
-                }, 20000)
-            }
-            
-            closex.addEventListener('click', () => {
-                popup.style.display = "none";
-            })
-        </script>
-    
+  </div>
+</section>
 
-    <div id="footer" style="background: #034; height: 80px; width: 100%; bottom: -30px">
-        <p style="padding-top: 20px;">&copy; <img id="menumade" src="MENU1.png"> made 2019</p>
-    </div>
-    
-    <script src="https://unpkg.com/aos@next/dist/aos.js"></script>
-    <script>
-        AOS.init();
-    </script>
-        
-    <script>
-        
-        var loader = document.getElementById("preloader");
-        
-        window.addEventListener("load", function(){loader.style.display = "none"})
-        
-    </script>
+<section class="section section-image">
+  <div class="container">
 
+    <header class="section-head">
+      <h2>What you need now</h2>
+      <p>Focused services, structured for fast results.</p>
+    </header>
+
+    <div class="services-grid">
+
+      <article class="service-card">
+        <h3>Online Menu + QR</h3>
+        <p>
+          Mobile-first menu pages customers can open instantly.
+          Clean layout, fast load, clear sections, and QR-ready.
+        </p>
+        <div class="service-bottom">
+          <span class="price">From $129</span>
+          <a class="cta-pill" href="contact.html?service=menu">Start</a>
         </div>
-    
-    <script>
-    (function(){
-        var s    = document.createElement('script');
-        var h    = document.querySelector('head') || document.body;
-        s.src    = 'https://acsbapp.com/apps/app/dist/js/app.js';
-        s.async  = true;
-        s.onload = function(){
-            acsbJS.init({
-                statementLink    : '',
-                footerHtml       : '',
-                hideMobile       : false,
-                hideTrigger      : false,
-                disableBgProcess : false,
-                language         : 'en',
-                position         : 'left',
-                leadColor        : '#009eb3',
-                triggerColor     : '#0095b3',
-                triggerRadius    : '50%',
-                triggerPositionX : 'right',
-                triggerPositionY : 'bottom',
-                triggerIcon      : 'wheels',
-                triggerSize      : 'medium',
-                triggerOffsetX   : 20,
-                triggerOffsetY   : 20,
-                mobile           : {
-                    triggerSize      : 'small',
-                    triggerPositionX : 'right',
-                    triggerPositionY : 'bottom',
-                    triggerOffsetX   : 10,
-                    triggerOffsetY   : 10,
-                    triggerRadius    : '50%'
-                }
-            });
-        };
-        h.appendChild(s);
-    })();
-</script>
-    
-    </body>
+      </article>
+
+      <article class="service-card">
+        <h3>Conversion Fix</h3>
+        <p>
+          Fix what’s costing you calls and orders:
+          clarity, CTAs, layout flow, mobile usability, and speed blockers.
+        </p>
+        <div class="service-bottom">
+          <span class="price">From $299</span>
+          <a class="cta-pill" href="contact.html?service=conversion">Fix</a>
+        </div>
+      </article>
+
+      <article class="service-card">
+        <h3>Google Visibility</h3>
+        <p>
+          Improve Search and Maps performance with stronger on-page signals
+          that help customers find you and take action.
+        </p>
+        <div class="service-bottom">
+          <span class="price">From $149</span>
+          <a class="cta-pill" href="contact.html?service=google">Optimize</a>
+        </div>
+      </article>
+
+      <article class="service-card">
+        <h3>Accessibility Upgrade</h3>
+        <p>
+          Site-wide accessibility toolkit plus usability fixes
+          for keyboard navigation, contrast, labels, and forms.
+        </p>
+        <div class="service-bottom">
+          <span class="price">$250 / year</span>
+          <a class="cta-pill" href="contact.html?service=accessibility">Upgrade</a>
+        </div>
+      </article>
+
+    </div>
+
+  </div>
+</section>
+
+<section class="section premium" id="app">
+  <div class="container premium-grid">
+
+    <div class="premium-copy">
+      <span class="pill gold">Premium</span>
+      <h2>App Upgrade</h2>
+      <p>
+        For businesses that want a native experience and higher engagement.
+        Offline menus, push notifications, native navigation, and publishing handled.
+      </p>
+
+      <ul class="feature-list">
+        <li>Offline menu access</li>
+        <li>Push notifications</li>
+        <li>Native navigation</li>
+        <li>App store publishing</li>
+      </ul>
+
+      <div class="premium-bottom">
+        <span class="price big">$999</span>
+        <a class="btn primary" href="contact.html?service=app">Upgrade</a>
+      </div>
+    </div>
+
+    <div class="premium-media">
+      <img src="MenuApp.png" alt="Menu app preview">
+    </div>
+
+  </div>
+</section>
+
+<section class="section section-image">
+  <div class="container cta">
+    <div>
+      <h2>Ready to start?</h2>
+      <p>Pick a service and we’ll reply with next steps—fast and focused.</p>
+    </div>
+
+    <div class="cta-actions">
+      <a class="btn primary" href="contact.html">Start</a>
+      <a class="btn ghost" href="index.html">Home</a>
+    </div>
+  </div>
+</section>
+
+</main>
+
+<footer class="footer">
+  <div class="container footer-inner">
+    <div class="footer-copy">© 2019 MENU-MADE</div>
+
+    <a class="footer-logo" href="index.html" aria-label="Home">
+      <img src="MENU1.png" alt="MENU-MADE">
+    </a>
+  </div>
+</footer>
+
+<link rel="stylesheet" href="mm-a11y-widget.css">
+<script src="mm-a11y-widget.js" defer></script>
+
+</body>
 </html>
