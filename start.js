@@ -1,4 +1,4 @@
-// start.js — Stripe Payment Link checkout (no Netlify functions)
+// start.js — Multi-item cart with Stripe Payment Links
 
 (() => {
 
@@ -13,9 +13,11 @@ const PAYMENT_LINKS = {
 
 const cartItemsEl = document.getElementById("cartItems");
 const cartTotalEl = document.getElementById("cartTotal");
+
 const continueBtn = document.getElementById("continueBtn");
 const clearBtn = document.getElementById("clearBtn");
 const checkoutBtn = document.getElementById("checkoutBtn");
+
 const intakeStep = document.getElementById("intakeStep");
 
 const leadName = document.getElementById("lead_name");
@@ -27,7 +29,7 @@ let cart = [];
 
 function formatUSD(cents){
 
-  return (cents / 100).toLocaleString(undefined,{
+  return (cents/100).toLocaleString(undefined,{
     style:"currency",
     currency:"USD"
   });
@@ -44,55 +46,77 @@ function renderCart(){
     li.innerHTML = "<span style='color:#888'>Cart is empty</span>";
     cartItemsEl.appendChild(li);
 
-    cartTotalEl.textContent = "$0";
+    cartTotalEl.textContent="$0";
 
-    if(continueBtn) continueBtn.disabled = true;
+    continueBtn.disabled=true;
 
     return;
 
   }
 
-  let total = 0;
+  let total=0;
 
-  cart.forEach(item => {
+  cart.forEach((item,index)=>{
 
-    total += item.price;
+    total+=item.price*item.qty;
 
-    const li = document.createElement("li");
-    li.className = "cart-item";
+    const li=document.createElement("li");
+    li.className="cart-item";
 
-    li.innerHTML = `
-      <strong>${item.name}</strong>
-      <small>${formatUSD(item.price)}</small>
+    li.innerHTML=`
+      <div>
+        <strong>${item.name}</strong>
+        <small>${formatUSD(item.price)}</small>
+      </div>
+      <div class="qty">
+        <button data-index="${index}" class="minus">−</button>
+        <span>${item.qty}</span>
+        <button data-index="${index}" class="plus">+</button>
+      </div>
     `;
 
     cartItemsEl.appendChild(li);
 
   });
 
-  cartTotalEl.textContent = formatUSD(total);
+  cartTotalEl.textContent=formatUSD(total);
 
-  if(continueBtn) continueBtn.disabled = false;
+  continueBtn.disabled=false;
 
 }
 
 function addToCart(service,name,price){
 
-  cart = [{ service,name,price }];
+  const existing = cart.find(i => i.service === service);
+
+  if(existing){
+
+    existing.qty += 1;
+
+  } else {
+
+    cart.push({
+      service,
+      name,
+      price,
+      qty:1
+    });
+
+  }
 
   renderCart();
 
 }
 
-document.querySelectorAll(".js-add").forEach(btn => {
+document.querySelectorAll(".js-add").forEach(btn=>{
 
-  btn.addEventListener("click", () => {
+  btn.addEventListener("click",()=>{
 
-    const card = btn.closest(".service-card");
+    const card=btn.closest(".service-card");
 
-    const service = card.dataset.sku;
-    const name = card.dataset.name;
-    const price = Number(card.dataset.price);
+    const service=card.dataset.sku;
+    const name=card.dataset.name;
+    const price=Number(card.dataset.price);
 
     addToCart(service,name,price);
 
@@ -100,31 +124,60 @@ document.querySelectorAll(".js-add").forEach(btn => {
 
 });
 
-clearBtn?.addEventListener("click", () => {
+cartItemsEl.addEventListener("click",(e)=>{
 
-  cart = [];
+  const minus=e.target.classList.contains("minus");
+  const plus=e.target.classList.contains("plus");
+
+  if(!minus && !plus) return;
+
+  const index=Number(e.target.dataset.index);
+
+  if(plus){
+
+    cart[index].qty++;
+
+  }
+
+  if(minus){
+
+    cart[index].qty--;
+
+    if(cart[index].qty<=0){
+      cart.splice(index,1);
+    }
+
+  }
 
   renderCart();
 
 });
 
-continueBtn?.addEventListener("click", () => {
+clearBtn?.addEventListener("click",()=>{
 
-  if(cart.length === 0) return;
+  cart=[];
+
+  renderCart();
+
+});
+
+continueBtn?.addEventListener("click",()=>{
+
+  if(cart.length===0) return;
 
   intakeStep?.classList.add("show");
 
 });
 
-checkoutBtn?.addEventListener("click", () => {
+checkoutBtn?.addEventListener("click",()=>{
 
-  if(cart.length === 0) return;
+  if(cart.length===0) return;
 
-  const name = leadName?.value.trim();
-  const business = leadBusiness?.value.trim();
-  const email = leadEmail?.value.trim();
+  const name=leadName.value.trim();
+  const business=leadBusiness.value.trim();
+  const email=leadEmail.value.trim();
 
-  if(!name || !business || !email){
+  if(!name||!business||!email){
 
     alert("Please complete Name, Business name, and Email.");
 
@@ -132,7 +185,7 @@ checkoutBtn?.addEventListener("click", () => {
 
   }
 
-  if(!scopeConfirm?.checked){
+  if(!scopeConfirm.checked){
 
     alert("Please confirm the scope agreement.");
 
@@ -140,21 +193,25 @@ checkoutBtn?.addEventListener("click", () => {
 
   }
 
-  checkoutBtn.disabled = true;
-  checkoutBtn.textContent = "Redirecting…";
+  checkoutBtn.disabled=true;
+  checkoutBtn.textContent="Redirecting…";
 
-  const service = cart[0].service;
+  // If multiple services, send to first service payment link
+  const firstService = cart[0].service;
 
-  const link = PAYMENT_LINKS[service];
+  const link = PAYMENT_LINKS[firstService];
 
   if(!link){
 
     alert("Checkout configuration error.");
+
+    checkoutBtn.disabled=false;
+
     return;
 
   }
 
-  window.location.href = link;
+  window.location.href=link;
 
 });
 
