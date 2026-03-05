@@ -13,6 +13,7 @@ exports.handler = async (event) => {
   try {
 
     const session = await stripe.checkout.sessions.create({
+
       mode: "payment",
 
       line_items: data.items.map(item => ({
@@ -22,6 +23,7 @@ exports.handler = async (event) => {
 
       success_url: process.env.URL + "/checkoutsuccess.html",
       cancel_url: process.env.URL + "/checkoutcancel.html"
+
     });
 
     return {
@@ -37,4 +39,5 @@ exports.handler = async (event) => {
     };
 
   }
+
 };
