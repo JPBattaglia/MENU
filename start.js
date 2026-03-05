@@ -1,298 +1,163 @@
-// start.js — FULL FILE (Wires start.html → Stripe Checkout → checkoutsuccess.html / checkoutcancel.html)
+// start.js — Stripe Payment Link checkout (no Netlify functions)
+
 (() => {
-  const CHECKOUT_ENDPOINT = "/.netlify/functions/create-checkout-session";
 
-  const FORMSPREE_ENDPOINT = "https://formspree.io/f/xnjqbely";
+const PAYMENT_LINKS = {
 
-  const CART_SNAPSHOT_KEY = "mm_last_checkout_cart_v2";
-  const LEAD_SNAPSHOT_KEY = "mm_last_lead_v1";
+  conversion: "https://buy.stripe.com/bJeaEXgRldkk7yQ7Sx9IQ0c",
+  visibility: "https://buy.stripe.com/00wfZh58D4NOdXe8WB9IQ0b",
+  accessibility: "https://buy.stripe.com/bJebJ144zfss6uM1u99IQ0a",
+  menu: "https://buy.stripe.com/4gMaEX6cH8002ewb4J9IQ09"
 
-  const formatUSD = (cents) =>
-    (cents / 100).toLocaleString(undefined, {
-      style: "currency",
-      currency: "USD"
-    });
+};
 
-  const byId = (id) => document.getElementById(id);
+const cartItemsEl = document.getElementById("cartItems");
+const cartTotalEl = document.getElementById("cartTotal");
+const continueBtn = document.getElementById("continueBtn");
+const clearBtn = document.getElementById("clearBtn");
+const checkoutBtn = document.getElementById("checkoutBtn");
+const intakeStep = document.getElementById("intakeStep");
 
-  const cartItemsEl = byId("cartItems");
-  const cartTotalEl = byId("cartTotal");
-  const continueBtn = byId("continueBtn");
-  const clearBtn = byId("clearBtn");
-  const checkoutBtn = byId("checkoutBtn");
-  const backBtn = byId("backBtn");
-  const intakeStep = byId("intakeStep");
-  const statusEl = byId("status");
+const leadName = document.getElementById("lead_name");
+const leadBusiness = document.getElementById("lead_business");
+const leadEmail = document.getElementById("lead_email");
+const scopeConfirm = document.getElementById("scopeConfirm");
 
-  const leadName = byId("lead_name");
-  const leadBusiness = byId("lead_business");
-  const leadEmail = byId("lead_email");
-  const leadPhone = byId("lead_phone");
-  const leadNotes = byId("lead_notes");
-  const scopeConfirm = byId("scopeConfirm");
+let cart = [];
 
-  if (!cartItemsEl || !cartTotalEl) return;
+function formatUSD(cents){
 
-  const setStatus = (msg) => {
-    if (!statusEl) return;
-    statusEl.textContent = msg || "";
-    statusEl.classList.toggle("show", !!msg);
-  };
-
-  const products = Array.from(
-    document.querySelectorAll(".product-grid .service-card")
-  ).map((card) => ({
-    sku: card.dataset.sku || "",
-    name: card.dataset.name || "",
-    priceCents: Number(card.dataset.price || "0"),
-    priceLabel: card.dataset.priceLabel || "",
-    priceId: card.dataset.priceId || ""
-  }));
-
-  const productsBySku = new Map(products.map((p) => [p.sku, p]));
-
-  const cart = new Map();
-
-  const updateButtons = () => {
-    const hasItems = cart.size > 0;
-    if (continueBtn) continueBtn.disabled = !hasItems;
-    if (clearBtn) clearBtn.disabled = !hasItems;
-  };
-
-  const computeTotal = () => {
-    let total = 0;
-    cart.forEach((item) => {
-      total += item.priceCents * item.qty;
-    });
-    return total;
-  };
-
-  const renderCart = () => {
-    cartItemsEl.innerHTML = "";
-
-    if (cart.size === 0) {
-      const empty = document.createElement("li");
-      empty.className = "cart-item";
-      empty.innerHTML =
-        "<span style='color:var(--muted)'>Cart is empty</span>";
-      cartItemsEl.appendChild(empty);
-      cartTotalEl.textContent = formatUSD(0);
-      updateButtons();
-      return;
-    }
-
-    cart.forEach((item) => {
-      const li = document.createElement("li");
-      li.className = "cart-item";
-
-      const left = document.createElement("div");
-
-      const title = document.createElement("strong");
-      title.textContent = item.name;
-
-      const sub = document.createElement("small");
-      sub.textContent = item.priceLabel
-        ? item.priceLabel
-        : formatUSD(item.priceCents);
-
-      left.appendChild(title);
-      left.appendChild(sub);
-
-      const right = document.createElement("div");
-      right.className = "qty";
-
-      const minus = document.createElement("button");
-      minus.textContent = "−";
-      minus.type = "button";
-
-      minus.addEventListener("click", () => {
-        if (item.qty <= 1) cart.delete(item.sku);
-        else {
-          item.qty -= 1;
-          cart.set(item.sku, item);
-        }
-
-        if (cart.size === 0 && intakeStep)
-          intakeStep.classList.remove("show");
-
-        renderCart();
-      });
-
-      const qty = document.createElement("span");
-      qty.textContent = item.qty;
-
-      const plus = document.createElement("button");
-      plus.textContent = "+";
-      plus.type = "button";
-
-      plus.addEventListener("click", () => {
-        item.qty += 1;
-        cart.set(item.sku, item);
-        renderCart();
-      });
-
-      right.appendChild(minus);
-      right.appendChild(qty);
-      right.appendChild(plus);
-
-      li.appendChild(left);
-      li.appendChild(right);
-
-      cartItemsEl.appendChild(li);
-    });
-
-    cartTotalEl.textContent = formatUSD(computeTotal());
-
-    updateButtons();
-  };
-
-  const addToCart = (sku) => {
-    const product = productsBySku.get(sku);
-    if (!product) return;
-
-    const existing = cart.get(sku);
-
-    if (existing) {
-      existing.qty += 1;
-      cart.set(sku, existing);
-    } else {
-      cart.set(sku, {
-        sku,
-        name: product.name,
-        priceCents: product.priceCents,
-        priceLabel: product.priceLabel,
-        priceId: product.priceId,
-        qty: 1
-      });
-    }
-
-    renderCart();
-  };
-
-  document.querySelectorAll(".js-add").forEach((btn) => {
-    btn.addEventListener("click", () => {
-      const card = btn.closest(".service-card");
-      if (!card) return;
-      addToCart(card.dataset.sku);
-    });
+  return (cents / 100).toLocaleString(undefined,{
+    style:"currency",
+    currency:"USD"
   });
 
-  clearBtn?.addEventListener("click", () => {
-    cart.clear();
-    renderCart();
-    setStatus("");
+}
+
+function renderCart(){
+
+  cartItemsEl.innerHTML = "";
+
+  if(cart.length === 0){
+
+    const li = document.createElement("li");
+    li.innerHTML = "<span style='color:#888'>Cart is empty</span>";
+    cartItemsEl.appendChild(li);
+
+    cartTotalEl.textContent = "$0";
+
+    if(continueBtn) continueBtn.disabled = true;
+
+    return;
+
+  }
+
+  let total = 0;
+
+  cart.forEach(item => {
+
+    total += item.price;
+
+    const li = document.createElement("li");
+    li.className = "cart-item";
+
+    li.innerHTML = `
+      <strong>${item.name}</strong>
+      <small>${formatUSD(item.price)}</small>
+    `;
+
+    cartItemsEl.appendChild(li);
+
   });
 
-  const snapshotCart = () => {
-    const snap = {
-      items: Array.from(cart.values()),
-      totalCents: computeTotal()
-    };
+  cartTotalEl.textContent = formatUSD(total);
 
-    try {
-      localStorage.setItem(CART_SNAPSHOT_KEY, JSON.stringify(snap));
-    } catch {}
+  if(continueBtn) continueBtn.disabled = false;
 
-    return snap;
-  };
+}
 
-  const snapshotLead = () => {
-    const snap = {
-      name: leadName?.value || "",
-      business: leadBusiness?.value || "",
-      email: leadEmail?.value || "",
-      phone: leadPhone?.value || "",
-      notes: leadNotes?.value || ""
-    };
+function addToCart(service,name,price){
 
-    try {
-      localStorage.setItem(LEAD_SNAPSHOT_KEY, JSON.stringify(snap));
-    } catch {}
+  cart = [{ service,name,price }];
 
-    return snap;
-  };
+  renderCart();
 
-  continueBtn?.addEventListener("click", () => {
-    if (cart.size === 0) return;
-    intakeStep?.classList.add("show");
+}
+
+document.querySelectorAll(".js-add").forEach(btn => {
+
+  btn.addEventListener("click", () => {
+
+    const card = btn.closest(".service-card");
+
+    const service = card.dataset.sku;
+    const name = card.dataset.name;
+    const price = Number(card.dataset.price);
+
+    addToCart(service,name,price);
+
   });
 
-  backBtn?.addEventListener("click", () => {
-    intakeStep?.classList.remove("show");
-  });
+});
 
-  checkoutBtn?.addEventListener("click", async () => {
+clearBtn?.addEventListener("click", () => {
 
-    if (cart.size === 0) return;
+  cart = [];
 
-    const name = leadName?.value?.trim();
-    const business = leadBusiness?.value?.trim();
-    const email = leadEmail?.value?.trim();
+  renderCart();
 
-    if (!name || !business || !email) {
-      setStatus("Please complete Name, Business name, and Email.");
-      return;
-    }
+});
 
-    if (!scopeConfirm?.checked) {
-      setStatus("Please confirm standard scope to proceed.");
-      return;
-    }
+continueBtn?.addEventListener("click", () => {
 
-    const cartSnap = snapshotCart();
-    const leadSnap = snapshotLead();
+  if(cart.length === 0) return;
 
-    checkoutBtn.disabled = true;
-    checkoutBtn.textContent = "Redirecting…";
+  intakeStep?.classList.add("show");
 
-    try {
+});
 
-      const res = await fetch(CHECKOUT_ENDPOINT, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json"
-        },
-        body: JSON.stringify({
-          items: cartSnap.items.map((i) => ({
-            priceId: i.priceId,
-            quantity: i.qty
-          })),
-          successUrl:
-            window.location.origin + "/checkoutsuccess.html",
-          cancelUrl:
-            window.location.origin + "/checkoutcancel.html",
-          customerEmail: leadSnap.email,
-          lead: leadSnap
-        })
-      });
+checkoutBtn?.addEventListener("click", () => {
 
-      if (!res.ok) throw new Error("Checkout failed");
+  if(cart.length === 0) return;
 
-      const data = await res.json();
+  const name = leadName?.value.trim();
+  const business = leadBusiness?.value.trim();
+  const email = leadEmail?.value.trim();
 
-      if (!data.url) throw new Error("Missing checkout URL");
+  if(!name || !business || !email){
 
-      window.location.href = data.url;
+    alert("Please complete Name, Business name, and Email.");
 
-    } catch (err) {
+    return;
 
-      setStatus(
-        "Checkout temporarily unavailable. Please try again."
-      );
+  }
 
-      checkoutBtn.disabled = false;
-      checkoutBtn.textContent = "Proceed to secure checkout";
-    }
-  });
+  if(!scopeConfirm?.checked){
 
-  (function init() {
-    const params = new URLSearchParams(window.location.search);
+    alert("Please confirm the scope agreement.");
 
-    const service = params.get("service");
+    return;
 
-    if (service) addToCart(service);
+  }
 
-    renderCart();
-  })();
+  checkoutBtn.disabled = true;
+  checkoutBtn.textContent = "Redirecting…";
+
+  const service = cart[0].service;
+
+  const link = PAYMENT_LINKS[service];
+
+  if(!link){
+
+    alert("Checkout configuration error.");
+    return;
+
+  }
+
+  window.location.href = link;
+
+});
+
+renderCart();
 
 })();
