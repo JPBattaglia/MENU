@@ -36,6 +36,7 @@ function computeTotal(){
   });
 
   return total;
+
 }
 
 function renderCart(){
@@ -63,21 +64,21 @@ function renderCart(){
     li.className = "cart-item";
 
     li.innerHTML = `
-    <div>
-    <strong>${item.name}</strong>
-    <small>${formatUSD(item.price)}</small>
-    </div>
+<div>
+<strong>${item.name}</strong>
+<small>${formatUSD(item.price)}</small>
+</div>
 
-    <div class="qty">
+<div class="qty">
 
-    <button data-minus="${item.sku}">−</button>
+<button data-minus="${item.sku}">−</button>
 
-    <span>${item.qty}</span>
+<span>${item.qty}</span>
 
-    <button data-plus="${item.sku}">+</button>
+<button data-plus="${item.sku}">+</button>
 
-    </div>
-    `;
+</div>
+`;
 
     cartItemsEl.appendChild(li);
 
