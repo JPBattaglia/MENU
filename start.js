@@ -1,13 +1,6 @@
-// start.js — MULTI ITEM CART + STRIPE PAYMENT LINKS
+// start.js — MULTI ITEM CART + STRIPE CHECKOUT SESSION
 
 (() => {
-
-const PAYMENT_LINKS = {
-  "conversion": "https://buy.stripe.com/bJeaEXgRldkk7yQ7Sx9IQ0c",
-  "visibility": "https://buy.stripe.com/00wfZh58D4NOdXe8WB9IQ0b",
-  "accessibility": "https://buy.stripe.com/bJebJ144zfss6uM1u99IQ0a",
-  "menu": "https://buy.stripe.com/4gMaEX6cH8002ewb4J9IQ09"
-};
 
 const cart = new Map();
 
@@ -28,209 +21,218 @@ const leadNotes = document.getElementById("lead_notes");
 const scopeConfirm = document.getElementById("scopeConfirm");
 
 function formatUSD(cents){
-
-return (cents / 100).toLocaleString(undefined,{
-style:"currency",
-currency:"USD"
-});
-
+  return (cents / 100).toLocaleString(undefined,{
+    style:"currency",
+    currency:"USD"
+  });
 }
 
 function computeTotal(){
 
-let total = 0;
+  let total = 0;
 
-cart.forEach(item=>{
-total += item.price * item.qty;
-});
+  cart.forEach(item=>{
+    total += item.price * item.qty;
+  });
 
-return total;
-
+  return total;
 }
 
 function renderCart(){
 
-cartItemsEl.innerHTML = "";
+  cartItemsEl.innerHTML = "";
 
-if(cart.size === 0){
+  if(cart.size === 0){
 
-const li = document.createElement("li");
-li.innerHTML = "<span style='opacity:.6'>Cart is empty</span>";
+    const li = document.createElement("li");
+    li.innerHTML = "<span style='opacity:.6'>Cart is empty</span>";
 
-cartItemsEl.appendChild(li);
+    cartItemsEl.appendChild(li);
 
-cartTotalEl.textContent = "$0";
+    cartTotalEl.textContent = "$0";
 
-continueBtn.disabled = true;
+    continueBtn.disabled = true;
 
-return;
+    return;
 
-}
+  }
 
-cart.forEach(item=>{
+  cart.forEach(item=>{
 
-const li = document.createElement("li");
-li.className = "cart-item";
+    const li = document.createElement("li");
+    li.className = "cart-item";
 
-li.innerHTML = `
-<div>
-<strong>${item.name}</strong>
-<small>${formatUSD(item.price)}</small>
-</div>
+    li.innerHTML = `
+    <div>
+    <strong>${item.name}</strong>
+    <small>${formatUSD(item.price)}</small>
+    </div>
 
-<div class="qty">
+    <div class="qty">
 
-<button data-minus="${item.sku}">−</button>
+    <button data-minus="${item.sku}">−</button>
 
-<span>${item.qty}</span>
+    <span>${item.qty}</span>
 
-<button data-plus="${item.sku}">+</button>
+    <button data-plus="${item.sku}">+</button>
 
-</div>
-`;
+    </div>
+    `;
 
-cartItemsEl.appendChild(li);
+    cartItemsEl.appendChild(li);
 
-});
+  });
 
-cartTotalEl.textContent = formatUSD(computeTotal());
+  cartTotalEl.textContent = formatUSD(computeTotal());
 
-continueBtn.disabled = false;
+  continueBtn.disabled = false;
 
 }
 
 function addToCart(sku,name,price){
 
-if(cart.has(sku)){
+  if(cart.has(sku)){
 
-const item = cart.get(sku);
-item.qty++;
+    const item = cart.get(sku);
+    item.qty++;
 
-cart.set(sku,item);
+    cart.set(sku,item);
 
-}else{
+  }else{
 
-cart.set(sku,{
-sku,
-name,
-price,
-qty:1
-});
+    cart.set(sku,{
+      sku,
+      name,
+      price,
+      qty:1
+    });
 
-}
+  }
 
-renderCart();
+  renderCart();
 
 }
 
 function changeQty(sku,delta){
 
-if(!cart.has(sku)) return;
+  if(!cart.has(sku)) return;
 
-const item = cart.get(sku);
+  const item = cart.get(sku);
 
-item.qty += delta;
+  item.qty += delta;
 
-if(item.qty <= 0){
+  if(item.qty <= 0){
 
-cart.delete(sku);
+    cart.delete(sku);
 
-}else{
+  }else{
 
-cart.set(sku,item);
+    cart.set(sku,item);
 
-}
+  }
 
-renderCart();
+  renderCart();
 
 }
 
 document.querySelectorAll(".js-add").forEach(btn=>{
 
-btn.addEventListener("click",()=>{
+  btn.addEventListener("click",()=>{
 
-const card = btn.closest(".service-card");
+    const card = btn.closest(".service-card");
 
-const sku = card.dataset.sku;
-const name = card.dataset.name;
-const price = Number(card.dataset.price);
+    const sku = card.dataset.sku;
+    const name = card.dataset.name;
+    const price = Number(card.dataset.price);
 
-addToCart(sku,name,price);
+    addToCart(sku,name,price);
 
-});
+  });
 
 });
 
 cartItemsEl.addEventListener("click",(e)=>{
 
-const plus = e.target.dataset.plus;
-const minus = e.target.dataset.minus;
+  const plus = e.target.dataset.plus;
+  const minus = e.target.dataset.minus;
 
-if(plus) changeQty(plus,1);
+  if(plus) changeQty(plus,1);
 
-if(minus) changeQty(minus,-1);
+  if(minus) changeQty(minus,-1);
 
 });
 
 clearBtn?.addEventListener("click",()=>{
 
-cart.clear();
+  cart.clear();
 
-renderCart();
+  renderCart();
 
 });
 
 continueBtn?.addEventListener("click",()=>{
 
-if(cart.size === 0) return;
+  if(cart.size === 0) return;
 
-intakeStep?.classList.add("show");
+  intakeStep?.classList.add("show");
 
 });
 
-checkoutBtn?.addEventListener("click",()=>{
+checkoutBtn?.addEventListener("click",async ()=>{
 
-if(cart.size === 0) return;
+  if(cart.size === 0) return;
 
-const name = leadName.value.trim();
-const business = leadBusiness.value.trim();
-const email = leadEmail.value.trim();
+  const name = leadName.value.trim();
+  const business = leadBusiness.value.trim();
+  const email = leadEmail.value.trim();
 
-if(!name || !business || !email){
+  if(!name || !business || !email){
 
-alert("Please complete Name, Business name, and Email.");
+    alert("Please complete Name, Business name, and Email.");
+    return;
 
-return;
+  }
 
-}
+  if(!scopeConfirm.checked){
 
-if(!scopeConfirm.checked){
+    alert("Please confirm the scope agreement.");
+    return;
 
-alert("Please confirm the scope agreement.");
+  }
 
-return;
+  checkoutBtn.disabled = true;
+  checkoutBtn.textContent = "Redirecting…";
 
-}
+  try{
 
-checkoutBtn.disabled = true;
-checkoutBtn.textContent = "Redirecting…";
+    const items = [...cart.values()].map(item=>({
+      key: item.sku,
+      qty: item.qty
+    }));
 
-/* choose first item payment link */
+    const response = await fetch("/api/create-checkout-session",{
+      method:"POST",
+      headers:{
+        "Content-Type":"application/json"
+      },
+      body: JSON.stringify({ items })
+    });
 
-const firstItem = [...cart.values()][0];
+    const data = await response.json();
 
-const link = PAYMENT_LINKS[firstItem.sku];
+    if(!data.url){
+      throw new Error("Missing checkout URL");
+    }
 
-if(!link){
+    window.location.href = data.url;
 
-alert("Checkout configuration error.");
-checkoutBtn.disabled=false;
+  }catch(err){
 
-return;
+    alert("Checkout connection error.");
+    checkoutBtn.disabled=false;
+    checkoutBtn.textContent="Proceed to Secure Checkout";
 
-}
-
-window.location.href = link;
+  }
 
 });
 
