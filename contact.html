@@ -1,282 +1,494 @@
-<!-- contact.html — FULL FILE -->
-
+<!-- start.html — FULL FILE (Cart UI + Pre-checkout Intake + Stripe Checkout) -->
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>MENU-MADE — Start</title>
+  <meta name="description" content="Choose services, add to cart, enter quick details, and checkout securely with Stripe.">
 
-<title>MENU-MADE — Start</title>
-<meta name="description" content="Choose services, add to cart, and start your upgrade.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Philosopher:wght@400;700&family=Righteous&display=swap" rel="stylesheet">
 
-<link rel="stylesheet" href="main.css">
-<link rel="stylesheet" href="mm-a11y-widget.css">
+  <link rel="stylesheet" href="main.css">
 
+  <!-- Page-only layout (no main.css edits) -->
+  <style>
+    .start-grid{
+      display:grid;
+      grid-template-columns: 1.15fr .85fr;
+      gap: 28px;
+      align-items:start;
+    }
+    @media (max-width: 900px){
+      .start-grid{ grid-template-columns: 1fr; }
+    }
+
+    /* Symmetry: 2x2 on desktop; stacked on mobile */
+    .product-grid{
+      display:grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 28px;
+    }
+    @media (max-width: 700px){
+      .product-grid{ grid-template-columns: 1fr; }
+    }
+
+    .product-grid .service-card{
+      height:100%;
+      display:flex;
+      flex-direction:column;
+    }
+    .card-actions{
+      margin-top:auto;
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:14px;
+      flex-wrap:wrap;
+    }
+    .price-tag{
+      font-weight:900;
+      color: var(--brand-soft);
+    }
+
+    /* Cart panel */
+    .cart{
+      position: sticky;
+      top: 110px;
+    }
+    @media (max-width: 900px){
+      .cart{ position: static; }
+    }
+
+    .cart-panel{
+      border-radius: var(--radius);
+      border: 1px solid rgba(0,214,230,.35);
+      background: rgba(0,0,0,.28);
+      box-shadow: 0 18px 40px rgba(0,0,0,.22);
+      padding: 18px;
+      backdrop-filter: blur(6px);
+    }
+
+    .cart-head{
+      display:flex;
+      align-items:flex-start;
+      justify-content:space-between;
+      gap:14px;
+      margin-bottom: 10px;
+    }
+    .cart-head h3{
+      margin:0;
+      font-family:'Righteous',sans-serif;
+      font-size: 22px;
+    }
+    .cart-sub{
+      margin:6px 0 0;
+      color: var(--muted);
+      font-size: 14px;
+      line-height: 1.35;
+    }
+
+    .cart-items{
+      margin: 14px 0 10px;
+      padding: 0;
+      list-style: none;
+      border-top: 1px solid rgba(255,255,255,.08);
+    }
+    .cart-item{
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:12px;
+      padding: 12px 0;
+      border-bottom: 1px solid rgba(255,255,255,.08);
+    }
+    .cart-item strong{ display:block; }
+    .cart-item small{
+      display:block;
+      color: var(--muted);
+      margin-top: 2px;
+    }
+
+    .qty{
+      display:flex;
+      align-items:center;
+      gap:8px;
+      white-space:nowrap;
+    }
+    .qty button{
+      width: 32px;
+      height: 32px;
+      border-radius: 10px;
+      border: 1px solid rgba(0,214,230,.35);
+      background: rgba(0,214,230,.10);
+      color: #fff;
+      font-weight: 900;
+      cursor:pointer;
+    }
+    .qty button:hover{ filter: brightness(1.1); }
+
+    .cart-total{
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:14px;
+      margin-top: 12px;
+      padding-top: 12px;
+      border-top: 1px solid rgba(255,255,255,.08);
+      font-size: 16px;
+    }
+    .cart-total strong{
+      font-size: 18px;
+      color: var(--brand-soft);
+    }
+
+    .cart-actions{
+      margin-top: 14px;
+      display:flex;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    .btn.secondary{
+      border: 2px solid rgba(255,255,255,.18);
+      color: #fff;
+    }
+
+    .muted-note{
+      margin-top: 10px;
+      font-size: 13.5px;
+      color: var(--muted);
+      line-height: 1.35;
+    }
+
+    .status{
+      margin-top: 10px;
+      font-size: 13.5px;
+      color: var(--muted);
+      display:none;
+    }
+    .status.show{ display:block; }
+
+    /* Intake step panel (revealed after Continue) */
+    .intake{
+      margin-top: 14px;
+      display:none;
+    }
+    .intake.show{ display:block; }
+
+    .field{
+      display:flex;
+      flex-direction:column;
+      gap:6px;
+      margin-bottom: 12px;
+    }
+    .field label{
+      font-weight: 800;
+      font-size: 13.5px;
+    }
+    .field input, .field textarea{
+      width: 100%;
+      border-radius: 14px;
+      border: 1px solid rgba(0,214,230,.25);
+      background: rgba(0,0,0,.22);
+      color: #fff;
+      padding: 10px 12px;
+      font: inherit;
+    }
+    .field textarea{ min-height: 90px; resize: vertical; }
+
+    .two{
+      display:grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+    }
+    @media (max-width: 520px){
+      .two{ grid-template-columns: 1fr; }
+    }
+
+    .mini{
+      font-size: 12.5px;
+      color: var(--muted);
+      line-height: 1.35;
+    }
+
+    .checkline{
+      display:flex;
+      align-items:flex-start;
+      gap:10px;
+      margin: 10px 0 0;
+    }
+    .checkline input{
+      margin-top: 3px;
+    }
+  </style>
 </head>
 
 <body>
 
 <header class="header">
+  <div class="container header-inner">
 
-<div class="container header-inner">
+    <div class="brand">
+      <a class="gear-link" href="index.html" aria-label="Home">
+        <img src="MENU=.png" class="brand-mark" alt="Menu-Made gear">
+      </a>
 
-<div class="brand">
+      <a class="word-link" href="about.html" aria-label="About">
+        <img src="MENU1.png" class="brand-word" alt="Menu-Made">
+      </a>
+    </div>
 
-<a class="gear-link" href="index.html">
-<img src="MENU=.png" class="brand-mark" alt="Menu-Made gear">
-</a>
+    <input class="nav-toggle" type="checkbox" id="navToggle" aria-label="Toggle menu">
 
-<a class="word-link" href="about.html">
-<img src="MENU1.png" class="brand-word" alt="Menu-Made">
-</a>
+    <label class="gear-burger" for="navToggle" aria-label="Open menu" role="button">
+      <img src="MENU=.png" alt="Menu">
+    </label>
 
-</div>
+    <nav class="nav" aria-label="Primary">
+      <a href="index.html">Home</a>
+      <a href="services.html">Services</a>
+      <a href="about.html">About</a>
+      <a href="accessability.html">Access</a>
+      <a class="nav-cta active" href="#checkout">Start</a>
+    </nav>
 
-<input class="nav-toggle" type="checkbox" id="navToggle">
-
-<label class="gear-burger" for="navToggle">
-<img src="MENU=.png" alt="Menu">
-</label>
-
-<nav class="nav">
-
-<a href="index.html">Home</a>
-<a href="services.html">Services</a>
-<a href="about.html">About</a>
-<a href="accessability.html">Access</a>
-<a class="nav-cta active" href="contact.html">Start</a>
-
-</nav>
-
-</div>
+  </div>
 </header>
-
 
 <main>
 
-
-<section class="section section-image">
-
-<div class="container">
-
-<header class="section-head">
-<h2>Choose your services</h2>
-<p>Add one service or combine multiple.</p>
-</header>
-
-
-<div class="product-grid">
-
-
-<!-- SERVICE 1 -->
-<article
-class="service-card"
-data-sku="online_menu_qr"
-data-name="Online Menu + QR"
-data-price="12900"
->
-
-<h3>Online Menu + QR</h3>
-
-<p>
-Mobile-first menu pages customers can open instantly.
-Clean layout, fast load, QR-ready.
-</p>
-
-<div class="card-actions">
-
-<span class="price-tag">$129</span>
-
-<button class="btn primary js-add" type="button">
-Add
-</button>
-
-</div>
-
-</article>
-
-
-
-<!-- SERVICE 2 -->
-<article
-class="service-card"
-data-sku="conversion_fix"
-data-name="Conversion Fix"
-data-price="29900"
->
-
-<h3>Conversion Fix</h3>
-
-<p>
-Fix what’s costing you calls and orders:
-clarity, CTAs, layout flow, mobile usability, and speed blockers.
-</p>
-
-<div class="card-actions">
-
-<span class="price-tag">$299</span>
-
-<button class="btn primary js-add" type="button">
-Add
-</button>
-
-</div>
-
-</article>
-
-
-
-<!-- SERVICE 3 -->
-<article
-class="service-card"
-data-sku="google_visibility"
-data-name="Google Visibility"
-data-price="14900"
->
-
-<h3>Google Visibility</h3>
-
-<p>
-Improve Search and Maps performance with stronger on-page signals
-that help customers find you and take action.
-</p>
-
-<div class="card-actions">
-
-<span class="price-tag">$149</span>
-
-<button class="btn primary js-add" type="button">
-Add
-</button>
-
-</div>
-
-</article>
-
-
-
-<!-- SERVICE 4 -->
-<article
-class="service-card"
-data-sku="accessibility_upgrade"
-data-name="Accessibility Upgrade"
-data-price="25000"
->
-
-<h3>Accessibility Upgrade</h3>
-
-<p>
-Site-wide accessibility toolkit plus usability fixes
-for keyboard navigation, contrast, labels, and forms.
-</p>
-
-<div class="card-actions">
-
-<span class="price-tag">$250 / year</span>
-
-<button class="btn primary js-add" type="button">
-Add
-</button>
-
-</div>
-
-</article>
-
-
-</div>
-
-
-
-<div class="cart-panel">
-
-<h3>Your cart</h3>
-
-<ul id="cartItems"></ul>
-
-<div class="cart-total">
-<span>Total</span>
-<strong id="cartTotal">$0</strong>
-</div>
-
-<div class="cart-actions">
-
-<button class="btn primary" id="continueBtn" disabled>
-Continue
-</button>
-
-<button class="btn secondary" id="clearBtn">
-Clear
-</button>
-
-</div>
-
-
-<div class="intake" id="intakeStep">
-
-<div class="field">
-<label>Name *</label>
-<input id="lead_name" type="text">
-</div>
-
-<div class="field">
-<label>Business *</label>
-<input id="lead_business" type="text">
-</div>
-
-<div class="field">
-<label>Email *</label>
-<input id="lead_email" type="email">
-</div>
-
-<div class="field">
-<label>Phone</label>
-<input id="lead_phone" type="tel">
-</div>
-
-<div class="field">
-<label>Notes</label>
-<textarea id="lead_notes"></textarea>
-</div>
-
-<label>
-<input type="checkbox" id="scopeConfirm">
-I confirm this purchase is within standard scope.
-</label>
-
-<button class="btn primary" id="checkoutBtn">
-Proceed to secure checkout
-</button>
-
-</div>
-
-</div>
-
-</div>
-
+<section class="hero" aria-label="Start">
+  <div class="container hero-grid">
+
+    <div class="hero-copy">
+      <span class="pill">Cart → quick details → secure checkout</span>
+      <h1>Start</h1>
+      <p>
+        Choose services, add them to your cart, then enter quick contact details before checkout.
+        This lets we follow up even if checkout is interrupted.
+      </p>
+
+      <div class="hero-actions">
+        <a class="btn primary" href="#checkout">Choose Services</a>
+        <a class="btn ghost" href="services.html">View Services</a>
+      </div>
+
+      <p class="muted-note">
+        Fixed prices cover standard scope. If your request is custom, use Notes so we can confirm details quickly.
+      </p>
+    </div>
+
+    <div class="hero-visual">
+      <div class="media-frame">
+        <img src="StartSuccess.png" alt="Menu-Made start preview" class="hero-image">
+        <div class="media-overlay">
+          <strong>Fast ROI</strong>
+          <span>Clear deliverables. Clean execution.</span>
+        </div>
+      </div>
+    </div>
+
+  </div>
 </section>
 
+<section class="section section-image" id="checkout" aria-label="Checkout">
+  <div class="container">
+
+    <header class="section-head">
+      <h2>Choose your services</h2>
+      <p>4 core options. Add one or combine multiple. Checkout is Stripe-hosted and secure.</p>
+    </header>
+
+    <div class="start-grid">
+
+      <!-- LEFT: Products -->
+      <div>
+
+        <div class="product-grid" aria-label="Service options">
+
+          <article class="service-card" data-sku="online_menu_qr" data-name="Online Menu + QR" data-price="12900" data-price-label="$129" data-price-id="price_1T6OzbHw7f6jhUv8Epy5oYMf">
+            <h3>Online Menu + QR</h3>
+            <p>Mobile-first menu page customers open instantly. Clean layout, fast load, QR-ready.</p>
+            <div class="card-actions">
+              <span class="price-tag">$129</span>
+              <button class="btn primary js-add" type="button">Add</button>
+            </div>
+          </article>
+
+          <article class="service-card" data-sku="conversion_fix" data-name="Conversion Fix" data-price="29900" data-price-label="$299" data-price-id="price_1T6P5tHw7f6jhUv8zQ7pGEoJ">
+            <h3>Conversion Fix</h3>
+            <p>Fix what blocks action: clarity, CTAs, layout flow, mobile usability, speed issues.</p>
+            <div class="card-actions">
+              <span class="price-tag">$299</span>
+              <button class="btn primary js-add" type="button">Add</button>
+            </div>
+          </article>
+
+          <article class="service-card" data-sku="google_visibility" data-name="Google Visibility" data-price="14900" data-price-label="$149" data-price-id="price_1T6iC6Hw7f6jhUv8iYYYZK0T">
+            <h3>Google Visibility</h3>
+            <p>Improve Search &amp; Maps performance with on-page signals that convert views into action.</p>
+            <div class="card-actions">
+              <span class="price-tag">$149</span>
+              <button class="btn primary js-add" type="button">Add</button>
+            </div>
+          </article>
+
+          <article class="service-card" data-sku="accessibility_upgrade" data-name="Accessibility Upgrade (Yearly)" data-price="25000" data-price-label="$250 / year" data-price-id="price_1T6j0xHw7f6jhUv8Ci1ZQ9qS">
+            <h3>Accessibility Upgrade</h3>
+            <p>Site-wide toolkit + usability fixes for keyboard navigation, contrast, labels, and forms.</p>
+            <div class="card-actions">
+              <span class="price-tag">$250 / year</span>
+              <button class="btn primary js-add" type="button">Add</button>
+            </div>
+          </article>
+
+        </div>
+
+        <div style="height:24px;"></div>
+
+        <div class="service-card">
+          <h3>What happens next</h3>
+          <p>
+            Add services → enter quick details → checkout securely. After payment, you’ll see confirmation and we’ll follow up with next steps.
+          </p>
+        </div>
+
+      </div>
+
+      <!-- RIGHT: Cart + Intake + Checkout -->
+      <aside class="cart" aria-label="Cart">
+        <div class="cart-panel">
+          <div class="cart-head">
+            <div>
+              <h3>Your cart</h3>
+              <p class="cart-sub">Add one service or combine multiple. Then continue.</p>
+            </div>
+          </div>
+
+          <ul class="cart-items" id="cartItems" aria-live="polite"></ul>
+
+          <div class="cart-total">
+            <span>Total</span>
+            <strong id="cartTotal">$0</strong>
+          </div>
+
+          <div class="cart-actions">
+            <button class="btn primary" id="continueBtn" type="button" disabled>Continue</button>
+            <button class="btn secondary" id="clearBtn" type="button" disabled>Clear</button>
+          </div>
+
+          <div class="status" id="status"></div>
+
+          <div class="intake" id="intakeStep" aria-label="Quick details">
+            <div style="height:10px;"></div>
+
+            <div class="field">
+              <label for="lead_name">Name *</label>
+              <input id="lead_name" type="text" autocomplete="name" required>
+            </div>
+
+            <div class="field">
+              <label for="lead_business">Business name *</label>
+              <input id="lead_business" type="text" autocomplete="organization" required>
+            </div>
+
+            <div class="two">
+              <div class="field">
+                <label for="lead_email">Email *</label>
+                <input id="lead_email" type="email" autocomplete="email" required>
+              </div>
+
+              <div class="field">
+                <label for="lead_phone">Phone</label>
+                <input id="lead_phone" type="tel" autocomplete="tel">
+              </div>
+            </div>
+
+            <div class="field">
+              <label for="lead_notes">Notes (optional)</label>
+              <textarea id="lead_notes" placeholder="Anything we should know (menu link, priorities, deadline, access details, etc.)"></textarea>
+              <div class="mini">If your request is custom, mention it here so we can confirm before work begins.</div>
+            </div>
+
+            <div class="checkline">
+              <input id="scopeConfirm" type="checkbox" required>
+              <label for="scopeConfirm" class="mini">
+                I confirm this purchase is for <strong style="color:#fff;">standard scope</strong> as described on the Services page.
+              </label>
+            </div>
+
+            <div class="cart-actions" style="margin-top:12px;">
+              <button class="btn primary" id="checkoutBtn" type="button">Proceed to secure checkout</button>
+              <button class="btn secondary" id="backBtn" type="button">Back</button>
+            </div>
+
+            <div class="mini" style="margin-top:10px;">
+              Your details are used for follow-up and project start. Checkout is handled by Stripe.
+            </div>
+          </div>
+
+          <p class="muted-note">
+            After Continue, enter quick details. This prevents “paid but no contact info” and lets us recover interrupted checkouts.
+          </p>
+
+          <div style="margin-top:10px;">
+            <a class="cta-pill" href="services.html">Review services</a>
+            <a class="cta-pill" href="accessability.html" style="margin-left:10px;">Accessibility</a>
+          </div>
+        </div>
+      </aside>
+
+    </div>
+
+  </div>
+</section>
+
+<section class="section section-image" aria-label="Final CTA">
+  <div class="container cta">
+    <div>
+      <h2>Ready?</h2>
+      <p>Add services to your cart, continue, then checkout securely.</p>
+    </div>
+
+    <div class="cta-actions">
+      <a class="btn primary" href="#checkout">Start checkout</a>
+      <a class="btn ghost" href="index.html">Home</a>
+    </div>
+  </div>
+</section>
 
 </main>
 
-
 <footer class="footer">
+  <div class="container footer-inner">
+    <div class="footer-copy">© 2019 MENU-MADE</div>
 
-<div class="container footer-inner">
+    <a class="footer-logo" href="index.html" aria-label="Home">
+      <img src="MENU1.png" alt="MENU-MADE">
+    </a>
 
-<div class="footer-copy">
-© 2019 MENU-MADE
-</div>
+    <div class="footer-social" aria-label="Social links">
+      <a class="social-icon" href="https://www.facebook.com/MenuMade.OnlinePresence" target="_blank" rel="noopener" aria-label="Facebook">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14 8.5V7c0-.8.5-1 1-1h2V3h-3c-2.8 0-4 1.7-4 4v1.5H8V12h2v9h4v-9h2.7l.3-3.5H14z"/></svg>
+      </a>
 
-<a class="footer-logo" href="index.html">
-<img src="MENU1.png" alt="MENU-MADE">
-</a>
+      <a class="social-icon" href="https://www.linkedin.com/company/menu-made/" target="_blank" rel="noopener" aria-label="LinkedIn">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6.5 6.5A2.5 2.5 0 1 1 6.5 1.5a2.5 2.5 0 0 1 0 5zM4 22V8h5v14H4zm7.5-14H16v1.9c.7-1.2 2-2.3 4.2-2.3 3 0 4.8 2 4.8 6.2V22h-5v-6.3c0-2-.6-3.1-2.1-3.1-1.1 0-1.7.8-2 1.5-.1.3-.1.8-.1 1.2V22h-5V8z"/></svg>
+      </a>
 
-</div>
-
+      <a class="social-icon" href="https://www.instagram.com/menumade.gram/" target="_blank" rel="noopener" aria-label="Instagram">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 2h10a5 5 0 0 1 5 5v10a5 5 0 0 1-5 5H7a5 5 0 0 1-5-5V7a5 5 0 0 1 5-5zm10 2H7a3 3 0 0 0-3 3v10a3 3 0 0 0 3 3h10a3 3 0 0 0 3-3V7a3 3 0 0 0-3-3zm-5 4.2a3.8 3.8 0 1 1 0 7.6 3.8 3.8 0 0 1 0-7.6zm0 2a1.8 1.8 0 1 0 0 3.6 1.8 1.8 0 0 0 0-3.6zM18 6.3a.9.9 0 1 1 0 1.8.9.9 0 0 1 0-1.8z"/></svg>
+      </a>
+    </div>
+  </div>
 </footer>
 
-
 <script src="start.js" defer></script>
+
+<link rel="stylesheet" href="mm-a11y-widget.css">
 <script src="mm-a11y-widget.js" defer></script>
 
 </body>

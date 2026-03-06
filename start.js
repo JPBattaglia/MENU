@@ -10,8 +10,10 @@ const cartTotalEl = document.getElementById("cartTotal");
 const continueBtn = document.getElementById("continueBtn");
 const clearBtn = document.getElementById("clearBtn");
 const checkoutBtn = document.getElementById("checkoutBtn");
+const backBtn = document.getElementById("backBtn");
 
 const intakeStep = document.getElementById("intakeStep");
+const statusEl = document.getElementById("status");
 
 const leadName = document.getElementById("lead_name");
 const leadBusiness = document.getElementById("lead_business");
@@ -19,6 +21,8 @@ const leadEmail = document.getElementById("lead_email");
 const leadPhone = document.getElementById("lead_phone");
 const leadNotes = document.getElementById("lead_notes");
 const scopeConfirm = document.getElementById("scopeConfirm");
+
+const CHECKOUT_API = "https://menu-made.com/api/create-checkout-session";
 
 function formatUSD(cents){
   return (cents / 100).toLocaleString(undefined,{
@@ -39,6 +43,12 @@ function computeTotal(){
 
 }
 
+function setStatus(message = ""){
+  if(!statusEl) return;
+  statusEl.textContent = message;
+  statusEl.classList.toggle("show", !!message);
+}
+
 function renderCart(){
 
   cartItemsEl.innerHTML = "";
@@ -52,7 +62,9 @@ function renderCart(){
 
     cartTotalEl.textContent = "$0";
 
-    continueBtn.disabled = true;
+    if (continueBtn) continueBtn.disabled = true;
+    if (clearBtn) clearBtn.disabled = true;
+    if (checkoutBtn) checkoutBtn.disabled = true;
 
     return;
 
@@ -71,11 +83,11 @@ function renderCart(){
 
 <div class="qty">
 
-<button data-minus="${item.sku}">−</button>
+<button type="button" data-minus="${item.sku}">−</button>
 
 <span>${item.qty}</span>
 
-<button data-plus="${item.sku}">+</button>
+<button type="button" data-plus="${item.sku}">+</button>
 
 </div>
 `;
@@ -86,7 +98,9 @@ function renderCart(){
 
   cartTotalEl.textContent = formatUSD(computeTotal());
 
-  continueBtn.disabled = false;
+  if (continueBtn) continueBtn.disabled = false;
+  if (clearBtn) clearBtn.disabled = false;
+  if (checkoutBtn) checkoutBtn.disabled = false;
 
 }
 
@@ -141,18 +155,20 @@ document.querySelectorAll(".js-add").forEach(btn=>{
   btn.addEventListener("click",()=>{
 
     const card = btn.closest(".service-card");
+    if(!card) return;
 
     const sku = card.dataset.sku;
     const name = card.dataset.name;
     const price = Number(card.dataset.price);
 
     addToCart(sku,name,price);
+    setStatus("");
 
   });
 
 });
 
-cartItemsEl.addEventListener("click",(e)=>{
+cartItemsEl?.addEventListener("click",(e)=>{
 
   const plus = e.target.dataset.plus;
   const minus = e.target.dataset.minus;
@@ -166,7 +182,7 @@ cartItemsEl.addEventListener("click",(e)=>{
 clearBtn?.addEventListener("click",()=>{
 
   cart.clear();
-
+  setStatus("");
   renderCart();
 
 });
@@ -176,6 +192,14 @@ continueBtn?.addEventListener("click",()=>{
   if(cart.size === 0) return;
 
   intakeStep?.classList.add("show");
+  setStatus("");
+
+});
+
+backBtn?.addEventListener("click",()=>{
+
+  intakeStep?.classList.remove("show");
+  setStatus("");
 
 });
 
@@ -186,6 +210,8 @@ checkoutBtn?.addEventListener("click",async ()=>{
   const name = leadName.value.trim();
   const business = leadBusiness.value.trim();
   const email = leadEmail.value.trim();
+  const phone = leadPhone.value.trim();
+  const notes = leadNotes.value.trim();
 
   if(!name || !business || !email){
 
@@ -203,6 +229,7 @@ checkoutBtn?.addEventListener("click",async ()=>{
 
   checkoutBtn.disabled = true;
   checkoutBtn.textContent = "Redirecting…";
+  setStatus("");
 
   try{
 
@@ -211,18 +238,27 @@ checkoutBtn?.addEventListener("click",async ()=>{
       qty: item.qty
     }));
 
-    const response = await fetch("/api/create-checkout-session",{
+    const response = await fetch(CHECKOUT_API,{
       method:"POST",
       headers:{
         "Content-Type":"application/json"
       },
-      body: JSON.stringify({ items })
+      body: JSON.stringify({
+        items,
+        lead: {
+          name,
+          business,
+          email,
+          phone,
+          notes
+        }
+      })
     });
 
-    const data = await response.json();
+    const data = await response.json().catch(()=>({}));
 
-    if(!data.url){
-      throw new Error("Missing checkout URL");
+    if(!response.ok || !data.url){
+      throw new Error(data.error || "Checkout connection error.");
     }
 
     window.location.href = data.url;
@@ -230,8 +266,8 @@ checkoutBtn?.addEventListener("click",async ()=>{
   }catch(err){
 
     alert("Checkout connection error.");
-    checkoutBtn.disabled=false;
-    checkoutBtn.textContent="Proceed to Secure Checkout";
+    checkoutBtn.disabled = false;
+    checkoutBtn.textContent = "Proceed to Secure Checkout";
 
   }
 
