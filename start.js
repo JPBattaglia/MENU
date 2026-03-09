@@ -1,129 +1,147 @@
-// menu-checkout Worker (Cloudflare)
-// Handles: POST /api/create-checkout-session
-// Returns: { url } for Stripe Checkout
+// start.js — FULL FILE
 
-export default {
-  async fetch(request, env) {
-    const url = new URL(request.url);
+const cart = {};
+const itemsEl = document.getElementById("cartItems");
+const totalEl = document.getElementById("cartTotal");
+const continueBtn = document.getElementById("continueBtn");
+const clearBtn = document.getElementById("clearBtn");
+const intakeStep = document.getElementById("intakeStep");
+const checkoutBtn = document.getElementById("checkoutBtn");
+const backBtn = document.getElementById("backBtn");
 
-    // ---- CORS (so your site can call this endpoint) ----
-    const allowedOrigins = new Set([
-      "https://menu-made.com",
-      "http://127.0.0.1:5500",
-      "http://localhost:5500"
-    ]);
+function renderCart() {
+  itemsEl.innerHTML = "";
+  let total = 0;
 
-    const origin = request.headers.get("Origin") || "";
-    const allowOrigin = allowedOrigins.has(origin) ? origin : "https://menu-made.com";
+  Object.values(cart).forEach(item => {
 
-    const corsHeaders = {
-      "Access-Control-Allow-Origin": allowOrigin,
-      "Access-Control-Allow-Methods": "POST, OPTIONS",
-      "Access-Control-Allow-Headers": "Content-Type",
-      "Vary": "Origin",
-    };
+    const li = document.createElement("li");
+    li.className = "cart-item";
 
-    if (request.method === "OPTIONS") {
-      return new Response(null, { status: 204, headers: corsHeaders });
-    }
+    li.innerHTML = `
+      <div>
+        <strong>${item.name}</strong>
+        <small>${item.priceLabel}</small>
+      </div>
 
-    if (request.method !== "POST") {
-      return new Response("Method Not Allowed", { status: 405, headers: corsHeaders });
-    }
+      <div class="qty">
+        <button data-dec="${item.key}">−</button>
+        <span>${item.qty}</span>
+        <button data-inc="${item.key}">+</button>
+      </div>
+    `;
 
-    if (url.pathname !== "/api/create-checkout-session") {
-      return new Response("Not Found", { status: 404, headers: corsHeaders });
-    }
+    itemsEl.appendChild(li);
+    total += item.price * item.qty;
 
-    // ---- Validate Stripe key exists ----
-    if (!env.STRIPE_SECRET_KEY) {
-      return json({ error: "Missing STRIPE_SECRET_KEY in Worker environment variables." }, 500, corsHeaders);
-    }
+  });
 
-    // ---- Read payload ----
-    let payload;
-    try {
-      payload = await request.json();
-    } catch {
-      return json({ error: "Invalid JSON body." }, 400, corsHeaders);
-    }
+  totalEl.textContent = "$" + (total / 100).toFixed(2);
 
-    const items = Array.isArray(payload?.items) ? payload.items : [];
-    if (items.length === 0) {
-      return json({ error: "Cart is empty." }, 400, corsHeaders);
-    }
+  const hasItems = total > 0;
+  continueBtn.disabled = !hasItems;
+  clearBtn.disabled = !hasItems;
+}
 
-    // ---- Map your service keys to Stripe Price IDs ----
-    const PRICE_MAP = {
-      menu: "price_1T6OzbHw7f6jhUv8Epy5oYMf",
-      conversion: "price_1T6P5tHw7f6jhUv8zQ7pGEoJ",
-      google: "price_1T6iC6Hw7f6jhUv8iYYYZK0T",
-      accessibility: "price_1T6j0xHw7f6jhUv8Ci1ZQ9qS"
-    };
+function addItem(card) {
 
-    // ---- Build Stripe line_items ----
-    const line_items = [];
-    for (const it of items) {
-      const key = String(it?.key || "");
-      const qty = Number(it?.qty || 1);
+  const key = card.dataset.sku;
+  const name = card.dataset.name;
+  const price = Number(card.dataset.price);
+  const priceLabel = card.dataset.priceLabel;
 
-      if (!key || !Number.isFinite(qty) || qty < 1) continue;
+  if (!cart[key]) {
+    cart[key] = { key, name, price, priceLabel, qty: 0 };
+  }
 
-      const price = PRICE_MAP[key];
-      if (!price) {
-        return json({ error: `No Stripe Price ID configured for key: ${key}` }, 400, corsHeaders);
-      }
+  cart[key].qty++;
+  renderCart();
+}
 
-      line_items.push({ price, quantity: Math.floor(qty) });
-    }
+document.querySelectorAll(".js-add").forEach(btn => {
 
-    if (line_items.length === 0) {
-      return json({ error: "No valid items." }, 400, corsHeaders);
-    }
+  btn.addEventListener("click", () => {
 
-    // ---- Create Checkout Session ----
-    const successUrl = "https://menu-made.com/checkoutsuccess.html?session_id={CHECKOUT_SESSION_ID}";
-    const cancelUrl = "https://menu-made.com/checkoutcancel.html";
+    const card = btn.closest(".service-card");
+    addItem(card);
 
-    const body = new URLSearchParams();
-    body.set("mode", "payment");
-    body.set("success_url", successUrl);
-    body.set("cancel_url", cancelUrl);
+  });
 
-    line_items.forEach((li, idx) => {
-      body.set(`line_items[${idx}][price]`, li.price);
-      body.set(`line_items[${idx}][quantity]`, String(li.quantity));
+});
+
+itemsEl.addEventListener("click", e => {
+
+  const inc = e.target.dataset.inc;
+  const dec = e.target.dataset.dec;
+
+  if (inc && cart[inc]) {
+    cart[inc].qty++;
+  }
+
+  if (dec && cart[dec]) {
+    cart[dec].qty--;
+
+    if (cart[dec].qty <= 0) delete cart[dec];
+  }
+
+  renderCart();
+});
+
+clearBtn.addEventListener("click", () => {
+
+  Object.keys(cart).forEach(k => delete cart[k]);
+  renderCart();
+
+});
+
+continueBtn.addEventListener("click", () => {
+
+  intakeStep.classList.add("show");
+  continueBtn.style.display = "none";
+
+});
+
+backBtn.addEventListener("click", () => {
+
+  intakeStep.classList.remove("show");
+  continueBtn.style.display = "inline-block";
+
+});
+
+checkoutBtn.addEventListener("click", async () => {
+
+  const items = Object.values(cart).map(i => ({
+    key: i.key,
+    qty: i.qty
+  }));
+
+  if (!items.length) return;
+
+  try {
+
+    const res = await fetch("https://menu-made.com/api/create-checkout-session", {
+      method: "POST",
+      mode: "cors",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({ items })
     });
 
-    body.set("customer_creation", "always");
+    const data = await res.json();
 
-    let stripeResp;
-    try {
-      stripeResp = await fetch("https://api.stripe.com/v1/checkout/sessions", {
-        method: "POST",
-        headers: {
-          "Authorization": `Bearer ${env.STRIPE_SECRET_KEY}`,
-          "Content-Type": "application/x-www-form-urlencoded",
-        },
-        body,
-      });
-    } catch (e) {
-      return json({ error: "Failed to reach Stripe." }, 502, corsHeaders);
+    if (data.url) {
+      window.location.href = data.url;
+    } else {
+      alert("Checkout error. Please refresh and try again.");
     }
 
-    const stripeJson = await stripeResp.json();
+  } catch (err) {
 
-    if (!stripeResp.ok) {
-      return json({ error: "Stripe error", details: stripeJson }, 400, corsHeaders);
-    }
+    alert("Checkout error. Please refresh and try again.");
 
-    return json({ url: stripeJson.url }, 200, corsHeaders);
-  },
-};
+  }
 
-function json(obj, status = 200, extraHeaders = {}) {
-  return new Response(JSON.stringify(obj), {
-    status,
-    headers: { "Content-Type": "application/json", ...extraHeaders },
-  });
-}
+});
+
+renderCart();
