@@ -152,8 +152,12 @@
     }
 
     .btn.secondary{
-      border: 2px solid rgba(255,255,255,.18);
+      border: 2px solid rgba(255,255,255,.45);
       color: #fff;
+      background: rgba(255,255,255,.08);
+    }
+    .btn.secondary:hover{
+      background: rgba(255,255,255,.16);
     }
 
     .muted-note{
@@ -198,6 +202,22 @@
       font: inherit;
     }
     .field textarea{ min-height: 90px; resize: vertical; }
+
+    .field input.invalid{
+      border-color:#ff6b6b;
+      box-shadow:0 0 0 2px rgba(255,107,107,.16);
+    }
+
+    .validation-msg{
+      display:none;
+      margin-top: 2px;
+      font-size: 12.5px;
+      color: #ff9a9a;
+      line-height: 1.35;
+    }
+    .validation-msg.show{
+      display:block;
+    }
 
     .two{
       display:grid;
@@ -398,12 +418,14 @@
             <div class="two">
               <div class="field">
                 <label for="lead_email">Email *</label>
-                <input id="lead_email" type="email" autocomplete="email" required>
+                <input id="lead_email" type="email" autocomplete="email" inputmode="email" placeholder="name@business.com" required aria-describedby="lead_email_error">
+                <div id="lead_email_error" class="validation-msg" aria-live="polite">Enter a valid email address.</div>
               </div>
 
               <div class="field">
                 <label for="lead_phone">Phone</label>
-                <input id="lead_phone" type="tel" autocomplete="tel">
+                <input id="lead_phone" type="tel" autocomplete="tel" inputmode="tel" placeholder="+1 555 555 5555" aria-describedby="lead_phone_error">
+                <div id="lead_phone_error" class="validation-msg" aria-live="polite">Enter a valid phone number.</div>
               </div>
             </div>
 
@@ -487,6 +509,117 @@
 </footer>
 
 <script src="start.js" defer></script>
+
+<script>
+  document.addEventListener("DOMContentLoaded", () => {
+    const emailInput = document.getElementById("lead_email");
+    const phoneInput = document.getElementById("lead_phone");
+    const emailError = document.getElementById("lead_email_error");
+    const phoneError = document.getElementById("lead_phone_error");
+    const status = document.getElementById("status");
+    const checkoutBtn = document.getElementById("checkoutBtn");
+
+    const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    const phonePattern = /^[0-9+\-\s().]{7,}$/;
+
+    function showToast(message) {
+      status.textContent = message;
+      status.classList.add("show");
+    }
+
+    function clearToast() {
+      status.textContent = "";
+      status.classList.remove("show");
+    }
+
+    function setFieldState(input, errorEl, isValid, message) {
+      input.classList.toggle("invalid", !isValid);
+      input.setAttribute("aria-invalid", String(!isValid));
+      errorEl.textContent = message;
+      errorEl.classList.toggle("show", !isValid);
+    }
+
+    function validateEmailField() {
+      const value = emailInput.value.trim();
+      const valid = emailPattern.test(value);
+      setFieldState(emailInput, emailError, valid, "Enter a valid email address.");
+      return valid;
+    }
+
+    function validatePhoneField() {
+      const value = phoneInput.value.trim();
+      const valid = value === "" || phonePattern.test(value);
+      setFieldState(phoneInput, phoneError, valid, "Enter a valid phone number.");
+      return valid;
+    }
+
+    emailInput.addEventListener("input", () => {
+      clearToast();
+      if (emailInput.value.trim() === "") {
+        emailInput.classList.remove("invalid");
+        emailInput.setAttribute("aria-invalid", "false");
+        emailError.classList.remove("show");
+        return;
+      }
+      validateEmailField();
+    });
+
+    emailInput.addEventListener("blur", () => {
+      if (emailInput.value.trim() !== "") validateEmailField();
+    });
+
+    phoneInput.addEventListener("input", () => {
+      clearToast();
+      if (phoneInput.value.trim() === "") {
+        phoneInput.classList.remove("invalid");
+        phoneInput.setAttribute("aria-invalid", "false");
+        phoneError.classList.remove("show");
+        return;
+      }
+      validatePhoneField();
+    });
+
+    phoneInput.addEventListener("blur", () => {
+      if (phoneInput.value.trim() !== "") validatePhoneField();
+    });
+
+    checkoutBtn.addEventListener("click", (event) => {
+      const emailValid = validateEmailField();
+      const phoneValid = validatePhoneField();
+
+      if (!emailValid) {
+        event.preventDefault();
+        event.stopImmediatePropagation();
+        showToast("Please enter a valid email address.");
+        emailInput.focus();
+        return;
+      }
+
+      if (!phoneValid) {
+        event.preventDefault();
+        event.stopImmediatePropagation();
+        showToast("Please enter a valid phone number.");
+        phoneInput.focus();
+        return;
+      }
+
+      clearToast();
+    }, true);
+  });
+</script>
+
+<script>
+document.addEventListener("DOMContentLoaded", () => {
+  const navToggle = document.getElementById("navToggle");
+  const navLinks = document.querySelectorAll(".nav a");
+
+  navLinks.forEach(link => {
+    link.addEventListener("click", () => {
+      navToggle.checked = false;
+    });
+  });
+});
+</script>
 
 <link rel="stylesheet" href="mm-a11y-widget.css">
 <script src="mm-a11y-widget.js" defer></script>

@@ -1,6 +1,7 @@
 /* main.css — FULL FILE
    Change requested:
    - Premium section portrait image fitting (MenuApp.png) so it looks correct.
+   - Force larger card paragraph + price text globally with !important.
    Everything else retained.
 */
 
@@ -415,4 +416,28 @@ img{ display:block; max-width:100%; height:auto; }
 
 .service-card .service-bottom {
   margin-top: auto;
+}
+
+/* GLOBAL CARD TEXT FORCE */
+.service-card p{
+  font-size: 18px !important;
+  line-height: 1.55 !important;
+}
+
+.service-card .price,
+.service-card .price-tag{
+  font-size: 18px !important;
+  line-height: 1.2 !important;
+}
+
+@media (max-width: 700px){
+  .service-card p{
+    font-size: 19px !important;
+    line-height: 1.55 !important;
+  }
+
+  .service-card .price,
+  .service-card .price-tag{
+    font-size: 19px !important;
+  }
 }
