@@ -2,6 +2,7 @@
    Change requested:
    - Premium section portrait image fitting (MenuApp.png) so it looks correct.
    - Force larger card paragraph + price text globally with !important.
+   - Make cards symmetrical as 2x2 on desktop/tablet and 1 per row on mobile.
    Everything else retained.
 */
 
@@ -223,13 +224,19 @@ img{ display:block; max-width:100%; height:auto; }
 /* CARDS */
 .cards{
   display:grid;
-  grid-template-columns:repeat(3,1fr);
+  grid-template-columns:repeat(2, minmax(0, 1fr));
   gap:32px;
+  align-items:stretch;
 }
 .service-card{
   background:linear-gradient(180deg,var(--panel-strong),var(--panel));
   padding:32px;
   border-radius:var(--radius);
+  display:flex;
+  flex-direction:column;
+}
+.cards .service-card{
+  height:100%;
 }
 .service-bottom{
   margin-top:24px;
@@ -273,23 +280,19 @@ img{ display:block; max-width:100%; height:auto; }
 
 /* PORTRAIT IMAGE FIT (requested) */
 .premium-frame{
-  /* Keep overlay; allow portrait image to breathe */
   overflow:hidden;
 }
 .portrait-stage{
-  /* Center the portrait asset and prevent awkward cropping */
   width:100%;
   display:flex;
   align-items:center;
   justify-content:center;
-
-  /* Give it a stable visual footprint */
   min-height:420px;
-  padding:22px 18px 54px; /* bottom padding leaves room for overlay text */
+  padding:22px 18px 54px;
 }
 .premium-image{
   width:auto;
-  height:520px;           /* portrait-friendly height */
+  height:520px;
   max-width:100%;
   object-fit:contain;
   image-rendering:auto;
@@ -335,13 +338,11 @@ img{ display:block; max-width:100%; height:auto; }
 /* RESPONSIVE */
 @media(max-width:900px){
   .hero-grid,
-  .premium-grid,
-  .cards{
+  .premium-grid{
     grid-template-columns:1fr;
   }
   .hero h1{ font-size:44px; }
 
-  /* portrait image scales down cleanly */
   .portrait-stage{
     min-height:380px;
     padding:18px 14px 54px;
@@ -350,6 +351,13 @@ img{ display:block; max-width:100%; height:auto; }
     height:500px;
   }
 }
+
+@media(max-width:700px){
+  .cards{
+    grid-template-columns:1fr;
+  }
+}
+
 @media(max-width:520px){
   .portrait-stage{
     min-height:340px;
@@ -409,35 +417,30 @@ img{ display:block; max-width:100%; height:auto; }
 }
 
 /* Ensure service cards align CTAs at the bottom */
-.service-card {
-  display: flex;
-  flex-direction: column;
-}
-
-.service-card .service-bottom {
-  margin-top: auto;
+.service-card .service-bottom{
+  margin-top:auto;
 }
 
 /* GLOBAL CARD TEXT FORCE */
 .service-card p{
-  font-size: 18px !important;
-  line-height: 1.55 !important;
+  font-size:18px !important;
+  line-height:1.55 !important;
 }
 
 .service-card .price,
 .service-card .price-tag{
-  font-size: 18px !important;
-  line-height: 1.2 !important;
+  font-size:18px !important;
+  line-height:1.2 !important;
 }
 
 @media (max-width: 700px){
   .service-card p{
-    font-size: 19px !important;
-    line-height: 1.55 !important;
+    font-size:19px !important;
+    line-height:1.55 !important;
   }
 
   .service-card .price,
   .service-card .price-tag{
-    font-size: 19px !important;
+    font-size:19px !important;
   }
 }
