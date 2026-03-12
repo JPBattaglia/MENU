@@ -7,7 +7,7 @@
 
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Philosopher:wght@400;700&family=Righteous&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Philosopher:wght@400;700&family=Aldrich&display=swap" rel="stylesheet">
 
   <link rel="icon" type="image/png" href="MENU=.png">
   <link rel="shortcut icon" href="MENU=.png">
@@ -62,9 +62,6 @@
       <a class="btn ghost" href="services.html">View Services</a>
     </div>
 
-    <p style="margin-top:18px;color:var(--muted);">
-      Session ID: <span id="sid">—</span>
-    </p>
   </div>
 </section>
 
@@ -84,6 +81,18 @@
   const params = new URLSearchParams(window.location.search);
   document.getElementById("sid").textContent =
     params.get("session_id") || "—";
+</script>
+
+<script>
+document.addEventListener("DOMContentLoaded", () => {
+  const params = new URLSearchParams(window.location.search);
+  const sessionId = params.get("session_id");
+
+  if (sessionId) {
+    sessionStorage.setItem("menuMadeCheckoutSessionId", sessionId);
+  }
+});
+
 </script>
 
 <link rel="stylesheet" href="mm-a11y-widget.css">
