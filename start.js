@@ -26,62 +26,11 @@ const phonePattern = /^[0-9+\-\s().]{7,}$/;
 function showStatus(message) {
   if (!statusEl) return;
   statusEl.textContent = message;
-  statusEl.classList.add("show");
 }
 
 function clearStatus() {
   if (!statusEl) return;
   statusEl.textContent = "";
-  statusEl.classList.remove("show");
-}
-
-function setFieldState(input, errorEl, isValid, message) {
-  if (!input) return;
-
-  input.classList.toggle("invalid", !isValid);
-  input.setAttribute("aria-invalid", String(!isValid));
-
-  if (errorEl) {
-    errorEl.textContent = message;
-    errorEl.classList.toggle("show", !isValid);
-  }
-}
-
-function clearFieldState(input, errorEl) {
-  if (!input) return;
-
-  input.classList.remove("invalid");
-  input.setAttribute("aria-invalid", "false");
-
-  if (errorEl) errorEl.classList.remove("show");
-}
-
-function validateEmailField() {
-  const value = leadEmailEl.value.trim();
-  const valid = emailPattern.test(value);
-
-  setFieldState(
-    leadEmailEl,
-    emailErrorEl,
-    valid,
-    "Enter a valid email address."
-  );
-
-  return valid;
-}
-
-function validatePhoneField() {
-  const value = leadPhoneEl.value.trim();
-  const valid = value === "" || phonePattern.test(value);
-
-  setFieldState(
-    leadPhoneEl,
-    phoneErrorEl,
-    valid,
-    "Enter a valid phone number."
-  );
-
-  return valid;
 }
 
 function renderCart() {
@@ -93,6 +42,7 @@ function renderCart() {
   Object.values(cart).forEach(item => {
 
     const li = document.createElement("li");
+
     li.className = "cart-item";
 
     li.innerHTML = `
@@ -173,8 +123,6 @@ itemsEl.addEventListener("click", e => {
 
   }
 
-  clearStatus();
-
   renderCart();
 
 });
@@ -182,8 +130,6 @@ itemsEl.addEventListener("click", e => {
 clearBtn.addEventListener("click", () => {
 
   Object.keys(cart).forEach(k => delete cart[k]);
-
-  clearStatus();
 
   renderCart();
 
@@ -195,8 +141,6 @@ continueBtn.addEventListener("click", () => {
 
   continueBtn.style.display = "none";
 
-  clearStatus();
-
 });
 
 backBtn.addEventListener("click", () => {
@@ -205,69 +149,7 @@ backBtn.addEventListener("click", () => {
 
   continueBtn.style.display = "inline-block";
 
-  clearStatus();
-
 });
-
-if (leadEmailEl) {
-
-  leadEmailEl.addEventListener("input", () => {
-
-    clearStatus();
-
-    if (leadEmailEl.value.trim() === "") {
-
-      clearFieldState(leadEmailEl, emailErrorEl);
-
-      return;
-
-    }
-
-    validateEmailField();
-
-  });
-
-  leadEmailEl.addEventListener("blur", () => {
-
-    if (leadEmailEl.value.trim() !== "") {
-
-      validateEmailField();
-
-    }
-
-  });
-
-}
-
-if (leadPhoneEl) {
-
-  leadPhoneEl.addEventListener("input", () => {
-
-    clearStatus();
-
-    if (leadPhoneEl.value.trim() === "") {
-
-      clearFieldState(leadPhoneEl, phoneErrorEl);
-
-      return;
-
-    }
-
-    validatePhoneField();
-
-  });
-
-  leadPhoneEl.addEventListener("blur", () => {
-
-    if (leadPhoneEl.value.trim() !== "") {
-
-      validatePhoneField();
-
-    }
-
-  });
-
-}
 
 checkoutBtn.addEventListener("click", async () => {
 
@@ -277,70 +159,53 @@ checkoutBtn.addEventListener("click", async () => {
   }));
 
   if (!items.length) {
-
     showStatus("Add at least one service before checkout.");
-
-    return;
-
-  }
-
-  const name = leadNameEl.value.trim();
-  const business = leadBusinessEl.value.trim();
-  const email = leadEmailEl.value.trim();
-  const phone = leadPhoneEl.value.trim();
-  const notes = leadNotesEl.value.trim();
-
-  if (!name) {
-    showStatus("Please enter your name.");
-    leadNameEl.focus();
     return;
   }
 
-  if (!business) {
-    showStatus("Please enter your business name.");
-    leadBusinessEl.focus();
+  const customer = {
+    name: leadNameEl.value.trim(),
+    business: leadBusinessEl.value.trim(),
+    email: leadEmailEl.value.trim(),
+    phone: leadPhoneEl.value.trim(),
+    notes: leadNotesEl.value.trim()
+  };
+
+  if (!customer.name) {
+    showStatus("Enter your name.");
     return;
   }
 
-  if (!validateEmailField()) {
-    showStatus("Please enter a valid email address.");
-    leadEmailEl.focus();
+  if (!customer.business) {
+    showStatus("Enter your business name.");
     return;
   }
 
-  if (!validatePhoneField()) {
-    showStatus("Please enter a valid phone number.");
-    leadPhoneEl.focus();
+  if (!emailPattern.test(customer.email)) {
+    showStatus("Enter a valid email.");
     return;
   }
 
   if (!scopeConfirmEl.checked) {
-    showStatus("Please confirm standard scope before checkout.");
-    scopeConfirmEl.focus();
+    showStatus("Confirm the scope checkbox.");
     return;
   }
-
-  clearStatus();
-
-  const customer = {
-    name,
-    business,
-    email,
-    phone,
-    notes
-  };
 
   try {
 
     const res = await fetch("/api/create-checkout", {
+
       method: "POST",
+
       headers: {
         "Content-Type": "application/json"
       },
+
       body: JSON.stringify({
-        items,
-        customer
+        items: items,
+        customer: customer
       })
+
     });
 
     const data = await res.json();
@@ -351,13 +216,13 @@ checkoutBtn.addEventListener("click", async () => {
 
     } else {
 
-      showStatus("Checkout error. Please refresh and try again.");
+      showStatus("Checkout error. Please refresh.");
 
     }
 
   } catch (err) {
 
-    showStatus("Checkout error. Please refresh and try again.");
+    showStatus("Checkout error. Please refresh.");
 
   }
 
