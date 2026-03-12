@@ -26,23 +26,53 @@ const phonePattern = /^[0-9+\-\s().]{7,}$/;
 function showStatus(message) {
   if (!statusEl) return;
   statusEl.textContent = message;
+  statusEl.classList.add("show");
 }
 
 function clearStatus() {
   if (!statusEl) return;
   statusEl.textContent = "";
+  statusEl.classList.remove("show");
+}
+
+function setFieldState(input, errorEl, isValid, message) {
+  if (!input) return;
+  input.classList.toggle("invalid", !isValid);
+  input.setAttribute("aria-invalid", String(!isValid));
+
+  if (errorEl) {
+    errorEl.textContent = message;
+    errorEl.classList.toggle("show", !isValid);
+  }
+}
+
+function clearFieldState(input, errorEl) {
+  if (!input) return;
+  input.classList.remove("invalid");
+  input.setAttribute("aria-invalid", "false");
+  if (errorEl) errorEl.classList.remove("show");
+}
+
+function validateEmailField() {
+  const value = leadEmailEl.value.trim();
+  const valid = emailPattern.test(value);
+  setFieldState(leadEmailEl, emailErrorEl, valid, "Enter a valid email address.");
+  return valid;
+}
+
+function validatePhoneField() {
+  const value = leadPhoneEl.value.trim();
+  const valid = value === "" || phonePattern.test(value);
+  setFieldState(leadPhoneEl, phoneErrorEl, valid, "Enter a valid phone number.");
+  return valid;
 }
 
 function renderCart() {
-
   itemsEl.innerHTML = "";
-
   let total = 0;
 
   Object.values(cart).forEach(item => {
-
     const li = document.createElement("li");
-
     li.className = "cart-item";
 
     li.innerHTML = `
@@ -59,22 +89,17 @@ function renderCart() {
     `;
 
     itemsEl.appendChild(li);
-
     total += item.price * item.qty;
-
   });
 
   totalEl.textContent = "$" + (total / 100).toFixed(2);
 
   const hasItems = total > 0;
-
   continueBtn.disabled = !hasItems;
   clearBtn.disabled = !hasItems;
-
 }
 
 function addItem(card) {
-
   const key = card.dataset.sku;
   const name = card.dataset.name;
   const price = Number(card.dataset.price);
@@ -85,27 +110,18 @@ function addItem(card) {
   }
 
   cart[key].qty++;
-
   clearStatus();
-
   renderCart();
-
 }
 
 document.querySelectorAll(".js-add").forEach(btn => {
-
   btn.addEventListener("click", () => {
-
     const card = btn.closest(".service-card");
-
     addItem(card);
-
   });
-
 });
 
 itemsEl.addEventListener("click", e => {
-
   const inc = e.target.dataset.inc;
   const dec = e.target.dataset.dec;
 
@@ -114,45 +130,63 @@ itemsEl.addEventListener("click", e => {
   }
 
   if (dec && cart[dec]) {
-
     cart[dec].qty--;
-
-    if (cart[dec].qty <= 0) {
-      delete cart[dec];
-    }
-
+    if (cart[dec].qty <= 0) delete cart[dec];
   }
 
+  clearStatus();
   renderCart();
-
 });
 
 clearBtn.addEventListener("click", () => {
-
   Object.keys(cart).forEach(k => delete cart[k]);
-
+  clearStatus();
   renderCart();
-
 });
 
 continueBtn.addEventListener("click", () => {
-
   intakeStep.classList.add("show");
-
   continueBtn.style.display = "none";
-
+  clearStatus();
 });
 
 backBtn.addEventListener("click", () => {
-
   intakeStep.classList.remove("show");
-
   continueBtn.style.display = "inline-block";
-
+  clearStatus();
 });
 
-checkoutBtn.addEventListener("click", async () => {
+if (leadEmailEl) {
+  leadEmailEl.addEventListener("input", () => {
+    clearStatus();
+    if (leadEmailEl.value.trim() === "") {
+      clearFieldState(leadEmailEl, emailErrorEl);
+      return;
+    }
+    validateEmailField();
+  });
 
+  leadEmailEl.addEventListener("blur", () => {
+    if (leadEmailEl.value.trim() !== "") validateEmailField();
+  });
+}
+
+if (leadPhoneEl) {
+  leadPhoneEl.addEventListener("input", () => {
+    clearStatus();
+    if (leadPhoneEl.value.trim() === "") {
+      clearFieldState(leadPhoneEl, phoneErrorEl);
+      return;
+    }
+    validatePhoneField();
+  });
+
+  leadPhoneEl.addEventListener("blur", () => {
+    if (leadPhoneEl.value.trim() !== "") validatePhoneField();
+  });
+}
+
+checkoutBtn.addEventListener("click", async () => {
   const items = Object.values(cart).map(i => ({
     key: i.key,
     qty: i.qty
@@ -163,69 +197,80 @@ checkoutBtn.addEventListener("click", async () => {
     return;
   }
 
-  const customer = {
-    name: leadNameEl.value.trim(),
-    business: leadBusinessEl.value.trim(),
-    email: leadEmailEl.value.trim(),
-    phone: leadPhoneEl.value.trim(),
-    notes: leadNotesEl.value.trim()
-  };
+  const name = leadNameEl.value.trim();
+  const business = leadBusinessEl.value.trim();
+  const email = leadEmailEl.value.trim();
+  const phone = leadPhoneEl.value.trim();
+  const notes = leadNotesEl.value.trim();
 
-  if (!customer.name) {
-    showStatus("Enter your name.");
+  if (!name) {
+    showStatus("Please enter your name.");
+    leadNameEl.focus();
     return;
   }
 
-  if (!customer.business) {
-    showStatus("Enter your business name.");
+  if (!business) {
+    showStatus("Please enter your business name.");
+    leadBusinessEl.focus();
     return;
   }
 
-  if (!emailPattern.test(customer.email)) {
-    showStatus("Enter a valid email.");
+  if (!validateEmailField()) {
+    showStatus("Please enter a valid email address.");
+    leadEmailEl.focus();
+    return;
+  }
+
+  if (!validatePhoneField()) {
+    showStatus("Please enter a valid phone number.");
+    leadPhoneEl.focus();
     return;
   }
 
   if (!scopeConfirmEl.checked) {
-    showStatus("Confirm the scope checkbox.");
+    showStatus("Please confirm standard scope before checkout.");
+    scopeConfirmEl.focus();
     return;
   }
 
+  clearStatus();
+
+  const customer = {
+    name,
+    business,
+    email,
+    phone,
+    notes
+  };
+
   try {
-
     const res = await fetch("/api/create-checkout", {
-
       method: "POST",
-
       headers: {
         "Content-Type": "application/json"
       },
-
       body: JSON.stringify({
-        items: items,
-        customer: customer
+        items,
+        customer
       })
-
     });
 
     const data = await res.json();
 
-    if (data.url) {
-
-      window.location.href = data.url;
-
-    } else {
-
-      showStatus("Checkout error. Please refresh.");
-
+    if (!res.ok) {
+      showStatus(data?.error?.message || data?.error || "Checkout error. Please refresh and try again.");
+      return;
     }
 
+    if (data.url) {
+      window.location.href = data.url;
+      return;
+    }
+
+    showStatus("Checkout error. Please refresh and try again.");
   } catch (err) {
-
-    showStatus("Checkout error. Please refresh.");
-
+    showStatus("Checkout error. Please refresh and try again.");
   }
-
 });
 
 renderCart();
