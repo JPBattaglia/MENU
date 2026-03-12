@@ -37,6 +37,7 @@ function clearStatus() {
 
 function setFieldState(input, errorEl, isValid, message) {
   if (!input) return;
+
   input.classList.toggle("invalid", !isValid);
   input.setAttribute("aria-invalid", String(!isValid));
 
@@ -48,30 +49,49 @@ function setFieldState(input, errorEl, isValid, message) {
 
 function clearFieldState(input, errorEl) {
   if (!input) return;
+
   input.classList.remove("invalid");
   input.setAttribute("aria-invalid", "false");
+
   if (errorEl) errorEl.classList.remove("show");
 }
 
 function validateEmailField() {
   const value = leadEmailEl.value.trim();
   const valid = emailPattern.test(value);
-  setFieldState(leadEmailEl, emailErrorEl, valid, "Enter a valid email address.");
+
+  setFieldState(
+    leadEmailEl,
+    emailErrorEl,
+    valid,
+    "Enter a valid email address."
+  );
+
   return valid;
 }
 
 function validatePhoneField() {
   const value = leadPhoneEl.value.trim();
   const valid = value === "" || phonePattern.test(value);
-  setFieldState(leadPhoneEl, phoneErrorEl, valid, "Enter a valid phone number.");
+
+  setFieldState(
+    leadPhoneEl,
+    phoneErrorEl,
+    valid,
+    "Enter a valid phone number."
+  );
+
   return valid;
 }
 
 function renderCart() {
+
   itemsEl.innerHTML = "";
+
   let total = 0;
 
   Object.values(cart).forEach(item => {
+
     const li = document.createElement("li");
     li.className = "cart-item";
 
@@ -89,17 +109,22 @@ function renderCart() {
     `;
 
     itemsEl.appendChild(li);
+
     total += item.price * item.qty;
+
   });
 
   totalEl.textContent = "$" + (total / 100).toFixed(2);
 
   const hasItems = total > 0;
+
   continueBtn.disabled = !hasItems;
   clearBtn.disabled = !hasItems;
+
 }
 
 function addItem(card) {
+
   const key = card.dataset.sku;
   const name = card.dataset.name;
   const price = Number(card.dataset.price);
@@ -110,18 +135,27 @@ function addItem(card) {
   }
 
   cart[key].qty++;
+
   clearStatus();
+
   renderCart();
+
 }
 
 document.querySelectorAll(".js-add").forEach(btn => {
+
   btn.addEventListener("click", () => {
+
     const card = btn.closest(".service-card");
+
     addItem(card);
+
   });
+
 });
 
 itemsEl.addEventListener("click", e => {
+
   const inc = e.target.dataset.inc;
   const dec = e.target.dataset.dec;
 
@@ -130,71 +164,124 @@ itemsEl.addEventListener("click", e => {
   }
 
   if (dec && cart[dec]) {
+
     cart[dec].qty--;
-    if (cart[dec].qty <= 0) delete cart[dec];
+
+    if (cart[dec].qty <= 0) {
+      delete cart[dec];
+    }
+
   }
 
   clearStatus();
+
   renderCart();
+
 });
 
 clearBtn.addEventListener("click", () => {
+
   Object.keys(cart).forEach(k => delete cart[k]);
+
   clearStatus();
+
   renderCart();
+
 });
 
 continueBtn.addEventListener("click", () => {
+
   intakeStep.classList.add("show");
+
   continueBtn.style.display = "none";
+
   clearStatus();
+
 });
 
 backBtn.addEventListener("click", () => {
+
   intakeStep.classList.remove("show");
+
   continueBtn.style.display = "inline-block";
+
   clearStatus();
+
 });
 
 if (leadEmailEl) {
+
   leadEmailEl.addEventListener("input", () => {
+
     clearStatus();
+
     if (leadEmailEl.value.trim() === "") {
+
       clearFieldState(leadEmailEl, emailErrorEl);
+
       return;
+
     }
+
     validateEmailField();
+
   });
 
   leadEmailEl.addEventListener("blur", () => {
-    if (leadEmailEl.value.trim() !== "") validateEmailField();
+
+    if (leadEmailEl.value.trim() !== "") {
+
+      validateEmailField();
+
+    }
+
   });
+
 }
 
 if (leadPhoneEl) {
+
   leadPhoneEl.addEventListener("input", () => {
+
     clearStatus();
+
     if (leadPhoneEl.value.trim() === "") {
+
       clearFieldState(leadPhoneEl, phoneErrorEl);
+
       return;
+
     }
+
     validatePhoneField();
+
   });
 
   leadPhoneEl.addEventListener("blur", () => {
-    if (leadPhoneEl.value.trim() !== "") validatePhoneField();
+
+    if (leadPhoneEl.value.trim() !== "") {
+
+      validatePhoneField();
+
+    }
+
   });
+
 }
 
 checkoutBtn.addEventListener("click", async () => {
+
   const items = Object.values(cart).map(i => ({
     key: i.key,
     qty: i.qty
   }));
 
   if (!items.length) {
+
     showStatus("Add at least one service before checkout.");
+
     return;
+
   }
 
   const name = leadNameEl.value.trim();
@@ -244,9 +331,9 @@ checkoutBtn.addEventListener("click", async () => {
   };
 
   try {
-    const res = await fetch("https://menu-made.com/api/create-checkout-session", {
+
+    const res = await fetch("/api/create-checkout", {
       method: "POST",
-      mode: "cors",
       headers: {
         "Content-Type": "application/json"
       },
@@ -259,13 +346,21 @@ checkoutBtn.addEventListener("click", async () => {
     const data = await res.json();
 
     if (data.url) {
+
       window.location.href = data.url;
+
     } else {
+
       showStatus("Checkout error. Please refresh and try again.");
+
     }
+
   } catch (err) {
+
     showStatus("Checkout error. Please refresh and try again.");
+
   }
+
 });
 
 renderCart();
