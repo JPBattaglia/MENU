@@ -8,7 +8,7 @@
 
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Philosopher:wght@400;700&family=Righteous&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Philosopher:wght@400;700&family=Aldrich&display=swap" rel="stylesheet">
 
   <link rel="icon" type="image/png" href="MENU=.png">
   <link rel="shortcut icon" href="MENU=.png">
@@ -18,44 +18,48 @@
 
   <style>
     /* ===== SERVICES GRID ===== */
-    .services-grid{
+    body.services-page .services-grid{
       display:grid;
       grid-template-columns: repeat(2, minmax(0, 1fr));
       gap: 28px;
     }
 
     @media (max-width: 700px){
-      .services-grid{
+      body.services-page .services-grid{
         grid-template-columns: 1fr;
       }
     }
 
-    .services-grid .service-card{
+    body.services-page .services-grid .service-card{
       height: 100%;
       display: flex;
       flex-direction: column;
     }
 
-    .services-grid .service-bottom{
+    body.services-page .services-grid .service-bottom{
       margin-top: auto;
     }
 
-    /* ===== HERO TITLE + ART (TIGHTER SPACING) ===== */
-    .services-hero .services-hero-title{
+    /* ===== HERO TITLE + ART ===== */
+    body.services-page .services-hero .services-hero-title{
       display: flex;
       align-items: center;
       gap: 18px;
       flex-wrap: nowrap;
     }
 
-    .services-hero .services-hero-title h1{
+    body.services-page .services-hero .services-hero-title h1{
       margin: 0;
       line-height: 1;
       white-space: nowrap;
     }
 
-    .services-hero .services-hero-art{
-      width: min(420px, 40vw);
+    /* DESKTOP */
+    body.services-page .services-hero .services-hero-art{
+      width: 560px;
+      max-width: none;
+      position: relative;
+      left: 100px;
       height: auto;
       display: block;
       pointer-events: none;
@@ -63,21 +67,34 @@
       filter: drop-shadow(0 0 14px rgba(120, 255, 255, .22));
     }
 
+    /* MOBILE */
     @media (max-width: 900px){
-      .services-hero .services-hero-title{
+
+      body.services-page .services-hero .services-hero-title{
         flex-direction: column;
         align-items: flex-start;
         gap: 14px;
       }
 
-      .services-hero .services-hero-art{
-        width: min(420px, 85vw);
+      body.services-page .services-hero .services-hero-art{
+        width: 100%;
+        max-width: 420px;
+
+        position: static;
+        left: auto;
+
+        margin: 0;
       }
+
+      .premium-media{
+        width: 50%;
+      }
+
     }
   </style>
 </head>
 
-<body>
+<body class="services-page">
 
 <header class="header">
   <div class="container header-inner">
@@ -146,6 +163,7 @@
         <h3>Online Menu + QR</h3>
         <p>
           Get a fast, mobile-friendly online menu page plus a ready-to-use QR code for tables, counters, packaging, or signage. Designed to make it easy for customers to view your menu instantly and take action.
+        </p>
         <div class="service-bottom">
           <span class="price">From $129</span>
           <a class="cta-pill" href="contact.html?service=menu">Start</a>
@@ -210,7 +228,7 @@
 
       <div class="premium-bottom">
         <span class="price big">$999</span>
-        <a class="btn primary" href="contact.html?service=app">Upgrade</a>
+        <a style="margin-left: 10px;" class="btn primary" href="contact.html?service=app">Upgrade</a>
       </div>
     </div>
 

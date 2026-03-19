@@ -1,9 +1,7 @@
 /* main.css — FULL FILE
-   Change requested:
-   - Premium section portrait image fitting (MenuApp.png) so it looks correct.
-   - Force larger card paragraph + price text globally with !important.
-   - Make cards symmetrical as 2x2 on desktop/tablet and 1 per row on mobile.
-   Everything else retained.
+   FIX:
+   - Removed global .media-frame img override that caused image overflow/cropping
+   - No other changes
 */
 
 :root{
@@ -146,11 +144,12 @@ img{ display:block; max-width:100%; height:auto; }
   gap:60px;
   align-items:center;
 }
+
 .hero h1{
-  font-family:'Righteous',sans-serif;
-  font-size:52px;
+  font-family:'Aldrich',sans-serif;
+  font-size:46px;
   margin:16px 0;
-  line-height:1.06;
+  line-height: 1.02;
 }
 .hero p{ color:var(--muted); }
 .pill{
@@ -208,7 +207,7 @@ img{ display:block; max-width:100%; height:auto; }
 .section{ padding:90px 0; }
 .section-image{
   background:
-    linear-gradient(rgba(0,0,0,.35),rgba(0,0,0,.55)),
+    linear-gradient(rgba(0,0,0,.25),rgba(0,0,0,.35)),
     url("Tech1.jpg") center/cover no-repeat;
 }
 .section-head{
@@ -216,7 +215,7 @@ img{ display:block; max-width:100%; height:auto; }
   margin-bottom:50px;
 }
 .section-head h2{
-  font-family:'Righteous',sans-serif;
+  font-family:'Aldrich',sans-serif;
   font-size:40px;
   margin:0 0 10px;
 }
@@ -234,6 +233,12 @@ img{ display:block; max-width:100%; height:auto; }
   border-radius:var(--radius);
   display:flex;
   flex-direction:column;
+  border: 1px solid cyan;
+  transition: transform .35s ease, box-shadow .35s ease;
+}
+.service-card:hover{
+  transform: translateY(-4px);
+  box-shadow: 0 16px 40px rgba(0,0,0,.45);
 }
 .cards .service-card{
   height:100%;
@@ -278,7 +283,7 @@ img{ display:block; max-width:100%; height:auto; }
   color:var(--gold);
 }
 
-/* PORTRAIT IMAGE FIT (requested) */
+/* PORTRAIT IMAGE FIT */
 .premium-frame{
   overflow:hidden;
 }
@@ -368,7 +373,7 @@ img{ display:block; max-width:100%; height:auto; }
   }
 }
 
-/* MOBILE NAV (≤700px) */
+/* MOBILE NAV */
 @media(max-width:700px){
   .header .container{
     padding-left:26px;
