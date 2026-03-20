@@ -17,7 +17,6 @@
   <link rel="stylesheet" href="main.css">
 
   <style>
-    /* page-only: skip link (does not affect other pages) */
     .skip-link{
       position:absolute;
       left:-9999px;
@@ -42,7 +41,6 @@
     }
     .tiny-note{ font-size: .95rem; opacity:.92; }
 
-    /* page-only: top CTA (hero) right-side image */
     .hero-split{
       display:flex;
       align-items:center;
@@ -252,15 +250,15 @@
 
     <div class="footer-social" aria-label="Social links">
       <a class="social-icon" href="https://www.facebook.com/MenuMade.OnlinePresence" target="_blank" rel="noopener" aria-label="Facebook">
-        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14 8.5V7c0-.8.5-1 1-1h2V3h-3c-2.8 0-4 1.7-4 4v1.5H8V12h2v9h4v-9h2.7l.3-3.5H14z"/></svg>
+        <svg viewBox="0 0 24 24"><path d="M14 8.5V7c0-.8.5-1 1-1h2V3h-3c-2.8 0-4 1.7-4 4v1.5H8V12h2v9h4v-9h2.7l.3-3.5H14z"/></svg>
       </a>
 
       <a class="social-icon" href="https://www.linkedin.com/company/menu-made/" target="_blank" rel="noopener" aria-label="LinkedIn">
-        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6.5 6.5A2.5 2.5 0 1 1 6.5 1.5a2.5 2.5 0 0 1 0 5zM4 22V8h5v14H4zm7.5-14H16v1.9c.7-1.2 2-2.3 4.2-2.3 3 0 4.8 2 4.8 6.2V22h-5v-6.3c0-2-.6-3.1-2.1-3.1-1.1 0-1.7.8-2 1.5-.1.3-.1.8-.1 1.2V22h-5V8z"/></svg>
+        <svg viewBox="0 0 24 24"><path d="M6.5 6.5A2.5 2.5 0 1 1 6.5 1.5a2.5 2.5 0 0 1 0 5zM4 22V8h5v14H4zm7.5-14H16v1.9c.7-1.2 2-2.3 4.2-2.3 3 0 4.8 2 4.8 6.2V22h-5v-6.3c0-2-.6-3.1-2.1-3.1-1.1 0-1.7.8-2 1.5-.1.3-.1.8-.1 1.2V22h-5V8z"/></svg>
       </a>
 
       <a class="social-icon" href="https://www.instagram.com/menumade.gram/" target="_blank" rel="noopener" aria-label="Instagram">
-        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 2h10a5 5 0 0 1 5 5v10a5 5 0 0 1-5 5H7a5 5 0 0 1-5-5V7a5 5 0 0 1 5-5zm10 2H7a3 3 0 0 0-3 3v10a3 3 0 0 0 3 3h10a3 3 0 0 0 3-3V7a3 3 0 0 0-3-3zm-5 4.2a3.8 3.8 0 1 1 0 7.6 3.8 3.8 0 0 1 0-7.6zm0 2a1.8 1.8 0 1 0 0 3.6 1.8 1.8 0 0 0 0-3.6zM18 6.3a.9.9 0 1 1 0 1.8.9.9 0 0 1 0-1.8z"/></svg>
+        <svg viewBox="0 0 24 24"><path d="M7 2h10a5 5 0 0 1 5 5v10a5 5 0 0 1-5 5H7a5 5 0 0 1-5-5V7a5 5 0 0 1 5-5zm10 2H7a3 3 0 0 0-3 3v10a3 3 0 0 0 3 3h10a3 3 0 0 0 3-3V7a3 3 0 0 0-3-3zm-5 4.2a3.8 3.8 0 1 1 0 7.6 3.8 3.8 0 0 1 0-7.6zm0 2a1.8 1.8 0 1 0 0 3.6 1.8 1.8 0 0 0 0-3.6zM18 6.3a.9.9 0 1 1 0 1.8.9.9 0 0 1 0-1.8z"/></svg>
       </a>
     </div>
   </div>
@@ -268,6 +266,17 @@
 
 <link rel="stylesheet" href="mm-a11y-widget.css">
 <script src="mm-a11y-widget.js" defer></script>
+
+<!-- ONLY ADDITION: PARALLAX -->
+<script>
+window.addEventListener('scroll', () => {
+  document.querySelectorAll('.section-image').forEach(section => {
+    const rect = section.getBoundingClientRect();
+    const offset = rect.top * -0.2;
+    section.style.backgroundPosition = `center calc(50% + ${offset}px)`;
+  });
+});
+</script>
 
 </body>
 </html>

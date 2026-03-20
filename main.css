@@ -1,8 +1,3 @@
-/* main.css — FULL FILE
-   FIX:
-   - Removed global .media-frame img override that caused image overflow/cropping
-   - No other changes
-*/
 
 :root{
   --bg:#013f45;
@@ -15,7 +10,7 @@
 
   --brand:#00d6e6;
   --brand-soft:#5ff2ff;
-  --gold:#d9b25a;
+  --gold:#f6dda3;
 
   --text:#ffffff;
   --muted:#d9f3f6;
@@ -238,6 +233,8 @@ img{ display:block; max-width:100%; height:auto; }
 }
 .service-card:hover{
   transform: translateY(-4px);
+  transition: 500ms;
+  border: 1px solid rgb(173, 255, 255);
   box-shadow: 0 16px 40px rgba(0,0,0,.45);
 }
 .cards .service-card{

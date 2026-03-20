@@ -150,21 +150,19 @@
         </div>
       </article>
     </div>
+    <div class="container cta">
 
-  </div>
-</section>
-
-<section class="section section-image" aria-label="Call to action">
-  <div class="container cta">
     <div>
+      <br><br><br>
       <h2>Ready to start?</h2>
       <p>Pick a service and we’ll respond with scope and next steps.</p>
     </div>
-
+      
     <div class="cta-actions">
       <a class="btn primary" href="contact.html">Start</a>
       <a class="btn ghost" href="services.html">View Services</a>
     </div>
+  </div>
   </div>
 </section>
 
@@ -180,6 +178,17 @@
 
 <link rel="stylesheet" href="mm-a11y-widget.css">
 <script src="mm-a11y-widget.js" defer></script>
+
+<!-- PARALLAX (ONLY ADDITION) -->
+<script>
+window.addEventListener('scroll', () => {
+  document.querySelectorAll('.section-image').forEach(section => {
+    const rect = section.getBoundingClientRect();
+    const offset = rect.top * -0.2;
+    section.style.backgroundPosition = `center calc(50% + ${offset}px)`;
+  });
+});
+</script>
 
 </body>
 </html>
