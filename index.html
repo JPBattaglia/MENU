@@ -3,8 +3,8 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>MENU-MADE — Mobile Menu + QR Code in 48 Hours</title>
-  <meta name="description" content="Mobile-friendly online menus and QR codes for restaurants, cafés, bars, bakeries, and food brands. From $129 with fast turnaround.">
+  <title>MENU-MADE — Premium Digital Presence for Food & Beverage</title>
+  <meta name="description" content="Premium menus, visibility, and mobile apps for food & beverage businesses.">
 
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -15,6 +15,202 @@
   <link rel="apple-touch-icon" href="MENU=.png">
 
   <link rel="stylesheet" href="main.css">
+
+  <style>
+    /* MENU-MADE promo popup — index page only */
+    .mm-promo{
+      position:fixed;
+      left:22px;
+      bottom:22px;
+      z-index:9998;
+      width:min(390px, calc(100vw - 44px));
+      border:1px solid rgba(95,242,255,.55);
+      border-radius:22px;
+      background:
+        radial-gradient(circle at 22% 0%, rgba(95,242,255,.20), transparent 34%),
+        linear-gradient(135deg, rgba(0,35,43,.96), rgba(1,63,69,.96));
+      box-shadow:0 18px 48px rgba(0,0,0,.42), 0 0 0 1px rgba(255,255,255,.05) inset;
+      color:#fff;
+      overflow:hidden;
+      transform:translateY(18px);
+      opacity:0;
+      pointer-events:none;
+      transition:opacity .28s ease, transform .28s ease;
+    }
+
+    .mm-promo.show{
+      opacity:1;
+      transform:translateY(0);
+      pointer-events:auto;
+    }
+
+    .mm-promo::before{
+      content:"";
+      position:absolute;
+      inset:0;
+      background:
+        linear-gradient(90deg, rgba(0,214,230,.10), transparent 40%, rgba(246,221,163,.08)),
+        repeating-linear-gradient(90deg, rgba(255,255,255,.035) 0 1px, transparent 1px 12px);
+      opacity:.45;
+      pointer-events:none;
+    }
+
+    .mm-promo-inner{
+      position:relative;
+      padding:18px;
+    }
+
+    .mm-promo-top{
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:12px;
+      margin-bottom:12px;
+    }
+
+    .mm-promo-brand{
+      display:flex;
+      align-items:center;
+      gap:10px;
+      min-width:0;
+    }
+
+    .mm-promo-mark{
+      width:42px;
+      height:42px;
+      border-radius:12px;
+      object-fit:contain;
+      background:rgba(255,255,255,.92);
+      padding:4px;
+      box-shadow:0 8px 18px rgba(0,0,0,.25);
+      flex:0 0 auto;
+    }
+
+    .mm-promo-kicker{
+      display:block;
+      color:var(--brand-soft);
+      font-size:12px;
+      font-weight:900;
+      letter-spacing:.08em;
+      text-transform:uppercase;
+    }
+
+    .mm-promo-name{
+      display:block;
+      color:#fff;
+      font-size:15px;
+      font-weight:900;
+      line-height:1.1;
+    }
+
+    .mm-promo-close{
+      width:34px;
+      height:34px;
+      border:1px solid rgba(255,255,255,.18);
+      border-radius:999px;
+      background:rgba(0,0,0,.24);
+      color:#fff;
+      font-size:22px;
+      line-height:1;
+      cursor:pointer;
+    }
+
+    .mm-promo h2{
+      font-family:'Aldrich',sans-serif;
+      margin:0 0 8px;
+      font-size:24px;
+      line-height:1.08;
+      letter-spacing:.01em;
+    }
+
+    .mm-promo p{
+      margin:0;
+      color:var(--muted);
+      font-size:15.5px;
+      line-height:1.42;
+    }
+
+    .mm-promo-price{
+      display:flex;
+      align-items:baseline;
+      gap:8px;
+      margin:13px 0 15px;
+    }
+
+    .mm-promo-price strong{
+      color:var(--gold);
+      font-size:24px;
+      font-weight:900;
+    }
+
+    .mm-promo-price span{
+      color:rgba(255,255,255,.78);
+      font-size:13px;
+    }
+
+    .mm-promo-actions{
+      display:flex;
+      align-items:center;
+      gap:10px;
+      flex-wrap:wrap;
+    }
+
+    .mm-promo-actions .btn{
+      padding:11px 15px;
+      border-radius:14px;
+      font-size:14px;
+    }
+
+    .mm-promo-dismiss{
+      border:0;
+      background:transparent;
+      color:rgba(255,255,255,.76);
+      font:inherit;
+      font-weight:800;
+      cursor:pointer;
+      padding:10px 4px;
+    }
+
+    .mm-promo-dismiss:hover{
+      color:#fff;
+      text-decoration:underline;
+      text-underline-offset:3px;
+    }
+
+    @media (max-width:700px){
+      .mm-promo{
+        left:12px;
+        right:12px;
+        bottom:12px;
+        width:auto;
+        border-radius:20px;
+      }
+
+      .mm-promo-inner{
+        padding:16px;
+      }
+
+      .mm-promo h2{
+        font-size:21px;
+      }
+
+      .mm-promo p{
+        font-size:14.5px;
+      }
+
+      .mm-promo-actions{
+        display:grid;
+        grid-template-columns:1fr;
+        gap:8px;
+      }
+
+      .mm-promo-actions .btn,
+      .mm-promo-dismiss{
+        width:100%;
+        text-align:center;
+      }
+    }
+  </style>
 </head>
 
 <body>
@@ -53,17 +249,17 @@
   <div class="container hero-grid">
 
     <div class="hero-copy">
-      <span class="pill">Fast setup for restaurants, cafés, bars &amp; food brands</span>
-      <h1>Mobile Menu + QR Code<br>Done in 48 Hours</h1>
+      <span class="pill">Built for the food &amp; beverage industry</span>
+      <h1>Menus, Visibility,<br>& Mobile Apps <br>— Done Right</h1>
       <p>
-        Send us your current menu and we’ll turn it into a clean, mobile-friendly
-        online menu with a QR code your guests can scan instantly. Built for food
-        businesses that need a polished upgrade without a long agency process.
+        Clean online menus, site conversion fixes, Google visibility,
+        and premium native mobile apps for bars, cafés, restaurants,
+        and food &amp; beverage brands that care about quality.
       </p>
 
       <div class="hero-actions">
-        <a class="btn primary" href="contact.html?service=menu">Start My $129 Menu</a>
-        <a class="btn ghost" href="services.html">See What’s Included</a>
+        <a class="btn primary" href="contact.html?service=menu">Launch My Menu</a>
+        <a class="btn ghost" href="contact.html?service=conversion">Improve My Website</a>
       </div>
     </div>
 
@@ -71,8 +267,8 @@
       <div class="media-frame">
         <img style="margin-bottom: 50px;" src="CTAmenus.png" alt="MENUS preview" class="hero-image">
         <div class="media-overlay">
-          <strong>From $129</strong>
-          <span>Mobile menu page + QR-ready delivery.</span>
+          <strong>Premium, practical execution</strong>
+          <span>Clear actions. Clean layout. Fast load.</span>
         </div>
       </div>
     </div>
@@ -84,17 +280,17 @@
   <div class="container">
 
     <header class="section-head">
-      <h2>Start with the fastest win</h2>
-      <p>The entry offer is simple: a clean online menu and QR code. Add upgrades only if you need them.</p>
+      <h2>What do you need right now?</h2>
+      <p>Focused services that improve clarity, action, and revenue.</p>
     </header>
 
     <div class="cards">
       <article class="service-card">
         <h3>Online Menu + QR</h3>
-        <p>A branded mobile-friendly menu page plus a QR code your guests can scan instantly. Standard turnaround: 48 hours after materials are received.</p>
+        <p>A branded mobile-friendly menu page plus a QR code your guests can scan instantly.</p>
         <div class="service-bottom">
           <span class="price">From $129</span>
-          <a class="cta-pill" href="contact.html?service=menu">Start $129</a>
+          <a class="cta-pill" href="contact.html?service=menu">Start</a>
         </div>
       </article>
 
@@ -121,41 +317,8 @@
         <p>Core accessibility fixes that improve usability and reduce avoidable compliance risk using our widget.</p>
         <div class="service-bottom">
           <span class="price">From $250</span>
-          <a class="cta-pill" href="contact.html?service=accessibility">Add</a>
+          <a class="cta-pill" href="contact.html?service=google">Add</a>
         </div>
-      </article>
-    </div>
-
-  </div>
-</section>
-
-<section class="section" aria-label="Menu offer proof">
-  <div class="container">
-
-    <header class="section-head">
-      <h2>What the $129 menu includes</h2>
-      <p>A focused first step: easy to understand, fast to approve, and useful immediately.</p>
-    </header>
-
-    <div class="cards">
-      <article class="service-card">
-        <h3>Mobile-first menu page</h3>
-        <p>Clean sections, readable item layout, fast loading, and a link you can use on your site, Instagram, Google profile, receipts, and signage.</p>
-      </article>
-
-      <article class="service-card">
-        <h3>QR-ready delivery</h3>
-        <p>You get a QR code connected to the menu page so guests can scan from tables, counters, flyers, packaging, or window signage.</p>
-      </article>
-
-      <article class="service-card">
-        <h3>Simple handoff</h3>
-        <p>Send your current menu as a PDF, image, website link, or pasted text. We organize it into a cleaner customer-facing version.</p>
-      </article>
-
-      <article class="service-card">
-        <h3>Upgrade path</h3>
-        <p>After the menu is live, add Google visibility, accessibility support, conversion fixes, or an app upgrade when the timing makes sense.</p>
       </article>
     </div>
 
@@ -204,12 +367,12 @@
 <section class="section section-image" aria-label="Call to action">
   <div class="container cta">
     <div>
-      <h2>Ready to get your menu online?</h2>
-      <p>Start with the $129 mobile menu + QR code. Add upgrades later if you need them.</p>
+      <h2>Ready to start?</h2>
+      <p>Choose what you need and we’ll move quickly with clear scope.</p>
     </div>
 
     <div class="cta-actions">
-      <a class="btn primary" href="contact.html?service=menu">Start My $129 Menu</a>
+      <a class="btn primary" href="contact.html">Start</a>
       <a class="btn ghost" href="services.html">View Services</a>
     </div>
   </div>
@@ -224,6 +387,65 @@
     </a>
   </div>
 </footer>
+
+
+<div class="mm-promo" id="mmMenuPromo" role="dialog" aria-labelledby="mmPromoTitle" aria-describedby="mmPromoText" aria-hidden="true">
+  <div class="mm-promo-inner">
+    <div class="mm-promo-top">
+      <div class="mm-promo-brand">
+        <img class="mm-promo-mark" src="LogoMENU2024.png" alt="Menu-Made">
+        <span>
+          <span class="mm-promo-kicker">Fast first step</span>
+          <span class="mm-promo-name">MENU-MADE</span>
+        </span>
+      </div>
+      <button class="mm-promo-close" id="mmPromoClose" type="button" aria-label="Close menu offer">×</button>
+    </div>
+
+    <h2 id="mmPromoTitle">Mobile Menu + QR in 48 Hours</h2>
+    <p id="mmPromoText">Send your current menu. We’ll turn it into a clean mobile-friendly menu page with a QR code your guests can scan instantly.</p>
+
+    <div class="mm-promo-price">
+      <strong>From $129</strong>
+      <span>standard menu scope</span>
+    </div>
+
+    <div class="mm-promo-actions">
+      <a class="btn primary" href="contact.html?service=menu">Start My $129 Menu</a>
+      <button class="mm-promo-dismiss" id="mmPromoDismiss" type="button">Not now</button>
+    </div>
+  </div>
+</div>
+
+<script>
+(function(){
+  const promo = document.getElementById('mmMenuPromo');
+  const closeBtn = document.getElementById('mmPromoClose');
+  const dismissBtn = document.getElementById('mmPromoDismiss');
+  const sessionKey = 'mm_menu_promo_seen';
+
+  if (!promo) return;
+
+  const params = new URLSearchParams(window.location.search);
+  if (params.get('service') === 'menu') return;
+  if (sessionStorage.getItem(sessionKey) === '1') return;
+
+  function hidePromo(){
+    promo.classList.remove('show');
+    promo.setAttribute('aria-hidden', 'true');
+    sessionStorage.setItem(sessionKey, '1');
+  }
+
+  window.setTimeout(function(){
+    promo.classList.add('show');
+    promo.setAttribute('aria-hidden', 'false');
+    sessionStorage.setItem(sessionKey, '1');
+  }, 15000);
+
+  if (closeBtn) closeBtn.addEventListener('click', hidePromo);
+  if (dismissBtn) dismissBtn.addEventListener('click', hidePromo);
+})();
+</script>
 
 <!-- ✅ PARALLAX (THIS PAGE ONLY — WORKING) -->
 <script>

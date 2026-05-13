@@ -91,6 +91,200 @@
       }
 
     }
+
+    /* MENU-MADE promo popup — services page */
+    .mm-promo{
+      position:fixed;
+      left:22px;
+      bottom:22px;
+      z-index:9998;
+      width:min(390px, calc(100vw - 44px));
+      border:1px solid rgba(95,242,255,.55);
+      border-radius:22px;
+      background:
+        radial-gradient(circle at 22% 0%, rgba(95,242,255,.20), transparent 34%),
+        linear-gradient(135deg, rgba(0,35,43,.96), rgba(1,63,69,.96));
+      box-shadow:0 18px 48px rgba(0,0,0,.42), 0 0 0 1px rgba(255,255,255,.05) inset;
+      color:#fff;
+      overflow:hidden;
+      transform:translateY(18px);
+      opacity:0;
+      pointer-events:none;
+      transition:opacity .28s ease, transform .28s ease;
+    }
+
+    .mm-promo.show{
+      opacity:1;
+      transform:translateY(0);
+      pointer-events:auto;
+    }
+
+    .mm-promo::before{
+      content:"";
+      position:absolute;
+      inset:0;
+      background:
+        linear-gradient(90deg, rgba(0,214,230,.10), transparent 40%, rgba(246,221,163,.08)),
+        repeating-linear-gradient(90deg, rgba(255,255,255,.035) 0 1px, transparent 1px 12px);
+      opacity:.45;
+      pointer-events:none;
+    }
+
+    .mm-promo-inner{
+      position:relative;
+      padding:18px;
+    }
+
+    .mm-promo-top{
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:12px;
+      margin-bottom:12px;
+    }
+
+    .mm-promo-brand{
+      display:flex;
+      align-items:center;
+      gap:10px;
+      min-width:0;
+    }
+
+    .mm-promo-mark{
+      width:42px;
+      height:42px;
+      border-radius:12px;
+      object-fit:contain;
+      background:rgba(255,255,255,.92);
+      padding:4px;
+      box-shadow:0 8px 18px rgba(0,0,0,.25);
+      flex:0 0 auto;
+    }
+
+    .mm-promo-kicker{
+      display:block;
+      color:var(--brand-soft);
+      font-size:12px;
+      font-weight:900;
+      letter-spacing:.08em;
+      text-transform:uppercase;
+    }
+
+    .mm-promo-name{
+      display:block;
+      color:#fff;
+      font-size:15px;
+      font-weight:900;
+      line-height:1.1;
+    }
+
+    .mm-promo-close{
+      width:34px;
+      height:34px;
+      border:1px solid rgba(255,255,255,.18);
+      border-radius:999px;
+      background:rgba(0,0,0,.24);
+      color:#fff;
+      font-size:22px;
+      line-height:1;
+      cursor:pointer;
+    }
+
+    .mm-promo h2{
+      font-family:'Aldrich',sans-serif;
+      margin:0 0 8px;
+      font-size:24px;
+      line-height:1.08;
+      letter-spacing:.01em;
+    }
+
+    .mm-promo p{
+      margin:0;
+      color:var(--muted);
+      font-size:15.5px;
+      line-height:1.42;
+    }
+
+    .mm-promo-price{
+      display:flex;
+      align-items:baseline;
+      gap:8px;
+      margin:13px 0 15px;
+    }
+
+    .mm-promo-price strong{
+      color:var(--gold);
+      font-size:24px;
+      font-weight:900;
+    }
+
+    .mm-promo-price span{
+      color:rgba(255,255,255,.78);
+      font-size:13px;
+    }
+
+    .mm-promo-actions{
+      display:flex;
+      align-items:center;
+      gap:10px;
+      flex-wrap:wrap;
+    }
+
+    .mm-promo-actions .btn{
+      padding:11px 15px;
+      border-radius:14px;
+      font-size:14px;
+    }
+
+    .mm-promo-dismiss{
+      border:0;
+      background:transparent;
+      color:rgba(255,255,255,.76);
+      font:inherit;
+      font-weight:800;
+      cursor:pointer;
+      padding:10px 4px;
+    }
+
+    .mm-promo-dismiss:hover{
+      color:#fff;
+      text-decoration:underline;
+      text-underline-offset:3px;
+    }
+
+    @media (max-width:700px){
+      .mm-promo{
+        left:12px;
+        right:12px;
+        bottom:12px;
+        width:auto;
+        border-radius:20px;
+      }
+
+      .mm-promo-inner{
+        padding:16px;
+      }
+
+      .mm-promo h2{
+        font-size:21px;
+      }
+
+      .mm-promo p{
+        font-size:14.5px;
+      }
+
+      .mm-promo-actions{
+        display:grid;
+        grid-template-columns:1fr;
+        gap:8px;
+      }
+
+      .mm-promo-actions .btn,
+      .mm-promo-dismiss{
+        width:100%;
+        text-align:center;
+      }
+    }
   </style>
 </head>
 
@@ -264,6 +458,65 @@
     </a>
   </div>
 </footer>
+
+<div class="mm-promo" id="mmMenuPromo" role="dialog" aria-labelledby="mmPromoTitle" aria-describedby="mmPromoText" aria-hidden="true">
+  <div class="mm-promo-inner">
+    <div class="mm-promo-top">
+      <div class="mm-promo-brand">
+        <img class="mm-promo-mark" src="LogoMENU2024.png" alt="Menu-Made">
+        <span>
+          <span class="mm-promo-kicker">Fast first step</span>
+          <span class="mm-promo-name">MENU-MADE</span>
+        </span>
+      </div>
+      <button class="mm-promo-close" id="mmPromoClose" type="button" aria-label="Close menu offer">×</button>
+    </div>
+
+    <h2 id="mmPromoTitle">Mobile Menu + QR in 48 Hours</h2>
+    <p id="mmPromoText">Send your current menu. We’ll turn it into a clean mobile-friendly menu page with a QR code your guests can scan instantly.</p>
+
+    <div class="mm-promo-price">
+      <strong>From $129</strong>
+      <span>standard menu scope</span>
+    </div>
+
+    <div class="mm-promo-actions">
+      <a class="btn primary" href="contact.html?service=menu">Start My $129 Menu</a>
+      <button class="mm-promo-dismiss" id="mmPromoDismiss" type="button">Not now</button>
+    </div>
+  </div>
+</div>
+
+<script>
+(function(){
+  const promo = document.getElementById('mmMenuPromo');
+  const closeBtn = document.getElementById('mmPromoClose');
+  const dismissBtn = document.getElementById('mmPromoDismiss');
+  const sessionKey = 'mm_menu_promo_seen';
+
+  if (!promo) return;
+
+  const params = new URLSearchParams(window.location.search);
+  if (params.get('service') === 'menu') return;
+  if (sessionStorage.getItem(sessionKey) === '1') return;
+
+  function hidePromo(){
+    promo.classList.remove('show');
+    promo.setAttribute('aria-hidden', 'true');
+    sessionStorage.setItem(sessionKey, '1');
+  }
+
+  window.setTimeout(function(){
+    promo.classList.add('show');
+    promo.setAttribute('aria-hidden', 'false');
+    sessionStorage.setItem(sessionKey, '1');
+  }, 15000);
+
+  if (closeBtn) closeBtn.addEventListener('click', hidePromo);
+  if (dismissBtn) dismissBtn.addEventListener('click', hidePromo);
+})();
+</script>
+
 
 <link rel="stylesheet" href="mm-a11y-widget.css">
 <script src="mm-a11y-widget.js" defer></script>
