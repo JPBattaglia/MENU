@@ -14,6 +14,19 @@
   <link rel="apple-touch-icon" href="MENU=.png">
 
   <link rel="stylesheet" href="main.css">
+
+  <style>
+    .onboarding-panel{max-width:820px;margin:28px auto 0;padding:24px;border:1px solid rgba(255,255,255,.16);border-radius:18px;background:rgba(255,255,255,.045);text-align:left}
+    .onboarding-panel[hidden],.onboarding-status[hidden]{display:none!important}
+    .onboarding-grid{display:grid;grid-template-columns:1fr 1fr;gap:18px;margin-top:22px}
+    .onboarding-field{display:flex;flex-direction:column;gap:7px}.onboarding-field.full{grid-column:1/-1}
+    .onboarding-field label{font-family:"Aldrich",sans-serif;font-size:.9rem}
+    .onboarding-field input,.onboarding-field textarea{width:100%;box-sizing:border-box;border:1px solid rgba(255,255,255,.22);border-radius:10px;padding:12px 13px;font:inherit;color:inherit;background:rgba(0,0,0,.18)}
+    .onboarding-field textarea{min-height:110px;resize:vertical}.field-note,.field-error{margin:0;font-size:.85rem}.field-error{font-weight:700}
+    .onboarding-status{margin-top:16px;padding:12px 14px;border-radius:10px;background:rgba(255,255,255,.07)}
+    @media(max-width:700px){.onboarding-grid{grid-template-columns:1fr}.onboarding-field.full{grid-column:auto}.onboarding-panel{padding:18px}}
+  </style>
+
 </head>
 
 <body>
@@ -47,52 +60,249 @@
 </header>
 
 <main>
-
 <section class="hero">
   <div class="container">
     <span class="pill">Payment confirmed</span>
     <h1>Success</h1>
-    <p>
-      Your payment was successful. We’ll review your request and follow up shortly
-      with next steps or any access we need.
-    </p>
+    <p>Your payment was successful. Complete the information below so Menu-Made can move your project directly into production.</p>
+    <p>Order reference: <strong id="orderRef">—</strong></p>
 
-    <div class="hero-actions">
-      <a class="btn primary" href="contact.html">Back to Start</a>
-      <a class="btn ghost" href="services.html">View Services</a>
+    <div id="loadingState" class="onboarding-panel"><p>Loading your project…</p></div>
+
+    <div id="errorState" class="onboarding-panel" hidden>
+      <h2>We couldn’t load your project</h2>
+      <p id="loadError">Please refresh this page. If the problem continues, contact Menu-Made.</p>
     </div>
 
+    <form id="onboardingForm" class="onboarding-panel" hidden novalidate>
+      <h2>Project information</h2>
+      <p>Required items must be completed before production can begin.</p>
+      <div id="onboardingFields" class="onboarding-grid"></div>
+      <div class="hero-actions">
+        <button id="saveButton" class="btn primary" type="submit">Save &amp; Continue</button>
+      </div>
+      <p id="formStatus" class="onboarding-status" role="status" aria-live="polite" hidden></p>
+    </form>
+
+    <div id="completeState" class="onboarding-panel" hidden>
+      <span class="pill">Onboarding complete</span>
+      <h2>Your project is ready for production</h2>
+      <p>We have everything required to begin the automated production workflow. You do not need to submit anything else right now.</p>
+      <div class="hero-actions">
+        <a class="btn primary" href="index.html">Return Home</a>
+        <a class="btn ghost" href="services.html">View Services</a>
+      </div>
+    </div>
   </div>
 </section>
-
 </main>
 
 <footer class="footer">
   <div class="container footer-inner">
+
     <div class="footer-copy">© 2019 MENU-MADE</div>
 
     <a class="footer-logo" href="index.html">
       <img src="MENU1.png" alt="MENU-MADE">
     </a>
+
   </div>
 </footer>
 
 <script>
-  const params = new URLSearchParams(window.location.search);
-  document.getElementById("sid").textContent =
-    params.get("session_id") || "—";
-</script>
-
-<script>
-document.addEventListener("DOMContentLoaded", () => {
-  const params = new URLSearchParams(window.location.search);
+(() => {
+  const params = new URLSearchParams(location.search);
   const sessionId = params.get("session_id");
+  const orderId = params.get("order_id");
 
-  if (sessionId) {
-    sessionStorage.setItem("menuMadeCheckoutSessionId", sessionId);
+  const $ = id => document.getElementById(id);
+  const labels = {
+    business_name: "Business name",
+    menu_source: "Current menu URL",
+    logo: "Logo",
+    brand_colors: "Brand colors",
+    qr_destination: "QR code destination URL",
+    contact_email: "Contact email",
+    menu_notes: "Menu notes",
+    special_instructions: "Special instructions"
+  };
+  const help = {
+    menu_source: "Link to the menu we should use as the source.",
+    logo: "PNG, JPEG, WebP, or SVG. Maximum 10 MB.",
+    brand_colors: "Example: navy and gold, or provide hex values.",
+    qr_destination: "The URL customers should reach when they scan the QR code.",
+    menu_notes: "Optional changes, corrections, or menu-specific notes.",
+    special_instructions: "Optional production or design instructions."
+  };
+
+  if (sessionId) sessionStorage.setItem("menuMadeCheckoutSessionId", sessionId);
+  if (orderId) {
+    sessionStorage.setItem("menuMadeOrderId", orderId);
+    $("orderRef").textContent = orderId;
   }
-});
 
+  function status(message) {
+    $("formStatus").textContent = message;
+    $("formStatus").hidden = !message;
+  }
+
+  function fail(message) {
+    $("loadingState").hidden = true;
+    $("onboardingForm").hidden = true;
+    $("completeState").hidden = true;
+    $("loadError").textContent = message;
+    $("errorState").hidden = false;
+  }
+
+  function buildField(input) {
+    const wrap = document.createElement("div");
+    wrap.className = "onboarding-field";
+    if (["menu_notes", "special_instructions"].includes(input.key)) wrap.classList.add("full");
+
+    const label = document.createElement("label");
+    label.htmlFor = `field-${input.key}`;
+    label.textContent = (labels[input.key] || input.key.replaceAll("_", " ")) + (input.required ? " *" : "");
+    wrap.appendChild(label);
+
+    if (input.type === "FILE") {
+      const control = document.createElement("input");
+      control.type = "file";
+      control.id = `field-${input.key}`;
+      control.name = input.key;
+      control.accept = "image/png,image/jpeg,image/webp,image/svg+xml";
+      control.dataset.kind = "FILE";
+      control.dataset.currentStatus = input.status || "MISSING";
+      if (input.required && input.status !== "VALID") control.required = true;
+      wrap.appendChild(control);
+
+      if (input.status === "VALID") {
+        const note = document.createElement("p");
+        note.className = "field-note";
+        note.textContent = "Logo already received. Choose a new file only to replace it.";
+        wrap.appendChild(note);
+      }
+    } else {
+      const multiline = ["menu_notes", "special_instructions"].includes(input.key);
+      const control = document.createElement(multiline ? "textarea" : "input");
+      control.id = `field-${input.key}`;
+      control.name = input.key;
+      control.dataset.kind = input.type || "TEXT";
+      control.value = input.value || "";
+      if (!multiline) control.type = input.type === "URL" ? "url" : (input.key === "contact_email" ? "email" : "text");
+      if (input.required) control.required = true;
+      wrap.appendChild(control);
+    }
+
+    if (help[input.key]) {
+      const note = document.createElement("p");
+      note.className = "field-note";
+      note.textContent = help[input.key];
+      wrap.appendChild(note);
+    }
+    if (input.validation_message) {
+      const err = document.createElement("p");
+      err.className = "field-error";
+      err.textContent = input.validation_message;
+      wrap.appendChild(err);
+    }
+    return wrap;
+  }
+
+  async function load() {
+    if (!sessionId || !orderId) {
+      fail("This success link is missing its order or checkout-session reference. Please use the original payment-success link.");
+      return;
+    }
+
+    try {
+      const res = await fetch(`/api/onboarding?order_id=${encodeURIComponent(orderId)}&session_id=${encodeURIComponent(sessionId)}`, {
+        headers: { Accept: "application/json" }
+      });
+      const data = await res.json();
+      if (!res.ok || !data.ok) throw new Error(data.error || "Unable to load onboarding.");
+
+      $("loadingState").hidden = true;
+      $("errorState").hidden = true;
+
+      if (data.onboarding?.complete) {
+        $("onboardingForm").hidden = true;
+        $("completeState").hidden = false;
+        return;
+      }
+
+      const box = $("onboardingFields");
+      box.replaceChildren();
+      (data.onboarding?.inputs || []).forEach(input => box.appendChild(buildField(input)));
+      $("completeState").hidden = true;
+      $("onboardingForm").hidden = false;
+    } catch (e) {
+      fail(e.message || "Unable to load onboarding.");
+    }
+  }
+
+  async function saveText() {
+    const fields = {};
+    document.querySelectorAll("#onboardingFields [data-kind]:not([data-kind='FILE'])")
+      .forEach(el => fields[el.name] = el.value);
+
+    const res = await fetch("/api/onboarding", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Accept: "application/json" },
+      body: JSON.stringify({ order_id: orderId, session_id: sessionId, fields })
+    });
+    const data = await res.json();
+    if (!res.ok || !data.ok) throw new Error(data.error || "Unable to save project information.");
+
+    const invalid = (data.saved || []).filter(item => item.status === "INVALID");
+    if (invalid.length) {
+      throw new Error(invalid.map(item => `${labels[item.key] || item.key}: ${item.message || "Invalid value"}`).join(" "));
+    }
+  }
+
+  async function uploadFiles() {
+    for (const input of document.querySelectorAll("#onboardingFields input[type='file'][data-kind='FILE']")) {
+      if (!input.files.length) {
+        if (input.required && input.dataset.currentStatus !== "VALID") throw new Error(`${labels[input.name] || input.name} is required.`);
+        continue;
+      }
+
+      const body = new FormData();
+      body.append("order_id", orderId);
+      body.append("session_id", sessionId);
+      body.append("input_key", input.name);
+      body.append("file", input.files[0]);
+
+      const res = await fetch("/api/onboarding/upload", { method: "POST", body });
+      const data = await res.json();
+      if (!res.ok || !data.ok) throw new Error(data.error || `Unable to upload ${labels[input.name] || input.name}.`);
+    }
+  }
+
+  $("onboardingForm").addEventListener("submit", async event => {
+    event.preventDefault();
+    if (!$("onboardingForm").reportValidity()) return;
+
+    $("saveButton").disabled = true;
+    $("saveButton").textContent = "Saving…";
+    status("Saving your project information…");
+
+    try {
+      await saveText();
+      await uploadFiles();
+      status("Saved. Checking project readiness…");
+      await load();
+      if (!$("completeState").hidden) status("");
+      else status("Saved. Complete any remaining required items to begin production.");
+    } catch (e) {
+      status(e.message || "Something went wrong while saving.");
+    } finally {
+      $("saveButton").disabled = false;
+      $("saveButton").textContent = "Save & Continue";
+    }
+  });
+
+  load();
+})();
 </script>
 
 <link rel="stylesheet" href="mm-a11y-widget.css">

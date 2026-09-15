@@ -19,6 +19,33 @@
   --radius-lg:26px;
 }
 
+
+/* SVG ICONS (common miss) */
+[data-mm-a11y-user-text-color] svg {
+  fill: var(--mm-a11y-user-text-color) !important;
+  stroke: var(--mm-a11y-user-text-color) !important;
+}
+
+/* UNDERLINE LINKS = underline only */
+[data-mm-a11y-underline="1"] a {
+  text-decoration: underline !important;
+  text-decoration-thickness: 2px;
+  text-underline-offset: 3px;
+}
+
+/* HIGHLIGHT LINKS = color + background (NO underline) */
+[data-mm-a11y-highlight-links="1"] a {
+  background: rgba(0,255,255,0.18) !important;
+  color: #00ffff !important;
+  border-radius: 4px;
+  padding: 1px 3px;
+}
+
+/* IMPORTANT: prevent stacking */
+[data-mm-a11y-highlight-links="1"][data-mm-a11y-underline="1"] a {
+  text-decoration: underline !important;
+}
+
 /* RESET */
 *{ box-sizing:border-box; }
 html,body{ margin:0; padding:0; }
