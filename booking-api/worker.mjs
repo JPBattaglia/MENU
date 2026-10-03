@@ -61,7 +61,7 @@ export async function deliver(env, row) {
         body: JSON.stringify({
           from: env.BOOKING_FROM,
           to: [kind === 'owner' ? env.BOOKING_TO : data.email],
-          reply_to: kind === 'owner' ? data.email : env.BOOKING_TO,
+          reply_to: kind === 'owner' ? data.email : (env.BOOKING_REPLY_TO || env.BOOKING_TO),
           subject: kind === 'owner' ? `MENU-MADE session request — ${data.date}` : 'MENU-MADE — session request received',
           text: kind === 'owner' ? details : `Hello ${data.name},\n\nYour session request was received. We’ll reply to confirm availability; this is not a confirmed appointment.\n\nSession: ${data.session}\nPreferred date: ${data.date}\nPreferred time: ${data.time} (${data.timezone})\nReference: ${row.id}\n\nMENU-MADE`
         })
