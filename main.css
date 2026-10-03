@@ -127,6 +127,42 @@ img{ display:block; max-width:100%; height:auto; }
   white-space:nowrap;
 }
 
+.nav-social{
+  display:flex;
+  align-items:center;
+  gap:8px;
+  margin-left:18px;
+}
+
+.social-icon{
+  width:34px;
+  height:34px;
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  border:1px solid rgba(95,242,255,.42);
+  border-radius:999px;
+  background:rgba(0,214,230,.10);
+  color:var(--brand-soft);
+  text-decoration:none;
+  font-family:'Aldrich',sans-serif;
+  font-size:11px;
+  font-weight:900;
+  transition:transform .18s ease, background .18s ease, border-color .18s ease;
+}
+
+.social-icon svg{
+  width:17px;
+  height:17px;
+  fill:currentColor;
+}
+
+.social-icon:hover{
+  transform:translateY(-2px);
+  border-color:var(--brand-soft);
+  background:rgba(95,242,255,.18);
+}
+
 /* BURGER */
 .nav-toggle{
   position:absolute;
@@ -196,6 +232,7 @@ img{ display:block; max-width:100%; height:auto; }
   border-radius:16px;
   text-decoration:none;
   font-weight:900;
+  text-align:center;
   transition: transform .18s ease, box-shadow .18s ease, filter .18s ease;
 }
 .btn.primary{
@@ -341,6 +378,47 @@ img{ display:block; max-width:100%; height:auto; }
   flex-wrap:wrap;
 }
 
+.booking-grid{
+  display:grid;
+  grid-template-columns:repeat(2, minmax(0, 1fr));
+  max-width:960px;
+  gap:28px;
+  align-items:stretch;
+}
+
+.booking-card{
+  min-width:0;
+  border:1px solid rgba(95,242,255,.45);
+  border-radius:var(--radius-lg);
+  padding:24px;
+  background:
+    radial-gradient(circle at 18% 0%, rgba(95,242,255,.18), transparent 36%),
+    linear-gradient(180deg, rgba(10,123,133,.88), rgba(8,104,113,.88));
+  box-shadow:0 18px 40px rgba(0,0,0,.24);
+}
+
+.booking-card h2{
+  font-family:'Aldrich',sans-serif;
+  font-size:28px;
+  line-height:1.05;
+  margin:0 0 12px;
+}
+
+.booking-card p{
+  color:var(--muted);
+  font-size:18px;
+  line-height:1.55;
+}
+
+.booking-actions{
+  display:flex;
+  align-items:center;
+  gap:14px;
+  flex-wrap:wrap;
+  margin-top:22px;
+}
+
+
 /* FOOTER */
 .footer{
   background:#003344;
@@ -356,12 +434,9 @@ img{ display:block; max-width:100%; height:auto; }
 .footer-logo{ width:120px; }
 .footer-social{
   display:flex;
-  gap:16px;
-}
-.footer-social svg{
-  width:22px;
-  height:22px;
-  fill:var(--brand);
+  gap:8px;
+  align-items:center;
+  justify-content:center;
 }
 
 /* RESPONSIVE */
@@ -429,6 +504,12 @@ img{ display:block; max-width:100%; height:auto; }
     margin-left:0;
     padding:12px 18px;
   }
+  .nav-social{
+    justify-content:center;
+    margin:8px 0 0;
+    padding-top:10px;
+    border-top:1px solid rgba(95,242,255,.22);
+  }
   .nav-cta{
     margin-left:0;
     display:inline-block;
@@ -442,6 +523,12 @@ img{ display:block; max-width:100%; height:auto; }
     opacity:1;
     pointer-events:auto;
     transform:translateY(0);
+  }
+}
+
+@media(max-width:900px){
+  .booking-grid{
+    grid-template-columns:1fr;
   }
 }
 
@@ -473,4 +560,74 @@ img{ display:block; max-width:100%; height:auto; }
     font-size:19px !important;
   }
 
+}
+
+
+/* Native MENU-MADE booking */
+.booking-form { min-width:0; }
+.booking-form select {
+  width:100%; min-width:0; border-radius:14px;
+  border:1px solid rgba(0,214,230,.4); background:var(--bg-deep);
+  color:var(--text); padding:12px; font:inherit;
+}
+.booking-form input { min-width:0; color-scheme:dark; }
+.booking-times { border:0; padding:0; margin:0 0 20px; min-width:0; }
+.booking-times legend { font-weight:800; }
+.booking-slots { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:8px; }
+.booking-slot {
+  min-height:44px; padding:10px 4px; border-radius:12px;
+  border:1px solid var(--brand-soft); background:var(--bg-deep);
+  color:var(--text); font:inherit; cursor:pointer;
+}
+.booking-slot[aria-pressed="true"] { background:var(--brand-soft); color:var(--bg-deep); font-weight:700; }
+.booking-slot:hover { border-color:white; }
+.booking-form :focus-visible, .social-icon:focus-visible { outline:3px solid var(--gold); outline-offset:3px; }
+.booking-summary { padding:16px; margin:0 0 18px; background:rgba(0,0,0,.2); border-radius:14px; }
+.booking-summary p { margin:8px 0 0; }
+.booking-form button:disabled { opacity:.55; cursor:not-allowed; }
+.booking-form a { color:var(--brand-soft); }
+@media(max-width:520px) {
+  .booking-card { padding:22px; }
+  .booking-card h2 { font-size:28px; }
+  .booking-slots { grid-template-columns:repeat(2,minmax(0,1fr)); }
+}
+/* Keep header icons identical to footer icons, including the mobile menu. */
+.nav .social-icon, .footer-social .social-icon {
+  width:34px; height:34px; flex:0 0 34px; padding:0; margin:0;
+}
+
+/* Compact booking cards against the Tech section background. */
+#booking { padding:60px 0; }
+#booking .booking-card p { font-size:16px !important; line-height:1.45 !important; }
+#booking .booking-form .mini { font-size:13px !important; }
+#booking .field { gap:4px; margin-bottom:10px; }
+#booking .field input, #booking .field textarea, #booking .field select {
+  padding:8px 10px; font-size:16px;
+}
+#booking .field textarea { min-height:64px; }
+#booking .booking-times { margin-bottom:14px; }
+#booking .booking-summary { padding:12px; margin-bottom:14px; }
+#booking .booking-summary p { font-size:14px !important; }
+#bookingStatus:empty { display:none; }
+
+/* Give the introduction enough presence to balance the booking form. */
+@media(min-width:901px) {
+  #booking .booking-card:not(.booking-form) {
+    display:flex;
+    flex-direction:column;
+    justify-content:space-between;
+    align-items:flex-start;
+    gap:24px;
+    padding:32px;
+  }
+  #booking .booking-card:not(.booking-form) h2 {
+    font-size:42px;
+    line-height:1.12;
+    margin:0;
+  }
+  #booking .booking-card:not(.booking-form) p {
+    font-size:22px !important;
+    line-height:1.6 !important;
+    margin:0;
+  }
 }

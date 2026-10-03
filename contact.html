@@ -297,7 +297,7 @@
 
       <div class="hero-actions">
         <a class="btn primary" href="#checkout">Start My $129 Menu</a>
-        <a class="btn ghost" href="services.html">View Services</a>
+        <a class="btn ghost" href="#booking">Book Call</a>
       </div>
 
       <p class="muted-note">
@@ -317,6 +317,8 @@
 
   </div>
 </section>
+
+
 
 <section class="section section-image" id="checkout" aria-label="Checkout">
   <div class="container">
@@ -472,7 +474,7 @@
   </div>
 </section>
 
-<section class="section section-image" aria-label="Final CTA">
+<section class="section" aria-label="Final CTA">
   <div class="container cta">
     <div>
       <h2>Ready to start your menu?</h2>
@@ -486,6 +488,49 @@
   </div>
 </section>
 
+<section class="section section-image" id="booking" aria-labelledby="booking-heading">
+  <div class="container booking-grid">
+    <div class="booking-card">
+      <span class="pill">MENU-MADE · Book a call</span>
+      <h2 id="booking-heading">Let’s plan your next step.</h2>
+      <p>Bring your menu, website, Google listing, or next big idea. Pick a session and a preferred time to talk it through with MENU-MADE.</p>
+      <p>Times are suggestions, subject to confirmation. Send your request from your email app and we’ll reply to confirm availability.</p>
+      <a class="btn ghost" href="#checkout">Go to checkout</a>
+    </div>
+    <form class="booking-card booking-form" id="bookingForm">
+      <div class="field">
+        <label for="bookingSession">Session type *</label>
+        <select id="bookingSession" name="session" required>
+          <option value="Menu + QR consultation (30 minutes)">Menu + QR consultation · 30 min</option>
+          <option value="Website + visibility consultation (30 minutes)">Website + visibility · 30 min</option>
+          <option value="Project planning (30 minutes)">Project planning · 30 min</option>
+        </select>
+      </div>
+      <div class="field">
+        <label for="bookingDate">Preferred date *</label>
+        <input id="bookingDate" name="date" type="date" required aria-describedby="bookingTimezone">
+      </div>
+      <fieldset class="booking-times">
+        <legend>Preferred time *</legend>
+        <p id="bookingTimezone" class="mini"></p>
+        <div id="bookingSlots" class="booking-slots"></div>
+      </fieldset>
+      <div class="two">
+        <div class="field"><label for="bookingName">Name *</label><input id="bookingName" name="name" autocomplete="name" maxlength="100" required></div>
+        <div class="field"><label for="bookingEmail">Email *</label><input id="bookingEmail" name="email" type="email" autocomplete="email" maxlength="150" required></div>
+      </div>
+      <div class="field"><label for="bookingBusiness">Business</label><input id="bookingBusiness" name="business" autocomplete="organization" maxlength="150"></div>
+      <div class="field"><label for="bookingNotes">What would you like to discuss?</label><textarea id="bookingNotes" name="notes" maxlength="1200" placeholder="Tell us about your menu, website, or project."></textarea></div>
+      <div class="booking-summary" aria-live="polite"><strong>Your session request</strong><p id="bookingSummary">Choose a date and time to build your request.</p></div>
+      <button class="btn primary" type="submit" id="bookingSubmit" disabled>Create email request</button>
+      <p class="mini">Your email app opens with a ready-to-send request. Your session is confirmed only after we reply.</p>
+      <p id="bookingStatus" role="status"></p>
+      <a id="bookingMailLink" hidden>Open email request again</a>
+      <noscript><p>Please enable JavaScript to select a time, or email <a href="mailto:info@menu-made.com">info@menu-made.com</a> with your preferred session and time.</p></noscript>
+    </form>
+  </div>
+</section>
+
 </main>
 
 <footer class="footer">
@@ -496,15 +541,13 @@
       <img src="MENU1.png" alt="MENU-MADE">
     </a>
 
-    <div class="footer-social">
+    <div class="footer-social" aria-label="Social links">
       <a class="social-icon" href="https://www.facebook.com/MenuMade.OnlinePresence" target="_blank" rel="noopener" aria-label="Facebook">
         <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14 8.5V7c0-.8.5-1 1-1h2V3h-3c-2.8 0-4 1.7-4 4v1.5H8V12h2v9h4v-9h2.7l.3-3.5H14z"/></svg>
       </a>
-
       <a class="social-icon" href="https://www.linkedin.com/company/menu-made/" target="_blank" rel="noopener" aria-label="LinkedIn">
-        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6.5 6.5A2.5 2.5 0 1 1 6.5 1.5a2.5 2.5 0 0 1 0 5zM4 22V8h5v14H4zm7.5-14H16v1.9c.7-1.2 2-2.3 4.2-2.3 3 0 4.8 2 4.8 6.2V22h-5v-6.3c0-2-.6-3.1-2.1-3.1-1.1 0-1.7.8-2 1.5-.1.3-.1.8-.1 1.2V22h-5V8z"/></svg>
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 3a2 2 0 1 1 0 4 2 2 0 0 1 0-4zM3 9h4v12H3V9zm6 0h4v1.6c.8-1.2 2-1.9 3.6-1.9 3.2 0 4.4 2 4.4 5.4V21h-4v-6.1c0-1.7-.3-2.8-1.8-2.8-1.6 0-2.2 1.2-2.2 2.8V21H9V9z"/></svg>
       </a>
-
       <a class="social-icon" href="https://www.instagram.com/menumade.gram/" target="_blank" rel="noopener" aria-label="Instagram">
         <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 2h10a5 5 0 0 1 5 5v10a5 5 0 0 1-5 5H7a5 5 0 0 1-5-5V7a5 5 0 0 1 5-5zm10 2H7a3 3 0 0 0-3 3v10a3 3 0 0 0 3 3h10a3 3 0 0 0 3-3V7a3 3 0 0 0-3-3zm-5 4.2a3.8 3.8 0 1 1 0 7.6 3.8 3.8 0 0 1 0-7.6zm0 2a1.8 1.8 0 1 0 0 3.6 1.8 1.8 0 0 0 0-3.6zM18 6.3a.9.9 0 1 1 0 1.8.9.9 0 0 1 0-1.8z"/></svg>
       </a>
@@ -512,6 +555,7 @@
   </div>
 </footer>
 
+<script src="booking.js" defer></script>
 <script src="start.js" defer></script>
 
 <script>
@@ -627,6 +671,25 @@ document.addEventListener("DOMContentLoaded", () => {
 
 <link rel="stylesheet" href="mm-a11y-widget.css">
 <script src="mm-a11y-widget.js" defer></script>
+
+<!-- Match the Tech background parallax used on the other pages. -->
+<script>
+(() => {
+  const sections = document.querySelectorAll('.section-image');
+  const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
+  function updateParallax() {
+    sections.forEach(section => {
+      const offset = section.getBoundingClientRect().top * -0.2;
+      section.style.backgroundPosition = reducedMotion.matches
+        ? 'center' : `center calc(50% + ${offset}px)`;
+    });
+  }
+  window.addEventListener('scroll', updateParallax, { passive: true });
+  window.addEventListener('resize', updateParallax);
+  reducedMotion.addEventListener('change', updateParallax);
+  updateParallax();
+})();
+</script>
 
 </body>
 </html>
