@@ -1,0 +1,21 @@
+{
+  "name": "menu-made-booking",
+  "main": "worker.mjs",
+  "compatibility_date": "2026-10-02",
+  "workers_dev": false,
+  "routes": [
+    { "pattern": "menu-made.com/api/booking", "zone_name": "menu-made.com" },
+    { "pattern": "www.menu-made.com/api/booking", "zone_name": "menu-made.com" }
+  ],
+  "d1_databases": [{
+    "binding": "DB",
+    "database_name": "menu-made-db",
+    "database_id": "1387bcdc-e462-41ce-bc6b-5cc1b0a47ad0",
+    "migrations_dir": "migrations"
+  }],
+  "vars": {
+    "BOOKING_FROM": "Menu-Made Bookings <bookings@menu-made.com>",
+    "BOOKING_TO": "info@menu-made.com"
+  },
+  "triggers": { "crons": ["*/5 * * * *"] }
+}
