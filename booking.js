@@ -7,7 +7,11 @@
   const slots = document.getElementById('bookingSlots');
   const summary = document.getElementById('bookingSummary');
   const status = document.getElementById('bookingStatus');
-  const mailLink = document.getElementById('bookingMailLink');
+  const submit = document.getElementById('bookingSubmit');
+  let submitting = false;
+  let requestId = '';
+  let requestPayload = '';
+  let received = false;
   const zone = Intl.DateTimeFormat().resolvedOptions().timeZone;
   let selectedTime = '';
   function tomorrow() {
@@ -21,8 +25,7 @@
     return new Date(`${date.value}T12:00:00`).toLocaleDateString(undefined, { weekday:'long', year:'numeric', month:'long', day:'numeric' });
   }
   function update() {
-    status.textContent = '';
-    mailLink.hidden = true;
+    if (!submitting && !received) status.textContent = '';
     summary.textContent = date.value && date.validity.valid && selectedTime
       ? `${session.value} · ${dateLabel()} at ${selectedTime} (${zone}). Pending confirmation.`
       : 'Choose a date and time to build your request.';
@@ -49,8 +52,9 @@
     update();
   });
   form.addEventListener('input', update);
-  document.getElementById('bookingSubmit').disabled = false;
-  form.addEventListener('submit', event => {
+  submit.disabled = false;
+  form.addEventListener('submit', async event => {
+    if (submitting || received) { event.preventDefault(); return; }
     event.preventDefault();
     date.min = tomorrow();
     if (!form.reportValidity()) return;
@@ -65,11 +69,51 @@
       document.getElementById('bookingName').focus();
       return;
     }
-    const body = `Hello MENU-MADE,\n\nI would like to request a session:\n\nSession: ${session.value}\nDate: ${dateLabel()}\nTime: ${selectedTime}\nTimezone: ${zone}\n\nName: ${data.get('name').trim()}\nEmail: ${data.get('email')}\nBusiness: ${data.get('business').trim() || 'Not provided'}\nNotes: ${data.get('notes').trim() || 'None'}\n\nPlease confirm availability. Thank you!`;
-    const href = `mailto:info@menu-made.com?subject=${encodeURIComponent('MENU-MADE session request — ' + date.value)}&body=${encodeURIComponent(body)}`;
-    mailLink.href = href;
-    mailLink.hidden = false;
-    status.textContent = 'Your request is ready. Send it from your email app to info@menu-made.com. If no app opens, use the link below or email us your session details. Your time is not yet confirmed.';
-    window.location.href = href;
+    const payload = {
+      session: session.value, date: date.value, time: selectedTime, timezone: zone,
+      name: data.get('name').trim(), email: data.get('email').trim(),
+      business: data.get('business').trim(), notes: data.get('notes').trim(),
+      website: data.get('website') || ''
+    };
+    // Retain the same ID for retries after a lost response.
+    const serialized = JSON.stringify(payload);
+    if (serialized !== requestPayload) {
+      requestId = crypto.randomUUID();
+      requestPayload = serialized;
+    }
+    submitting = true;
+    const controls = [...form.querySelectorAll('input, select, textarea, button')];
+    controls.forEach(control => { control.disabled = true; });
+    form.setAttribute('aria-busy', 'true');
+    submit.textContent = 'Sending…';
+    status.textContent = 'Sending your session request…';
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 20000);
+    try {
+      const response = await fetch(form.action, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ...payload, requestId }), signal: controller.signal
+      });
+      const result = await response.json().catch(() => null);
+      if (!response.ok || result?.ok !== true || typeof result.requestId !== 'string') {
+        throw new Error(response.status === 429
+          ? 'Too many requests. Please wait a few minutes before trying again.'
+          : 'We could not confirm receipt. Please try again or contact info@menu-made.com.');
+      }
+      received = true;
+      submit.textContent = 'Request received';
+      status.textContent = `Your request was received. Reference: ${result.requestId}. We’ll contact you to confirm availability. Your time is not yet confirmed.`;
+    } catch (error) {
+      status.textContent = error.name === 'AbortError'
+        ? 'The connection timed out. Please try again; retrying the same request will not create a duplicate.'
+        : (error instanceof TypeError
+          ? 'Connection failed. Please check your connection and try again.' : error.message);
+      submit.textContent = 'Try again';
+    } finally {
+      clearTimeout(timeout);
+      submitting = false;
+      form.removeAttribute('aria-busy');
+      if (!received) controls.forEach(control => { control.disabled = false; });
+    }
   });
 })();
