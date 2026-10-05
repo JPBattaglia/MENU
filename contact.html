@@ -494,10 +494,10 @@
       <span class="pill">MENU-MADE · Book a call</span>
       <h2 id="booking-heading">Let’s plan your next step.</h2>
       <p>Bring your menu, website, Google listing, or next big idea. Pick a session and a preferred time to talk it through with MENU-MADE.</p>
-      <p>Times are suggestions, subject to confirmation. Send your request from your email app and we’ll reply to confirm availability.</p>
+      <p>Times are suggestions, subject to confirmation. Submit your request here and we’ll reply to confirm availability.</p>
       <a class="btn ghost" href="#checkout">Go to checkout</a>
     </div>
-    <form class="booking-card booking-form" id="bookingForm">
+    <form class="booking-card booking-form" id="bookingForm" action="/api/booking" method="post">
       <div class="field">
         <label for="bookingSession">Session type *</label>
         <select id="bookingSession" name="session" required>
@@ -522,10 +522,10 @@
       <div class="field"><label for="bookingBusiness">Business</label><input id="bookingBusiness" name="business" autocomplete="organization" maxlength="150"></div>
       <div class="field"><label for="bookingNotes">What would you like to discuss?</label><textarea id="bookingNotes" name="notes" maxlength="1200" placeholder="Tell us about your menu, website, or project."></textarea></div>
       <div class="booking-summary" aria-live="polite"><strong>Your session request</strong><p id="bookingSummary">Choose a date and time to build your request.</p></div>
-      <button class="btn primary" type="submit" id="bookingSubmit" disabled>Create email request</button>
-      <p class="mini">Your email app opens with a ready-to-send request. Your session is confirmed only after we reply.</p>
+      <div hidden aria-hidden="true"><label for="bookingWebsite">Leave this blank</label><input id="bookingWebsite" name="website" tabindex="-1" autocomplete="off"></div>
+      <button class="btn primary" type="submit" id="bookingSubmit" disabled>Send session request</button>
+      <p class="mini">Your request is submitted directly to MENU-MADE. Your session is confirmed only after we reply.</p>
       <p id="bookingStatus" role="status"></p>
-      <a id="bookingMailLink" hidden>Open email request again</a>
       <noscript><p>Please enable JavaScript to select a time, or email <a href="mailto:info@menu-made.com">info@menu-made.com</a> with your preferred session and time.</p></noscript>
     </form>
   </div>
@@ -555,7 +555,7 @@
   </div>
 </footer>
 
-<script src="booking.js" defer></script>
+<script src="booking.js?v=20261005" defer></script>
 <script src="start.js" defer></script>
 
 <script>
