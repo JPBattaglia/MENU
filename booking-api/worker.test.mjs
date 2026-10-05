@@ -69,3 +69,15 @@ test('inquiry persists without scheduling fields and sends project emails', asyn
     assert.equal(f.rows.get(d.requestId).customer_sent,1);
   } finally {globalThis.fetch=previous;}
 });
+test('branded inquiry HTML escapes customer text and preserves both reply paths', async () => {
+  const { inquiryEmailHtml } = await import('./worker.mjs');
+  const d={name:'<img src=x onerror=alert(1)>',email:'jp@example.com',business:'A & B',service:'Conversion Fix',notes:'First line\n<script>alert(1)</script>'};
+  for (const kind of ['owner','customer']) {
+    const html=inquiryEmailHtml(d,'ref-123',kind);
+    assert.ok(html.includes('https://menu-made.com/MENU1.png'));
+    assert.ok(html.includes('A &amp; B'));
+    assert.ok(!html.includes('<script>'));
+    assert.ok(html.includes('First line<br>&lt;script&gt;'));
+    assert.ok(html.includes('Reference: ref-123'));
+  }
+});

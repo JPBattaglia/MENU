@@ -7886,6 +7886,44 @@ async function hash(value) {
   return [...new Uint8Array(digest)].map(n => n.toString(16).padStart(2, '0')).join('');
 }
 
+const escapeEmailHtml = value => String(value ?? '').replace(/[&<>"']/g, character => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[character]));
+
+function inquiryEmailHtml(data, reference, kind) {
+  const owner = kind === 'owner';
+  const safe = escapeEmailHtml;
+  const row = (label, value) => `<tr><td style="padding:12px 16px;border-bottom:1px solid #dce8ec;font-size:12px;font-weight:bold;color:#45616c;width:110px;vertical-align:top;">${safe(label)}</td><td style="padding:12px 16px;border-bottom:1px solid #dce8ec;font-size:15px;color:#102f3d;overflow-wrap:anywhere;">${safe(value)}</td></tr>`;
+  const heading = owner ? 'New project inquiry' : 'Thanks—your inquiry is received.';
+  const intro = owner
+    ? `${safe(data.name)} has contacted MENU-MADE about ${safe(data.service)}. Review the details below and reply directly to this email to follow up.`
+    : `Thanks for contacting MENU-MADE. We’ve received your inquiry about <strong>${safe(data.service)}</strong> and will review your project details. We’ll reply to discuss the next steps.`;
+  const summary = row('Service', data.service) + (owner ? row('Name', data.name) + row('Email', data.email) : '') + (data.business ? row('Business', data.business) : '');
+  return `<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${heading}</title></head>
+<body style="margin:0;padding:0;background-color:#edf3f5;font-family:Arial,Helvetica,sans-serif;">
+<div style="display:none;font-size:1px;color:#edf3f5;max-height:0;overflow:hidden;">${owner ? 'A new MENU-MADE inquiry is ready for your review.' : 'Your project details are with MENU-MADE. We’ll reply with the next steps.'}</div>
+<table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="background-color:#edf3f5;"><tr><td align="center" style="padding:28px 12px;">
+<table role="presentation" width="600" cellspacing="0" cellpadding="0" border="0" style="width:100%;max-width:600px;background-color:#ffffff;border:1px solid #dce8ec;">
+<tr><td style="background-color:#071f2c;padding:28px 32px;border-bottom:4px solid #00d6e6;">
+<a href="https://menu-made.com" style="text-decoration:none;"><img src="https://menu-made.com/MENU1.png" width="220" alt="MENU-MADE" style="display:block;width:220px;max-width:100%;height:auto;border:0;"></a>
+<p style="margin:14px 0 0;color:#bfeef0;font-size:12px;letter-spacing:1px;">MENUS · WEBSITES · ONLINE PRESENCE</p></td></tr>
+<tr><td style="padding:32px;">
+<p style="margin:0 0 12px;font-size:12px;font-weight:bold;letter-spacing:1px;color:#08747b;">${owner ? 'PROJECT INQUIRY' : 'INQUIRY CONFIRMATION'}</p>
+<h1 style="margin:0 0 24px;font-size:26px;line-height:1.25;color:#071f2c;">${heading}</h1>
+${owner ? '' : `<p style="margin:0 0 16px;font-size:16px;line-height:1.6;color:#26434f;">Hi ${safe(data.name)},</p>`}
+<p style="margin:0 0 24px;font-size:16px;line-height:1.6;color:#26434f;">${intro}</p>
+<table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="background-color:#f3f8f9;border:1px solid #dce8ec;">${summary}</table>
+<h2 style="margin:24px 0 10px;font-size:16px;color:#071f2c;">Project details</h2>
+<p style="margin:0 0 24px;font-size:15px;line-height:1.6;color:#26434f;overflow-wrap:anywhere;">${safe(data.notes).replace(/\r?\n/g, '<br>')}</p>
+<p style="margin:0;font-size:15px;line-height:1.6;color:#26434f;">${owner ? 'Use Reply to contact the customer directly.' : 'Have something to add? Reply directly to this email.'}</p>
+${owner ? '' : '<p style="margin:24px 0 0;font-size:15px;color:#071f2c;">The MENU-MADE team</p>'}
+</td></tr>
+<tr><td style="padding:24px 32px;background-color:#071f2c;">
+<p style="margin:0 0 10px;font-size:14px;line-height:1.6;color:#e8f6f7;"><a href="https://menu-made.com" style="color:#5ff2ff;">menu-made.com</a> &nbsp;·&nbsp; <a href="mailto:info@menu-made.com" style="color:#5ff2ff;">info@menu-made.com</a></p>
+<p style="margin:0;font-size:11px;line-height:1.6;color:#bbced5;overflow-wrap:anywhere;">Reference: ${safe(reference)}</p>
+</td></tr></table>
+</td></tr></table></body></html>`;
+}
+
 async function deliver(env, row) {
   const data = JSON.parse(row.payload);
   const inquiry = data.type === 'inquiry';
@@ -7898,6 +7936,7 @@ async function deliver(env, row) {
         method: 'POST', signal: AbortSignal.timeout(10000),
         headers: { Authorization: `Bearer ${env.RESEND_API_KEY}`, 'Content-Type': 'application/json', 'Idempotency-Key': `booking/${row.id}/${kind}` },
         body: JSON.stringify({
+          ...(inquiry ? { html: inquiryEmailHtml(data, row.id, kind) } : {}),
           from: env.BOOKING_FROM,
           to: [kind === 'owner' ? env.BOOKING_TO : data.email],
           reply_to: kind === 'owner' ? data.email : (env.BOOKING_REPLY_TO || env.BOOKING_TO),
