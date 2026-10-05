@@ -34,6 +34,11 @@
       business: data.get('business').trim(), notes: data.get('notes').trim(),
       website: data.get('website') || ''
     };
+    if (!payload.notes) {
+      showStatus('Please enter your project details.');
+      document.getElementById('bookingNotes').focus();
+      return;
+    }
     // Retain the same ID for retries after a lost response.
     const serialized = JSON.stringify(payload);
     if (serialized !== requestPayload) {
@@ -55,9 +60,15 @@
       });
       const result = await response.json().catch(() => null);
       if (!response.ok || result?.ok !== true || typeof result.requestId !== 'string') {
-        throw new Error(response.status === 429
-          ? 'Too many requests. Please wait a few minutes before trying again.'
-          : 'We could not confirm receipt. Please try again or contact info@menu-made.com.');
+        const messages = {
+          400: 'Please check your service, name, email, and project details. Your inquiry was not accepted.',
+          403: 'This request was blocked. Please open https://menu-made.com/contact and try again.',
+          404: 'The inquiry service is unavailable. Please contact info@menu-made.com.',
+          409: 'This reference was already used for different details. Please reload the page before submitting again.',
+          429: 'Too many requests. Please wait an hour before trying again.',
+          503: 'The inquiry service could not save your request. Please try again later or contact info@menu-made.com.'
+        };
+        throw new Error(messages[response.status] || `Your inquiry could not be confirmed (error ${response.status}). Please contact info@menu-made.com.`);
       }
       received = true;
       submit.textContent = 'Inquiry received';
