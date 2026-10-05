@@ -247,6 +247,27 @@
     .checkline input{
       margin-top: 3px;
     }
+    /* Booking results stay visible in a centered, dismissible toast. */
+    .booking-toast{
+      position:fixed;
+      top:50%;
+      left:50%;
+      transform:translate(-50%,-50%);
+      z-index:10000;
+      width:min(520px,calc(100vw - 32px));
+      max-height:calc(100dvh - 32px);
+      overflow:auto;
+      box-sizing:border-box;
+      padding:28px;
+      border:2px solid var(--brand-soft,#00d6e6);
+      border-radius:20px;
+      background:#071f2c;
+      color:#fff;
+      box-shadow:0 20px 70px rgba(0,0,0,.65);
+    }
+    .booking-toast[hidden]{display:none;}
+    .booking-toast p{margin:0 0 20px;line-height:1.6;overflow-wrap:anywhere;}
+    .booking-toast .btn{min-height:44px;}
   </style>
 </head>
 
@@ -525,11 +546,15 @@
       <div hidden aria-hidden="true"><label for="bookingWebsite">Leave this blank</label><input id="bookingWebsite" name="website" tabindex="-1" autocomplete="off"></div>
       <button class="btn primary" type="submit" id="bookingSubmit" disabled>Send session request</button>
       <p class="mini">Your request is submitted directly to MENU-MADE. Your session is confirmed only after we reply.</p>
-      <p id="bookingStatus" role="status"></p>
       <noscript><p>Please enable JavaScript to select a time, or email <a href="mailto:info@menu-made.com">info@menu-made.com</a> with your preferred session and time.</p></noscript>
     </form>
   </div>
 </section>
+
+<div class="booking-toast" id="bookingToast" hidden>
+  <p id="bookingStatus" role="status" aria-live="polite" aria-atomic="true"></p>
+  <button class="btn primary" id="bookingDismiss" type="button" aria-label="Dismiss booking notification">Close</button>
+</div>
 
 </main>
 
@@ -555,7 +580,7 @@
   </div>
 </footer>
 
-<script src="booking.js?v=20261005" defer></script>
+<script src="booking.js?v=20261005-toast" defer></script>
 <script src="start.js" defer></script>
 
 <script>

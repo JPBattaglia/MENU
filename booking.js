@@ -8,6 +8,16 @@
   const summary = document.getElementById('bookingSummary');
   const status = document.getElementById('bookingStatus');
   const submit = document.getElementById('bookingSubmit');
+  const toast = document.getElementById('bookingToast');
+  const dismiss = document.getElementById('bookingDismiss');
+  function showStatus(message) {
+    status.textContent = message;
+    toast.hidden = false;
+  }
+  dismiss.addEventListener('click', () => { toast.hidden = true; });
+  document.addEventListener('keydown', event => {
+    if (event.key === 'Escape' && !toast.hidden) toast.hidden = true;
+  });
   let submitting = false;
   let requestId = '';
   let requestPayload = '';
@@ -25,7 +35,7 @@
     return new Date(`${date.value}T12:00:00`).toLocaleDateString(undefined, { weekday:'long', year:'numeric', month:'long', day:'numeric' });
   }
   function update() {
-    if (!submitting && !received) status.textContent = '';
+    if (!submitting && !received) { status.textContent = ''; toast.hidden = true; }
     summary.textContent = date.value && date.validity.valid && selectedTime
       ? `${session.value} · ${dateLabel()} at ${selectedTime} (${zone}). Pending confirmation.`
       : 'Choose a date and time to build your request.';
@@ -59,13 +69,13 @@
     date.min = tomorrow();
     if (!form.reportValidity()) return;
     if (!selectedTime) {
-      status.textContent = 'Please choose a preferred time.';
+      showStatus('Please choose a preferred time.');
       slots.querySelector('button')?.focus();
       return;
     }
     const data = new FormData(form);
     if (!data.get('name').trim()) {
-      status.textContent = 'Please enter your name.';
+      showStatus('Please enter your name.');
       document.getElementById('bookingName').focus();
       return;
     }
@@ -86,7 +96,7 @@
     controls.forEach(control => { control.disabled = true; });
     form.setAttribute('aria-busy', 'true');
     submit.textContent = 'Sending…';
-    status.textContent = 'Sending your session request…';
+    showStatus('Sending your session request…');
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 20000);
     try {
@@ -102,12 +112,12 @@
       }
       received = true;
       submit.textContent = 'Request received';
-      status.textContent = `Your request was received. Reference: ${result.requestId}. We’ll contact you to confirm availability. Your time is not yet confirmed.`;
+      showStatus(`Your request was received. Reference: ${result.requestId}. We’ll contact you to confirm availability. Your time is not yet confirmed.`);
     } catch (error) {
-      status.textContent = error.name === 'AbortError'
+      showStatus(error.name === 'AbortError'
         ? 'The connection timed out. Please try again; retrying the same request will not create a duplicate.'
         : (error instanceof TypeError
-          ? 'Connection failed. Please check your connection and try again.' : error.message);
+          ? 'Connection failed. Please check your connection and try again.' : error.message));
       submit.textContent = 'Try again';
     } finally {
       clearTimeout(timeout);
