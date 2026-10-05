@@ -509,29 +509,12 @@
   </div>
 </section>
 
-<section class="section section-image" id="booking" aria-labelledby="booking-heading">
+<section class="section section-image" id="inquiry" aria-labelledby="inquiry-heading">
   <div class="container booking-grid">
     <div class="booking-card">
-      <span class="pill">MENU-MADE · Book a call</span>
-      <h2 id="booking-heading">Let’s plan your next step.</h2>
-      <p>Bring your menu, website, Google listing, or next big idea. Talk it through with MENU-MADE.</p>
-      <a class="btn ghost" href="#checkout">Go to checkout</a>
-    </div>
-    <div class="booking-card">
-      <h3>Choose your session</h3>
-      <p>View available sessions and choose a time that works for you.</p>
-      <a class="btn primary" id="bookingLink" href="https://www.everyexpert.com/jpbattaglia" target="_blank" rel="noopener noreferrer">View availability &amp; book</a>
-      <p class="mini">Booking opens in a new tab.</p>
-    </div>
-  </div>
-</section>
-
-<section class="section" id="inquiry" aria-labelledby="inquiry-heading">
-  <div class="container booking-grid">
-    <div class="booking-card">
-      <span class="pill">MENU-MADE · Project inquiry</span>
+      <span class="pill" id="booking">MENU-MADE · Let’s connect</span>
       <h2 id="inquiry-heading">Tell us about your project.</h2>
-      <p>Have a question or need help choosing a service? Send your details and we’ll reply with the next steps.</p>
+      <p>Have a question or need help choosing a service? Send your details and we’ll reply with the next steps. Prefer to talk? You can also book a session below.</p>
     </div>
     <form class="booking-card booking-form" id="bookingForm" action="/api/inquiry" method="post">
       <div class="field"><label for="inquiryService">Service of interest *</label><select id="inquiryService" name="service" required><option value="">Choose a service</option><option>Online Menu + QR</option><option>Conversion Fix</option><option>Google Visibility</option><option>Accessibility Upgrade</option><option>Other project</option></select></div>
@@ -544,6 +527,11 @@
       <div hidden aria-hidden="true"><label for="bookingWebsite">Leave this blank</label><input id="bookingWebsite" name="website" tabindex="-1" autocomplete="off"></div>
       <button class="btn primary" type="submit" id="bookingSubmit">Send inquiry</button>
       <noscript><p>Please enable JavaScript to send an inquiry, or email <a href="mailto:info@menu-made.com">info@menu-made.com</a>.</p></noscript>
+      <div class="booking-summary">
+        <p>Prefer to talk through your project?</p>
+        <a class="btn ghost" id="bookingLink" href="https://www.everyexpert.com/jpbattaglia" target="_blank" rel="noopener noreferrer">Book a session</a>
+        <p class="mini">Booking opens in a new tab.</p>
+      </div>
     </form>
   </div>
 </section>
