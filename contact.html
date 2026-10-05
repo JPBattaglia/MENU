@@ -248,6 +248,8 @@
       margin-top: 3px;
     }
     /* Booking results stay visible in a centered, dismissible toast. */
+    .inquiry-intro{display:flex;flex-direction:column;}
+    .inquiry-intro .booking-summary{margin-top:auto;padding-top:24px;}
     .booking-toast{
       position:fixed;
       top:50%;
@@ -511,10 +513,15 @@
 
 <section class="section section-image" id="inquiry" aria-labelledby="inquiry-heading">
   <div class="container booking-grid">
-    <div class="booking-card">
+    <div class="booking-card inquiry-intro">
       <span class="pill" id="booking">MENU-MADE · Let’s connect</span>
       <h2 id="inquiry-heading">Tell us about your project.</h2>
-      <p>Have a question or need help choosing a service? Send your details and we’ll reply with the next steps. Prefer to talk? You can also book a session below.</p>
+      <p>Have a question or need help choosing a service? Send your details and we’ll reply with the next steps. You can also book a session to talk through your project.</p>
+      <div class="booking-summary">
+        <p>Prefer to talk through your project?</p>
+        <a class="btn ghost" id="bookingLink" href="https://www.everyexpert.com/jpbattaglia" target="_blank" rel="noopener noreferrer">Book a session</a>
+        <p class="mini">Booking opens in a new tab.</p>
+      </div>
     </div>
     <form class="booking-card booking-form" id="bookingForm" action="/api/inquiry" method="post">
       <div class="field"><label for="inquiryService">Service of interest *</label><select id="inquiryService" name="service" required><option value="">Choose a service</option><option>Online Menu + QR</option><option>Conversion Fix</option><option>Google Visibility</option><option>Accessibility Upgrade</option><option>Other project</option></select></div>
@@ -527,11 +534,7 @@
       <div hidden aria-hidden="true"><label for="bookingWebsite">Leave this blank</label><input id="bookingWebsite" name="website" tabindex="-1" autocomplete="off"></div>
       <button class="btn primary" type="submit" id="bookingSubmit">Send inquiry</button>
       <noscript><p>Please enable JavaScript to send an inquiry, or email <a href="mailto:info@menu-made.com">info@menu-made.com</a>.</p></noscript>
-      <div class="booking-summary">
-        <p>Prefer to talk through your project?</p>
-        <a class="btn ghost" id="bookingLink" href="https://www.everyexpert.com/jpbattaglia" target="_blank" rel="noopener noreferrer">Book a session</a>
-        <p class="mini">Booking opens in a new tab.</p>
-      </div>
+
     </form>
   </div>
 </section>
