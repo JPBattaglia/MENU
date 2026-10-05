@@ -514,47 +514,17 @@
     <div class="booking-card">
       <span class="pill">MENU-MADE · Book a call</span>
       <h2 id="booking-heading">Let’s plan your next step.</h2>
-      <p>Bring your menu, website, Google listing, or next big idea. Pick a session and a preferred time to talk it through with MENU-MADE.</p>
-      <p>Times are suggestions, subject to confirmation. Submit your request here and we’ll reply to confirm availability.</p>
+      <p>Bring your menu, website, Google listing, or next big idea. Talk it through with MENU-MADE.</p>
       <a class="btn ghost" href="#checkout">Go to checkout</a>
     </div>
-    <form class="booking-card booking-form" id="bookingForm" action="/api/booking" method="post">
-      <div class="field">
-        <label for="bookingSession">Session type *</label>
-        <select id="bookingSession" name="session" required>
-          <option value="Menu + QR consultation (30 minutes)">Menu + QR consultation · 30 min</option>
-          <option value="Website + visibility consultation (30 minutes)">Website + visibility · 30 min</option>
-          <option value="Project planning (30 minutes)">Project planning · 30 min</option>
-        </select>
-      </div>
-      <div class="field">
-        <label for="bookingDate">Preferred date *</label>
-        <input id="bookingDate" name="date" type="date" required aria-describedby="bookingTimezone">
-      </div>
-      <fieldset class="booking-times">
-        <legend>Preferred time *</legend>
-        <p id="bookingTimezone" class="mini"></p>
-        <div id="bookingSlots" class="booking-slots"></div>
-      </fieldset>
-      <div class="two">
-        <div class="field"><label for="bookingName">Name *</label><input id="bookingName" name="name" autocomplete="name" maxlength="100" required></div>
-        <div class="field"><label for="bookingEmail">Email *</label><input id="bookingEmail" name="email" type="email" autocomplete="email" maxlength="150" required></div>
-      </div>
-      <div class="field"><label for="bookingBusiness">Business</label><input id="bookingBusiness" name="business" autocomplete="organization" maxlength="150"></div>
-      <div class="field"><label for="bookingNotes">What would you like to discuss?</label><textarea id="bookingNotes" name="notes" maxlength="1200" placeholder="Tell us about your menu, website, or project."></textarea></div>
-      <div class="booking-summary" aria-live="polite"><strong>Your session request</strong><p id="bookingSummary">Choose a date and time to build your request.</p></div>
-      <div hidden aria-hidden="true"><label for="bookingWebsite">Leave this blank</label><input id="bookingWebsite" name="website" tabindex="-1" autocomplete="off"></div>
-      <button class="btn primary" type="submit" id="bookingSubmit" disabled>Send session request</button>
-      <p class="mini">Your request is submitted directly to MENU-MADE. Your session is confirmed only after we reply.</p>
-      <noscript><p>Please enable JavaScript to select a time, or email <a href="mailto:info@menu-made.com">info@menu-made.com</a> with your preferred session and time.</p></noscript>
-    </form>
+    <div class="booking-card">
+      <h3>Choose your session</h3>
+      <p>View available sessions and choose a time that works for you.</p>
+      <a class="btn primary" id="bookingLink" href="https://www.everyexpert.com/jpbattaglia" target="_blank" rel="noopener noreferrer">View availability &amp; book</a>
+      <p class="mini">Booking opens in a new tab.</p>
+    </div>
   </div>
 </section>
-
-<div class="booking-toast" id="bookingToast" hidden>
-  <p id="bookingStatus" role="status" aria-live="polite" aria-atomic="true"></p>
-  <button class="btn primary" id="bookingDismiss" type="button" aria-label="Dismiss booking notification">Close</button>
-</div>
 
 </main>
 
@@ -580,7 +550,6 @@
   </div>
 </footer>
 
-<script src="booking.js?v=20261005-toast" defer></script>
 <script src="start.js" defer></script>
 
 <script>
