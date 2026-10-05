@@ -526,6 +526,32 @@
   </div>
 </section>
 
+<section class="section" id="inquiry" aria-labelledby="inquiry-heading">
+  <div class="container booking-grid">
+    <div class="booking-card">
+      <span class="pill">MENU-MADE · Project inquiry</span>
+      <h2 id="inquiry-heading">Tell us about your project.</h2>
+      <p>Have a question or need help choosing a service? Send your details and we’ll reply with the next steps.</p>
+    </div>
+    <form class="booking-card booking-form" id="bookingForm" action="/api/inquiry" method="post">
+      <div class="field"><label for="inquiryService">Service of interest *</label><select id="inquiryService" name="service" required><option value="">Choose a service</option><option>Online Menu + QR</option><option>Conversion Fix</option><option>Google Visibility</option><option>Accessibility Upgrade</option><option>Other project</option></select></div>
+      <div class="two">
+        <div class="field"><label for="bookingName">Name *</label><input id="bookingName" name="name" autocomplete="name" maxlength="100" required></div>
+        <div class="field"><label for="bookingEmail">Email *</label><input id="bookingEmail" name="email" type="email" autocomplete="email" maxlength="150" required></div>
+      </div>
+      <div class="field"><label for="bookingBusiness">Business</label><input id="bookingBusiness" name="business" autocomplete="organization" maxlength="150"></div>
+      <div class="field"><label for="bookingNotes">Project details *</label><textarea id="bookingNotes" name="notes" maxlength="1200" required placeholder="What would you like help with?"></textarea></div>
+      <div hidden aria-hidden="true"><label for="bookingWebsite">Leave this blank</label><input id="bookingWebsite" name="website" tabindex="-1" autocomplete="off"></div>
+      <button class="btn primary" type="submit" id="bookingSubmit">Send inquiry</button>
+      <noscript><p>Please enable JavaScript to send an inquiry, or email <a href="mailto:info@menu-made.com">info@menu-made.com</a>.</p></noscript>
+    </form>
+  </div>
+</section>
+<div class="booking-toast" id="bookingToast" hidden>
+  <p id="bookingStatus" role="status" aria-live="polite" aria-atomic="true"></p>
+  <button class="btn primary" id="bookingDismiss" type="button" aria-label="Dismiss notification">Close</button>
+</div>
+
 </main>
 
 <footer class="footer">
@@ -685,5 +711,6 @@ document.addEventListener("DOMContentLoaded", () => {
 })();
 </script>
 
+<script src="booking.js?v=20261005-inquiry" defer></script>
 </body>
 </html>
