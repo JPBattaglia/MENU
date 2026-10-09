@@ -7502,6 +7502,19 @@ async function runNextProductionStep(request, env) {
       500
     );
   }
+  let selection = {};
+  try {
+    const text = await request.text();
+    if (text.length > 4096) return jsonResponse({ok:false,error:"Runner request is too large"},413);
+    selection = text.trim() ? JSON.parse(text) : {};
+    if (!selection || typeof selection !== "object" || Array.isArray(selection)
+      || Object.keys(selection).some(key => !["workflow_run_id","step_key","dry_run"].includes(key))
+      || (selection.workflow_run_id !== undefined && !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(selection.workflow_run_id))
+      || (selection.step_key !== undefined && !["PREPARE_INPUTS","GENERATE_MENU_DRAFT","GENERATE_QR","QUALITY_CHECK"].includes(selection.step_key))
+      || (selection.dry_run !== undefined && typeof selection.dry_run !== "boolean")) {
+      return jsonResponse({ok:false,error:"Invalid runner selection"},400);
+    }
+  } catch { return jsonResponse({ok:false,error:"Invalid runner JSON"},400); }
   let targetStep = null;
   try {
     targetStep = await env.DB.prepare(`
@@ -7545,6 +7558,8 @@ async function runNextProductionStep(request, env) {
             )
 
             AND (ws.step_key != 'QUALITY_CHECK' OR wr.workflow_key = 'MENU_QR_V1')
+            AND (? IS NULL OR wr.id = ?)
+            AND (? IS NULL OR ws.step_key = ?)
 
             AND wr.status IN (
               'QUEUED',
@@ -7568,7 +7583,8 @@ async function runNextProductionStep(request, env) {
             ws.step_order ASC
 
           LIMIT 1
-        `).first();
+        `).bind(selection.workflow_run_id || null, selection.workflow_run_id || null,
+          selection.step_key || null, selection.step_key || null).first();
     if (!targetStep) {
       return jsonResponse({
         ok: true,
@@ -7576,6 +7592,11 @@ async function runNextProductionStep(request, env) {
         message: "No runnable production step found"
       });
     }
+    // Preview never claims or changes a workflow, project, asset, or notification.
+    if (selection.dry_run) return jsonResponse({ok:true,processed:false,dry_run:true,
+      selected_step:{id:targetStep.workflow_step_id,key:targetStep.step_key,status:targetStep.step_status},
+      workflow_run:{id:targetStep.workflow_run_id,workflow_key:targetStep.workflow_key,status:targetStep.workflow_status},
+      project:{id:targetStep.project_id}});
     const timestamp = nowIso();
     const claimResult = await env.DB.prepare(`
           UPDATE workflow_steps
