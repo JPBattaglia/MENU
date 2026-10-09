@@ -39,8 +39,13 @@
       document.getElementById('bookingNotes').focus();
       return;
     }
-    // Retain the same ID for retries after a lost response.
-    const serialized = JSON.stringify(payload);
+    const file = document.getElementById('bookingDocument').files[0];
+    let fileFingerprint;
+    submitting = true;
+    try { fileFingerprint = await window.MenuMadeDocuments.fingerprint(file); }
+    catch (error) { submitting = false; showStatus(error.message); return; }
+    // Include file contents when deciding whether a retry is the same request.
+    const serialized = JSON.stringify(payload) + fileFingerprint;
     if (serialized !== requestPayload) {
       requestId = crypto.randomUUID();
       requestPayload = serialized;
@@ -52,24 +57,9 @@
     submit.textContent = 'Sending…';
     showStatus('Sending your project inquiry…');
     const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 20000);
+    const timeout = setTimeout(() => controller.abort(), 60000);
     try {
-      const response = await fetch(form.action, {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ...payload, requestId }), signal: controller.signal
-      });
-      const result = await response.json().catch(() => null);
-      if (!response.ok || result?.ok !== true || typeof result.requestId !== 'string') {
-        const messages = {
-          400: 'Please check your service, name, email, and project details. Your inquiry was not accepted.',
-          403: 'This request was blocked. Please open https://menu-made.com/contact and try again.',
-          404: 'The inquiry service is unavailable. Please contact info@menu-made.com.',
-          409: 'This reference was already used for different details. Please reload the page before submitting again.',
-          429: 'Too many requests. Please wait an hour before trying again.',
-          503: 'The inquiry service could not save your request. Please try again later or contact info@menu-made.com.'
-        };
-        throw new Error(messages[response.status] || `Your inquiry could not be confirmed (error ${response.status}). Please contact info@menu-made.com.`);
-      }
+      const result = await window.MenuMadeDocuments.send({ ...payload, requestId }, file, controller.signal);
       received = true;
       submit.textContent = 'Inquiry received';
       showStatus(`Your project inquiry was received. Reference: ${result.requestId}. We’ll reply with the next steps.`);

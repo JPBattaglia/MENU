@@ -21,6 +21,8 @@ const emailErrorEl = document.getElementById("lead_email_error");
 const phoneErrorEl = document.getElementById("lead_phone_error");
 
 const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+let checkoutInFlight = false;
+let uploadedDocumentRequest = null;
 const phonePattern = /^[0-9+\-\s().]{7,}$/;
 
 function showStatus(message) {
@@ -187,6 +189,7 @@ if (leadPhoneEl) {
 }
 
 checkoutBtn.addEventListener("click", async () => {
+  if (checkoutInFlight) return;
   const items = Object.values(cart).map(i => ({
     key: i.key,
     qty: i.qty
@@ -240,12 +243,37 @@ checkoutBtn.addEventListener("click", async () => {
     business,
     email,
     phone,
-    notes
+    notes: notes.slice(0, 500)
   };
 
+  const file = document.getElementById('lead_document').files[0];
+  const controller = new AbortController();
+  let timeout;
+  checkoutInFlight = true;
+  checkoutBtn.disabled = true;
   try {
+    window.MenuMadeDocuments.validate(file);
+    const fingerprint = await window.MenuMadeDocuments.fingerprint(file);
+    checkoutBtn.textContent = file ? 'Sending document…' : 'Opening secure checkout…';
+    timeout = setTimeout(() => controller.abort(), 60000);
+    if (file) {
+      const payload = { type: 'inquiry', service: 'Other project', name, business, email,
+        notes: ('Document for selected services: ' + Object.values(cart).map(i => i.name).join(', ') + '\n' + notes).slice(0, 1200), website: '' };
+      const key = JSON.stringify(payload) + fingerprint;
+      if (!uploadedDocumentRequest || uploadedDocumentRequest.key !== key) {
+        uploadedDocumentRequest = { key, payload: { ...payload, requestId: crypto.randomUUID() }, received: false };
+      }
+      if (!uploadedDocumentRequest.received) {
+        await window.MenuMadeDocuments.send(uploadedDocumentRequest.payload, file, controller.signal);
+        uploadedDocumentRequest.received = true;
+      }
+      customer.notes = ('Document inquiry reference: ' + uploadedDocumentRequest.payload.requestId + '\n' + notes).slice(0, 500);
+      document.getElementById('lead_document_status').textContent = 'Document received. Reference: ' + uploadedDocumentRequest.payload.requestId;
+    }
+    checkoutBtn.textContent = 'Opening secure checkout…';
     const res = await fetch("/api/create-checkout", {
       method: "POST",
+      signal: controller.signal,
       headers: {
         "Content-Type": "application/json"
       },
@@ -269,7 +297,12 @@ checkoutBtn.addEventListener("click", async () => {
 
     showStatus("Checkout error. Please refresh and try again.");
   } catch (err) {
-    showStatus("Checkout error. Please refresh and try again.");
+    showStatus(err.name === 'AbortError' ? 'The connection timed out. Please try again; the same document request will not be duplicated.' : err.message || 'Checkout error. Please refresh and try again.');
+  } finally {
+    clearTimeout(timeout);
+    checkoutInFlight = false;
+    checkoutBtn.disabled = false;
+    checkoutBtn.textContent = 'Proceed to secure checkout';
   }
 });
 

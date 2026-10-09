@@ -5,7 +5,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>MENU-MADE — Start Your Mobile Menu + QR Code</title>
-  <meta name="description" content="Start a mobile-friendly online menu and QR code for your restaurant, café, bar, bakery, or food brand. From $129.">
+  <meta name="description" content="Start a mobile-friendly online menu and QR code for your restaurant, café, bar, bakery, or food brand. $129 one-time.">
 
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -317,16 +317,16 @@
       <h1>Start Your Menu Upgrade</h1>
       <p>
         The fastest path is simple: choose Online Menu + QR, enter your business details,
-        and checkout securely. Send your current menu as a link, PDF, image, or pasted text in Notes.
+        and checkout securely. Paste a menu link or menu text in Notes, or attach a PDF, Word document, text file, or menu image below.
       </p>
 
       <div class="hero-actions">
         <a class="btn primary" href="#checkout">Start My $129 Menu</a>
-        <a class="btn ghost" href="#booking">Book Call</a>
+        <a class="btn ghost" href="https://www.everyexpert.com/jpbattaglia" target="_blank" rel="noopener noreferrer">Book Call ↗</a>
       </div>
 
       <p class="muted-note">
-        Standard menu scope covers a clean mobile menu page plus QR-ready delivery. If you need more, add notes before checkout.
+        The $129 one-time menu package covers a branded mobile menu page and QR code. <a href="services.html#purchase-scope">Read the included work and required materials</a>. For custom work or questions about hosting and revisions, send an inquiry before paying.
       </p>
     </div>
 
@@ -362,7 +362,7 @@
 
           <article class="service-card" data-sku="online_menu_qr" data-name="Online Menu + QR" data-price="12900" data-price-label="$129" data-price-id="price_1T6OzbHw7f6jhUv8Epy5oYMf">
             <h3>Online Menu + QR</h3>
-            <p>Mobile-first menu page customers open instantly. Clean layout, fast load, QR-ready delivery. Standard turnaround: 48 hours after materials are received.</p>
+            <p>Mobile-first menu page customers open instantly. Clean layout, fast load, QR-ready delivery. Standard menu turnaround: 48 hours after all required materials are received and validated. Incomplete materials or custom work require a confirmed delivery date.</p>
             <div class="card-actions">
               <span class="price-tag">$129</span>
               <button class="btn primary js-add" type="button">Add Menu</button>
@@ -380,7 +380,7 @@
 
           <article class="service-card" data-sku="google_visibility" data-name="Google Visibility" data-price="14900" data-price-label="$149" data-price-id="price_1T6iC6Hw7f6jhUv8iYYYZK0T">
             <h3>Google Visibility</h3>
-            <p>Improve Search &amp; Maps performance with on-page signals that convert views into action.</p>
+            <p>Google Business Profile creation or improvements to business details, categories, and menu/website links. Website SEO changes are scoped separately. Google placement is not guaranteed.</p>
             <div class="card-actions">
               <span class="price-tag">$149</span>
               <button class="btn primary js-add" type="button">Add</button>
@@ -403,7 +403,7 @@
         <div class="service-card">
           <h3>What happens next</h3>
           <p>
-            For the menu offer, send your current menu in Notes as a link, PDF/image reference, or pasted text. After checkout, we follow up with next steps and delivery details.
+            Choose your service and provide your contact details. Paste a menu link or attach your menu document before checkout. After Stripe payment, complete the project information form with your logo, colors, and destination link. Menu turnaround begins after required materials are received and validated; custom delivery dates are confirmed separately.
           </p>
         </div>
 
@@ -422,7 +422,7 @@
           <ul class="cart-items" id="cartItems" aria-live="polite"></ul>
 
           <div class="cart-total">
-            <span>Total</span>
+            <span>Selected services · USD</span>
             <strong id="cartTotal">$0</strong>
           </div>
 
@@ -431,25 +431,26 @@
             <button class="btn secondary" id="clearBtn" type="button" disabled>Clear</button>
           </div>
 
-          <div class="status" id="status"></div>
+          <div class="status" id="status" role="status" aria-live="polite"></div>
+          <p class="mini" id="billingSummary">Menu, Conversion Fix, and Google Visibility are one-time purchases. Accessibility covers one year, paid upfront. Confirm the final amount on Stripe before paying.</p>
 
           <div class="intake" id="intakeStep">
             <div style="height:10px;"></div>
 
             <div class="field">
               <label for="lead_name">Name *</label>
-              <input id="lead_name" type="text" autocomplete="name" required>
+              <input id="lead_name" maxlength="100" type="text" autocomplete="name" required>
             </div>
 
             <div class="field">
               <label for="lead_business">Business name *</label>
-              <input id="lead_business" type="text" autocomplete="organization" required>
+              <input id="lead_business" maxlength="150" type="text" autocomplete="organization" required>
             </div>
 
             <div class="two">
               <div class="field">
                 <label for="lead_email">Email *</label>
-                <input id="lead_email" type="email" autocomplete="email" inputmode="email" placeholder="name@business.com" required aria-describedby="lead_email_error">
+                <input id="lead_email" maxlength="150" type="email" autocomplete="email" inputmode="email" placeholder="name@business.com" required aria-describedby="lead_email_error">
                 <div id="lead_email_error" class="validation-msg" aria-live="polite">Enter a valid email address.</div>
               </div>
 
@@ -462,14 +463,22 @@
 
             <div class="field">
               <label for="lead_notes">Notes (optional)</label>
-              <textarea id="lead_notes" placeholder="Paste your current menu link, website, Instagram, priorities, deadline, or access details."></textarea>
-              <div class="mini">For Online Menu + QR, paste your menu link or describe where we should pull the menu from.</div>
+              <textarea id="lead_notes" maxlength="400" placeholder="Paste your current menu link or menu text, website, priorities, and desired deadline. Do not send passwords."></textarea>
+              <div class="mini">Paste a shareable menu link or the menu text, or attach your menu file below.</div>
+            </div>
+
+
+            <div class="field">
+              <label for="lead_document">Attach your menu or project document (optional)</label>
+              <input id="lead_document" type="file" accept=".pdf,.doc,.docx,.txt,.png,.jpg,.jpeg,.webp" aria-describedby="lead_document_help lead_document_status">
+              <div class="mini" id="lead_document_help">One PDF, Word document, text file, PNG, JPEG, or WebP; maximum 5 MB. Sent with your contact details when you continue to checkout. Documents are reviewed by Menu-Made; a file upload does not automatically complete production onboarding.</div>
+              <div class="mini" id="lead_document_status" role="status" aria-live="polite"></div>
             </div>
 
             <div class="checkline">
               <input id="scopeConfirm" type="checkbox" required>
               <label for="scopeConfirm" class="mini">
-                I confirm this purchase is for <strong style="color:#fff;">standard scope</strong> as described on the Services page.
+                I have reviewed the <a href="services.html#purchase-scope">included work and required materials</a>. I will request a separate quote for custom work.
               </label>
             </div>
 
@@ -479,12 +488,12 @@
             </div>
 
             <div class="mini" style="margin-top:10px;">
-              Your details are used for follow-up and project start. Checkout is handled by Stripe.
+              Your contact details and any attached document are used to review and start your project. You’ll continue to Stripe for secure payment.
             </div>
           </div>
 
           <p class="muted-note">
-            After Continue, enter quick details. This prevents “paid but no contact info” and lets us recover interrupted checkouts.
+            Enter your contact details so we can follow up about your project. You’ll then continue to Stripe for secure payment.
           </p>
 
           <div style="margin-top:10px;">
@@ -522,7 +531,7 @@
       <div class="booking-summary">
         <p style="margin-bottom: 20px;">Prefer to talk through your project?</p>
         <a class="btn ghost" id="bookingLink" href="https://www.everyexpert.com/jpbattaglia" target="_blank" rel="noopener noreferrer">Book a session</a>
-        <p style="margin-top: 20px;" class="mini">Booking opens in a new tab.</p>
+        <p style="margin-top: 20px;" class="mini">EveryExpert opens in a new tab. Review the session duration, timezone, any fee, and available times there before confirming. Sending this inquiry does not book an appointment.</p>
       </div>
     </div>
     <form class="booking-card booking-form" id="bookingForm" action="/api/inquiry" method="post">
@@ -533,6 +542,8 @@
       </div>
       <div class="field"><label for="bookingBusiness">Business</label><input id="bookingBusiness" name="business" autocomplete="organization" maxlength="150"></div>
       <div class="field"><label for="bookingNotes">Project details *</label><textarea id="bookingNotes" name="notes" maxlength="1200" required placeholder="What would you like help with?"></textarea></div>
+
+      <div class="field"><label for="bookingDocument">Attach a menu or project document (optional)</label><input id="bookingDocument" type="file" name="document" accept=".pdf,.doc,.docx,.txt,.png,.jpg,.jpeg,.webp" aria-describedby="bookingDocumentHelp"><p class="mini" id="bookingDocumentHelp">One PDF, Word document, text file, PNG, JPEG, or WebP; maximum 5 MB. Uploaded with your inquiry and reviewed by Menu-Made.</p></div>
       <div hidden aria-hidden="true"><label for="bookingWebsite">Leave this blank</label><input id="bookingWebsite" name="website" tabindex="-1" autocomplete="off"></div>
       <button class="btn primary" type="submit" id="bookingSubmit">Send inquiry</button>
       <noscript><p>Please enable JavaScript to send an inquiry, or email <a href="mailto:info@menu-made.com">info@menu-made.com</a>.</p></noscript>
@@ -569,7 +580,8 @@
   </div>
 </footer>
 
-<script src="start.js" defer></script>
+<script src="document-upload.js?v=20261009" defer></script>
+<script src="start.js?v=20261009" defer></script>
 
 <script>
   document.addEventListener("DOMContentLoaded", () => {
@@ -704,6 +716,6 @@ document.addEventListener("DOMContentLoaded", () => {
 })();
 </script>
 
-<script src="booking.js?v=20261005-inquiry-errors" defer></script>
+<script src="booking.js?v=20261009-document-upload" defer></script>
 </body>
 </html>
