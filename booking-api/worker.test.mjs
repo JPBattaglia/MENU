@@ -81,3 +81,69 @@ test('branded inquiry HTML escapes customer text and preserves both reply paths'
     assert.ok(html.includes('Reference: ref-123'));
   }
 });
+
+function uploadRequest(d, content = '%PDF-1.7\nmenu', filename = 'menu.pdf') {
+  const form = new FormData();
+  form.append('payload', JSON.stringify(d));
+  form.append('document', new File([content], filename, { type: 'application/pdf' }));
+  return new Request('https://menu-made.com/api/inquiry', { method: 'POST', headers: { Origin: 'https://menu-made.com', 'CF-Connecting-IP': '127.0.0.1' }, body: form });
+}
+function uploadFixture() {
+  const f = fixture(); const objects = new Map(); let storageFailure = false;
+  f.env.ASSETS = {
+    async put(key, bytes) { if (storageFailure) throw Error('Storage unavailable'); objects.set(key, new Uint8Array(bytes)); },
+    async get(key) { const bytes = objects.get(key); return bytes ? { async arrayBuffer() { return bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength); } } : null; }
+  };
+  return { ...f, objects, breakStorage() { storageFailure = true; }, fixStorage() { storageFailure = false; } };
+}
+const inquiryData = () => ({ type:'inquiry',service:'Online Menu + QR',name:'JP',email:'jp@example.com',business:'Cafe',notes:'Menu document',requestId:crypto.randomUUID(),website:'' });
+test('document upload persists privately, sends owner attachment, and deduplicates retries', async () => {
+  const f = uploadFixture(); const d = inquiryData(); const emails = []; const previous = globalThis.fetch;
+  globalThis.fetch = async (_url, options) => { emails.push(JSON.parse(options.body)); return new Response('{}'); };
+  try {
+    const response = await worker.fetch(uploadRequest(d),f.env,f.ctx);
+    assert.equal(response.status,201);
+    await Promise.all(f.pending);
+    assert.equal(f.objects.size,1);
+    const stored = JSON.parse(f.rows.get(d.requestId).payload);
+    assert.ok(stored.document.storageKey.startsWith('private/inquiries/'+d.requestId+'/'));
+    assert.equal(stored.document.name,'menu.pdf');
+    assert.equal(emails[0].attachments[0].filename,'menu.pdf');
+    assert.equal(atob(emails[0].attachments[0].content),'%PDF-1.7\nmenu');
+    assert.equal(emails[1].attachments,undefined);
+    assert.match(emails[1].html,/Document received/);
+    assert.equal((await worker.fetch(uploadRequest(d),f.env,f.ctx)).status,200);
+    await Promise.all(f.pending);
+    assert.equal(f.rows.size,1);
+    assert.equal(emails.length,2);
+    assert.equal((await worker.fetch(uploadRequest(d,'%PDF-1.7\ndifferent'),f.env,f.ctx)).status,409);
+  } finally { globalThis.fetch=previous; }
+});
+test('invalid content, unsupported extension and oversize files are rejected before persistence', async () => {
+  const f=uploadFixture(); const d=inquiryData();
+  assert.equal((await worker.fetch(uploadRequest(d,'not a pdf'),f.env,f.ctx)).status,400);
+  assert.equal((await worker.fetch(uploadRequest(d,'%PDF-1.7','menu.exe'),f.env,f.ctx)).status,400);
+  assert.equal((await worker.fetch(uploadRequest(d,'%PDF-'+ 'x'.repeat(5*1024*1024)),f.env,f.ctx)).status,413);
+  assert.equal(f.rows.size,0); assert.equal(f.objects.size,0);
+});
+test('storage failure cannot report upload success and the same request recovers on retry', async () => {
+  const f=uploadFixture(); const d=inquiryData(); const previous=globalThis.fetch;
+  globalThis.fetch=async()=>new Response('{}');
+  try {
+    f.breakStorage();
+    assert.equal((await worker.fetch(uploadRequest(d),f.env,f.ctx)).status,503);
+    assert.equal(f.pending.length,0);
+    f.fixStorage();
+    assert.equal((await worker.fetch(uploadRequest(d),f.env,f.ctx)).status,200);
+    await Promise.all(f.pending);
+    assert.equal(f.rows.size,1); assert.equal(f.objects.size,1);
+    assert.equal(f.rows.get(d.requestId).owner_sent,1);
+  } finally { globalThis.fetch=previous; }
+});
+test('document upload retains origin restrictions and fails without storage binding', async () => {
+  const f=fixture();const d=inquiryData();
+  assert.equal((await worker.fetch(uploadRequest(d),f.env,f.ctx)).status,503);
+  const req=uploadRequest(d);req.headers.set('Origin','https://evil.example');
+  assert.equal((await worker.fetch(req,f.env,f.ctx)).status,403);
+  assert.equal(f.rows.size,0);
+});

@@ -7882,7 +7882,7 @@ const TIMES = new Set(['9:00 AM', '10:00 AM', '11:00 AM', '1:00 PM', '2:00 PM', 
 const ORIGINS = new Set(['https://menu-made.com', 'https://www.menu-made.com']);
 const json = (body, status = 200) => Response.json(body, { status, headers: { 'Cache-Control': 'no-store' } });
 
-async function readBody(request) {
+async function readBody(request, maxBytes = 8192, multipart = false) {
   const reader = request.body?.getReader();
   if (!reader) throw new Error('Empty body');
   const chunks = []; let size = 0;
@@ -7890,12 +7890,59 @@ async function readBody(request) {
     const { value, done } = await reader.read();
     if (done) break;
     size += value.length;
-    if (size > 8192) { await reader.cancel(); throw new Error('Body too large'); }
+    if (size > maxBytes) { await reader.cancel(); throw new Error('Body too large'); }
     chunks.push(value);
   }
   const bytes = new Uint8Array(size); let offset = 0;
   for (const chunk of chunks) { bytes.set(chunk, offset); offset += chunk.length; }
+  if (multipart) return new Response(bytes, { headers: { 'Content-Type': request.headers.get('Content-Type') } }).formData();
   return JSON.parse(new TextDecoder().decode(bytes));
+}
+
+const DOCUMENT_LIMIT = 5 * 1024 * 1024;
+const DOCUMENT_TYPES = { pdf: 'application/pdf', doc: 'application/msword', docx: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', txt: 'text/plain', png: 'image/png', jpg: 'image/jpeg', jpeg: 'image/jpeg', webp: 'image/webp' };
+
+async function validateDocument(file) {
+  if (!file || typeof file === 'string' || !file.size || file.size > DOCUMENT_LIMIT) throw new Error('Invalid file size');
+  const name = String(file.name).split(/[\\/]/).pop().replace(/[\x00-\x1f\x7f]/g, '').slice(0, 180);
+  const extension = name.split('.').pop().toLowerCase();
+  const contentType = DOCUMENT_TYPES[extension];
+  if (!contentType) throw new Error('Unsupported document');
+  const bytes = new Uint8Array(await file.arrayBuffer());
+  const starts = values => values.every((value, i) => bytes[i] === value);
+  const valid = extension === 'pdf' ? starts([37,80,68,70,45])
+    : extension === 'doc' ? starts([208,207,17,224,161,177,26,225])
+    : extension === 'docx' ? starts([80,75,3,4])
+    : extension === 'png' ? starts([137,80,78,71,13,10,26,10])
+    : ['jpg','jpeg'].includes(extension) ? starts([255,216,255])
+    : extension === 'webp' ? starts([82,73,70,70]) && [87,69,66,80].every((v,i) => bytes[i+8] === v)
+    : !bytes.includes(0);
+  if (!valid) throw new Error('File content does not match its extension');
+  if (extension === 'txt') new TextDecoder('utf-8', { fatal: true }).decode(bytes);
+  const digest = await crypto.subtle.digest('SHA-256', bytes);
+  const checksum = [...new Uint8Array(digest)].map(n => n.toString(16).padStart(2,'0')).join('');
+  return { name, contentType, size: bytes.length, checksum, bytes };
+}
+
+async function persistDocument(env, document, data) {
+  if (!document) return;
+  await env.ASSETS.put(data.document.storageKey, document.bytes, {
+    httpMetadata: { contentType: document.contentType },
+    customMetadata: { requestId: data.requestId, checksum: document.checksum, originalFilename: document.name }
+  });
+}
+
+async function emailDocument(env, document) {
+  if (!document) return undefined;
+  const object = await env.ASSETS.get(document.storageKey);
+  if (!object) throw new Error('Document not yet available');
+  const bytes = new Uint8Array(await object.arrayBuffer());
+  const digest = await crypto.subtle.digest('SHA-256', bytes);
+  const checksum = [...new Uint8Array(digest)].map(n => n.toString(16).padStart(2,'0')).join('');
+  if (bytes.length !== document.size || checksum !== document.checksum) throw new Error('Document integrity failure');
+  let binary = '';
+  for (let i = 0; i < bytes.length; i += 8192) binary += String.fromCharCode(...bytes.subarray(i, i + 8192));
+  return [{ filename: document.name, content: btoa(binary), content_type: document.contentType }];
 }
 
 function validate(data, now = new Date()) {
@@ -7949,7 +7996,7 @@ function inquiryEmailHtml(data, reference, kind) {
   const intro = owner
     ? `${safe(data.name)} has contacted MENU-MADE about ${safe(data.service)}. Review the details below and reply directly to this email to follow up.`
     : `Thanks for contacting MENU-MADE. We’ve received your inquiry about <strong>${safe(data.service)}</strong> and will review your project details. We’ll reply to discuss the next steps.`;
-  const summary = row('Service', data.service) + (owner ? row('Name', data.name) + row('Email', data.email) : '') + (data.business ? row('Business', data.business) : '');
+  const summary = (data.document ? row('Document received', data.document.name) : '') + row('Service', data.service) + (owner ? row('Name', data.name) + row('Email', data.email) : '') + (data.business ? row('Business', data.business) : '');
   return `<!doctype html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${heading}</title></head>
 <body style="margin:0;padding:0;background-color:#edf3f5;font-family:Arial,Helvetica,sans-serif;">
@@ -7985,11 +8032,13 @@ async function deliver(env, row) {
     if (row[`${kind}_sent`]) continue;
     // Resend deduplicates concurrent deliveries; sent flags retain that protection after its retry window.
     try {
+      const attachments = kind === 'owner' ? await emailDocument(env, data.document) : undefined;
       const response = await fetch('https://api.resend.com/emails', {
         method: 'POST', signal: AbortSignal.timeout(10000),
         headers: { Authorization: `Bearer ${env.RESEND_API_KEY}`, 'Content-Type': 'application/json', 'Idempotency-Key': `booking/${row.id}/${kind}` },
         body: JSON.stringify({
           ...(inquiry ? { html: inquiryEmailHtml(data, row.id, kind) } : {}),
+          ...(attachments ? { attachments } : {}),
           from: env.BOOKING_FROM,
           to: [kind === 'owner' ? env.BOOKING_TO : data.email],
           reply_to: kind === 'owner' ? data.email : (env.BOOKING_REPLY_TO || env.BOOKING_TO),
@@ -8012,18 +8061,38 @@ return {
     if (!['/api/booking', '/api/inquiry'].includes(new URL(request.url).pathname)) return json({ ok: false }, 404);
     if (request.method !== 'POST') return new Response(null, { status: 405, headers: { Allow: 'POST' } });
     if (!ORIGINS.has(request.headers.get('Origin'))) return json({ ok: false }, 403);
-    if (!request.headers.get('Content-Type')?.toLowerCase().startsWith('application/json')) return json({ ok: false }, 415);
+    const contentType = request.headers.get('Content-Type')?.toLowerCase() || '';
+    const multipart = contentType.startsWith('multipart/form-data') && new URL(request.url).pathname === '/api/inquiry';
+    if (!multipart && !contentType.startsWith('application/json')) return json({ ok: false }, 415);
+    if (multipart && !env.ASSETS) return json({ ok: false }, 503);
     if (!env.DB || !env.RESEND_API_KEY || !env.BOOKING_FROM || !env.BOOKING_TO || !env.BOOKING_RATE_SALT) return json({ ok: false }, 503);
-    let raw;
-    try { raw = await readBody(request); } catch { return json({ ok: false }, 400); }
+    let raw; let document;
+    try {
+      if (multipart) {
+        const body = await readBody(request, DOCUMENT_LIMIT + 32768, true);
+        const payloadText = body.get('payload');
+        if (typeof payloadText !== 'string' || payloadText.length > 8192 || body.getAll('document').length !== 1) return json({ ok: false }, 400);
+        raw = JSON.parse(payloadText);
+        document = await validateDocument(body.get('document'));
+      } else raw = await readBody(request);
+    } catch (error) { return json({ ok: false }, multipart && /size|large/i.test(error.message) ? 413 : 400); }
     if (typeof raw?.website !== 'string' || raw.website !== '') return json({ ok: false }, 400);
     if (new URL(request.url).pathname === '/api/inquiry' && raw.type !== 'inquiry') return json({ ok: false }, 400);
     const data = validate(raw);
     if (!data) return json({ ok: false }, 400);
+    if (document) data.document = {
+      name: document.name, contentType: document.contentType, size: document.size, checksum: document.checksum,
+      storageKey: `private/inquiries/${data.requestId}/${document.checksum}`
+    };
     const payload = JSON.stringify(data);
     try {
       const existing = await env.DB.prepare('SELECT * FROM mm_booking_requests WHERE id = ?').bind(data.requestId).first();
-      if (existing) return existing.payload === payload ? json({ ok: true, requestId: existing.id }) : json({ ok: false }, 409);
+      if (existing) {
+        if (existing.payload !== payload) return json({ ok: false }, 409);
+        await persistDocument(env, document, data);
+        if (document) ctx.waitUntil(deliver(env, existing).catch(() => console.error('Document notification retry required')));
+        return json({ ok: true, requestId: existing.id });
+      }
       const ip = request.headers.get('CF-Connecting-IP');
       if (!ip) return json({ ok: false }, 403);
       const now = Math.floor(Date.now() / 1000);
@@ -8036,9 +8105,15 @@ return {
         ON CONFLICT(id) DO NOTHING`).bind(data.requestId, payload, ipHash, now, ipHash, now - 3600, now - 3600).run();
       if (!result.meta.changes) {
         const concurrent = await env.DB.prepare('SELECT * FROM mm_booking_requests WHERE id = ?').bind(data.requestId).first();
-        if (concurrent) return concurrent.payload === payload ? json({ ok: true, requestId: concurrent.id }) : json({ ok: false }, 409);
+        if (concurrent) {
+          if (concurrent.payload !== payload) return json({ ok: false }, 409);
+          await persistDocument(env, document, data);
+          if (document) ctx.waitUntil(deliver(env, concurrent).catch(() => console.error('Document notification retry required')));
+          return json({ ok: true, requestId: concurrent.id });
+        }
         return json({ ok: false }, 429);
       }
+      await persistDocument(env, document, data);
       ctx.waitUntil(deliver(env, { id: data.requestId, payload, owner_sent: 0, customer_sent: 0 }).catch(() => console.error('Booking notification retry required')));
       return json({ ok: true, requestId: data.requestId }, 201);
     } catch {
