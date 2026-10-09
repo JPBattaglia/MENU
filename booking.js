@@ -59,8 +59,10 @@
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 60000);
     try {
+      window.MenuMadeFunnel?.track("inquiry_attempt");
       const result = await window.MenuMadeDocuments.send({ ...payload, requestId }, file, controller.signal);
       received = true;
+      window.MenuMadeFunnel?.track("inquiry_received");
       submit.textContent = 'Inquiry received';
       showStatus(`Your project inquiry was received. Reference: ${result.requestId}. We’ll reply with the next steps.`);
     } catch (error) {

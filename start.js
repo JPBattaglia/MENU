@@ -112,6 +112,7 @@ function addItem(card) {
   }
 
   cart[key].qty++;
+  window.MenuMadeFunnel?.track("service_selected", key);
   clearStatus();
   renderCart();
 }
@@ -148,6 +149,7 @@ clearBtn.addEventListener("click", () => {
 
 continueBtn.addEventListener("click", () => {
   intakeStep.classList.add("show");
+  window.MenuMadeFunnel?.track("details_opened");
   continueBtn.style.display = "none";
   clearStatus();
 });
@@ -271,6 +273,7 @@ checkoutBtn.addEventListener("click", async () => {
       document.getElementById('lead_document_status').textContent = 'Document received. Reference: ' + uploadedDocumentRequest.payload.requestId;
     }
     checkoutBtn.textContent = 'Opening secure checkout…';
+    window.MenuMadeFunnel?.track("checkout_attempt");
     const res = await fetch("/api/create-checkout", {
       method: "POST",
       signal: controller.signal,
@@ -279,6 +282,7 @@ checkoutBtn.addEventListener("click", async () => {
       },
       body: JSON.stringify({
         items,
+        tracking: window.MenuMadeFunnel?.tracking(),
         customer
       })
     });
@@ -286,6 +290,7 @@ checkoutBtn.addEventListener("click", async () => {
     const data = await res.json();
 
     if (!res.ok) {
+      window.MenuMadeFunnel?.track("checkout_error");
       showStatus(data?.error?.message || data?.error || "Checkout error. Please refresh and try again.");
       return;
     }
@@ -297,6 +302,7 @@ checkoutBtn.addEventListener("click", async () => {
 
     showStatus("Checkout error. Please refresh and try again.");
   } catch (err) {
+    window.MenuMadeFunnel?.track("checkout_error");
     showStatus(err.name === 'AbortError' ? 'The connection timed out. Please try again; the same document request will not be duplicated.' : err.message || 'Checkout error. Please refresh and try again.');
   } finally {
     clearTimeout(timeout);
