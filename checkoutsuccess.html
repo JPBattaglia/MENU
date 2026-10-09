@@ -27,6 +27,7 @@
     @media(max-width:700px){.onboarding-grid{grid-template-columns:1fr}.onboarding-field.full{grid-column:auto}.onboarding-panel{padding:18px}}
   </style>
 
+<script src="funnel.js?v=20261009" defer></script>
 </head>
 
 <body>
@@ -233,10 +234,12 @@
       const data = await res.json();
       if (!res.ok || !data.ok) throw new Error(data.error || "Unable to load onboarding.");
 
+      if (data.environment === "live") window.MenuMadeFunnel?.track("onboarding_opened");
       $("loadingState").hidden = true;
       $("errorState").hidden = true;
 
       if (data.onboarding?.complete) {
+        if (data.environment === "live") window.MenuMadeFunnel?.track("onboarding_completed");
         $("onboardingForm").hidden = true;
         $("completeState").hidden = false;
         return;
