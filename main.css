@@ -249,6 +249,33 @@ img{ display:block; max-width:100%; height:auto; }
   filter:brightness(1.05);
 }
 
+/* Native file pickers use the same primary treatment as other actions. */
+input[type="file"]::file-selector-button{
+  margin-right:12px;
+  padding:14px 22px;
+  border:0;
+  border-radius:16px;
+  background:linear-gradient(135deg,var(--brand),var(--brand-soft));
+  color:#001b22;
+  font:inherit;
+  font-weight:900;
+  cursor:pointer;
+  transition:transform .18s ease,box-shadow .18s ease,filter .18s ease;
+}
+input[type="file"]::file-selector-button:hover{
+  transform:translateY(-2px);
+  box-shadow:0 10px 22px rgba(0,0,0,.25);
+  filter:brightness(1.05);
+}
+input[type="file"]:focus-visible{
+  outline:2px solid var(--brand-soft);
+  outline-offset:3px;
+}
+input[type="file"]:disabled::file-selector-button{
+  opacity:.6;
+  cursor:default;
+}
+
 /* MEDIA */
 .media-frame{
   position:relative;
