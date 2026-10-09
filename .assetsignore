@@ -1,0 +1,14 @@
+# Deployment metadata and local tooling are not website assets.
+.git/
+.github/
+.gitignore
+.assetsignore
+.wrangler/
+.netlify/
+node_modules/
+.dev.vars*
+.env*
+wrangler.jsonc
+# Backend code, reports, and tests are not served by the static website.
+booking-api/
+*.test.mjs
