@@ -216,8 +216,14 @@
     .package-details-content li + li{margin-top:8px;}
     .hospitality-frame .hospitality-photo{border-radius:22px;}
     .package-details{overflow:hidden;box-sizing:border-box;}
-    .hero-visual .guest-menu-frame{width:90%;margin-inline:auto;transition:width 420ms cubic-bezier(.22,1,.36,1);}
+    .hero-visual .guest-menu-frame{width:96%;margin-inline:auto;transition:width 420ms cubic-bezier(.22,1,.36,1);}
     .hero-grid.package-expanded .guest-menu-frame{width:100%;}
+    @media(min-width:901px){
+      .hero > .hero-grid{grid-template-columns:minmax(0, 1fr) minmax(0, 1.15fr);gap:40px;}
+    }
+    @media(max-width:900px){
+      .hero > .hero-grid{grid-template-columns:1fr;}
+    }
     @media(prefers-reduced-motion:reduce){.hero-visual .guest-menu-frame{transition:none;}}
   </style>
 <script src="funnel.js?v=20261009" defer></script>
