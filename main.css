@@ -699,3 +699,10 @@ input[type="file"]:disabled::file-selector-button{
 .section-head a, .conversion-help a, .booking-summary a:not(.btn), .service-card p a { color:var(--brand-soft); text-underline-offset:4px; }
 #inquiry { scroll-margin-top:110px; }
 @media(max-width:760px) { .conversion-grid { grid-template-columns:1fr; } }
+
+/* Homepage: warm guest experience with a readable caption. */
+.guest-menu-frame { background:#012f34; }
+.guest-menu-frame .hero-image { width:100%; height:auto; aspect-ratio:3 / 2; object-fit:cover; }
+.guest-menu-frame .media-overlay { position:static; background:#012f34; padding:20px 24px; line-height:1.6; }
+.guest-menu-frame .media-overlay strong { display:block; font-size:22px; margin-bottom:4px; }
+.guest-menu-frame .media-overlay span { display:block; color:var(--muted); font-size:16px; }
