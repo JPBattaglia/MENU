@@ -15,7 +15,7 @@
   <link rel="shortcut icon" href="MENU=.png">
   <link rel="apple-touch-icon" href="MENU=.png">
 
-  <link rel="stylesheet" href="main.css?v=20261013-start-readability">
+  <link rel="stylesheet" href="main.css?v=20261013-conversion">
 
   <!-- Page-only layout (no main.css edits) -->
   <style>
@@ -322,12 +322,13 @@
       </p>
 
       <div class="hero-actions">
-        <a class="btn primary" href="#checkout">Start My $129 Menu</a>
-        <a class="btn ghost" href="https://www.everyexpert.com/jpbattaglia" target="_blank" rel="noopener noreferrer">Book Call ↗</a>
+        <a class="btn primary" href="#checkout" data-start-menu>Start My $129 Menu</a>
+        <a class="btn ghost" href="#inquiry">Questions before you buy?</a>
       </div>
 
+      <p class="conversion-help"><a href="sample-menu.html">Try the sample menu</a> · <a href="#inquiry">Ask about your project</a></p>
       <p class="muted-note">
-        The $129 one-time menu package covers a branded mobile menu page and QR code. <a href="services.html#purchase-scope">Read the included work and required materials</a>. For custom work or questions about hosting and revisions, send an inquiry before paying.
+        The $129 one-time menu package includes a branded mobile menu page, QR code, and two revisions. Hosting is $15/year ($144 total for the first year). Checkout collects the $129 setup payment only; contact us to arrange hosting. <a href="services.html#purchase-scope">Read the included work and required materials</a>. For custom work or questions about hosting and revisions, send an inquiry before paying.
       </p>
     </div>
 
@@ -336,7 +337,7 @@
         <img src="StartSuccess.png" alt="Menu-Made start preview" class="hero-image">
         <div class="media-overlay">
           <strong>Start with the menu</strong>
-          <span>Low-friction offer. Fast customer-facing result.</span>
+          <span>A mobile-friendly menu your guests can open with a scan.</span>
         </div>
       </div>
     </div>
@@ -350,8 +351,8 @@
   <div class="container">
 
     <header class="section-head">
-      <h2>Start with the core offer</h2>
-      <p>Choose Online Menu + QR for the fastest first step. Add other services only if you need them now.</p>
+      <h2>Start your mobile menu</h2>
+      <p>The $129 menu package is the starting point. Other services are optional.</p>
     </header>
 
     <div class="start-grid">
@@ -433,7 +434,7 @@
           </div>
 
           <div class="status" id="status" role="status" aria-live="polite"></div>
-          <p class="mini" id="billingSummary">Menu, Conversion Fix, and Google Visibility are one-time purchases. Accessibility covers one year, paid upfront. Confirm the final amount at checkout before paying.</p>
+          <p class="mini" id="billingSummary">Menu setup includes two revisions and costs $129. Hosting is an additional $15/year, arranged separately ($144 first year). Conversion Fix and Google Visibility are one-time purchases. Accessibility covers one year, paid upfront. Confirm the final amount at checkout before paying.</p>
 
           <div class="intake" id="intakeStep">
             <div style="height:10px;"></div>
@@ -517,7 +518,7 @@
     </div>
 
     <div class="cta-actions">
-      <a class="btn primary" href="#checkout">Start My $129 Menu</a>
+      <a class="btn primary" href="#checkout" data-start-menu>Start My $129 Menu</a>
       <a class="btn ghost" href="index.html">Home</a>
     </div>
   </div>
@@ -528,12 +529,8 @@
     <div class="booking-card inquiry-intro">
       <span style="padding: 10px; margin: 20px 0; width: 200px" class="pill" id="booking">MENU-MADE · Let’s connect</span>
       <h2 id="inquiry-heading">Tell us about your project.</h2>
-      <p>Have a question or need help choosing a service? Send your details and we’ll reply with the next steps. You can also book a session to talk through your project.</p>
-      <div class="booking-summary">
-        <p style="margin-bottom: 20px;">Prefer to talk through your project?</p>
-        <a class="btn ghost" id="bookingLink" href="https://www.everyexpert.com/jpbattaglia" target="_blank" rel="noopener noreferrer">Book a session</a>
-        <p style="margin-top: 20px;" class="mini">EveryExpert opens in a new tab. Review the session duration, timezone, any fee, and available times there before confirming. Sending this inquiry does not book an appointment.</p>
-      </div>
+      <p>Have a question or need help choosing a service? Send your details and we’ll reply with the next steps. If you’d prefer a call, include a few suitable times and your timezone in your message. We’ll confirm by email.</p>
+      <div class="booking-summary"><p>Talk directly with MENU-MADE about your menu, hosting, or future updates.</p><a href="mailto:info@menu-made.com">info@menu-made.com</a><p class="mini">Requesting a call does not reserve an appointment. We’ll agree on a time by email.</p></div>
     </div>
     <form class="booking-card booking-form" id="bookingForm" action="/api/inquiry" method="post">
       <div class="field"><label for="inquiryService">Service of interest *</label><select id="inquiryService" name="service" required><option value="">Choose a service</option><option>Online Menu + QR</option><option>Conversion Fix</option><option>Google Visibility</option><option>Accessibility Upgrade</option><option>Other project</option></select></div>
@@ -582,7 +579,7 @@
 </footer>
 
 <script src="document-upload.js?v=20261009" defer></script>
-<script src="start.js?v=20261009-funnel" defer></script>
+<script src="start.js?v=20261013-direct-start" defer></script>
 
 <script>
   document.addEventListener("DOMContentLoaded", () => {

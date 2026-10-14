@@ -99,6 +99,10 @@ function renderCart() {
   const hasItems = total > 0;
   continueBtn.disabled = !hasItems;
   clearBtn.disabled = !hasItems;
+  if (!hasItems) {
+    intakeStep.classList.remove("show");
+    continueBtn.style.display = "inline-block";
+  }
 }
 
 function addItem(card) {
@@ -313,3 +317,32 @@ checkoutBtn.addEventListener("click", async () => {
 });
 
 renderCart();
+// Carry the chosen service into checkout without adding duplicate quantities.
+function beginService(sku, moveToDetails = true) {
+  const card = document.querySelector(`.service-card[data-sku="${sku}"]`);
+  if (!card) return;
+  if (!cart[sku]) addItem(card);
+  intakeStep.classList.add('show');
+  continueBtn.style.display = 'none';
+  window.MenuMadeFunnel?.track('details_opened');
+  if (moveToDetails) {
+    intakeStep.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    leadNameEl.focus({ preventScroll: true });
+  }
+}
+document.querySelectorAll('[data-start-menu]').forEach(link => {
+  link.addEventListener('click', event => {
+    event.preventDefault();
+    beginService('online_menu_qr');
+  });
+});
+const requestedService = new URLSearchParams(location.search).get('service');
+const serviceSkus = { menu: 'online_menu_qr', conversion: 'conversion_fix', google: 'google_visibility', accessibility: 'accessibility_upgrade' };
+if (serviceSkus[requestedService]) beginService(serviceSkus[requestedService]);
+if (requestedService === 'app') {
+  const service = document.getElementById('inquiryService');
+  if (service) service.value = 'Other project';
+  const notes = document.getElementById('bookingNotes');
+  if (notes && !notes.value) notes.value = 'I’d like to discuss a native menu app for my business.';
+  document.getElementById('inquiry')?.scrollIntoView();
+}
