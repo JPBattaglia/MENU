@@ -40,56 +40,19 @@
       margin-top: auto;
     }
 
-    /* ===== HERO TITLE + ART ===== */
-    body.services-page .services-hero .services-hero-title{
-      display: flex;
-      align-items: center;
-      gap: 18px;
-      flex-wrap: nowrap;
+    /* Keep the full introduction together beside the photo. */
+    .services-hero-layout{
+      display:grid;
+      grid-template-columns:minmax(0, 1.1fr) minmax(0, 1fr);
+      align-items:center;
+      gap:clamp(28px, 5vw, 64px);
     }
-
-    body.services-page .services-hero .services-hero-title h1{
-      margin: 0;
-      line-height: 1;
-      white-space: normal;
-    }
-
-    /* DESKTOP */
-    body.services-page .services-hero .services-hero-art{
-      width: 560px;
-      max-width: none;
-      position: relative;
-      left: 100px;
-      height: auto;
-      display: block;
-      pointer-events: none;
-      user-select: none;
-      filter: drop-shadow(0 0 14px rgba(120, 255, 255, .22));
-    }
-
-    /* MOBILE */
-    @media (max-width: 900px){
-
-      body.services-page .services-hero .services-hero-title{
-        flex-direction: column;
-        align-items: flex-start;
-        gap: 14px;
-      }
-
-      body.services-page .services-hero .services-hero-art{
-        width: 100%;
-        max-width: 420px;
-
-        position: static;
-        left: auto;
-
-        margin: 0;
-      }
-
-      .premium-media{
-        width: 50%;
-      }
-
+    .services-hero-copy p{ max-width:58ch; line-height:1.55; }
+    .services-hero-layout > .hospitality-photo{ width:100%; min-width:0; }
+    @media (max-width:900px){
+      .services-hero-layout{ grid-template-columns:1fr; gap:32px; }
+      .services-hero-layout > .hospitality-photo{ max-width:600px; justify-self:center; }
+      .premium-media{ width:50%; }
     }
 
     /* MENU-MADE promo popup — services page */
@@ -320,13 +283,11 @@
 <main>
 
 <section class="hero services-hero">
-  <div class="container">
+  <div class="container services-hero-layout">
+    <div class="services-hero-copy">
     <span class="pill">Start small. Launch fast. Upgrade later.</span>
 
-    <div class="services-hero-title">
-      <h1>Mobile Menu First</h1>
-      <img class="services-hero-art hospitality-photo" src="hospitality-owner.webp" alt="Illustrative restaurant owner working on a menu at a café counter" width="1536" height="1024">
-    </div>
+    <h1>Mobile Menu First</h1>
 
     <p>
       The fastest first step is a clean mobile menu and QR code from $129.
@@ -338,6 +299,8 @@
       <a class="btn primary" href="contact.html?service=menu">Start My $129 Menu</a>
       <a class="btn ghost" href="#app">App Upgrade</a>
     </div>
+    </div>
+    <img class="hospitality-photo" src="hospitality-owner.webp" alt="Illustrative restaurant owner working on a menu at a café counter" width="1536" height="1024">
   </div>
 </section>
 
