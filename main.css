@@ -658,3 +658,38 @@ input[type="file"]:disabled::file-selector-button{
     margin:0;
   }
 }
+
+/* Keep the Start page's supporting text and image caption easy to read. */
+.start-page .hero-copy .muted-note {
+  margin-top: 18px;
+  font-size: 16px;
+  line-height: 1.65;
+  color: var(--text);
+}
+.start-page .muted-note a,
+.start-page .muted-note a:visited {
+  color: var(--brand-soft);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  text-decoration-thickness: 2px;
+}
+.start-page .muted-note a:hover { color: #fff; }
+.start-page .muted-note a:focus-visible {
+  outline: 2px solid var(--brand-soft);
+  outline-offset: 4px;
+}
+.start-page .hero-visual .media-overlay {
+  position: static;
+  padding: 18px 22px;
+  background: #012f34;
+  color: #fff;
+  font-size: 16px;
+  line-height: 1.6;
+}
+.start-page .hero-visual .media-overlay strong {
+  display: block;
+  margin-bottom: 4px;
+  font-size: 20px;
+  line-height: 1.35;
+}
+.start-page .hero-visual .media-overlay span { display: block; }
