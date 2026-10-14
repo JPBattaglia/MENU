@@ -293,8 +293,8 @@ input[type="file"]:disabled::file-selector-button{
 .section{ padding:90px 0; }
 .section-image{
   background:
-    linear-gradient(rgba(0,0,0,.25),rgba(0,0,0,.35)),
-    url("Tech1.jpg") center/cover no-repeat;
+    linear-gradient(rgba(1,35,38,.94),rgba(1,35,38,.92)),
+    url("sample-oliva-hero.webp") center/cover no-repeat;
 }
 .section-head{
   max-width:640px;
@@ -706,3 +706,13 @@ input[type="file"]:disabled::file-selector-button{
 .guest-menu-frame .media-overlay { position:static; background:#012f34; padding:20px 24px; line-height:1.6; }
 .guest-menu-frame .media-overlay strong { display:block; font-size:22px; margin-bottom:4px; }
 .guest-menu-frame .media-overlay span { display:block; color:var(--muted); font-size:16px; }
+
+/* A consistent hospitality photo treatment across the site. */
+.hospitality-photo { display:block; width:100%; height:auto; aspect-ratio:3 / 2; object-fit:cover; border-radius:22px; box-shadow:0 18px 42px rgba(0,0,0,.18); }
+.start-page .media-frame .hospitality-photo { border-radius:22px 22px 0 0; box-shadow:none; }
+.hospitality-frame .hospitality-photo { border-radius:22px 22px 0 0; box-shadow:none; }
+.hospitality-frame .media-overlay { position:static; padding:20px 24px; background:#012f34; line-height:1.6; }
+.hospitality-frame .media-overlay strong, .hospitality-frame .media-overlay span { display:block; }
+body.services-page .services-hero .services-hero-title .hospitality-photo { width:48%; max-width:560px; left:auto; position:static; filter:none; flex-shrink:0; }
+body.services-page .premium-media .hospitality-photo { width:100%; height:auto; max-height:none; object-fit:cover; }
+@media(max-width:900px) { body.services-page .services-hero .services-hero-title .hospitality-photo { width:100%; max-width:560px; } }
