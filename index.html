@@ -215,6 +215,10 @@
     .package-details-content ul{padding-left:20px;margin-bottom:0;}
     .package-details-content li + li{margin-top:8px;}
     .hospitality-frame .hospitality-photo{border-radius:22px;}
+    .package-details{overflow:hidden;box-sizing:border-box;}
+    .hero-visual .guest-menu-frame{width:90%;margin-inline:auto;transition:width 420ms cubic-bezier(.22,1,.36,1);}
+    .hero-grid.package-expanded .guest-menu-frame{width:100%;}
+    @media(prefers-reduced-motion:reduce){.hero-visual .guest-menu-frame{transition:none;}}
   </style>
 <script src="funnel.js?v=20261009" defer></script>
 </head>
@@ -257,6 +261,12 @@
     <div class="hero-copy">
       <span class="pill">Built for the food &amp; beverage industry</span>
       <h1>Your menu.<br>Easy to read.<br>On any device.</h1>
+
+
+      <div class="hero-actions">
+        <a class="btn primary" href="contact.html?service=menu">Start My $129 Menu</a>
+        <a class="btn ghost" href="sample-menu.html">View a Sample Menu</a>
+      </div>
       <details class="package-details">
         <summary>Package details &amp; pricing <span>$129 setup + $15/year hosting</span></summary>
         <div class="package-details-content">
@@ -269,11 +279,6 @@
           </ul>
         </div>
       </details>
-
-      <div class="hero-actions">
-        <a class="btn primary" href="contact.html?service=menu">Start My $129 Menu</a>
-        <a class="btn ghost" href="sample-menu.html">View a Sample Menu</a>
-      </div>
     </div>
 
     <div class="hero-visual">
@@ -480,5 +485,6 @@ window.addEventListener('scroll', () => {
 <link rel="stylesheet" href="mm-a11y-widget.css">
 <script src="mm-a11y-widget.js" defer></script>
 
+<script src="home-package.js" defer></script>
 </body>
 </html>
