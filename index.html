@@ -206,6 +206,15 @@
         text-align:center;
       }
     }
+    .package-details{margin-top:24px;border:1px solid rgba(95,242,255,.4);border-radius:16px;background:rgba(0,30,36,.25);}
+    .package-details summary{padding:16px 20px;cursor:pointer;color:var(--brand-soft);font-weight:700;line-height:1.5;}
+    .package-details summary span{display:block;margin-left:20px;font-size:14px;color:var(--muted);font-weight:400;}
+    .package-details summary:focus-visible{outline:3px solid var(--brand-soft);outline-offset:4px;border-radius:16px;}
+    .package-details-content{padding:0 20px 18px;line-height:1.6;color:var(--muted);}
+    .package-details-content p{margin-top:0;}
+    .package-details-content ul{padding-left:20px;margin-bottom:0;}
+    .package-details-content li + li{margin-top:8px;}
+    .hospitality-frame .hospitality-photo{border-radius:22px;}
   </style>
 <script src="funnel.js?v=20261009" defer></script>
 </head>
@@ -248,9 +257,18 @@
     <div class="hero-copy">
       <span class="pill">Built for the food &amp; beverage industry</span>
       <h1>Your menu.<br>Easy to read.<br>On any device.</h1>
-      <p>
-        A branded online menu and QR code for your restaurant, café, or bar. $129 one-time. Includes up to 3 menu pages and two revisions. Additional pages are $20 each. Hosting is $15/year ($144 first year before additional pages). Standard delivery within 48 hours after complete menu materials are received and validated.
-      </p>
+      <details class="package-details">
+        <summary>Package details &amp; pricing <span>$129 setup + $15/year hosting</span></summary>
+        <div class="package-details-content">
+          <p>A branded online menu and QR code for your restaurant, café, or bar.</p>
+          <ul>
+            <li><strong>$129 one-time setup:</strong> up to 3 menu pages and two revisions.</li>
+            <li><strong>Additional pages:</strong> $20 each.</li>
+            <li><strong>Hosting:</strong> $15/year ($144 first year before additional pages).</li>
+            <li><strong>Standard delivery:</strong> within 48 hours after complete menu materials are received and validated.</li>
+          </ul>
+        </div>
+      </details>
 
       <div class="hero-actions">
         <a class="btn primary" href="contact.html?service=menu">Start My $129 Menu</a>
@@ -261,10 +279,6 @@
     <div class="hero-visual">
       <div class="media-frame guest-menu-frame">
         <img src="home-seasonal-menu.webp" alt="Illustrative restaurant guest beside a beautifully presented meal and a tablet displaying a seasonal digital menu" class="hero-image" width="1536" height="1024" fetchpriority="high">
-        <div class="media-overlay">
-          <strong>Your menu, ready to share</strong>
-          <span>On your tables, website, and Google profile.</span>
-        </div>
       </div>
     </div>
 
@@ -351,10 +365,6 @@
     <div class="premium-media">
       <div class="media-frame premium-frame hospitality-frame">
         <img src="hospitality-access.webp" alt="Illustrative guests exploring a digital menu on a tablet" class="hospitality-photo" width="1536" height="1024" loading="lazy">
-        <div class="media-overlay">
-          <strong>$999 starting price</strong>
-          <span>Premium build + publishing support.</span>
-        </div>
       </div>
     </div>
 
