@@ -293,7 +293,7 @@ input[type="file"]:disabled::file-selector-button{
 .section{ padding:90px 0; }
 .section-image{
   background:
-    linear-gradient(rgba(1,35,38,.94),rgba(1,35,38,.92)),
+    linear-gradient(rgba(1,35,38,.72),rgba(1,35,38,.68)),
     url("sample-oliva-hero.webp") center/cover no-repeat;
 }
 .section-head{
