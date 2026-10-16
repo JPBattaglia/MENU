@@ -143,7 +143,7 @@ test('other service links keep their selected offer without adding a menu or pag
   const app = page('?service=app');
   assert.deepEqual(app.cart(), {});
   assert.equal(app.get('inquiryService').value, 'Other project');
-  assert.match(app.get('bookingNotes').value, /native menu app/);
+  assert.match(app.get('bookingNotes').value, /mobile app/);
   assert.equal(app.get('inquiry').scrolled, true);
 });
 
@@ -188,4 +188,14 @@ test('removing or clearing a menu removes the page option and prevents an empty 
   await p.get('clearBtn').fire('click');
   assert.deepEqual(p.cart(), {});
   assert.equal(p.get('continueBtn').disabled, true);
+});
+
+
+test('custom website requests go to inquiry without adding a paid service', () => {
+  const p = page('?service=website');
+  assert.deepEqual(p.cart(), {});
+  assert.equal(p.get('cartTotal').textContent, '$0.00');
+  assert.equal(p.get('inquiryService').value, 'Other project');
+  assert.match(p.get('bookingNotes').value, /new website or redesign/);
+  assert.equal(p.get('inquiry').scrolled, true);
 });

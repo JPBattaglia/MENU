@@ -5,7 +5,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>MENU-MADE — Choose a Service and Start Your Project</title>
-  <meta name="description" content="Choose a menu, website conversion, Google visibility, or accessibility service for your food business. Review your order and full price before secure checkout.">
+  <meta name="description" content="Choose a menu, website conversion, Google visibility, or accessibility service for your business. Review your order and full price before secure checkout.">
 
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -15,7 +15,7 @@
   <link rel="shortcut icon" href="MENU=.png">
   <link rel="apple-touch-icon" href="MENU=.png">
 
-  <link rel="stylesheet" href="main.css?v=20261015-conversion">
+  <link rel="stylesheet" href="main.css?v=20261015-full-services">
 
   <!-- Page-only layout (no main.css edits) -->
   <style>
@@ -365,7 +365,7 @@
   <div class="container hero-grid">
 
     <div class="hero-copy">
-      <span class="pill">Menus · Websites · Online presence</span>
+      <span class="pill">Websites · Menus · Online presence</span>
       <h1>Start Your Project</h1>
       <p>
         Choose the service your business needs, review the price, and send your details.
@@ -481,13 +481,13 @@
 
             <div class="field">
               <label for="lead_notes">Notes (optional)</label>
-              <textarea id="lead_notes" maxlength="400" placeholder="Paste your current menu link or menu text, website, priorities, and desired deadline. Do not send passwords."></textarea>
-              <div class="mini">Paste a shareable menu link or the menu text, or attach your menu file below.</div>
+              <textarea id="lead_notes" maxlength="400" placeholder="Share your website, project goals, priorities, and desired deadline. Do not send passwords."></textarea>
+              <div class="mini">For menu projects, share a menu link, paste the menu text, or attach your current menu below.</div>
             </div>
 
 
             <div class="field">
-              <label for="lead_document">Attach your menu or project document (optional)</label>
+              <label for="lead_document">Attach a project document (optional)</label>
               <input id="lead_document" type="file" accept=".pdf,.doc,.docx,.txt,.png,.jpg,.jpeg,.webp" aria-describedby="lead_document_help lead_document_status">
               <div class="mini" id="lead_document_help">One PDF, Word document, text file, PNG, JPEG, or WebP; maximum 5 MB. Sent with your contact details when you continue to checkout. Documents are reviewed by Menu-Made; a file upload does not automatically complete production onboarding.</div>
               <div class="mini" id="lead_document_status" role="status" aria-live="polite"></div>
@@ -520,8 +520,9 @@
       </aside>
 
       <details class="optional-services" id="optionalServices" open>
-        <summary id="serviceChoicesSummary">Choose or add a service<span>Online menu, website, visibility, and accessibility services</span></summary>
+        <summary id="serviceChoicesSummary">Choose or add a service<span>Website improvements, online menus, visibility, and accessibility services</span></summary>
         <div class="optional-content">
+          <p class="mini">Need a new website or an app? <a href="contact.html?service=website#inquiry">Discuss a custom website</a> or <a href="contact.html?service=app#inquiry">ask about an app</a>. These projects begin with a scope discussion.</p>
 
         <div class="product-grid">
 
@@ -568,7 +569,7 @@
         <div class="service-card">
           <h3>What happens next</h3>
           <p>
-            Choose your service and provide your contact details. Paste a menu link or attach your menu document before checkout. After payment, complete the project information form with your logo, colors, and destination link. Menu turnaround begins after required materials are received and validated; custom delivery dates are confirmed separately.
+            Choose a service and provide your contact details. Include your website and project goals; for menu projects, share your current menu. After payment, provide the information required for your selected service. We confirm scope, missing materials, and delivery timing. Custom websites and app requirements begin with an inquiry and quote.
           </p>
         </div>
 
@@ -602,10 +603,10 @@
       <span style="padding: 10px; margin: 20px 0; width: 200px" class="pill" id="booking">MENU-MADE · Let’s connect</span>
       <h2 id="inquiry-heading">Tell us about your project.</h2>
       <p>Have a question or need help choosing a service? Send your details and we’ll reply with the next steps. If you’d prefer a call, include a few suitable times and your timezone in your message. We’ll confirm by email.</p>
-      <div class="booking-summary"><p>Talk directly with MENU-MADE about your menu, hosting, or future updates.</p><a href="mailto:info@menu-made.com">info@menu-made.com</a><p class="mini">Requesting a call does not reserve an appointment. We’ll agree on a time by email.</p></div>
+      <div class="booking-summary"><p>Talk directly with MENU-MADE about your website, app, visibility, accessibility, or design project.</p><a href="mailto:info@menu-made.com">info@menu-made.com</a><p class="mini">Requesting a call does not reserve an appointment. We’ll agree on a time by email.</p></div>
     </div>
     <form class="booking-card booking-form" id="bookingForm" action="/api/inquiry" method="post">
-      <div class="field"><label for="inquiryService">Service of interest *</label><select id="inquiryService" name="service" required><option value="">Choose a service</option><option>Online Menu + QR</option><option>Conversion Fix</option><option>Google Visibility</option><option>Accessibility Upgrade</option><option>Other project</option></select></div>
+      <div class="field"><label for="inquiryService">Service of interest *</label><select id="inquiryService" name="service" required><option value="">Choose a service</option><option>Online Menu + QR</option><option>Conversion Fix</option><option>Google Visibility</option><option>Accessibility Upgrade</option><option value="Other project">Custom website, app, or other project</option></select></div>
       <div class="two">
         <div class="field"><label for="bookingName">Name *</label><input id="bookingName" name="name" autocomplete="name" maxlength="100" required></div>
         <div class="field"><label for="bookingEmail">Email *</label><input id="bookingEmail" name="email" type="email" autocomplete="email" maxlength="150" required></div>
@@ -651,7 +652,7 @@
 </footer>
 
 <script src="document-upload.js?v=20261009" defer></script>
-<script src="start.js?v=20261015-service-choice" defer></script>
+<script src="start.js?v=20261015-all-services" defer></script>
 
 
 
