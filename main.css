@@ -283,6 +283,11 @@ body:not(.sample-menu-page) {
   outline-offset: 4px
 }
 
+:where(body:not(.sample-menu-page)) label.gear-burger {
+  border: 0;
+  box-shadow: none;
+}
+
 :where(body:not(.sample-menu-page)) .btn {
   display: inline-block;
   padding: 14px 22px;
@@ -1716,7 +1721,7 @@ body:not(.sample-menu-page).services-page .premium-media .hospitality-photo {
 :where(body.start-page) .checkout-actions{margin-top:12px;}
 :where(body.start-page) .checkout-privacy-note,
 :where(body.start-page) .order-review-links{margin-top:10px;}
-:where(body.start-page) .order-accessibility-link{margin-left:10px;}
+:where(body.start-page) .order-review-links{display:flex;flex-wrap:wrap;align-items:center;gap:12px;padding-block:12px;}
 :where(body.start-page) .service-summary-spacer{height:24px;}
 :where(body.start-page) #booking.inquiry-heading-pill{padding:10px;margin:20px 0;width:200px;}
 
