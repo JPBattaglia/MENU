@@ -14,69 +14,10 @@
   <link rel="shortcut icon" href="MENU=.png">
   <link rel="apple-touch-icon" href="MENU=.png">
 
-  <link rel="stylesheet" href="main.css?v=20261015-image-buttons">
-
-  <style>
-    .skip-link{
-      position:absolute;
-      left:-9999px;
-      top:auto;
-      width:1px;
-      height:1px;
-      overflow:hidden;
-    }
-    .skip-link:focus{
-      left:14px;
-      top:14px;
-      width:auto;
-      height:auto;
-      padding:10px 12px;
-      border-radius:12px;
-      background:rgba(0,214,230,.18);
-      border:2px solid var(--cyan);
-      z-index:9999;
-      color:#fff;
-      text-decoration:none;
-      font-weight:900;
-    }
-    .tiny-note{ font-size: .95rem; opacity:.92; }
-
-    .hero-split{
-      display:flex;
-      align-items:center;
-      justify-content:space-between;
-      gap:40px;
-    }
-    .hero-left{ flex: 1 1 auto; min-width: 0; }
-    .hero-right{
-      flex: 0 0 auto;
-      width: min(520px, 44%);
-      display:flex;
-      align-items:center;
-      justify-content:flex-end;
-    }
-    .hero-cta-art{
-      width:100%;
-      height:auto;
-      display:block;
-      user-select:none;
-      -webkit-user-drag:none;
-    }
-    @media (max-width: 980px){
-      .hero-split{
-        flex-direction:column;
-        align-items:flex-start;
-        gap:22px;
-      }
-      .hero-right{
-        width:min(560px, 100%);
-        justify-content:flex-start;
-      }
-    }
-  </style>
+  <link rel="stylesheet" href="main.css?v=20261015-unified">
 </head>
 
-<body>
+<body class="accessibility-page">
 
 <a class="skip-link" href="#main">Skip to content</a>
 
@@ -129,7 +70,7 @@
           <a class="btn ghost" href="services.html">View Services</a>
         </div>
 
-        <p class="tiny-note" style="margin-top:14px;">
+        <p class="tiny-note accessibility-lead-note">
           Note: a widget alone is not “compliance.” Real accessibility comes from auditing and fixing the underlying site.
           We offer both.
         </p>
@@ -164,7 +105,7 @@
         </article>
 
         <article class="service-card">
-            <center><img src="AccessiBePartner.png" alt="accessiBe Official Partner logo featuring blue checkmark symbol" style="height:44px; width: 150px; margin: 8px 0;"></center>
+            <center><img src="AccessiBePartner.png" alt="accessiBe Official Partner logo featuring blue checkmark symbol" class="accessibility-partner-logo"></center>
           <h3>accessiBe Integration (optional)</h3>
           <p>
             Prefer a third-party overlay? We can install and configure accessiBe for your site
@@ -216,7 +157,7 @@
           <p>
             Use the Start form and select “Accessibility”. We’ll follow up with next steps or an audit proposal.
           </p>
-          <div style="margin-top:12px;">
+          <div class="accessibility-followup">
             <a class="btn primary" href="contact.html?service=accessibility">Start accessibility request</a>
           </div>
         </article>
@@ -262,20 +203,10 @@
     </div>
   </div>
 </footer>
-
-<link rel="stylesheet" href="mm-a11y-widget.css?v=20261015-image-buttons">
 <script src="mm-a11y-widget.js" defer></script>
 
 <!-- ONLY ADDITION: PARALLAX -->
-<script>
-window.addEventListener('scroll', () => {
-  document.querySelectorAll('.section-image').forEach(section => {
-    const rect = section.getBoundingClientRect();
-    const offset = rect.top * -0.2;
-    section.style.backgroundPosition = `center calc(50% + ${offset}px)`;
-  });
-});
-</script>
+<script src="section-parallax.js?v=20261015-unified" defer></script>
 
 </body>
 </html>

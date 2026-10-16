@@ -14,49 +14,7 @@
   <link rel="shortcut icon" href="MENU=.png">
   <link rel="apple-touch-icon" href="MENU=.png">
 
-  <link rel="stylesheet" href="main.css?v=20261015-image-buttons">
-
-  <style>
-    /* ===== SERVICES GRID ===== */
-    body.services-page .services-grid{
-      display:grid;
-      grid-template-columns: repeat(2, minmax(0, 1fr));
-      gap: 28px;
-    }
-
-    @media (max-width: 700px){
-      body.services-page .services-grid{
-        grid-template-columns: 1fr;
-      }
-    }
-
-    body.services-page .services-grid .service-card{
-      height: 100%;
-      display: flex;
-      flex-direction: column;
-    }
-
-    body.services-page .services-grid .service-bottom{
-      margin-top: auto;
-    }
-    .service-card[id]{scroll-margin-top:120px;}
-
-    /* Keep the full introduction together beside the photo. */
-    .services-hero-layout{
-      display:grid;
-      grid-template-columns:minmax(0, 1.1fr) minmax(0, 1fr);
-      align-items:center;
-      gap:clamp(28px, 5vw, 64px);
-    }
-    .services-hero-copy p{ max-width:58ch; line-height:1.55; }
-    .services-hero-layout > .hospitality-photo{ width:100%; min-width:0; }
-    @media (max-width:900px){
-      .services-hero-layout{ grid-template-columns:1fr; gap:32px; }
-      .services-hero-layout > .hospitality-photo{ max-width:600px; justify-self:center; }
-      .premium-media{ width:50%; }
-    }
-
-  </style>
+  <link rel="stylesheet" href="main.css?v=20261015-unified">
 <script src="funnel.js?v=20261015-start-choice" defer></script>
 </head>
 
@@ -220,7 +178,7 @@
 
       <div class="premium-bottom">
         <span class="price big">$999</span>
-        <a style="margin-left: 10px;" class="btn primary" href="contact.html?service=app">Discuss My App</a>
+        <a class="btn primary app-purchase-link" href="contact.html?service=app">Discuss My App</a>
       </div>
     </div>
 
@@ -268,20 +226,9 @@
     </div>
   </div>
 </footer>
-
-
-<link rel="stylesheet" href="mm-a11y-widget.css?v=20261015-image-buttons">
 <script src="mm-a11y-widget.js" defer></script>
 
-<script>
-window.addEventListener('scroll', () => {
-  document.querySelectorAll('.section-image').forEach(section => {
-    const rect = section.getBoundingClientRect();
-    const offset = rect.top * -0.2;
-    section.style.backgroundPosition = `center calc(50% + ${offset}px)`;
-  });
-});
-</script>
+<script src="section-parallax.js?v=20261015-unified" defer></script>
 
 </body>
 </html>
