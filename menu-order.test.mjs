@@ -31,15 +31,18 @@ function page(search = '') {
   const addButtons = [...cards.values()].map(card => ({ ...element(), closest: () => card }));
   const startButtons = [...markup.matchAll(/data-start-menu\b/g)].map(() => element());
   const chooseButtons = [...markup.matchAll(/data-choose-services\b/g)].map(() => element());
+  const websiteButtons = [...markup.matchAll(/data-select-website\b/g)].map(() => element());
   const sent = [], documents = [], tracking = [], cartSection = element();
   let failCheckout = false;
-  const location = { search, href: 'https://menu-made.com/contact.html' + search };
+  let fingerprintPause = null;
+  const [query = '', hash = ''] = search.split('#');
+  const location = { search: query, hash: hash ? '#' + hash : '', href: 'https://menu-made.com/contact.html' + search };
   const context = {
     location, URLSearchParams, AbortController, setTimeout, clearTimeout, crypto: webcrypto,
     window: { location, matchMedia: () => ({ matches: true }), MenuMadeFunnel: { track: (...args) => tracking.push(args), tracking: () => ({ session_id: 'test-session' }) },
-      MenuMadeDocuments: { validate() {}, fingerprint: async () => 'test-fingerprint', send: async (payload, file) => { documents.push({ payload, file }); } } },
+      MenuMadeDocuments: { validate() {}, fingerprint: async () => fingerprintPause ? await fingerprintPause : 'test-fingerprint', send: async (payload, file) => { documents.push({ payload, file }); } } },
     document: { getElementById: get, createElement: () => element(),
-      querySelectorAll(selector) { return selector === '.js-add' ? addButtons : selector === '[data-start-menu]' ? startButtons : selector === '[data-choose-services]' ? chooseButtons : []; },
+      querySelectorAll(selector) { return selector.includes('#menuPages') ? [...websiteButtons, ...addButtons, ...['clearBtn', 'continueBtn', 'backBtn', 'menuPages', 'lead_name', 'lead_business', 'lead_email', 'lead_phone', 'lead_notes', 'lead_document', 'scopeConfirm'].map(get)] : selector === '.js-add' ? addButtons : selector === '[data-start-menu]' ? startButtons : selector === '[data-choose-services]' ? chooseButtons : selector === '[data-select-website]' ? websiteButtons : []; },
       querySelector(selector) { return selector === '.cart' ? cartSection : cards.get(/data-sku="([^"]+)"/.exec(selector)?.[1]) || null; } },
     fetch: async (url, options) => { sent.push({ url, body: JSON.parse(options.body) }); return { ok: !failCheckout, json: async () => failCheckout ? { error: 'Please retry checkout.' } : { url: 'https://checkout.stripe.com/test' } }; }
   };
@@ -48,28 +51,37 @@ function page(search = '') {
     get('lead_name').value = 'Test Buyer'; get('lead_business').value = 'Test Cafe'; get('lead_email').value = 'test@example.com'; get('scopeConfirm').checked = true;
   };
   const cart = () => JSON.parse(vm.runInNewContext('JSON.stringify(cart)', context));
-  return { get, fill, sent, documents, tracking, startButtons, chooseButtons, addButtons, cards, cart, cartSection, fail() { failCheckout = true; }, recover() { failCheckout = false; } };
+  return { get, fill, sent, documents, tracking, startButtons, chooseButtons, websiteButtons, addButtons, cards, cart, cartSection,
+    pauseFingerprint() { let release; fingerprintPause = new Promise(resolve => { release = resolve; }); return () => release('test-fingerprint'); },
+    fail() { failCheckout = true; }, recover() { failCheckout = false; } };
 }
 
-test('generic and unknown service links leave the order empty and show service choices', async () => {
+test('generic and unknown service links preload a quote-only website project without payment', async () => {
   for (const search of ['', '?service=', '?service=unknown', '?service=__proto__', '?service=constructor', '?utm_source=test']) {
     const p = page(search); p.fill();
-    assert.deepEqual(p.cart(), {});
-    assert.equal(p.get('cartTotal').textContent, '$0.00');
-    assert.equal(p.get('emptyOrder').hidden, false);
+    assert.deepEqual(Object.keys(p.cart()), ['website_design_custom']);
+    assert.equal(p.cart().website_design_custom.name, 'Website Design & Custom Builds');
+    assert.equal(p.cart().website_design_custom.priceLabel, 'To be quoted');
+    assert.equal(p.cart().website_design_custom.quoteRequired, true);
+    assert.equal(p.get('cartTotal').textContent, 'Quote required');
+    assert.equal(p.get('websiteQuotePanel').hidden, false);
+    assert.equal(p.get('emptyOrder').hidden, true);
     assert.equal(p.get('optionalServices').open, true);
     assert.equal(p.get('menuConfig').hidden, true);
     assert.equal(p.get('intakeStep').classList.contains('show'), false);
     assert.equal(p.get('checkoutBtn').disabled, true);
     assert.equal(p.get('continueBtn').disabled, true);
     await p.get('checkoutBtn').fire('click');
-    assert.match(p.get('status').textContent, /Choose a service/);
+    assert.match(p.get('status').textContent, /requires a project quote/);
+    await p.get('requestWebsiteQuote').fire('click');
+    assert.equal(p.get('inquiryService').value, 'Other project');
+    assert.match(p.get('bookingNotes').value, /Website Design & Custom Builds/);
     assert.equal(p.sent.length, 0);
     assert.equal(p.documents.length, 0);
     assert.equal(p.tracking.some(event => event[0] === 'service_selected'), false);
     await p.chooseButtons[0].fire('click');
     assert.equal(p.get('serviceChoicesSummary').focused, true);
-    assert.deepEqual(p.cart(), {});
+    assert.deepEqual(Object.keys(p.cart()), ['website_design_custom']);
   }
 });
 
@@ -89,14 +101,22 @@ test('supported menu links select one complete first-year menu package without d
   }
 });
 
-test('a generic visitor chooses a service before the order and contact details open', async () => {
+test('choosing a priced service replaces the default website quote before opening checkout details', async () => {
   const p = page();
   await p.addButtons[0].fire('click');
+  assert.deepEqual(Object.keys(p.cart()), ['online_menu_qr']);
   assert.equal(p.cart().online_menu_qr.qty, 1);
   assert.equal(p.get('cartTotal').textContent, '$144.00');
   assert.equal(p.get('emptyOrder').hidden, true);
   assert.equal(p.get('intakeStep').classList.contains('show'), true);
   assert.equal(p.get('lead_name').focused, true);
+  assert.equal(p.get('websiteQuotePanel').hidden, true);
+  await p.addButtons[1].fire('click');
+  assert.deepEqual(Object.keys(p.cart()), ['online_menu_qr', 'conversion_fix']);
+  assert.equal(p.get('cartTotal').textContent, '$443.00');
+  p.fill(); await p.get('checkoutBtn').fire('click');
+  assert.deepEqual(p.sent[0].body.items, [{ key: 'online_menu_qr', qty: 1 }, { key: 'conversion_fix', qty: 1 }]);
+  assert.equal(p.sent[0].body.menu_pages, 3);
 });
 
 test('page count updates the complete displayed quote and refuses invalid totals', async () => {
@@ -191,11 +211,105 @@ test('removing or clearing a menu removes the page option and prevents an empty 
 });
 
 
-test('custom website requests go to inquiry without adding a paid service', () => {
-  const p = page('?service=website');
-  assert.deepEqual(p.cart(), {});
-  assert.equal(p.get('cartTotal').textContent, '$0.00');
-  assert.equal(p.get('inquiryService').value, 'Other project');
-  assert.match(p.get('bookingNotes').value, /new website or redesign/);
-  assert.equal(p.get('inquiry').scrolled, true);
+test('explicit custom website links preload the quote and preserve the inquiry destination', async () => {
+  for (const route of ['?service=website', '?service=website#inquiry']) {
+    const p = page(route);
+    assert.deepEqual(Object.keys(p.cart()), ['website_design_custom']);
+    assert.equal(p.get('cartTotal').textContent, 'Quote required');
+    assert.equal(p.get('inquiryService').value, 'Other project');
+    assert.match(p.get('bookingNotes').value, /new website or redesign/);
+    if (route.includes('#inquiry')) assert.equal(p.get('inquiry').scrolled, true);
+    else assert.equal(p.get('requestWebsiteQuote').focused, true);
+    await p.get('checkoutBtn').fire('click');
+    assert.equal(p.sent.length, 0);
+  }
+});
+
+test('clearing or removing the default website leaves an empty order until selected again', async () => {
+  for (const action of ['clear', 'remove']) {
+    const p = page();
+    if (action === 'clear') await p.get('clearBtn').fire('click');
+    else await p.get('cartItems').fire('click', { target: { dataset: { remove: 'website_design_custom' } } });
+    assert.deepEqual(p.cart(), {});
+    assert.equal(p.get('cartTotal').textContent, '$0.00');
+    assert.equal(p.get('websiteQuotePanel').hidden, true);
+    assert.equal(p.get('emptyOrder').hidden, false);
+    assert.equal(p.get('checkoutBtn').disabled, true);
+    assert.equal(p.get('optionalServices').open, true);
+    await p.get('checkoutBtn').fire('click');
+    assert.equal(p.sent.length, 0);
+    await p.chooseButtons[0].fire('click');
+    assert.deepEqual(p.cart(), {});
+    await p.websiteButtons[0].fire('click');
+    assert.equal(p.get('cartTotal').textContent, 'Quote required');
+  }
+});
+
+test('selecting the website chooser replaces paid services with an inquiry-only project', async () => {
+  const p = page('?service=conversion'); p.fill();
+  await p.websiteButtons[0].fire('click');
+  assert.deepEqual(Object.keys(p.cart()), ['website_design_custom']);
+  assert.equal(p.get('intakeStep').classList.contains('show'), false);
+  assert.equal(p.get('menuConfig').hidden, true);
+  await p.get('checkoutBtn').fire('click');
+  assert.equal(p.sent.length, 0);
+  assert.equal(p.documents.length, 0);
+});
+
+test('checkout keeps the visible order locked while asynchronous document preparation is pending', async () => {
+  for (const service of ['conversion', 'menu']) {
+    const p = page('?service=' + service); p.fill();
+    const initialCart = p.cart();
+    const initialTotal = p.get('cartTotal').textContent;
+    const release = p.pauseFingerprint();
+    const pending = p.get('checkoutBtn').fire('click');
+    assert.equal(p.websiteButtons[0].disabled, true);
+    assert.equal(p.addButtons[0].disabled, true);
+    assert.equal(p.get('clearBtn').disabled, true);
+    assert.equal(p.get('menuPages').disabled, true);
+    assert.equal(p.get('lead_email').disabled, true);
+    assert.equal(p.get('lead_document').disabled, true);
+    await p.websiteButtons[0].fire('click');
+    await p.addButtons[0].fire('click');
+    for (const patch of [{ inc: 'conversion_fix' }, { dec: 'conversion_fix' }, { remove: Object.keys(initialCart)[0] }]) {
+      await p.get('cartItems').fire('click', { target: { dataset: patch } });
+    }
+    await p.get('clearBtn').fire('click');
+    p.get('menuPages').value = '50'; await p.get('menuPages').fire('input');
+    assert.equal(p.get('menuPages').value, '3');
+    assert.deepEqual(p.cart(), initialCart);
+    assert.equal(p.get('cartTotal').textContent, initialTotal);
+    assert.equal(p.get('websiteQuotePanel').hidden, true);
+    assert.equal(p.sent.length, 0);
+    release(); await pending;
+    assert.equal(p.sent.length, 1);
+    assert.deepEqual(p.sent[0].body.items, [{ key: service === 'menu' ? 'online_menu_qr' : 'conversion_fix', qty: 1 }]);
+    if (service === 'menu') assert.equal(p.sent[0].body.menu_pages, 3);
+    assert.equal(p.websiteButtons[0].disabled, false);
+    assert.equal(p.get('lead_email').disabled, false);
+    assert.equal(p.get('lead_document').disabled, false);
+    await p.websiteButtons[0].fire('click');
+    assert.equal(p.get('cartTotal').textContent, 'Quote required');
+  }
+});
+
+test('priced selection removes only the automatic website inquiry template', async () => {
+  const automatic = page();
+  assert.equal(automatic.get('inquiryService').value, 'Other project');
+  await automatic.addButtons[1].fire('click');
+  assert.equal(automatic.get('bookingNotes').value, '');
+  assert.equal(automatic.get('inquiryService').value, '');
+
+  const edited = page();
+  edited.get('bookingNotes').value = 'Please keep my own project details.';
+  await edited.addButtons[1].fire('click');
+  assert.equal(edited.get('bookingNotes').value, 'Please keep my own project details.');
+  assert.equal(edited.get('inquiryService').value, 'Other project');
+
+  const previous = page('?service=conversion');
+  previous.get('inquiryService').value = 'Google Visibility';
+  await previous.websiteButtons[0].fire('click');
+  await previous.addButtons[1].fire('click');
+  assert.equal(previous.get('bookingNotes').value, '');
+  assert.equal(previous.get('inquiryService').value, 'Google Visibility');
 });

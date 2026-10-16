@@ -268,6 +268,19 @@ html[data-mm-a11y-guide="1"] .mm-a11y-guide{
 }
 
 /* Portable page-level adjustments */
+.mm-a11y-panel button,
+.mm-a11y-launcher{
+  border:2px solid var(--button-border,#c6d0d4);
+  box-shadow:var(--button-inset,inset 0 1px 0 rgba(255,255,255,.7),inset 0 -1px 0 rgba(0,25,32,.28));
+}
+.mm-a11y-launcher{
+  box-shadow:var(--button-inset,inset 0 1px 0 rgba(255,255,255,.7),inset 0 -1px 0 rgba(0,25,32,.28)),0 10px 30px rgba(0,0,0,.28);
+}
+.mm-a11y-cancel{
+  padding:6px 10px;
+  border-radius:8px;
+}
+
 html[data-mm-a11y-text="1"] body{ font-size: 110% !important; }
 html[data-mm-a11y-text="2"] body{ font-size: 125% !important; }
 html[data-mm-a11y-text="3"] body{ font-size: 150% !important; }
