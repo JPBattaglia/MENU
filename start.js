@@ -16,6 +16,7 @@ const extraPagesLabelEl = document.getElementById('extraPagesLabel');
 const extraPagesAmountEl = document.getElementById('extraPagesAmount');
 const serviceChoicesEl = document.getElementById('optionalServices');
 const emptyOrderEl = document.getElementById('emptyOrder');
+const websiteQuotePanelEl = document.getElementById('websiteQuotePanel');
 
 const leadNameEl = document.getElementById("lead_name");
 const leadBusinessEl = document.getElementById("lead_business");
@@ -30,9 +31,58 @@ const phoneErrorEl = document.getElementById("lead_phone_error");
 const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 let checkoutInFlight = false;
 let uploadedDocumentRequest = null;
+let checkoutLockedMenuPages = null;
+let automaticWebsiteInquiry = false;
+let websiteInquiryPreviousService = '';
 const phonePattern = /^[0-9+\-\s().]{7,}$/;
 const MENU_SKU = 'online_menu_qr';
+const WEBSITE_QUOTE_KEY = 'website_design_custom';
+const WEBSITE_NAME = 'Website Design & Custom Builds';
+const WEBSITE_INQUIRY_TEMPLATE = 'I’d like a quote for Website Design & Custom Builds: a new website or redesign for my business.';
 const money = cents => '$' + (cents / 100).toFixed(2);
+
+function prepareWebsiteInquiry() {
+  const service = document.getElementById('inquiryService');
+  const notes = document.getElementById('bookingNotes');
+  if (!notes.value) {
+    websiteInquiryPreviousService = service.value;
+    notes.value = WEBSITE_INQUIRY_TEMPLATE;
+    automaticWebsiteInquiry = true;
+  }
+  service.value = 'Other project';
+}
+
+function clearAutomaticWebsiteInquiry() {
+  const notes = document.getElementById('bookingNotes');
+  const service = document.getElementById('inquiryService');
+  if (automaticWebsiteInquiry && notes.value === WEBSITE_INQUIRY_TEMPLATE) {
+    notes.value = '';
+    if (service.value === 'Other project') service.value = websiteInquiryPreviousService;
+  }
+  automaticWebsiteInquiry = false;
+}
+
+function lockCheckoutControls(locked) {
+  document.querySelectorAll('[data-select-website], .js-add, #cartItems button, #clearBtn, #continueBtn, #backBtn, #menuPages, #intakeStep input, #intakeStep textarea').forEach(control => {
+    control.disabled = locked;
+  });
+  if (locked) checkoutLockedMenuPages = menuPagesEl.value;
+  else checkoutLockedMenuPages = null;
+}
+
+function selectWebsiteQuote(moveToOrder = false) {
+  if (checkoutInFlight) return;
+  Object.keys(cart).forEach(key => delete cart[key]);
+  cart[WEBSITE_QUOTE_KEY] = { key: WEBSITE_QUOTE_KEY, name: WEBSITE_NAME, qty: 1, quoteRequired: true, priceLabel: 'To be quoted' };
+  prepareWebsiteInquiry();
+  clearStatus();
+  renderCart();
+  if (moveToOrder) {
+    const reducedMotion = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+    document.querySelector('.cart').scrollIntoView({ behavior: reducedMotion ? 'auto' : 'smooth', block: 'start' });
+    document.getElementById('requestWebsiteQuote').focus({ preventScroll: true });
+  }
+}
 
 function menuQuote() {
   const raw = menuPagesEl.value.trim();
@@ -90,6 +140,7 @@ function renderCart() {
   itemsEl.innerHTML = "";
   let total = 0;
   const hasMenu = Boolean(cart[MENU_SKU]);
+  const hasWebsiteQuote = Boolean(cart[WEBSITE_QUOTE_KEY]);
   const quote = hasMenu ? menuQuote() : null;
   menuConfigEl.hidden = !hasMenu;
   menuPagesEl.disabled = !hasMenu;
@@ -105,13 +156,13 @@ function renderCart() {
 
     li.innerHTML = `
       <div>
-        <strong>${item.name}</strong>
+        <strong>${item.quoteRequired ? 'Website Design &amp; Custom Builds' : item.name}</strong>
         <small>${item.key === MENU_SKU ? '1 menu package · includes first-year hosting' : item.priceLabel}</small>
       </div>
 
       <div class="qty">
-        ${item.key === MENU_SKU
-          ? '<button class="remove-item" type="button" data-remove="online_menu_qr" aria-label="Remove Online Menu + QR from your order">Remove</button>'
+        ${item.key === MENU_SKU || item.quoteRequired
+          ? `<button class="remove-item" type="button" data-remove="${item.key}" aria-label="Remove ${item.quoteRequired ? 'Website Design and Custom Builds' : 'Online Menu + QR'} from your order">Remove</button>`
           : `<button type="button" data-dec="${item.key}" aria-label="Remove one ${item.name}">−</button>
         <span aria-label="Quantity">${item.qty}</span>
         <button type="button" data-inc="${item.key}" aria-label="Add one ${item.name}">+</button>`}
@@ -119,26 +170,36 @@ function renderCart() {
     `;
 
     itemsEl.appendChild(li);
-    total += item.key === MENU_SKU ? (quote?.totalCents || 0) : item.price * item.qty;
+    if (!item.quoteRequired) total += item.key === MENU_SKU ? (quote?.totalCents || 0) : item.price * item.qty;
   });
 
-  totalEl.textContent = validPages ? money(total) : 'Enter page count';
+  totalEl.textContent = hasWebsiteQuote ? 'Quote required' : validPages ? money(total) : 'Enter page count';
+  document.getElementById('orderTotalLabel').textContent = hasWebsiteQuote ? 'Project price' : 'Total due today · USD';
+  websiteQuotePanelEl.hidden = !hasWebsiteQuote;
 
   const hasItems = Object.keys(cart).length > 0;
   emptyOrderEl.hidden = hasItems;
   document.getElementById('orderActions').hidden = !hasItems;
-  document.getElementById('billingDetails').hidden = !hasItems;
-  continueBtn.disabled = !hasItems || !validPages;
-  checkoutBtn.disabled = !hasItems || !validPages || checkoutInFlight;
+  document.getElementById('billingDetails').hidden = !hasItems || hasWebsiteQuote;
+  document.getElementById('orderSecurity').hidden = !hasItems || hasWebsiteQuote;
+  continueBtn.disabled = !hasItems || !validPages || hasWebsiteQuote;
+  checkoutBtn.disabled = !hasItems || !validPages || hasWebsiteQuote || checkoutInFlight;
   clearBtn.disabled = !hasItems;
   if (!hasItems) {
     serviceChoicesEl.open = true;
     intakeStep.classList.remove("show");
     continueBtn.style.display = "inline-block";
   }
+  if (hasWebsiteQuote) {
+    intakeStep.classList.remove('show');
+    continueBtn.style.display = 'none';
+  }
 }
 
 function addItem(card) {
+  if (checkoutInFlight) return;
+  clearAutomaticWebsiteInquiry();
+  delete cart[WEBSITE_QUOTE_KEY];
   const key = card.dataset.sku;
   const name = card.dataset.name;
   const price = Number(card.dataset.price);
@@ -162,14 +223,22 @@ document.querySelectorAll(".js-add").forEach(btn => {
   });
 });
 
+document.querySelectorAll('[data-select-website]').forEach(button => {
+  button.addEventListener('click', () => selectWebsiteQuote(true));
+});
+document.getElementById('requestWebsiteQuote').addEventListener('click', () => {
+  prepareWebsiteInquiry();
+});
+
 itemsEl.addEventListener("click", e => {
+  if (checkoutInFlight) return;
   const inc = e.target.dataset.inc;
   const dec = e.target.dataset.dec;
   const remove = e.target.dataset.remove;
 
   if (remove && cart[remove]) delete cart[remove];
 
-  if (inc && cart[inc] && inc !== MENU_SKU) {
+  if (inc && cart[inc] && inc !== MENU_SKU && !cart[inc].quoteRequired) {
     cart[inc].qty++;
   }
 
@@ -183,17 +252,24 @@ itemsEl.addEventListener("click", e => {
 });
 
 menuPagesEl.addEventListener('input', () => {
+  if (checkoutInFlight) {
+    menuPagesEl.value = checkoutLockedMenuPages;
+    return;
+  }
   clearStatus();
   renderCart();
 });
 
 clearBtn.addEventListener("click", () => {
+  if (checkoutInFlight) return;
   Object.keys(cart).forEach(k => delete cart[k]);
   clearStatus();
   renderCart();
 });
 
 continueBtn.addEventListener("click", () => {
+  if (checkoutInFlight) return;
+  if (!Object.keys(cart).length || cart[WEBSITE_QUOTE_KEY]) return;
   intakeStep.classList.add("show");
   window.MenuMadeFunnel?.track("details_opened");
   continueBtn.style.display = "none";
@@ -201,6 +277,7 @@ continueBtn.addEventListener("click", () => {
 });
 
 backBtn.addEventListener("click", () => {
+  if (checkoutInFlight) return;
   intakeStep.classList.remove("show");
   continueBtn.style.display = "inline-block";
   clearStatus();
@@ -238,7 +315,12 @@ if (leadPhoneEl) {
 
 checkoutBtn.addEventListener("click", async () => {
   if (checkoutInFlight) return;
-  const items = Object.values(cart).map(i => ({
+  if (cart[WEBSITE_QUOTE_KEY]) {
+    prepareWebsiteInquiry();
+    showStatus('Website Design & Custom Builds requires a project quote. Use Request a Website Quote to send your inquiry.');
+    return;
+  }
+  const items = Object.values(cart).filter(item => !item.quoteRequired).map(i => ({
     key: i.key,
     qty: i.qty
   }));
@@ -306,6 +388,8 @@ checkoutBtn.addEventListener("click", async () => {
   let timeout;
   checkoutInFlight = true;
   checkoutBtn.disabled = true;
+  lockCheckoutControls(true);
+  checkoutBtn.textContent = file ? 'Preparing document…' : 'Opening secure checkout…';
   try {
     window.MenuMadeDocuments.validate(file);
     const fingerprint = await window.MenuMadeDocuments.fingerprint(file);
@@ -361,6 +445,7 @@ checkoutBtn.addEventListener("click", async () => {
   } finally {
     clearTimeout(timeout);
     checkoutInFlight = false;
+    lockCheckoutControls(false);
     checkoutBtn.textContent = 'Proceed to secure checkout';
     renderCart();
   }
@@ -369,6 +454,7 @@ checkoutBtn.addEventListener("click", async () => {
 renderCart();
 // Carry the chosen service into checkout without adding duplicate quantities.
 function beginService(sku, moveToDetails = true) {
+  if (checkoutInFlight) return;
   const card = document.querySelector(`.service-card[data-sku="${sku}"]`);
   if (!card) return;
   if (!cart[sku]) addItem(card);
@@ -403,7 +489,10 @@ if (Object.hasOwn(serviceSkus, requestedService)) {
   beginService(serviceSkus[requestedService]);
   serviceChoicesEl.open = false;
 }
-if (requestedService === 'app' || requestedService === 'website') {
+else if (requestedService !== 'app') {
+  selectWebsiteQuote(requestedService === 'website' && location.hash !== '#inquiry');
+}
+if (requestedService === 'app' || (requestedService === 'website' && location.hash === '#inquiry')) {
   const service = document.getElementById('inquiryService');
   if (service) service.value = 'Other project';
   const notes = document.getElementById('bookingNotes');

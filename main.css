@@ -17,6 +17,9 @@
 
   --radius:18px;
   --radius-lg:26px;
+  --image-border:2px solid var(--brand);
+  --button-border:#c6d0d4;
+  --button-inset:inset 0 1px 0 rgba(255,255,255,.7),inset 0 -1px 0 rgba(0,25,32,.28);
 }
 
 
@@ -159,7 +162,6 @@ img{ display:block; max-width:100%; height:auto; }
 
 .social-icon:hover{
   transform:translateY(-2px);
-  border-color:var(--brand-soft);
   background:rgba(95,242,255,.18);
 }
 
@@ -180,10 +182,11 @@ img{ display:block; max-width:100%; height:auto; }
   align-items:center;
   justify-content:center;
   cursor:pointer;
+  border-radius:999px;
 }
 .gear-burger img{
-  width:42px;
-  height:42px;
+  width:100%;
+  height:100%;
   background:none;
   border:none;
   transform-origin:50% 50%;
@@ -226,11 +229,20 @@ img{ display:block; max-width:100%; height:auto; }
 }
 
 /* BUTTONS */
+:is(.btn,.cta-pill,.nav-cta,.social-icon,.gear-burger,button,[role="button"],input[type="submit"],input[type="button"],input[type="reset"]){
+  border:2px solid var(--button-border);
+  box-shadow:var(--button-inset);
+}
+:is(.btn,.cta-pill,.nav-cta,.social-icon,.gear-burger,button,[role="button"],input[type="submit"],input[type="button"],input[type="reset"]):focus-visible{
+  outline:3px solid var(--gold);
+  outline-offset:4px;
+}
 .btn{
   display:inline-block;
   padding:14px 22px;
   border-radius:16px;
   text-decoration:none;
+  font:inherit;
   font-weight:900;
   text-align:center;
   transition: transform .18s ease, box-shadow .18s ease, filter .18s ease;
@@ -240,12 +252,11 @@ img{ display:block; max-width:100%; height:auto; }
   color:#001b22;
 }
 .btn.ghost{
-  border:2px solid var(--brand);
   color:var(--brand-soft);
 }
 .btn:hover{
   transform:translateY(-2px);
-  box-shadow:0 10px 22px rgba(0,0,0,.25);
+  box-shadow:var(--button-inset),0 10px 22px rgba(0,0,0,.25);
   filter:brightness(1.05);
 }
 
@@ -253,7 +264,8 @@ img{ display:block; max-width:100%; height:auto; }
 input[type="file"]::file-selector-button{
   margin-right:12px;
   padding:14px 22px;
-  border:0;
+  border:2px solid var(--button-border);
+  box-shadow:var(--button-inset);
   border-radius:16px;
   background:linear-gradient(135deg,var(--brand),var(--brand-soft));
   color:#001b22;
@@ -264,7 +276,7 @@ input[type="file"]::file-selector-button{
 }
 input[type="file"]::file-selector-button:hover{
   transform:translateY(-2px);
-  box-shadow:0 10px 22px rgba(0,0,0,.25);
+  box-shadow:var(--button-inset),0 10px 22px rgba(0,0,0,.25);
   filter:brightness(1.05);
 }
 input[type="file"]:focus-visible{
@@ -281,6 +293,7 @@ input[type="file"]:disabled::file-selector-button{
   position:relative;
   overflow:hidden;
   border-radius:var(--radius-lg);
+  border:var(--image-border);
 }
 .media-overlay{
   position:absolute;
@@ -350,7 +363,7 @@ input[type="file"]:disabled::file-selector-button{
 }
 .cta-pill:hover{
   transform:translateY(-2px);
-  box-shadow:0 8px 18px rgba(0,0,0,.22);
+  box-shadow:var(--button-inset),0 8px 18px rgba(0,0,0,.22);
   filter:brightness(1.05);
 }
 
@@ -603,11 +616,11 @@ input[type="file"]:disabled::file-selector-button{
 .booking-slots { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:8px; }
 .booking-slot {
   min-height:44px; padding:10px 4px; border-radius:12px;
-  border:1px solid var(--brand-soft); background:var(--bg-deep);
+  background:var(--bg-deep);
   color:var(--text); font:inherit; cursor:pointer;
 }
 .booking-slot[aria-pressed="true"] { background:var(--brand-soft); color:var(--bg-deep); font-weight:700; }
-.booking-slot:hover { border-color:white; }
+.booking-slot:hover { filter:brightness(1.08); }
 .booking-form :focus-visible, .social-icon:focus-visible { outline:3px solid var(--gold); outline-offset:3px; }
 .booking-summary { padding:16px; margin:0 0 18px; background:rgba(0,0,0,.2); border-radius:14px; }
 .booking-summary p { margin:8px 0 0; }
@@ -708,9 +721,10 @@ input[type="file"]:disabled::file-selector-button{
 .guest-menu-frame .media-overlay span { display:block; color:var(--muted); font-size:16px; }
 
 /* A consistent hospitality photo treatment across the site. */
-.hospitality-photo { display:block; width:100%; height:auto; aspect-ratio:3 / 2; object-fit:cover; border-radius:22px; box-shadow:0 18px 42px rgba(0,0,0,.18); }
+.hospitality-photo { display:block; width:100%; height:auto; aspect-ratio:3 / 2; object-fit:cover; border:var(--image-border); border-radius:22px; box-shadow:0 18px 42px rgba(0,0,0,.18); }
 .start-page .media-frame .hospitality-photo { border-radius:22px 22px 0 0; box-shadow:none; }
 .hospitality-frame .hospitality-photo { border-radius:22px 22px 0 0; box-shadow:none; }
+.media-frame > .hospitality-photo { border:0; border-radius:0; }
 .hospitality-frame .media-overlay { position:static; padding:20px 24px; background:#012f34; line-height:1.6; }
 .hospitality-frame .media-overlay strong, .hospitality-frame .media-overlay span { display:block; }
 body.services-page .services-hero .services-hero-title .hospitality-photo { width:48%; max-width:560px; left:auto; position:static; filter:none; flex-shrink:0; }
@@ -720,8 +734,8 @@ body.services-page .premium-media .hospitality-photo { width:100%; height:auto; 
 /* Real work and practical answers near the purchase decision. */
 .hero-intro { max-width:38ch; font-size:20px; line-height:1.5; }
 .restaurant-work-grid { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:24px; }
-.restaurant-work-card { display:block; min-width:0; overflow:hidden; border:1px solid rgba(95,242,255,.35); border-radius:22px; background:#012d33; color:#fff; text-decoration:none; }
-.restaurant-work-card img { display:block; width:100%; height:230px; object-fit:cover; object-position:top; }
+.restaurant-work-card { display:block; min-width:0; overflow:hidden; border:var(--image-border); border-radius:22px; background:#012d33; color:#fff; text-decoration:none; }
+.restaurant-work-card img { display:block; width:100%; height:230px; object-fit:cover; object-position:top; border-bottom:var(--image-border); }
 .restaurant-work-card:nth-child(2) img { object-position:center; }
 .restaurant-work-card > span { display:block; padding:22px; font-weight:700; font-size:20px; }
 .restaurant-work-card small { display:block; color:var(--muted); font-weight:400; font-size:15px; margin-top:8px; }

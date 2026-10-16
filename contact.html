@@ -15,7 +15,7 @@
   <link rel="shortcut icon" href="MENU=.png">
   <link rel="apple-touch-icon" href="MENU=.png">
 
-  <link rel="stylesheet" href="main.css?v=20261015-full-services">
+  <link rel="stylesheet" href="main.css?v=20261015-image-buttons">
 
   <!-- Page-only layout (no main.css edits) -->
   <style>
@@ -125,7 +125,6 @@
       width: 32px;
       height: 32px;
       border-radius: 10px;
-      border: 1px solid rgba(0,214,230,.35);
       background: rgba(0,214,230,.10);
       color: #fff;
       font-weight: 900;
@@ -150,7 +149,7 @@
     .cart-panel h4{margin:6px 0 14px;font-size:18px;}
     .cart-panel .order-security{margin-top:14px;}
     .start-page .cart-panel p.mini{font-size:13px !important;line-height:1.5 !important;}
-    .cart-panel a:not(.cta-pill){color:var(--brand-soft);}
+    .cart-panel a:not(.cta-pill):not(.btn){color:var(--brand-soft);}
     .billing-details{margin:14px 0;}
     .billing-details summary{cursor:pointer;color:var(--brand-soft);font-size:14px;line-height:1.5;}
     @media(max-width:520px){.cart-panel{padding:16px;}.cart-item{gap:8px;}.cart-actions .btn{max-width:100%;}.menu-breakdown > div{font-size:13.5px;}}
@@ -181,7 +180,6 @@
     .cart-panel [hidden]{display:none;}
 
     .btn.secondary{
-      border: 2px solid rgba(255,255,255,.45);
       color: #fff;
       background: rgba(255,255,255,.08);
     }
@@ -373,7 +371,8 @@
       </p>
 
       <div class="hero-actions">
-        <a class="btn primary" href="#optionalServices" data-choose-services>Choose a Service</a>
+        <button class="btn primary" type="button" data-select-website>Start a Website Project</button>
+        <a class="btn ghost" href="#optionalServices" data-choose-services>Choose Another Service</a>
         <a class="btn ghost" href="#inquiry">Questions before you buy?</a>
       </div>
 
@@ -406,7 +405,7 @@
 
     <header class="section-head">
       <h2>Choose a service</h2>
-      <p>Select what you need to build your order. You’ll see the full price before paying.</p>
+      <p>Start with a custom website quote or choose a fixed-price service. Every project’s scope and price are confirmed before payment.</p>
     </header>
 
     <div class="start-grid">
@@ -417,7 +416,7 @@
           <div class="cart-head">
             <div>
               <h3>Your order</h3>
-              <p class="cart-sub">Review your selected services and complete price before secure payment.</p>
+              <p class="cart-sub">Review your project and its next step below.</p>
             </div>
           </div>
 
@@ -440,8 +439,13 @@
           </div>
 
           <div class="cart-total">
-            <span>Total due today · USD</span>
+            <span id="orderTotalLabel">Total due today · USD</span>
             <strong id="cartTotal" aria-live="polite" aria-atomic="true">$0.00</strong>
+          </div>
+
+          <div id="websiteQuotePanel" hidden>
+            <p class="mini">Website Design &amp; Custom Builds is quoted for your project. Tell us about your pages, goals, and features so we can agree on the scope, price, and delivery before work begins.</p>
+            <a class="btn primary" id="requestWebsiteQuote" href="#inquiry">Request a Website Quote</a>
           </div>
 
           <div class="cart-actions" id="orderActions" hidden>
@@ -510,7 +514,7 @@
             </div>
           </div>
 
-          <p class="mini order-security">Payment is handled securely by Stripe. MENU-MADE does not collect your card details on this page. After payment, we’ll guide you through the remaining project materials.</p>
+          <p class="mini order-security" id="orderSecurity" hidden>Payment is handled securely by Stripe. MENU-MADE does not collect your card details on this page. After payment, we’ll guide you through the remaining project materials.</p>
 
           <div style="margin-top:10px;">
             <a class="cta-pill" href="services.html">Review services</a>
@@ -522,9 +526,18 @@
       <details class="optional-services" id="optionalServices" open>
         <summary id="serviceChoicesSummary">Choose or add a service<span>Website improvements, online menus, visibility, and accessibility services</span></summary>
         <div class="optional-content">
-          <p class="mini">Need a new website or an app? <a href="contact.html?service=website#inquiry">Discuss a custom website</a> or <a href="contact.html?service=app#inquiry">ask about an app</a>. These projects begin with a scope discussion.</p>
+          <p class="mini">Custom websites and apps begin with a scope discussion. Choose a website project below or <a href="contact.html?service=app#inquiry">ask about an app</a>.</p>
 
         <div class="product-grid">
+
+          <article class="service-card">
+            <h3>Website Design &amp; Custom Builds</h3>
+            <p>A new website or a broader redesign built around your business. We agree on pages, features, materials, delivery, and price before work begins.</p>
+            <div class="card-actions">
+              <span class="price-tag">To be quoted</span>
+              <button class="btn primary" type="button" data-select-website>Select Website Design</button>
+            </div>
+          </article>
 
           <article class="service-card" data-sku="online_menu_qr" data-name="Online Menu + QR" data-price="12900" data-price-label="$144 first year" data-price-id="price_1T6OzbHw7f6jhUv8Epy5oYMf">
             <h3>Online Menu + QR</h3>
@@ -652,7 +665,7 @@
 </footer>
 
 <script src="document-upload.js?v=20261009" defer></script>
-<script src="start.js?v=20261015-all-services" defer></script>
+<script src="start.js?v=20261015-website-default" defer></script>
 
 
 
@@ -669,7 +682,7 @@ document.addEventListener("DOMContentLoaded", () => {
 });
 </script>
 
-<link rel="stylesheet" href="mm-a11y-widget.css">
+<link rel="stylesheet" href="mm-a11y-widget.css?v=20261015-image-buttons">
 <script src="mm-a11y-widget.js" defer></script>
 
 <!-- Match the Tech background parallax used on the other pages. -->
