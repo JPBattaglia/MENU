@@ -13,7 +13,9 @@
 .work-copy p { color:var(--muted); line-height:1.55; margin:0 0 22px; }
 .work-copy .work-link { color:var(--brand-soft); font-weight:700; line-height:1.5; margin-top:auto; text-underline-offset:5px; }
 .work-archive-note { border-left:3px solid var(--brand); padding:10px 18px; margin:0 0 50px; max-width:790px; color:var(--muted); line-height:1.6; }
-.work-next { padding:44px; margin-bottom:70px; border:1px solid rgba(95,242,255,.3); border-radius:24px; background:rgba(0,35,42,.8); }
+.work-next { position:relative; isolation:isolate; overflow:hidden; padding:90px 0; background:#012326; }
+.work-next::before { content:""; position:absolute; z-index:-1; inset:-100px 0; background:linear-gradient(rgba(1,35,38,.72),rgba(1,35,38,.68)),url("sample-oliva-hero.webp") center/cover no-repeat; transform:translate3d(0,var(--work-parallax-offset,0px),0); will-change:transform; }
+.work-next-content { position:relative; }
 .work-next h2 { font:clamp(25px,3vw,34px)/1.15 'Aldrich',sans-serif; margin:0 0 14px; }
 .work-next p { color:var(--muted); line-height:1.6; max-width:670px; }
 .work-skip { position:fixed; top:-100px; left:14px; z-index:99; background:var(--brand-soft); color:#001b22; padding:12px 18px; border-radius:8px; }
@@ -23,13 +25,16 @@
 @media (max-width:900px) {
   .work-grid { grid-template-columns:1fr; max-width:660px; margin-inline:auto; }
   .work-visual { height:340px; }
-  .work-next { padding:30px; }
+  .work-next { padding:76px 0; }
 }
 @media (max-width:520px) {
   .work-intro { padding-top:44px; }
   .work-visual { height:280px; }
   .work-copy { padding:22px; }
-  .work-next { padding:24px; }
+  .work-next { padding:64px 0; }
   .work-next .hero-actions .btn { width:100%; }
 }
-@media (prefers-reduced-motion:reduce) { .work-visual img { transition:none; } }
+@media (prefers-reduced-motion:reduce) {
+  .work-visual img { transition:none; }
+  .work-next::before { transform:none; will-change:auto; }
+}

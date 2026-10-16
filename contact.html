@@ -194,6 +194,31 @@
       line-height: 1.35;
     }
 
+    .start-package-details{
+      margin-top:18px;
+      border:1px solid rgba(95,242,255,.4);
+      border-radius:16px;
+      background:rgba(0,30,36,.25);
+      overflow:hidden;
+      box-sizing:border-box;
+    }
+    .start-package-details > summary{
+      padding:16px 20px;
+      color:var(--brand-soft);
+      font-weight:700;
+      line-height:1.5;
+      cursor:pointer;
+    }
+    .start-package-details > summary:focus-visible{
+      outline:3px solid var(--brand-soft);
+      outline-offset:-4px;
+      border-radius:16px;
+    }
+    .start-page .hero-copy .start-package-details .muted-note{
+      margin:0;
+      padding:0 20px 20px;
+    }
+
     .status{
       margin-top: 10px;
       font-size: 13.5px;
@@ -351,9 +376,12 @@
       </div>
 
       <p class="conversion-help"><a href="sample-menu.html">Try the sample menu</a> · <a href="#inquiry">Ask about your project</a></p>
-      <p class="muted-note">
+      <details class="package-details start-package-details">
+        <summary>Package details &amp; pricing</summary>
+        <p class="muted-note">
         One checkout covers $129 setup plus $15 first-year hosting: $144 for up to 3 menu pages, a QR code, and two revisions. Additional pages cost $20 each. Hosting renews at $15/year, arranged separately, with no automatic subscription. <a href="services.html#purchase-scope">Read the included work and required materials</a>. For custom work or questions about hosting and revisions, send an inquiry before paying.
-      </p>
+        </p>
+      </details>
     </div>
 
     <div class="hero-visual">
@@ -660,5 +688,6 @@ document.addEventListener("DOMContentLoaded", () => {
 </script>
 
 <script src="booking.js?v=20261009-funnel" defer></script>
+<script src="home-package.js?v=20261015-start-details" defer></script>
 </body>
 </html>
