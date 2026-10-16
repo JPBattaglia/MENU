@@ -5,6 +5,7 @@ These optimized WebP files were exported from the owner's existing public-facing
 - `fahys-menu.webp`: Fahys / FAHYS MENUFRNT.png
 - `ellas-table-preview.webp`: Inactive Sites / EllasPizza / TableMenuMockup.png
 - `ellas-menu.webp`: Inactive Sites / EllasPizza / EllasPizzaMenuTop.jpeg
-- `happy-donut-menu.webp`: Donut / HappyDonutMenu.png
+- `pinecrest-dinner-preview.webp`: optimized preview of the following menu.
+- `pinecrest-dinner-menu.webp`: Inactive Sites / Pinecrest / PinecrestMenuDinnerNoPrices.png
 
 Images are archival examples, not statements about current menu prices, restaurant availability, or customer results.
