@@ -2,20 +2,20 @@
 
 EC003 user priority: add funnel measurement after the offer and upload changes. Reuse the deployed `/api/funnel-event`, `funnel_events`, payment records, and onboarding business events. No backend replacement, database schema, service pricing, production gates, branding, or paid hosting changes.
 
-The site records session-based visits, interactive sample views, menu Start clicks, viewed offers, selected services, opened details, checkout attempts/errors, successful inquiry receipts, outbound booking-link clicks, and onboarding opened/completed signals. Checkout receives first-touch attribution through its existing `tracking` field. The existing Worker records created checkout sessions and payment events. No client script emits a purchase event.
+The site records session-based visits, interactive sample views, generic and menu-specific Start clicks, viewed offers, selected services, opened details, checkout attempts/errors, successful inquiry receipts, outbound booking-link clicks, and onboarding opened/completed signals. Checkout receives first-touch attribution through its existing `tracking` field. The existing Worker records created checkout sessions and payment events. No client script emits a purchase event.
 
-Load `<script src="funnel.js?v=20261015-conversion" defer></script>` once on each marketing page, the interactive sample (`sample-menu.html`), the order page, and the payment-success page. Keep the script before the deferred order scripts so they can use `window.MenuMadeFunnel`. Both `/sample-menu` and `/sample-menu.html` are recognized. Sample views are recorded when that page loads; a link click alone is not a sample view.
+Load `<script src="funnel.js?v=20261015-start-choice" defer></script>` once on each marketing page, the interactive sample (`sample-menu.html`), the order page, and the payment-success page. Keep the script before the deferred order scripts so they can use `window.MenuMadeFunnel`. Both `/sample-menu` and `/sample-menu.html` are recognized. Sample views are recorded when that page loads; a link click alone is not a sample view.
 
 The new signals use the existing backend-supported `CTA_CLICK` event type and an allowlisted `metadata.stage`:
 
 | Stage | Meaning |
 | --- | --- |
 | `sample_menu_view` | The interactive sample page loaded in this tracked session. |
-| `start_clicked` | A menu order link or marked Start control was clicked. |
+| `start_clicked` | A generic Start link or an explicit menu order control was clicked; only explicit menu controls carry the menu offer ID. |
 | `checkout_attempt` | The customer attempted to create a checkout. |
 | `checkout_error` | The browser received a checkout error. |
 
-Start tracking covers internal links to `contact[.html]?service=menu` or `service=online_menu_qr`, bare contact-page Start links, and controls marked `data-start-menu` or `data-funnel-start`. Inquiry links and other service links do not count as menu starts. Each stage/service combination is sent at most once per page load; the reports deduplicate again by session. Do not add customer data to tracking attributes or use arbitrary stage names.
+Start tracking covers internal links to `contact[.html]?service=menu` or `service=online_menu_qr`, bare contact-page Start links, and controls marked `data-start-menu` or `data-funnel-start`. Bare contact links and generic `data-funnel-start` controls send `start_clicked` without an `offer_id`; clicking Start does not imply a service choice. Explicit menu links and `data-start-menu` controls include `offer_online_menu_qr`. Inquiry links and other service links do not count as Start clicks. Each stage/service combination is sent at most once per page load; the reports deduplicate again by session, so a generic Start followed by an explicit menu Start still counts as one started session. Do not add customer data to tracking attributes or use arbitrary stage names.
 
 Payment completion already runs on the server: the Stripe `checkout.session.completed` webhook updates the order to `PAID`, stores a successful payment, and records `PURCHASE_COMPLETED` for the order's offers. Loading or refreshing `checkoutsuccess.html` does not record a purchase. The report below counts live paid orders and distinct paid sessions rather than raw purchase events, since a single order can contain multiple offers.
 

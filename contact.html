@@ -4,8 +4,8 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>MENU-MADE — Start Your Mobile Menu + QR Code</title>
-  <meta name="description" content="Start a mobile-friendly online menu and QR code for your restaurant, café, bar, bakery, or food brand. $129 setup plus $15 first-year hosting; $144 for up to 3 menu pages.">
+  <title>MENU-MADE — Choose a Service and Start Your Project</title>
+  <meta name="description" content="Choose a menu, website conversion, Google visibility, or accessibility service for your food business. Review your order and full price before secure checkout.">
 
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -143,6 +143,7 @@
     .menu-breakdown dd{margin:0;font-weight:700;white-space:nowrap;}
     .optional-services{min-width:0;align-self:start;border:1px solid rgba(0,214,230,.3);border-radius:var(--radius);background:rgba(0,0,0,.2);}
     .optional-services > summary{padding:20px;cursor:pointer;color:var(--brand-soft);font-weight:700;line-height:1.5;}
+    #serviceChoicesSummary{scroll-margin-top:120px;}
     .optional-services > summary span{display:block;color:var(--muted);font-size:14px;font-weight:400;}
     .optional-services > .optional-content{padding:0 18px 18px;}
     .optional-services .product-grid{gap:16px;}
@@ -177,6 +178,7 @@
       gap: 12px;
       flex-wrap: wrap;
     }
+    .cart-panel [hidden]{display:none;}
 
     .btn.secondary{
       border: 2px solid rgba(255,255,255,.45);
@@ -321,7 +323,7 @@
     .booking-toast p{margin:0 0 20px;line-height:1.6;overflow-wrap:anywhere;}
     .booking-toast .btn{min-height:44px;}
   </style>
-<script src="funnel.js?v=20261015-conversion" defer></script>
+<script src="funnel.js?v=20261015-start-choice" defer></script>
 </head>
 
 <body class="start-page">
@@ -351,7 +353,7 @@
       <a href="portfolio.html">Our Work</a>
       <a href="about.html">About</a>
       <a href="accessability.html">Access</a>
-      <a class="nav-cta active" href="#checkout">Start</a>
+      <a class="nav-cta active" href="contact.html">Start</a>
     </nav>
 
   </div>
@@ -363,21 +365,21 @@
   <div class="container hero-grid">
 
     <div class="hero-copy">
-      <span class="pill">Menu + QR · $144 first year for up to 3 pages</span>
-      <h1>Start Your Menu Upgrade</h1>
+      <span class="pill">Menus · Websites · Online presence</span>
+      <h1>Start Your Project</h1>
       <p>
-        Your menu package is ready below. Choose your page count, enter your business details,
-        and check out securely. Paste a menu link or menu text in Notes, or attach a PDF, Word document, text file, or menu image below.
+        Choose the service your business needs, review the price, and send your details.
+        For a menu project, you can paste a menu link or attach your current menu before secure checkout.
       </p>
 
       <div class="hero-actions">
-        <a class="btn primary" href="#checkout" data-start-menu>Start My Menu</a>
+        <a class="btn primary" href="#optionalServices" data-choose-services>Choose a Service</a>
         <a class="btn ghost" href="#inquiry">Questions before you buy?</a>
       </div>
 
       <p class="conversion-help"><a href="sample-menu.html">Try the sample menu</a> · <a href="#inquiry">Ask about your project</a></p>
       <details class="package-details start-package-details">
-        <summary>Package details &amp; pricing</summary>
+        <summary>Menu package details &amp; pricing</summary>
         <p class="muted-note">
         One checkout covers $129 setup plus $15 first-year hosting: $144 for up to 3 menu pages, a QR code, and two revisions. Additional pages cost $20 each. Hosting renews at $15/year, arranged separately, with no automatic subscription. <a href="services.html#purchase-scope">Read the included work and required materials</a>. For custom work or questions about hosting and revisions, send an inquiry before paying.
         </p>
@@ -388,8 +390,8 @@
       <div class="media-frame">
         <img src="hospitality-owner.webp" alt="Illustrative restaurant owner preparing a menu at a café counter" class="hero-image hospitality-photo" width="1536" height="1024">
         <div class="media-overlay">
-          <strong>Start with the menu</strong>
-          <span>A mobile-friendly menu your guests can open with a scan.</span>
+          <strong>Your next step, made simple</strong>
+          <span>Choose your service and review the price before you pay.</span>
         </div>
       </div>
     </div>
@@ -403,8 +405,8 @@
   <div class="container">
 
     <header class="section-head">
-      <h2>Start your mobile menu</h2>
-      <p>Choose your page count and see the full first-year price before paying. Other services are optional.</p>
+      <h2>Choose a service</h2>
+      <p>Select what you need to build your order. You’ll see the full price before paying.</p>
     </header>
 
     <div class="start-grid">
@@ -415,11 +417,12 @@
           <div class="cart-head">
             <div>
               <h3>Your order</h3>
-              <p class="cart-sub">Your complete price is shown before secure payment.</p>
+              <p class="cart-sub">Review your selected services and complete price before secure payment.</p>
             </div>
           </div>
 
           <ul class="cart-items" id="cartItems" aria-live="polite"></ul>
+          <p class="mini" id="emptyOrder">Your order is empty. Choose a service from the list to see its price and next steps.</p>
 
           <div class="menu-config" id="menuConfig" hidden>
             <div class="field">
@@ -441,13 +444,13 @@
             <strong id="cartTotal" aria-live="polite" aria-atomic="true">$0.00</strong>
           </div>
 
-          <div class="cart-actions">
+          <div class="cart-actions" id="orderActions" hidden>
             <button class="btn primary" id="continueBtn" type="button" disabled>Continue to details</button>
             <button class="btn secondary" id="clearBtn" type="button" disabled>Clear</button>
           </div>
 
           <div class="status" id="status" role="status" aria-live="polite"></div>
-          <details class="billing-details"><summary>How billing works</summary><p class="mini" id="billingSummary">One payment covers the services you select. Menu hosting for the first year and additional pages are included in the displayed total. Conversion Fix and Google Visibility are one-time purchases. Accessibility covers one year, paid upfront. Review the final total at Stripe before paying.</p></details>
+          <details class="billing-details" id="billingDetails" hidden><summary>How billing works</summary><p class="mini" id="billingSummary">One payment covers the services you select. Menu hosting for the first year and additional pages are included in the displayed total. Conversion Fix and Google Visibility are one-time purchases. Accessibility covers one year, paid upfront. Review the final total at Stripe before paying.</p></details>
 
           <div class="intake" id="intakeStep">
             <h4>Your contact details</h4>
@@ -516,8 +519,8 @@
         </div>
       </aside>
 
-      <details class="optional-services" id="optionalServices">
-        <summary>Change services or add an upgrade<span>Optional website, visibility, and accessibility services</span></summary>
+      <details class="optional-services" id="optionalServices" open>
+        <summary id="serviceChoicesSummary">Choose or add a service<span>Online menu, website, visibility, and accessibility services</span></summary>
         <div class="optional-content">
 
         <div class="product-grid">
@@ -582,12 +585,12 @@
 <section class="section" aria-label="Final CTA">
   <div class="container cta">
     <div>
-      <h2>Ready to start your menu?</h2>
-      <p>Choose your page count, send your details, and continue to secure payment.</p>
+      <h2>Ready to start your project?</h2>
+      <p>Choose a service, send your details, and continue to secure payment.</p>
     </div>
 
     <div class="cta-actions">
-      <a class="btn primary" href="#checkout" data-start-menu>Start My Menu</a>
+      <a class="btn primary" href="#optionalServices" data-choose-services>Choose a Service</a>
       <a class="btn ghost" href="index.html">Home</a>
     </div>
   </div>
@@ -648,7 +651,7 @@
 </footer>
 
 <script src="document-upload.js?v=20261009" defer></script>
-<script src="start.js?v=20261015-complete-order" defer></script>
+<script src="start.js?v=20261015-service-choice" defer></script>
 
 
 

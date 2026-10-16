@@ -43,10 +43,11 @@
   send('SITE_VISIT', 'page_view');
   if (/^\/sample-menu(?:\.html)?$/.test(path)) api.track('sample_menu_view', 'online_menu_qr');
   document.addEventListener('click', event => {
-    if (event.target.closest?.('[data-start-menu], [data-funnel-start]')) api.track('start_clicked', 'online_menu_qr');
+    const menuControl = event.target.closest?.('[data-start-menu]');
+    let isStart = Boolean(menuControl || event.target.closest?.('[data-funnel-start]'));
+    let startService = menuControl ? 'online_menu_qr' : undefined;
     const a = event.target.closest?.('a[href]');
-    if (!a) return;
-    try {
+    if (a) try {
       const u = new URL(a.href, location.href);
       if (u.hostname === 'www.everyexpert.com' || u.hostname === 'everyexpert.com') api.track('booking_link_clicked');
       else if (u.origin === location.origin && /^\/contact(?:\.html)?$/.test(u.pathname)) {
@@ -54,9 +55,14 @@
         if (offers[service]) api.track('service_link_clicked', service);
         const menuLink = offers[service] === 'offer_online_menu_qr';
         const defaultStart = !service && ['', '#checkout', '#details'].includes(u.hash);
-        if ((menuLink || defaultStart) && u.hash !== '#inquiry') api.track('start_clicked', 'online_menu_qr');
+        if (u.hash === '#inquiry') isStart = false;
+        else if (menuLink || defaultStart) {
+          isStart = true;
+          if (menuLink) startService = 'online_menu_qr';
+        }
       }
     } catch {}
+    if (isStart) api.track('start_clicked', startService);
   });
   if (typeof IntersectionObserver === 'function') {
     const observer = new IntersectionObserver(entries => {
