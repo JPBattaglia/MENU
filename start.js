@@ -403,10 +403,12 @@ if (Object.hasOwn(serviceSkus, requestedService)) {
   beginService(serviceSkus[requestedService]);
   serviceChoicesEl.open = false;
 }
-if (requestedService === 'app') {
+if (requestedService === 'app' || requestedService === 'website') {
   const service = document.getElementById('inquiryService');
   if (service) service.value = 'Other project';
   const notes = document.getElementById('bookingNotes');
-  if (notes && !notes.value) notes.value = 'I’d like to discuss a native menu app for my business.';
+  if (notes && !notes.value) notes.value = requestedService === 'website'
+    ? 'I’d like to discuss a new website or redesign for my business.'
+    : 'I’d like to discuss a mobile app and its requirements for my business.';
   document.getElementById('inquiry')?.scrollIntoView();
 }
