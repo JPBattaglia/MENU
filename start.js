@@ -14,6 +14,8 @@ const menuPagesErrorEl = document.getElementById('menuPagesError');
 const menuConfigEl = document.getElementById('menuConfig');
 const extraPagesLabelEl = document.getElementById('extraPagesLabel');
 const extraPagesAmountEl = document.getElementById('extraPagesAmount');
+const serviceChoicesEl = document.getElementById('optionalServices');
+const emptyOrderEl = document.getElementById('emptyOrder');
 
 const leadNameEl = document.getElementById("lead_name");
 const leadBusinessEl = document.getElementById("lead_business");
@@ -123,10 +125,14 @@ function renderCart() {
   totalEl.textContent = validPages ? money(total) : 'Enter page count';
 
   const hasItems = Object.keys(cart).length > 0;
+  emptyOrderEl.hidden = hasItems;
+  document.getElementById('orderActions').hidden = !hasItems;
+  document.getElementById('billingDetails').hidden = !hasItems;
   continueBtn.disabled = !hasItems || !validPages;
   checkoutBtn.disabled = !hasItems || !validPages || checkoutInFlight;
   clearBtn.disabled = !hasItems;
   if (!hasItems) {
+    serviceChoicesEl.open = true;
     intakeStep.classList.remove("show");
     continueBtn.style.display = "inline-block";
   }
@@ -152,6 +158,7 @@ document.querySelectorAll(".js-add").forEach(btn => {
   btn.addEventListener("click", () => {
     const card = btn.closest(".service-card");
     addItem(card);
+    beginService(card.dataset.sku);
   });
 });
 
@@ -237,7 +244,8 @@ checkoutBtn.addEventListener("click", async () => {
   }));
 
   if (!items.length) {
-    showStatus("Add at least one service before checkout.");
+    showStatus("Choose a service before continuing to checkout.");
+    serviceChoicesEl.open = true;
     return;
   }
   const quote = cart[MENU_SKU] ? menuQuote() : null;
@@ -379,10 +387,22 @@ document.querySelectorAll('[data-start-menu]').forEach(link => {
     beginService('online_menu_qr');
   });
 });
+document.querySelectorAll('[data-choose-services]').forEach(link => {
+  link.addEventListener('click', event => {
+    event.preventDefault();
+    serviceChoicesEl.open = true;
+    const summary = document.getElementById('serviceChoicesSummary');
+    const reducedMotion = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+    summary.scrollIntoView({ behavior: reducedMotion ? 'auto' : 'smooth', block: 'start' });
+    summary.focus({ preventScroll: true });
+  });
+});
 const requestedService = new URLSearchParams(location.search).get('service')?.toLowerCase();
 const serviceSkus = { menu: MENU_SKU, online_menu_qr: MENU_SKU, 'online-menu-qr': MENU_SKU, conversion: 'conversion_fix', google: 'google_visibility', accessibility: 'accessibility_upgrade' };
-if (serviceSkus[requestedService]) beginService(serviceSkus[requestedService]);
-else if (requestedService !== 'app') beginService(MENU_SKU, false);
+if (Object.hasOwn(serviceSkus, requestedService)) {
+  beginService(serviceSkus[requestedService]);
+  serviceChoicesEl.open = false;
+}
 if (requestedService === 'app') {
   const service = document.getElementById('inquiryService');
   if (service) service.value = 'Other project';

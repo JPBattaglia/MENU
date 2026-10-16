@@ -12,7 +12,12 @@ function page({ storage = new Map(), search = '', pathname = '/contact', privacy
     document: { referrer, addEventListener: (k, fn) => listeners[k] = fn, querySelectorAll: () => [] },
     fetch: (_url, options) => { if (fail) throw new Error('offline'); sent.push(JSON.parse(options.body)); return Promise.resolve({ ok: true }); } };
   vm.runInNewContext(script, context);
-  const click = (href, start = false) => listeners.click?.({ target: { closest: selector => selector === 'a[href]' ? (href ? { href } : null) : (start ? {} : null) } });
+  const click = (href, start = '') => listeners.click?.({ target: { closest: selector => {
+    if (selector === 'a[href]') return href ? { href } : null;
+    if (selector === '[data-start-menu]') return start === 'menu' ? {} : null;
+    if (selector === '[data-funnel-start]') return start === 'generic' ? {} : null;
+    return null;
+  } } });
   return { api: window.MenuMadeFunnel, sent, listeners, storage, click };
 }
 test('preserves first-touch attribution across pages and sends no URL query or contact data', () => {
@@ -60,8 +65,25 @@ test('records a sample view on either sample URL without collecting dish searche
     assert.equal(p.sent.length, 2);
   }
 });
-test('tracks menu starts from the nav, preselected offer links, and same-page start controls', () => {
-  for (const href of ['https://menu-made.com/contact.html', 'https://menu-made.com/contact?service=menu#details', 'https://menu-made.com/contact.html?service=online_menu_qr#checkout']) {
+test('tracks generic starts without attributing a menu offer or selecting a service', () => {
+  for (const href of ['https://menu-made.com/contact.html', 'https://menu-made.com/contact', 'https://menu-made.com/contact#checkout']) {
+    const p = page({ pathname: '/' });
+    p.click(href);
+    p.click(href);
+    const starts = p.sent.filter(event => event.metadata.stage === 'start_clicked');
+    assert.equal(starts.length, 1);
+    assert.equal(Object.hasOwn(starts[0], 'offer_id'), false);
+    assert.equal(p.sent.some(event => event.metadata.stage === 'service_selected' || event.metadata.stage === 'service_link_clicked'), false);
+  }
+  const p = page();
+  p.click('#checkout', 'generic');
+  p.click(null, 'generic');
+  const starts = p.sent.filter(event => event.metadata.stage === 'start_clicked');
+  assert.equal(starts.length, 1);
+  assert.equal(Object.hasOwn(starts[0], 'offer_id'), false);
+});
+test('attributes explicit menu links and menu-specific controls to the menu offer', () => {
+  for (const href of ['https://menu-made.com/contact?service=menu#details', 'https://menu-made.com/contact.html?service=online_menu_qr#checkout']) {
     const p = page({ pathname: '/' });
     p.click(href);
     p.click(href);
@@ -70,9 +92,15 @@ test('tracks menu starts from the nav, preselected offer links, and same-page st
     assert.equal(starts[0].offer_id, 'offer_online_menu_qr');
   }
   const p = page();
-  p.click('#checkout', true);
-  p.click(null, true);
-  assert.equal(p.sent.filter(event => event.metadata.stage === 'start_clicked').length, 1);
+  p.click('#checkout', 'menu');
+  p.click(null, 'menu');
+  const starts = p.sent.filter(event => event.metadata.stage === 'start_clicked');
+  assert.equal(starts.length, 1);
+  assert.equal(starts[0].offer_id, 'offer_online_menu_qr');
+  const markedLink = page();
+  markedLink.click('https://menu-made.com/contact.html?service=menu', 'generic');
+  assert.equal(markedLink.sent.filter(event => event.metadata.stage === 'start_clicked').length, 1);
+  assert.equal(markedLink.sent.find(event => event.metadata.stage === 'start_clicked').offer_id, 'offer_online_menu_qr');
 });
 test('inquiries, other services, and unrelated or external links are not menu starts', () => {
   const p = page();

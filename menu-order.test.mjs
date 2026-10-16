@@ -29,7 +29,8 @@ function page(search = '') {
     cards.set(card.dataset.sku, card);
   }
   const addButtons = [...cards.values()].map(card => ({ ...element(), closest: () => card }));
-  const startButtons = [element(), element()];
+  const startButtons = [...markup.matchAll(/data-start-menu\b/g)].map(() => element());
+  const chooseButtons = [...markup.matchAll(/data-choose-services\b/g)].map(() => element());
   const sent = [], documents = [], tracking = [], cartSection = element();
   let failCheckout = false;
   const location = { search, href: 'https://menu-made.com/contact.html' + search };
@@ -38,7 +39,7 @@ function page(search = '') {
     window: { location, matchMedia: () => ({ matches: true }), MenuMadeFunnel: { track: (...args) => tracking.push(args), tracking: () => ({ session_id: 'test-session' }) },
       MenuMadeDocuments: { validate() {}, fingerprint: async () => 'test-fingerprint', send: async (payload, file) => { documents.push({ payload, file }); } } },
     document: { getElementById: get, createElement: () => element(),
-      querySelectorAll(selector) { return selector === '.js-add' ? addButtons : selector === '[data-start-menu]' ? startButtons : []; },
+      querySelectorAll(selector) { return selector === '.js-add' ? addButtons : selector === '[data-start-menu]' ? startButtons : selector === '[data-choose-services]' ? chooseButtons : []; },
       querySelector(selector) { return selector === '.cart' ? cartSection : cards.get(/data-sku="([^"]+)"/.exec(selector)?.[1]) || null; } },
     fetch: async (url, options) => { sent.push({ url, body: JSON.parse(options.body) }); return { ok: !failCheckout, json: async () => failCheckout ? { error: 'Please retry checkout.' } : { url: 'https://checkout.stripe.com/test' } }; }
   };
@@ -47,26 +48,59 @@ function page(search = '') {
     get('lead_name').value = 'Test Buyer'; get('lead_business').value = 'Test Cafe'; get('lead_email').value = 'test@example.com'; get('scopeConfirm').checked = true;
   };
   const cart = () => JSON.parse(vm.runInNewContext('JSON.stringify(cart)', context));
-  return { get, fill, sent, documents, tracking, startButtons, addButtons, cards, cart, cartSection, fail() { failCheckout = true; }, recover() { failCheckout = false; } };
+  return { get, fill, sent, documents, tracking, startButtons, chooseButtons, addButtons, cards, cart, cartSection, fail() { failCheckout = true; }, recover() { failCheckout = false; } };
 }
 
-test('generic start and supported menu links open one complete first-year menu package', async () => {
-  for (const search of ['', '?service=menu', '?service=online_menu_qr', '?service=online-menu-qr']) {
+test('generic and unknown service links leave the order empty and show service choices', async () => {
+  for (const search of ['', '?service=', '?service=unknown', '?service=__proto__', '?service=constructor', '?utm_source=test']) {
+    const p = page(search); p.fill();
+    assert.deepEqual(p.cart(), {});
+    assert.equal(p.get('cartTotal').textContent, '$0.00');
+    assert.equal(p.get('emptyOrder').hidden, false);
+    assert.equal(p.get('optionalServices').open, true);
+    assert.equal(p.get('menuConfig').hidden, true);
+    assert.equal(p.get('intakeStep').classList.contains('show'), false);
+    assert.equal(p.get('checkoutBtn').disabled, true);
+    assert.equal(p.get('continueBtn').disabled, true);
+    await p.get('checkoutBtn').fire('click');
+    assert.match(p.get('status').textContent, /Choose a service/);
+    assert.equal(p.sent.length, 0);
+    assert.equal(p.documents.length, 0);
+    assert.equal(p.tracking.some(event => event[0] === 'service_selected'), false);
+    await p.chooseButtons[0].fire('click');
+    assert.equal(p.get('serviceChoicesSummary').focused, true);
+    assert.deepEqual(p.cart(), {});
+  }
+});
+
+test('supported menu links select one complete first-year menu package without duplicates', async () => {
+  for (const search of ['?service=menu', '?service=online_menu_qr', '?service=online-menu-qr']) {
     const p = page(search);
     assert.equal(p.get('cartTotal').textContent, '$144.00');
     assert.equal(p.get('menuConfig').hidden, false);
     assert.equal(p.get('intakeStep').classList.contains('show'), true);
     assert.equal(p.cart().online_menu_qr.qty, 1);
-    await p.startButtons[0].fire('click');
-    await p.startButtons[0].fire('click');
+    assert.equal(p.get('optionalServices').open, false);
+    await p.addButtons[0].fire('click');
+    await p.addButtons[0].fire('click');
     await p.addButtons[0].fire('click');
     assert.equal(p.cart().online_menu_qr.qty, 1);
     assert.equal(p.get('cartTotal').textContent, '$144.00');
   }
 });
 
-test('page count updates the complete displayed quote and refuses invalid totals', async () => {
+test('a generic visitor chooses a service before the order and contact details open', async () => {
   const p = page();
+  await p.addButtons[0].fire('click');
+  assert.equal(p.cart().online_menu_qr.qty, 1);
+  assert.equal(p.get('cartTotal').textContent, '$144.00');
+  assert.equal(p.get('emptyOrder').hidden, true);
+  assert.equal(p.get('intakeStep').classList.contains('show'), true);
+  assert.equal(p.get('lead_name').focused, true);
+});
+
+test('page count updates the complete displayed quote and refuses invalid totals', async () => {
+  const p = page('?service=menu');
   for (const [pages, total, extra] of [['1', '$144.00', '$0.00'], ['3', '$144.00', '$0.00'], ['4', '$164.00', '$20.00'], ['5', '$184.00', '$40.00'], ['50', '$1084.00', '$940.00']]) {
     p.get('menuPages').value = pages;
     await p.get('menuPages').fire('input');
@@ -114,7 +148,7 @@ test('other service links keep their selected offer without adding a menu or pag
 });
 
 test('required contact and scope fields block checkout, with a clear focus target', async () => {
-  const p = page();
+  const p = page('?service=menu');
   await p.get('checkoutBtn').fire('click');
   assert.equal(p.get('lead_name').focused, true);
   p.fill(); p.get('lead_email').value = 'invalid';
@@ -127,7 +161,7 @@ test('required contact and scope fields block checkout, with a clear focus targe
 });
 
 test('a checkout retry reuses its document receipt while keeping the menu quote attached', async () => {
-  const p = page(); p.fill(); p.fail();
+  const p = page('?service=menu'); p.fill(); p.fail();
   p.get('lead_document').files = [{ name: 'test-menu.pdf' }];
   p.get('menuPages').value = '4'; await p.get('menuPages').fire('input');
   await p.get('checkoutBtn').fire('click');
@@ -143,12 +177,13 @@ test('a checkout retry reuses its document receipt while keeping the menu quote 
 });
 
 test('removing or clearing a menu removes the page option and prevents an empty checkout', async () => {
-  const p = page();
+  const p = page('?service=menu');
   await p.get('cartItems').fire('click', { target: { dataset: { remove: 'online_menu_qr' } } });
   assert.deepEqual(p.cart(), {});
   assert.equal(p.get('menuConfig').hidden, true);
   assert.equal(p.get('checkoutBtn').disabled, true);
-  await p.startButtons[0].fire('click');
+  assert.equal(p.get('optionalServices').open, true);
+  await p.addButtons[0].fire('click');
   assert.equal(p.get('cartTotal').textContent, '$144.00');
   await p.get('clearBtn').fire('click');
   assert.deepEqual(p.cart(), {});
