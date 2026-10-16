@@ -22,6 +22,8 @@ function page(search = '') {
   const els = new Map();
   const get = id => { if (!els.has(id)) els.set(id, element()); return els.get(id); };
   get('menuPages').value = '3';
+  const pickerTag = markup.match(/<details\b[^>]*\bid="optionalServices"[^>]*>/)?.[0] || '';
+  get('optionalServices').open = /\sopen(?:\s|=|>)/.test(pickerTag);
   const cards = new Map();
   for (const match of markup.matchAll(/<article class="service-card" ([^>]*data-sku[^>]*)>/g)) {
     const card = element();
@@ -65,7 +67,7 @@ test('generic and unknown service links preload the menu at the hero with contac
     assert.equal(p.get('cartTotal').textContent, '$144.00');
     assert.equal(p.get('websiteQuotePanel').hidden, true);
     assert.equal(p.get('emptyOrder').hidden, true);
-    assert.equal(p.get('optionalServices').open, true);
+    assert.equal(p.get('optionalServices').open, false);
     assert.equal(p.get('menuConfig').hidden, false);
     assert.equal(p.get('intakeStep').classList.contains('show'), false);
     assert.equal(p.get('continueBtn').disabled, false);
@@ -76,11 +78,25 @@ test('generic and unknown service links preload the menu at the hero with contac
     assert.equal(p.sent.length, 0);
     assert.equal(p.documents.length, 0);
     await p.chooseButtons[0].fire('click');
+    assert.equal(p.get('optionalServices').open, true);
     assert.equal(p.get('serviceChoicesSummary').focused, true);
     assert.deepEqual(Object.keys(p.cart()), ['online_menu_qr']);
     await p.startButtons[0].fire('click');
     assert.equal(p.get('intakeStep').classList.contains('show'), true);
     assert.equal(p.cart().online_menu_qr.qty, 1);
+  }
+});
+
+test('the service picker starts closed for every route and opens for an explicit picker destination', async () => {
+  for (const route of ['', '?service=unknown', '?service=menu', '?service=online_menu_qr', '?service=online-menu-qr', '?service=conversion', '?service=google', '?service=accessibility', '?service=website', '?service=website#inquiry', '?service=app']) {
+    const p = page(route);
+    assert.equal(p.get('optionalServices').open, false, route || 'generic Start');
+    await p.chooseButtons[0].fire('click');
+    assert.equal(p.get('optionalServices').open, true);
+    assert.equal(p.get('serviceChoicesSummary').focused, true);
+  }
+  for (const route of ['#optionalServices', '?service=menu#optionalServices', '?service=website#optionalServices']) {
+    assert.equal(page(route).get('optionalServices').open, true);
   }
 });
 

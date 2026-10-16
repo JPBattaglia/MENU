@@ -136,7 +136,7 @@ function validatePhoneField() {
   return valid;
 }
 
-function renderCart() {
+function renderCart(openEmptyChoices = true) {
   itemsEl.innerHTML = "";
   let total = 0;
   const hasMenu = Boolean(cart[MENU_SKU]);
@@ -186,7 +186,7 @@ function renderCart() {
   checkoutBtn.disabled = !hasItems || !validPages || hasWebsiteQuote || checkoutInFlight;
   clearBtn.disabled = !hasItems;
   if (!hasItems) {
-    serviceChoicesEl.open = true;
+    if (openEmptyChoices) serviceChoicesEl.open = true;
     intakeStep.classList.remove("show");
     continueBtn.style.display = "inline-block";
   }
@@ -451,7 +451,7 @@ checkoutBtn.addEventListener("click", async () => {
   }
 });
 
-renderCart();
+renderCart(false);
 // Carry the chosen service into checkout without adding duplicate quantities.
 function beginService(sku, moveToDetails = true) {
   if (checkoutInFlight) return;
@@ -507,3 +507,4 @@ if (requestedService === 'app' || (requestedService === 'website' && location.ha
     : 'I’d like to discuss a mobile app and its requirements for my business.';
   document.getElementById('inquiry')?.scrollIntoView();
 }
+if (location.hash === '#optionalServices') serviceChoicesEl.open = true;

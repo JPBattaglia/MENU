@@ -15,7 +15,7 @@
   <link rel="shortcut icon" href="MENU=.png">
   <link rel="apple-touch-icon" href="MENU=.png">
 
-  <link rel="stylesheet" href="main.css?v=20261015-unified">
+  <link rel="stylesheet" href="main.css?v=20261016-service-links">
 
 <script src="funnel.js?v=20261015-start-choice" defer></script>
 </head>
@@ -219,8 +219,18 @@
         </div>
       </aside>
 
-      <details class="optional-services" id="optionalServices" open>
-        <summary id="serviceChoicesSummary">Choose or add a service<span>Website improvements, online menus, visibility, and accessibility services</span></summary>
+      <details class="optional-services" id="optionalServices">
+        <summary class="service-picker-summary" id="serviceChoicesSummary">
+          <span class="service-picker-copy">
+            <span class="service-picker-title">Choose or add a service</span>
+            <span class="service-picker-help">Tap or click to browse all services</span>
+          </span>
+          <span class="service-picker-action" aria-hidden="true">
+            <span class="service-picker-show">View services</span>
+            <span class="service-picker-hide">Hide services</span>
+            <span class="service-picker-chevron"></span>
+          </span>
+        </summary>
         <div class="optional-content">
           <p class="mini">Custom websites and apps begin with a scope discussion. Choose a website project below or <a href="contact.html?service=app#inquiry">ask about an app</a>.</p>
 
@@ -361,7 +371,7 @@
 </footer>
 
 <script src="document-upload.js?v=20261009" defer></script>
-<script src="start.js?v=20261015-menu-default" defer></script>
+<script src="start.js?v=20261016-service-picker" defer></script>
 
 
 
