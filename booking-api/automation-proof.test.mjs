@@ -48,3 +48,38 @@ test('PDF input is blocked without claiming successful generation',async()=>{
   const f=fixture(),original=globalThis.fetch;globalThis.fetch=async()=>new Response('PDF',{headers:{'content-type':'application/pdf'}});
   try{await assert.rejects(api.runGenerateMenuDraftStep({...step,step_key:'GENERATE_MENU_DRAFT'},f.env),/requires document extraction/);assert.equal(f.objects.size,0);assert.equal(f.writes.length,0)}finally{globalThis.fetch=original}
 });
+
+test('deployed runner selection and dry-run preview remain read-only after the checkout merge', async () => {
+  const reads = [], writes = [];
+  const runId = '22222222-2222-4222-8222-222222222222';
+  const env = { PRODUCTION_RUNNER_SECRET: 'test-runner-placeholder', DB: { prepare(sql) {
+    let args = [];
+    return { bind(...values) { args = values; return this; }, async first() {
+      reads.push({ sql, args });
+      return { workflow_step_id: 'test-step', step_key: 'QUALITY_CHECK', step_status: 'QUEUED', workflow_run_id: runId, workflow_key: 'MENU_QR_V1', workflow_status: 'QUEUED', project_id: 'test-project' };
+    }, async run() { writes.push(sql); throw new Error('Dry run must not write'); } };
+  } } };
+  const response = await api.default.fetch(new Request('https://menu-made.com/api/production/run-next', {
+    method: 'POST', headers: { Authorization: 'Bearer test-runner-placeholder' },
+    body: JSON.stringify({ workflow_run_id: runId, step_key: 'QUALITY_CHECK', dry_run: true })
+  }), env, {});
+  assert.equal(response.status, 200);
+  const result = await response.json();
+  assert.equal(result.dry_run, true);
+  assert.equal(result.processed, false);
+  assert.equal(result.selected_step.key, 'QUALITY_CHECK');
+  assert.deepEqual(reads[0].args, [runId, runId, 'QUALITY_CHECK', 'QUALITY_CHECK']);
+  assert.match(reads[0].sql, /ws\.step_key != 'QUALITY_CHECK' OR wr\.workflow_key = 'MENU_QR_V1'/);
+  assert.equal(writes.length, 0);
+});
+
+test('runner selection still requires authorization and rejects invalid selection before querying', async () => {
+  const env = { PRODUCTION_RUNNER_SECRET: 'test-runner-placeholder', DB: { prepare() { throw new Error('Must not query'); } } };
+  const make = (selection, authorized = true) => new Request('https://menu-made.com/api/production/run-next', {
+    method: 'POST', headers: authorized ? { Authorization: 'Bearer test-runner-placeholder' } : {}, body: JSON.stringify(selection)
+  });
+  assert.equal((await api.default.fetch(make({ dry_run: true }, false), env, {})).status, 401);
+  for (const selection of [{ unexpected: true }, { dry_run: 'yes' }, { workflow_run_id: 'invalid' }, { step_key: 'PUBLISH' }, []]) {
+    assert.equal((await api.default.fetch(make(selection), env, {})).status, 400);
+  }
+});

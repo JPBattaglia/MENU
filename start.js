@@ -9,6 +9,11 @@ const intakeStep = document.getElementById("intakeStep");
 const checkoutBtn = document.getElementById("checkoutBtn");
 const backBtn = document.getElementById("backBtn");
 const statusEl = document.getElementById("status");
+const menuPagesEl = document.getElementById('menuPages');
+const menuPagesErrorEl = document.getElementById('menuPagesError');
+const menuConfigEl = document.getElementById('menuConfig');
+const extraPagesLabelEl = document.getElementById('extraPagesLabel');
+const extraPagesAmountEl = document.getElementById('extraPagesAmount');
 
 const leadNameEl = document.getElementById("lead_name");
 const leadBusinessEl = document.getElementById("lead_business");
@@ -24,6 +29,16 @@ const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 let checkoutInFlight = false;
 let uploadedDocumentRequest = null;
 const phonePattern = /^[0-9+\-\s().]{7,}$/;
+const MENU_SKU = 'online_menu_qr';
+const money = cents => '$' + (cents / 100).toFixed(2);
+
+function menuQuote() {
+  const raw = menuPagesEl.value.trim();
+  const pages = Number(raw);
+  if (!raw || !Number.isInteger(pages) || pages < 1 || pages > 50) return null;
+  const extraPages = Math.max(0, pages - 3);
+  return { pages, extraPages, extrasCents: extraPages * 2000, totalCents: 14400 + extraPages * 2000 };
+}
 
 function showStatus(message) {
   if (!statusEl) return;
@@ -72,6 +87,15 @@ function validatePhoneField() {
 function renderCart() {
   itemsEl.innerHTML = "";
   let total = 0;
+  const hasMenu = Boolean(cart[MENU_SKU]);
+  const quote = hasMenu ? menuQuote() : null;
+  menuConfigEl.hidden = !hasMenu;
+  menuPagesEl.disabled = !hasMenu;
+  menuPagesEl.required = hasMenu;
+  const validPages = !hasMenu || Boolean(quote);
+  setFieldState(menuPagesEl, menuPagesErrorEl, validPages, 'Enter a whole number from 1 to 50.');
+  extraPagesLabelEl.textContent = quote ? `Additional pages · ${quote.extraPages}` : 'Additional pages';
+  extraPagesAmountEl.textContent = quote ? money(quote.extrasCents) : '—';
 
   Object.values(cart).forEach(item => {
     const li = document.createElement("li");
@@ -80,24 +104,27 @@ function renderCart() {
     li.innerHTML = `
       <div>
         <strong>${item.name}</strong>
-        <small>${item.priceLabel}</small>
+        <small>${item.key === MENU_SKU ? '1 menu package · includes first-year hosting' : item.priceLabel}</small>
       </div>
 
       <div class="qty">
-        <button type="button" data-dec="${item.key}">−</button>
-        <span>${item.qty}</span>
-        <button type="button" data-inc="${item.key}">+</button>
+        ${item.key === MENU_SKU
+          ? '<button class="remove-item" type="button" data-remove="online_menu_qr" aria-label="Remove Online Menu + QR from your order">Remove</button>'
+          : `<button type="button" data-dec="${item.key}" aria-label="Remove one ${item.name}">−</button>
+        <span aria-label="Quantity">${item.qty}</span>
+        <button type="button" data-inc="${item.key}" aria-label="Add one ${item.name}">+</button>`}
       </div>
     `;
 
     itemsEl.appendChild(li);
-    total += item.price * item.qty;
+    total += item.key === MENU_SKU ? (quote?.totalCents || 0) : item.price * item.qty;
   });
 
-  totalEl.textContent = "$" + (total / 100).toFixed(2);
+  totalEl.textContent = validPages ? money(total) : 'Enter page count';
 
-  const hasItems = total > 0;
-  continueBtn.disabled = !hasItems;
+  const hasItems = Object.keys(cart).length > 0;
+  continueBtn.disabled = !hasItems || !validPages;
+  checkoutBtn.disabled = !hasItems || !validPages || checkoutInFlight;
   clearBtn.disabled = !hasItems;
   if (!hasItems) {
     intakeStep.classList.remove("show");
@@ -115,7 +142,7 @@ function addItem(card) {
     cart[key] = { key, name, price, priceLabel, qty: 0 };
   }
 
-  cart[key].qty++;
+  cart[key].qty = key === MENU_SKU ? 1 : cart[key].qty + 1;
   window.MenuMadeFunnel?.track("service_selected", key);
   clearStatus();
   renderCart();
@@ -131,8 +158,11 @@ document.querySelectorAll(".js-add").forEach(btn => {
 itemsEl.addEventListener("click", e => {
   const inc = e.target.dataset.inc;
   const dec = e.target.dataset.dec;
+  const remove = e.target.dataset.remove;
 
-  if (inc && cart[inc]) {
+  if (remove && cart[remove]) delete cart[remove];
+
+  if (inc && cart[inc] && inc !== MENU_SKU) {
     cart[inc].qty++;
   }
 
@@ -141,6 +171,11 @@ itemsEl.addEventListener("click", e => {
     if (cart[dec].qty <= 0) delete cart[dec];
   }
 
+  clearStatus();
+  renderCart();
+});
+
+menuPagesEl.addEventListener('input', () => {
   clearStatus();
   renderCart();
 });
@@ -205,6 +240,12 @@ checkoutBtn.addEventListener("click", async () => {
     showStatus("Add at least one service before checkout.");
     return;
   }
+  const quote = cart[MENU_SKU] ? menuQuote() : null;
+  if (cart[MENU_SKU] && !quote) {
+    showStatus('Enter a whole number from 1 to 50 for your menu pages.');
+    menuPagesEl.focus();
+    return;
+  }
 
   const name = leadNameEl.value.trim();
   const business = leadBusinessEl.value.trim();
@@ -264,7 +305,7 @@ checkoutBtn.addEventListener("click", async () => {
     timeout = setTimeout(() => controller.abort(), 60000);
     if (file) {
       const payload = { type: 'inquiry', service: 'Other project', name, business, email,
-        notes: ('Document for selected services: ' + Object.values(cart).map(i => i.name).join(', ') + '\n' + notes).slice(0, 1200), website: '' };
+        notes: ('Document for selected services: ' + Object.values(cart).map(i => i.name).join(', ') + (quote ? `\nMenu scope: ${quote.pages} pages, two revisions, first-year hosting; menu package ${money(quote.totalCents)}.` : '') + '\n' + notes).slice(0, 1200), website: '' };
       const key = JSON.stringify(payload) + fingerprint;
       if (!uploadedDocumentRequest || uploadedDocumentRequest.key !== key) {
         uploadedDocumentRequest = { key, payload: { ...payload, requestId: crypto.randomUUID() }, received: false };
@@ -286,6 +327,7 @@ checkoutBtn.addEventListener("click", async () => {
       },
       body: JSON.stringify({
         items,
+        ...(quote ? { menu_pages: quote.pages } : {}),
         tracking: window.MenuMadeFunnel?.tracking(),
         customer
       })
@@ -311,8 +353,8 @@ checkoutBtn.addEventListener("click", async () => {
   } finally {
     clearTimeout(timeout);
     checkoutInFlight = false;
-    checkoutBtn.disabled = false;
     checkoutBtn.textContent = 'Proceed to secure checkout';
+    renderCart();
   }
 });
 
@@ -326,7 +368,8 @@ function beginService(sku, moveToDetails = true) {
   continueBtn.style.display = 'none';
   window.MenuMadeFunnel?.track('details_opened');
   if (moveToDetails) {
-    intakeStep.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    const reducedMotion = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+    document.querySelector('.cart').scrollIntoView({ behavior: reducedMotion ? 'auto' : 'smooth', block: 'start' });
     leadNameEl.focus({ preventScroll: true });
   }
 }
@@ -336,9 +379,10 @@ document.querySelectorAll('[data-start-menu]').forEach(link => {
     beginService('online_menu_qr');
   });
 });
-const requestedService = new URLSearchParams(location.search).get('service');
-const serviceSkus = { menu: 'online_menu_qr', conversion: 'conversion_fix', google: 'google_visibility', accessibility: 'accessibility_upgrade' };
+const requestedService = new URLSearchParams(location.search).get('service')?.toLowerCase();
+const serviceSkus = { menu: MENU_SKU, online_menu_qr: MENU_SKU, 'online-menu-qr': MENU_SKU, conversion: 'conversion_fix', google: 'google_visibility', accessibility: 'accessibility_upgrade' };
 if (serviceSkus[requestedService]) beginService(serviceSkus[requestedService]);
+else if (requestedService !== 'app') beginService(MENU_SKU, false);
 if (requestedService === 'app') {
   const service = document.getElementById('inquiryService');
   if (service) service.value = 'Other project';
