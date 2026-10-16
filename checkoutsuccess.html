@@ -13,24 +13,12 @@
   <link rel="shortcut icon" href="MENU=.png">
   <link rel="apple-touch-icon" href="MENU=.png">
 
-  <link rel="stylesheet" href="main.css?v=20261015-image-buttons">
-
-  <style>
-    .onboarding-panel{max-width:820px;margin:28px auto 0;padding:24px;border:1px solid rgba(255,255,255,.16);border-radius:18px;background:rgba(255,255,255,.045);text-align:left}
-    .onboarding-panel[hidden],.onboarding-status[hidden]{display:none!important}
-    .onboarding-grid{display:grid;grid-template-columns:1fr 1fr;gap:18px;margin-top:22px}
-    .onboarding-field{display:flex;flex-direction:column;gap:7px}.onboarding-field.full{grid-column:1/-1}
-    .onboarding-field label{font-family:"Aldrich",sans-serif;font-size:.9rem}
-    .onboarding-field input,.onboarding-field textarea{width:100%;box-sizing:border-box;border:1px solid rgba(255,255,255,.22);border-radius:10px;padding:12px 13px;font:inherit;color:inherit;background:rgba(0,0,0,.18)}
-    .onboarding-field textarea{min-height:110px;resize:vertical}.field-note,.field-error{margin:0;font-size:.85rem}.field-error{font-weight:700}
-    .onboarding-status{margin-top:16px;padding:12px 14px;border-radius:10px;background:rgba(255,255,255,.07)}
-    @media(max-width:700px){.onboarding-grid{grid-template-columns:1fr}.onboarding-field.full{grid-column:auto}.onboarding-panel{padding:18px}}
-  </style>
+  <link rel="stylesheet" href="main.css?v=20261015-unified">
 
 <script src="funnel.js?v=20261015-start-choice" defer></script>
 </head>
 
-<body>
+<body class="checkout-success-page">
 
 <header class="header">
   <div class="container header-inner">
@@ -319,8 +307,6 @@
   load();
 })();
 </script>
-
-<link rel="stylesheet" href="mm-a11y-widget.css?v=20261015-image-buttons">
 <script src="mm-a11y-widget.js" defer></script>
 
 </body>

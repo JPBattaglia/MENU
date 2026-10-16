@@ -56,32 +56,31 @@ function page(search = '') {
     fail() { failCheckout = true; }, recover() { failCheckout = false; } };
 }
 
-test('generic and unknown service links preload a quote-only website project without payment', async () => {
+test('generic and unknown service links preload the menu at the hero with contact details closed', async () => {
   for (const search of ['', '?service=', '?service=unknown', '?service=__proto__', '?service=constructor', '?utm_source=test']) {
     const p = page(search); p.fill();
-    assert.deepEqual(Object.keys(p.cart()), ['website_design_custom']);
-    assert.equal(p.cart().website_design_custom.name, 'Website Design & Custom Builds');
-    assert.equal(p.cart().website_design_custom.priceLabel, 'To be quoted');
-    assert.equal(p.cart().website_design_custom.quoteRequired, true);
-    assert.equal(p.get('cartTotal').textContent, 'Quote required');
-    assert.equal(p.get('websiteQuotePanel').hidden, false);
+    assert.deepEqual(Object.keys(p.cart()), ['online_menu_qr']);
+    assert.equal(p.cart().online_menu_qr.qty, 1);
+    assert.equal(p.get('menuPages').value, '3');
+    assert.equal(p.get('cartTotal').textContent, '$144.00');
+    assert.equal(p.get('websiteQuotePanel').hidden, true);
     assert.equal(p.get('emptyOrder').hidden, true);
     assert.equal(p.get('optionalServices').open, true);
-    assert.equal(p.get('menuConfig').hidden, true);
+    assert.equal(p.get('menuConfig').hidden, false);
     assert.equal(p.get('intakeStep').classList.contains('show'), false);
-    assert.equal(p.get('checkoutBtn').disabled, true);
-    assert.equal(p.get('continueBtn').disabled, true);
-    await p.get('checkoutBtn').fire('click');
-    assert.match(p.get('status').textContent, /requires a project quote/);
-    await p.get('requestWebsiteQuote').fire('click');
-    assert.equal(p.get('inquiryService').value, 'Other project');
-    assert.match(p.get('bookingNotes').value, /Website Design & Custom Builds/);
+    assert.equal(p.get('continueBtn').disabled, false);
+    assert.equal(p.cartSection.scrolled, undefined);
+    assert.equal(p.get('lead_name').focused, undefined);
+    assert.equal(p.get('inquiryService').value, '');
+    assert.equal(p.get('bookingNotes').value, '');
     assert.equal(p.sent.length, 0);
     assert.equal(p.documents.length, 0);
-    assert.equal(p.tracking.some(event => event[0] === 'service_selected'), false);
     await p.chooseButtons[0].fire('click');
     assert.equal(p.get('serviceChoicesSummary').focused, true);
-    assert.deepEqual(Object.keys(p.cart()), ['website_design_custom']);
+    assert.deepEqual(Object.keys(p.cart()), ['online_menu_qr']);
+    await p.startButtons[0].fire('click');
+    assert.equal(p.get('intakeStep').classList.contains('show'), true);
+    assert.equal(p.cart().online_menu_qr.qty, 1);
   }
 });
 
@@ -101,8 +100,8 @@ test('supported menu links select one complete first-year menu package without d
   }
 });
 
-test('choosing a priced service replaces the default website quote before opening checkout details', async () => {
-  const p = page();
+test('choosing a priced service replaces an explicit website quote before opening checkout details', async () => {
+  const p = page('?service=website');
   await p.addButtons[0].fire('click');
   assert.deepEqual(Object.keys(p.cart()), ['online_menu_qr']);
   assert.equal(p.cart().online_menu_qr.qty, 1);
@@ -117,6 +116,14 @@ test('choosing a priced service replaces the default website quote before openin
   p.fill(); await p.get('checkoutBtn').fire('click');
   assert.deepEqual(p.sent[0].body.items, [{ key: 'online_menu_qr', qty: 1 }, { key: 'conversion_fix', qty: 1 }]);
   assert.equal(p.sent[0].body.menu_pages, 3);
+});
+
+test('adding another priced service keeps the generic menu selection', async () => {
+  const p = page();
+  await p.addButtons[1].fire('click');
+  assert.deepEqual(Object.keys(p.cart()), ['online_menu_qr', 'conversion_fix']);
+  assert.equal(p.cart().online_menu_qr.qty, 1);
+  assert.equal(p.get('cartTotal').textContent, '$443.00');
 });
 
 test('page count updates the complete displayed quote and refuses invalid totals', async () => {
@@ -225,11 +232,11 @@ test('explicit custom website links preload the quote and preserve the inquiry d
   }
 });
 
-test('clearing or removing the default website leaves an empty order until selected again', async () => {
+test('clearing or removing the generic menu leaves an empty order until selected again', async () => {
   for (const action of ['clear', 'remove']) {
     const p = page();
     if (action === 'clear') await p.get('clearBtn').fire('click');
-    else await p.get('cartItems').fire('click', { target: { dataset: { remove: 'website_design_custom' } } });
+    else await p.get('cartItems').fire('click', { target: { dataset: { remove: 'online_menu_qr' } } });
     assert.deepEqual(p.cart(), {});
     assert.equal(p.get('cartTotal').textContent, '$0.00');
     assert.equal(p.get('websiteQuotePanel').hidden, true);
@@ -240,8 +247,8 @@ test('clearing or removing the default website leaves an empty order until selec
     assert.equal(p.sent.length, 0);
     await p.chooseButtons[0].fire('click');
     assert.deepEqual(p.cart(), {});
-    await p.websiteButtons[0].fire('click');
-    assert.equal(p.get('cartTotal').textContent, 'Quote required');
+    await p.startButtons[0].fire('click');
+    assert.equal(p.get('cartTotal').textContent, '$144.00');
   }
 });
 
@@ -270,6 +277,7 @@ test('checkout keeps the visible order locked while asynchronous document prepar
     assert.equal(p.get('lead_email').disabled, true);
     assert.equal(p.get('lead_document').disabled, true);
     await p.websiteButtons[0].fire('click');
+    await p.startButtons[0].fire('click');
     await p.addButtons[0].fire('click');
     for (const patch of [{ inc: 'conversion_fix' }, { dec: 'conversion_fix' }, { remove: Object.keys(initialCart)[0] }]) {
       await p.get('cartItems').fire('click', { target: { dataset: patch } });
@@ -294,13 +302,13 @@ test('checkout keeps the visible order locked while asynchronous document prepar
 });
 
 test('priced selection removes only the automatic website inquiry template', async () => {
-  const automatic = page();
+  const automatic = page('?service=website');
   assert.equal(automatic.get('inquiryService').value, 'Other project');
   await automatic.addButtons[1].fire('click');
   assert.equal(automatic.get('bookingNotes').value, '');
   assert.equal(automatic.get('inquiryService').value, '');
 
-  const edited = page();
+  const edited = page('?service=website');
   edited.get('bookingNotes').value = 'Please keep my own project details.';
   await edited.addButtons[1].fire('click');
   assert.equal(edited.get('bookingNotes').value, 'Please keep my own project details.');

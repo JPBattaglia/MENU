@@ -15,312 +15,8 @@
   <link rel="shortcut icon" href="MENU=.png">
   <link rel="apple-touch-icon" href="MENU=.png">
 
-  <link rel="stylesheet" href="main.css?v=20261015-image-buttons">
+  <link rel="stylesheet" href="main.css?v=20261015-unified">
 
-  <!-- Page-only layout (no main.css edits) -->
-  <style>
-    .start-grid{
-      display:grid;
-      grid-template-columns: minmax(0, 1.15fr) minmax(0, .85fr);
-      gap: 28px;
-      align-items:start;
-    }
-    @media (max-width: 900px){
-      .start-grid{ grid-template-columns: 1fr; }
-    }
-
-    /* Symmetry: 2x2 on desktop; stacked on mobile */
-    .product-grid{
-      display:grid;
-      grid-template-columns: 1fr;
-      gap: 28px;
-    }
-    @media (max-width: 700px){
-      .product-grid{ grid-template-columns: 1fr; }
-    }
-
-    .product-grid .service-card{
-      height:100%;
-      display:flex;
-      flex-direction:column;
-    }
-    .card-actions{
-      margin-top:auto;
-      display:flex;
-      align-items:center;
-      justify-content:space-between;
-      gap:14px;
-      flex-wrap:wrap;
-    }
-    .price-tag{
-      font-weight:900;
-      color: var(--brand-soft);
-    }
-
-    /* Cart panel */
-    .cart{
-      min-width: 0;
-      scroll-margin-top: 120px;
-    }
-    @media (max-width: 900px){
-      .cart{ position: static; }
-    }
-
-    .cart-panel{
-      border-radius: var(--radius);
-      border: 1px solid rgba(0,214,230,.35);
-      background: rgba(4,29,35,.94);
-      box-shadow: 0 18px 40px rgba(0,0,0,.22);
-      padding: 18px;
-      backdrop-filter: blur(6px);
-    }
-
-    .cart-head{
-      display:flex;
-      align-items:flex-start;
-      justify-content:space-between;
-      gap:14px;
-      margin-bottom: 10px;
-    }
-    .cart-head h3{
-      margin:0;
-      font-family:'Righteous',sans-serif;
-      font-size: 22px;
-    }
-    .cart-sub{
-      margin:6px 0 0;
-      color: var(--muted);
-      font-size: 14px;
-      line-height: 1.35;
-    }
-
-    .cart-items{
-      margin: 14px 0 10px;
-      padding: 0;
-      list-style: none;
-      border-top: 1px solid rgba(255,255,255,.08);
-    }
-    .cart-item{
-      display:flex;
-      align-items:center;
-      justify-content:space-between;
-      gap:12px;
-      padding: 12px 0;
-      border-bottom: 1px solid rgba(255,255,255,.08);
-    }
-    .cart-item strong{ display:block; }
-    .cart-item small{
-      display:block;
-      color: var(--muted);
-      margin-top: 2px;
-    }
-
-    .qty{
-      display:flex;
-      align-items:center;
-      gap:8px;
-      white-space:nowrap;
-    }
-    .qty button{
-      width: 32px;
-      height: 32px;
-      border-radius: 10px;
-      background: rgba(0,214,230,.10);
-      color: #fff;
-      font-weight: 900;
-      cursor:pointer;
-    }
-    .qty button:hover{ filter: brightness(1.1); }
-    .qty button{min-width:44px;min-height:44px;}
-    .cart-item .remove-item{width:auto;padding:8px 12px;font-weight:600;}
-    .menu-config[hidden]{display:none;}
-    .menu-config{padding:16px 0 4px;}
-    .menu-config input{max-width:160px;min-height:44px;}
-    .menu-breakdown{margin:14px 0;}
-    .menu-breakdown > div{display:flex;justify-content:space-between;gap:16px;margin:8px 0;font-size:14px;}
-    .menu-breakdown dt{color:var(--muted);}
-    .menu-breakdown dd{margin:0;font-weight:700;white-space:nowrap;}
-    .optional-services{min-width:0;align-self:start;border:1px solid rgba(0,214,230,.3);border-radius:var(--radius);background:rgba(0,0,0,.2);}
-    .optional-services > summary{padding:20px;cursor:pointer;color:var(--brand-soft);font-weight:700;line-height:1.5;}
-    #serviceChoicesSummary{scroll-margin-top:120px;}
-    .optional-services > summary span{display:block;color:var(--muted);font-size:14px;font-weight:400;}
-    .optional-services > .optional-content{padding:0 18px 18px;}
-    .optional-services .product-grid{gap:16px;}
-    .cart-panel h4{margin:6px 0 14px;font-size:18px;}
-    .cart-panel .order-security{margin-top:14px;}
-    .start-page .cart-panel p.mini{font-size:13px !important;line-height:1.5 !important;}
-    .cart-panel a:not(.cta-pill):not(.btn){color:var(--brand-soft);}
-    .billing-details{margin:14px 0;}
-    .billing-details summary{cursor:pointer;color:var(--brand-soft);font-size:14px;line-height:1.5;}
-    @media(max-width:520px){.cart-panel{padding:16px;}.cart-item{gap:8px;}.cart-actions .btn{max-width:100%;}.menu-breakdown > div{font-size:13.5px;}}
-    @media(prefers-reduced-motion:reduce){html{scroll-behavior:auto;}}
-
-
-    .cart-total{
-      display:flex;
-      align-items:center;
-      justify-content:space-between;
-      gap:14px;
-      margin-top: 12px;
-      padding-top: 12px;
-      border-top: 1px solid rgba(255,255,255,.08);
-      font-size: 16px;
-    }
-    .cart-total strong{
-      font-size: 18px;
-      color: var(--brand-soft);
-    }
-
-    .cart-actions{
-      margin-top: 14px;
-      display:flex;
-      gap: 12px;
-      flex-wrap: wrap;
-    }
-    .cart-panel [hidden]{display:none;}
-
-    .btn.secondary{
-      color: #fff;
-      background: rgba(255,255,255,.08);
-    }
-    .btn.secondary:hover{
-      background: rgba(255,255,255,.16);
-    }
-
-    .muted-note{
-      margin-top: 10px;
-      font-size: 13.5px;
-      color: var(--muted);
-      line-height: 1.35;
-    }
-
-    .start-package-details{
-      margin-top:18px;
-      border:1px solid rgba(95,242,255,.4);
-      border-radius:16px;
-      background:rgba(0,30,36,.25);
-      overflow:hidden;
-      box-sizing:border-box;
-    }
-    .start-package-details > summary{
-      padding:16px 20px;
-      color:var(--brand-soft);
-      font-weight:700;
-      line-height:1.5;
-      cursor:pointer;
-    }
-    .start-package-details > summary:focus-visible{
-      outline:3px solid var(--brand-soft);
-      outline-offset:-4px;
-      border-radius:16px;
-    }
-    .start-page .hero-copy .start-package-details .muted-note{
-      margin:0;
-      padding:0 20px 20px;
-    }
-
-    .status{
-      margin-top: 10px;
-      font-size: 13.5px;
-      color: var(--muted);
-      display:none;
-    }
-    .status.show{ display:block; }
-
-    /* Intake step panel (revealed after Continue) */
-    .intake{
-      margin-top: 14px;
-      display:none;
-    }
-    .intake.show{ display:block; }
-
-    .field{
-      display:flex;
-      flex-direction:column;
-      gap:6px;
-      margin-bottom: 12px;
-    }
-    .field label{
-      font-weight: 800;
-      font-size: 13.5px;
-    }
-    .field input, .field textarea{
-      width: 100%;
-      border-radius: 14px;
-      border: 1px solid rgba(0,214,230,.25);
-      background: rgba(0,0,0,.22);
-      color: #fff;
-      padding: 10px 12px;
-      font: inherit;
-    }
-    .field textarea{ min-height: 90px; resize: vertical; }
-
-    .field input.invalid{
-      border-color:#ff6b6b;
-      box-shadow:0 0 0 2px rgba(255,107,107,.16);
-    }
-
-    .validation-msg{
-      display:none;
-      margin-top: 2px;
-      font-size: 12.5px;
-      color: #ff9a9a;
-      line-height: 1.35;
-    }
-    .validation-msg.show{
-      display:block;
-    }
-
-    .two{
-      display:grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 12px;
-    }
-    @media (max-width: 520px){
-      .two{ grid-template-columns: 1fr; }
-    }
-
-    .mini{
-      font-size: 12.5px;
-      color: var(--muted);
-      line-height: 1.35;
-    }
-
-    .checkline{
-      display:flex;
-      align-items:flex-start;
-      gap:10px;
-      margin: 10px 0 0;
-    }
-    .checkline input{
-      margin-top: 3px;
-    }
-    /* Booking results stay visible in a centered, dismissible toast. */
-    #inquiry .booking-card{background:linear-gradient(180deg,#0a7b85,#086871);}
-    .inquiry-intro{display:flex;flex-direction:column;}
-    .inquiry-intro > .pill{align-self:stretch;max-width:100%;box-sizing:border-box;padding:2px 14px;}
-    .inquiry-intro .booking-summary{margin-top:auto;padding-top:24px;}
-    .booking-toast{
-      position:fixed;
-      top:50%;
-      left:50%;
-      transform:translate(-50%,-50%);
-      z-index:10000;
-      width:min(520px,calc(100vw - 32px));
-      max-height:calc(100dvh - 32px);
-      overflow:auto;
-      box-sizing:border-box;
-      padding:28px;
-      border:2px solid var(--brand-soft,#00d6e6);
-      border-radius:20px;
-      background:#071f2c;
-      color:#fff;
-      box-shadow:0 20px 70px rgba(0,0,0,.65);
-    }
-    .booking-toast[hidden]{display:none;}
-    .booking-toast p{margin:0 0 20px;line-height:1.6;overflow-wrap:anywhere;}
-    .booking-toast .btn{min-height:44px;}
-  </style>
 <script src="funnel.js?v=20261015-start-choice" defer></script>
 </head>
 
@@ -371,7 +67,7 @@
       </p>
 
       <div class="hero-actions">
-        <button class="btn primary" type="button" data-select-website>Start a Website Project</button>
+        <a class="btn primary" href="#checkout" data-start-menu>Start My Menu</a>
         <a class="btn ghost" href="#optionalServices" data-choose-services>Choose Another Service</a>
         <a class="btn ghost" href="#inquiry">Questions before you buy?</a>
       </div>
@@ -405,7 +101,7 @@
 
     <header class="section-head">
       <h2>Choose a service</h2>
-      <p>Start with a custom website quote or choose a fixed-price service. Every project’s scope and price are confirmed before payment.</p>
+      <p>Review your menu package, add another service, or request a custom website quote. Every project’s scope and price are confirmed before payment.</p>
     </header>
 
     <div class="start-grid">
@@ -504,21 +200,21 @@
               </label>
             </div>
 
-            <div class="cart-actions" style="margin-top:12px;">
+            <div class="cart-actions checkout-actions">
               <button class="btn primary" id="checkoutBtn" type="button">Proceed to secure checkout</button>
               <button class="btn secondary" id="backBtn" type="button">Hide contact details</button>
             </div>
 
-            <div class="mini" style="margin-top:10px;">
+            <div class="mini checkout-privacy-note">
               Your contact details and any attached document are used to review and start your project. You’ll continue to secure checkout for payment.
             </div>
           </div>
 
           <p class="mini order-security" id="orderSecurity" hidden>Payment is handled securely by Stripe. MENU-MADE does not collect your card details on this page. After payment, we’ll guide you through the remaining project materials.</p>
 
-          <div style="margin-top:10px;">
+          <div class="order-review-links">
             <a class="cta-pill" href="services.html">Review services</a>
-            <a class="cta-pill" href="accessability.html" style="margin-left:10px;">Accessibility</a>
+            <a class="cta-pill order-accessibility-link" href="accessability.html">Accessibility</a>
           </div>
         </div>
       </aside>
@@ -577,7 +273,7 @@
 
         </div>
 
-        <div style="height:24px;"></div>
+        <div class="service-summary-spacer"></div>
 
         <div class="service-card">
           <h3>What happens next</h3>
@@ -613,7 +309,7 @@
 <section class="section section-image" id="inquiry" aria-labelledby="inquiry-heading">
   <div class="container booking-grid">
     <div class="booking-card inquiry-intro">
-      <span style="padding: 10px; margin: 20px 0; width: 200px" class="pill" id="booking">MENU-MADE · Let’s connect</span>
+      <span class="pill inquiry-heading-pill" id="booking">MENU-MADE · Let’s connect</span>
       <h2 id="inquiry-heading">Tell us about your project.</h2>
       <p>Have a question or need help choosing a service? Send your details and we’ll reply with the next steps. If you’d prefer a call, include a few suitable times and your timezone in your message. We’ll confirm by email.</p>
       <div class="booking-summary"><p>Talk directly with MENU-MADE about your website, app, visibility, accessibility, or design project.</p><a href="mailto:info@menu-made.com">info@menu-made.com</a><p class="mini">Requesting a call does not reserve an appointment. We’ll agree on a time by email.</p></div>
@@ -665,7 +361,7 @@
 </footer>
 
 <script src="document-upload.js?v=20261009" defer></script>
-<script src="start.js?v=20261015-website-default" defer></script>
+<script src="start.js?v=20261015-menu-default" defer></script>
 
 
 
@@ -681,28 +377,10 @@ document.addEventListener("DOMContentLoaded", () => {
   });
 });
 </script>
-
-<link rel="stylesheet" href="mm-a11y-widget.css?v=20261015-image-buttons">
 <script src="mm-a11y-widget.js" defer></script>
 
 <!-- Match the Tech background parallax used on the other pages. -->
-<script>
-(() => {
-  const sections = document.querySelectorAll('.section-image');
-  const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
-  function updateParallax() {
-    sections.forEach(section => {
-      const offset = section.getBoundingClientRect().top * -0.2;
-      section.style.backgroundPosition = reducedMotion.matches
-        ? 'center' : `center calc(50% + ${offset}px)`;
-    });
-  }
-  window.addEventListener('scroll', updateParallax, { passive: true });
-  window.addEventListener('resize', updateParallax);
-  reducedMotion.addEventListener('change', updateParallax);
-  updateParallax();
-})();
-</script>
+<script src="section-parallax.js?v=20261015-unified" defer></script>
 
 <script src="booking.js?v=20261009-funnel" defer></script>
 <script src="home-package.js?v=20261015-start-details" defer></script>

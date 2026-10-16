@@ -14,42 +14,11 @@
   <link rel="shortcut icon" href="MENU=.png">
   <link rel="apple-touch-icon" href="MENU=.png">
 
-  <link rel="stylesheet" href="main.css?v=20261015-image-buttons">
-
-<style>
-.hero-grid{
-  display:grid;
-  grid-template-columns:1.1fr .9fr;
-  align-items:center;
-  gap:40px;
-}
-
-.hero-image{
-  display:flex;
-  justify-content:center;
-}
-
-.hero-image img{
-  max-width:460px;
-  width:100%;
-  height:auto;
-}
-
-@media (max-width:900px){
-  .hero-grid{
-    grid-template-columns:1fr;
-    text-align:center;
-  }
-
-  .hero-image{
-    margin-top:20px;
-  }
-}
-</style>
+  <link rel="stylesheet" href="main.css?v=20261015-unified">
 
 </head>
 
-<body>
+<body class="about-page">
 
 <header class="header">
   <div class="container header-inner">
@@ -190,20 +159,10 @@
     </div>
   </div>
 </footer>
-
-<link rel="stylesheet" href="mm-a11y-widget.css?v=20261015-image-buttons">
 <script src="mm-a11y-widget.js" defer></script>
 
 <!-- PARALLAX (ONLY ADDITION) -->
-<script>
-window.addEventListener('scroll', () => {
-  document.querySelectorAll('.section-image').forEach(section => {
-    const rect = section.getBoundingClientRect();
-    const offset = rect.top * -0.2;
-    section.style.backgroundPosition = `center calc(50% + ${offset}px)`;
-  });
-});
-</script>
+<script src="section-parallax.js?v=20261015-unified" defer></script>
 
 </body>
 </html>
