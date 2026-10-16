@@ -5,7 +5,7 @@
   if (!['menu-made.com', 'www.menu-made.com'].includes(windowHost)) return;
   const query = new URLSearchParams(location.search);
   if (navigator.globalPrivacyControl || navigator.doNotTrack === '1' || query.get('mm_measurement') === 'off') return;
-  const paths = new Set(['/', '/index', '/index.html', '/services', '/services.html', '/contact', '/contact.html', '/checkoutsuccess', '/checkoutsuccess.html']);
+  const paths = new Set(['/', '/index', '/index.html', '/services', '/services.html', '/contact', '/contact.html', '/about', '/about.html', '/accessability', '/accessability.html', '/portfolio', '/portfolio.html', '/sample-menu', '/sample-menu.html', '/checkoutsuccess', '/checkoutsuccess.html']);
   const path = paths.has(location.pathname) ? location.pathname : '/other';
   const token = value => /^[a-z0-9_-]{1,64}$/i.test(value || '') ? value.toLowerCase() : null;
   const offers = { online_menu_qr: 'offer_online_menu_qr', conversion_fix: 'offer_conversion_fix', google_visibility: 'offer_google_visibility', accessibility_upgrade: 'offer_accessibility_upgrade', menu: 'offer_online_menu_qr', conversion: 'offer_conversion_fix', google: 'offer_google_visibility', accessibility: 'offer_accessibility_upgrade' };
@@ -25,7 +25,7 @@
   try { sessionStorage.setItem('mm_funnel_session', JSON.stringify(session)); } catch {}
   const tracking = () => ({ visitor_id: session.id, session_id: session.id, source: session.source,
     medium: session.medium, campaign: session.campaign, referrer: session.referrer, landing_path: session.landing_path });
-  const stages = new Set(['service_selected', 'details_opened', 'checkout_attempt', 'checkout_error', 'inquiry_attempt', 'inquiry_received', 'booking_link_clicked', 'onboarding_opened', 'onboarding_completed', 'service_link_clicked']);
+  const stages = new Set(['sample_menu_view', 'start_clicked', 'service_selected', 'details_opened', 'checkout_attempt', 'checkout_error', 'inquiry_attempt', 'inquiry_received', 'booking_link_clicked', 'onboarding_opened', 'onboarding_completed', 'service_link_clicked']);
   const seen = new Set();
   function send(eventType, stage, service) {
     const key = eventType + ':' + stage + ':' + (service || '');
@@ -41,13 +41,21 @@
   const api = Object.freeze({ tracking, track(stage, service) { if (stages.has(stage)) send('CTA_CLICK', stage, service); } });
   window.MenuMadeFunnel = api;
   send('SITE_VISIT', 'page_view');
+  if (/^\/sample-menu(?:\.html)?$/.test(path)) api.track('sample_menu_view', 'online_menu_qr');
   document.addEventListener('click', event => {
+    if (event.target.closest?.('[data-start-menu], [data-funnel-start]')) api.track('start_clicked', 'online_menu_qr');
     const a = event.target.closest?.('a[href]');
     if (!a) return;
     try {
       const u = new URL(a.href, location.href);
       if (u.hostname === 'www.everyexpert.com' || u.hostname === 'everyexpert.com') api.track('booking_link_clicked');
-      else if (u.origin === location.origin && /\/contact(?:\.html)?$/.test(u.pathname) && offers[u.searchParams.get('service')]) api.track('service_link_clicked', u.searchParams.get('service'));
+      else if (u.origin === location.origin && /^\/contact(?:\.html)?$/.test(u.pathname)) {
+        const service = u.searchParams.get('service');
+        if (offers[service]) api.track('service_link_clicked', service);
+        const menuLink = offers[service] === 'offer_online_menu_qr';
+        const defaultStart = !service && ['', '#checkout', '#details'].includes(u.hash);
+        if ((menuLink || defaultStart) && u.hash !== '#inquiry') api.track('start_clicked', 'online_menu_qr');
+      }
     } catch {}
   });
   if (typeof IntersectionObserver === 'function') {

@@ -4362,8 +4362,61 @@ async function createMenuQrInputs(projectId, order, timestamp, env) {
 __name(createMenuQrInputs, "createMenuQrInputs");
 
 // src/offers/checkout.js
-async function normalizeCheckoutItems(itemsInput, env) {
+// Keep the quoted menu scope with its existing offer/order item, so prepaid
+// hosting and extra pages do not create unrelated fulfillment projects.
+const MENU_PACKAGE_PRICING = Object.freeze({
+  setupCents: 12900,
+  hostingFirstYearCents: 1500,
+  includedPages: 3,
+  additionalPageCents: 2000,
+  maxPages: 50
+});
+class CheckoutValidationError extends Error {
+  constructor(message, status = 400) {
+    super(message);
+    this.status = status;
+  }
+}
+function quoteMenuPackage(menuPages) {
+  if (!Number.isInteger(menuPages) || menuPages < 1 || menuPages > MENU_PACKAGE_PRICING.maxPages) {
+    throw new CheckoutValidationError("Choose a menu page count from 1 to 50.");
+  }
+  const additionalPages = Math.max(0, menuPages - MENU_PACKAGE_PRICING.includedPages);
+  return {
+    pricing_version: "menu-first-year-2026-10-15",
+    menu_pages: menuPages,
+    included_pages: MENU_PACKAGE_PRICING.includedPages,
+    included_revisions: 2,
+    setup_cents: MENU_PACKAGE_PRICING.setupCents,
+    additional_pages: additionalPages,
+    additional_page_cents: MENU_PACKAGE_PRICING.additionalPageCents,
+    additional_pages_cents: additionalPages * MENU_PACKAGE_PRICING.additionalPageCents,
+    hosting_first_year_cents: MENU_PACKAGE_PRICING.hostingFirstYearCents,
+    total_cents: MENU_PACKAGE_PRICING.setupCents + MENU_PACKAGE_PRICING.hostingFirstYearCents + additionalPages * MENU_PACKAGE_PRICING.additionalPageCents,
+    currency: "USD",
+    hosting_renewal_cents: 1500,
+    hosting_renewal_automatic: false
+  };
+}
+function appendCheckoutLineItem(params, item, index, environment) {
+  const prefix = `line_items[${index}]`;
+  if (item.menuPackage || environment === "sandbox") {
+    params.append(`${prefix}[price_data][currency]`, item.currency.toLowerCase());
+    params.append(`${prefix}[price_data][unit_amount]`, String(item.priceCents));
+    params.append(`${prefix}[price_data][product_data][name]`, item.menuPackage
+      ? `${item.offerName} — ${item.menuPackage.menu_pages} menu pages + first-year hosting`
+      : item.offerName);
+    if (item.menuPackage) {
+      params.append(`${prefix}[price_data][product_data][description]`, "$129 setup includes up to 3 pages and two revisions; $20 per additional page; $15 first-year hosting. Hosting renewal is $15/year, arranged separately; no automatic subscription.");
+    }
+  } else {
+    params.append(`${prefix}[price]`, item.stripePriceId);
+  }
+  params.append(`${prefix}[quantity]`, String(item.quantity));
+}
+async function normalizeCheckoutItems(itemsInput, env, checkoutOptions = {}) {
   const normalizedItems = [];
+  let menuSelected = false;
   for (const item of itemsInput) {
     const identifier = item?.offer_id || item?.code || item?.slug || item?.key;
     if (!identifier) {
@@ -4376,9 +4429,24 @@ async function normalizeCheckoutItems(itemsInput, env) {
     if (!catalogRow) {
       continue;
     }
-    const quantity = Number(item?.qty) > 0 ? Math.floor(
+    let quantity = Number(item?.qty) > 0 ? Math.floor(
       Number(item.qty)
     ) : 1;
+    const isMenu = String(catalogRow.offer_code).toUpperCase() === "ONLINE_MENU_QR";
+    let menuPackage;
+    if (isMenu) {
+      if (menuSelected || (item.qty !== undefined && item.qty !== 1)) {
+        throw new CheckoutValidationError("One menu package per order. Use the page count for additional menu pages.");
+      }
+      menuSelected = true;
+      menuPackage = quoteMenuPackage(checkoutOptions.menu_pages);
+      // A catalog change requires a matching quote update, rather than silently
+      // advertising one amount and charging another.
+      if (Number(catalogRow.price_cents) !== MENU_PACKAGE_PRICING.setupCents || String(catalogRow.currency).toUpperCase() !== "USD") {
+        throw new CheckoutValidationError("Menu package pricing is being updated. Please contact us before purchasing.", 503);
+      }
+      quantity = 1;
+    }
     normalizedItems.push({
       key: identifier,
       quantity,
@@ -4386,15 +4454,19 @@ async function normalizeCheckoutItems(itemsInput, env) {
       offerCode: catalogRow.offer_code,
       offerName: catalogRow.offer_name,
       offerVersionId: catalogRow.offer_version_id,
-      priceCents: Number(
+      priceCents: menuPackage ? menuPackage.total_cents : Number(
         catalogRow.price_cents
       ),
       currency: String(
         catalogRow.currency || "USD"
       ).toUpperCase(),
       stripePriceId: catalogRow.stripe_price_id || null,
-      stripeProductId: catalogRow.stripe_product_id || null
+      stripeProductId: catalogRow.stripe_product_id || null,
+      ...(menuPackage ? { menuPackage } : {})
     });
+  }
+  if (!menuSelected && checkoutOptions.menu_pages !== undefined) {
+    throw new CheckoutValidationError("A menu page count requires an Online Menu + QR package.");
   }
   return normalizedItems;
 }
@@ -4662,7 +4734,8 @@ async function createPendingOrder(data, normalizedItems, env, environment) {
       item.priceCents * item.quantity,
       JSON.stringify({
         offer_code: item.offerCode,
-        environment
+        environment,
+        ...(item.menuPackage ? { menu_package: item.menuPackage } : {})
       })
     ).run();
   }
@@ -4714,7 +4787,8 @@ async function createCheckoutSessionTest(request, env) {
     const itemsInput = Array.isArray(data?.items) ? data.items : [];
     const normalizedItems = await normalizeCheckoutItems(
       itemsInput,
-      env
+      env,
+      data
     );
     if (normalizedItems.length === 0) {
       return jsonResponse(
@@ -4832,30 +4906,7 @@ async function createCheckoutSessionTest(request, env) {
         )
       );
     }
-    normalizedItems.forEach(
-      (item, index) => {
-        params.append(
-          `line_items[${index}][price_data][currency]`,
-          item.currency.toLowerCase()
-        );
-        params.append(
-          `line_items[${index}][price_data][unit_amount]`,
-          String(
-            item.priceCents
-          )
-        );
-        params.append(
-          `line_items[${index}][price_data][product_data][name]`,
-          item.offerName
-        );
-        params.append(
-          `line_items[${index}][quantity]`,
-          String(
-            item.quantity
-          )
-        );
-      }
-    );
+    normalizedItems.forEach((item, index) => appendCheckoutLineItem(params, item, index, "sandbox"));
     const stripeRes = await fetch(
       "https://api.stripe.com/v1/checkout/sessions",
       {
@@ -4948,7 +4999,7 @@ async function createCheckoutSessionTest(request, env) {
         ok: false,
         error: error instanceof Error ? error.message : String(error)
       },
-      500
+      error instanceof CheckoutValidationError ? error.status : 500
     );
   }
 }
@@ -4988,7 +5039,8 @@ async function createCheckoutSession(request, env) {
     const itemsInput = Array.isArray(data?.items) ? data.items : [];
     const normalizedItems = await normalizeCheckoutItems(
       itemsInput,
-      env
+      env,
+      data
     );
     if (normalizedItems.length === 0) {
       return jsonResponse(
@@ -5000,7 +5052,7 @@ async function createCheckoutSession(request, env) {
       );
     }
     for (const item of normalizedItems) {
-      if (!item.stripePriceId) {
+      if (!item.menuPackage && !item.stripePriceId) {
         return jsonResponse(
           {
             ok: false,
@@ -5117,20 +5169,7 @@ async function createCheckoutSession(request, env) {
         )
       );
     }
-    normalizedItems.forEach(
-      (item, index) => {
-        params.append(
-          `line_items[${index}][price]`,
-          item.stripePriceId
-        );
-        params.append(
-          `line_items[${index}][quantity]`,
-          String(
-            item.quantity
-          )
-        );
-      }
-    );
+    normalizedItems.forEach((item, index) => appendCheckoutLineItem(params, item, index, "live"));
     const stripeRes = await fetch(
       "https://api.stripe.com/v1/checkout/sessions",
       {
@@ -5223,7 +5262,7 @@ async function createCheckoutSession(request, env) {
         ok: false,
         error: error instanceof Error ? error.message : String(error)
       },
-      500
+      error instanceof CheckoutValidationError ? error.status : 500
     );
   }
 }
@@ -7502,6 +7541,19 @@ async function runNextProductionStep(request, env) {
       500
     );
   }
+  let selection = {};
+  try {
+    const text = await request.text();
+    if (text.length > 4096) return jsonResponse({ok:false,error:"Runner request is too large"},413);
+    selection = text.trim() ? JSON.parse(text) : {};
+    if (!selection || typeof selection !== "object" || Array.isArray(selection)
+      || Object.keys(selection).some(key => !["workflow_run_id","step_key","dry_run"].includes(key))
+      || (selection.workflow_run_id !== undefined && !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(selection.workflow_run_id))
+      || (selection.step_key !== undefined && !["PREPARE_INPUTS","GENERATE_MENU_DRAFT","GENERATE_QR","QUALITY_CHECK"].includes(selection.step_key))
+      || (selection.dry_run !== undefined && typeof selection.dry_run !== "boolean")) {
+      return jsonResponse({ok:false,error:"Invalid runner selection"},400);
+    }
+  } catch { return jsonResponse({ok:false,error:"Invalid runner JSON"},400); }
   let targetStep = null;
   try {
     targetStep = await env.DB.prepare(`
@@ -7545,6 +7597,8 @@ async function runNextProductionStep(request, env) {
             )
 
             AND (ws.step_key != 'QUALITY_CHECK' OR wr.workflow_key = 'MENU_QR_V1')
+            AND (? IS NULL OR wr.id = ?)
+            AND (? IS NULL OR ws.step_key = ?)
 
             AND wr.status IN (
               'QUEUED',
@@ -7568,7 +7622,8 @@ async function runNextProductionStep(request, env) {
             ws.step_order ASC
 
           LIMIT 1
-        `).first();
+        `).bind(selection.workflow_run_id || null, selection.workflow_run_id || null,
+          selection.step_key || null, selection.step_key || null).first();
     if (!targetStep) {
       return jsonResponse({
         ok: true,
@@ -7576,6 +7631,11 @@ async function runNextProductionStep(request, env) {
         message: "No runnable production step found"
       });
     }
+    // Preview never claims or changes a workflow, project, asset, or notification.
+    if (selection.dry_run) return jsonResponse({ok:true,processed:false,dry_run:true,
+      selected_step:{id:targetStep.workflow_step_id,key:targetStep.step_key,status:targetStep.step_status},
+      workflow_run:{id:targetStep.workflow_run_id,workflow_key:targetStep.workflow_key,status:targetStep.workflow_status},
+      project:{id:targetStep.project_id}});
     const timestamp = nowIso();
     const claimResult = await env.DB.prepare(`
           UPDATE workflow_steps
@@ -7816,6 +7876,17 @@ var worker_default = {
       return getPublicOffers(
         env
       );
+    }
+    if (request.method === "GET" && url.pathname === "/api/menu-package-quote") {
+      try {
+        const rawPages = url.searchParams.get("pages");
+        if (!rawPages || !/^\d+$/.test(rawPages)) {
+          throw new CheckoutValidationError("Choose a menu page count from 1 to 50.");
+        }
+        return jsonResponse({ ok: true, quote: quoteMenuPackage(Number(rawPages)) });
+      } catch (error) {
+        return jsonResponse({ ok: false, error: error.message }, 400);
+      }
     }
     if (request.method === "POST" && url.pathname === "/api/funnel-event") {
       return recordFunnelEvent(

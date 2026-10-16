@@ -5,7 +5,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>MENU-MADE — Start Your Mobile Menu + QR Code</title>
-  <meta name="description" content="Start a mobile-friendly online menu and QR code for your restaurant, café, bar, bakery, or food brand. $129 one-time.">
+  <meta name="description" content="Start a mobile-friendly online menu and QR code for your restaurant, café, bar, bakery, or food brand. $129 setup plus $15 first-year hosting; $144 for up to 3 menu pages.">
 
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -15,13 +15,13 @@
   <link rel="shortcut icon" href="MENU=.png">
   <link rel="apple-touch-icon" href="MENU=.png">
 
-  <link rel="stylesheet" href="main.css?v=20261013-food-backgrounds">
+  <link rel="stylesheet" href="main.css?v=20261015-conversion">
 
   <!-- Page-only layout (no main.css edits) -->
   <style>
     .start-grid{
       display:grid;
-      grid-template-columns: 1.15fr .85fr;
+      grid-template-columns: minmax(0, 1.15fr) minmax(0, .85fr);
       gap: 28px;
       align-items:start;
     }
@@ -32,7 +32,7 @@
     /* Symmetry: 2x2 on desktop; stacked on mobile */
     .product-grid{
       display:grid;
-      grid-template-columns: repeat(2, minmax(0, 1fr));
+      grid-template-columns: 1fr;
       gap: 28px;
     }
     @media (max-width: 700px){
@@ -59,8 +59,8 @@
 
     /* Cart panel */
     .cart{
-      position: sticky;
-      top: 110px;
+      min-width: 0;
+      scroll-margin-top: 120px;
     }
     @media (max-width: 900px){
       .cart{ position: static; }
@@ -69,7 +69,7 @@
     .cart-panel{
       border-radius: var(--radius);
       border: 1px solid rgba(0,214,230,.35);
-      background: rgba(0,0,0,.28);
+      background: rgba(4,29,35,.94);
       box-shadow: 0 18px 40px rgba(0,0,0,.22);
       padding: 18px;
       backdrop-filter: blur(6px);
@@ -132,6 +132,29 @@
       cursor:pointer;
     }
     .qty button:hover{ filter: brightness(1.1); }
+    .qty button{min-width:44px;min-height:44px;}
+    .cart-item .remove-item{width:auto;padding:8px 12px;font-weight:600;}
+    .menu-config[hidden]{display:none;}
+    .menu-config{padding:16px 0 4px;}
+    .menu-config input{max-width:160px;min-height:44px;}
+    .menu-breakdown{margin:14px 0;}
+    .menu-breakdown > div{display:flex;justify-content:space-between;gap:16px;margin:8px 0;font-size:14px;}
+    .menu-breakdown dt{color:var(--muted);}
+    .menu-breakdown dd{margin:0;font-weight:700;white-space:nowrap;}
+    .optional-services{min-width:0;align-self:start;border:1px solid rgba(0,214,230,.3);border-radius:var(--radius);background:rgba(0,0,0,.2);}
+    .optional-services > summary{padding:20px;cursor:pointer;color:var(--brand-soft);font-weight:700;line-height:1.5;}
+    .optional-services > summary span{display:block;color:var(--muted);font-size:14px;font-weight:400;}
+    .optional-services > .optional-content{padding:0 18px 18px;}
+    .optional-services .product-grid{gap:16px;}
+    .cart-panel h4{margin:6px 0 14px;font-size:18px;}
+    .cart-panel .order-security{margin-top:14px;}
+    .start-page .cart-panel p.mini{font-size:13px !important;line-height:1.5 !important;}
+    .cart-panel a:not(.cta-pill){color:var(--brand-soft);}
+    .billing-details{margin:14px 0;}
+    .billing-details summary{cursor:pointer;color:var(--brand-soft);font-size:14px;line-height:1.5;}
+    @media(max-width:520px){.cart-panel{padding:16px;}.cart-item{gap:8px;}.cart-actions .btn{max-width:100%;}.menu-breakdown > div{font-size:13.5px;}}
+    @media(prefers-reduced-motion:reduce){html{scroll-behavior:auto;}}
+
 
     .cart-total{
       display:flex;
@@ -273,7 +296,7 @@
     .booking-toast p{margin:0 0 20px;line-height:1.6;overflow-wrap:anywhere;}
     .booking-toast .btn{min-height:44px;}
   </style>
-<script src="funnel.js?v=20261009" defer></script>
+<script src="funnel.js?v=20261015-conversion" defer></script>
 </head>
 
 <body class="start-page">
@@ -300,6 +323,7 @@
     <nav class="nav" aria-label="Primary">
       <a href="index.html">Home</a>
       <a href="services.html">Services</a>
+      <a href="portfolio.html">Our Work</a>
       <a href="about.html">About</a>
       <a href="accessability.html">Access</a>
       <a class="nav-cta active" href="#checkout">Start</a>
@@ -314,21 +338,21 @@
   <div class="container hero-grid">
 
     <div class="hero-copy">
-      <span class="pill">Mobile menu + QR code from $129</span>
+      <span class="pill">Menu + QR · $144 first year for up to 3 pages</span>
       <h1>Start Your Menu Upgrade</h1>
       <p>
-        The fastest path is simple: choose Online Menu + QR, enter your business details,
-        and checkout securely. Paste a menu link or menu text in Notes, or attach a PDF, Word document, text file, or menu image below.
+        Your menu package is ready below. Choose your page count, enter your business details,
+        and check out securely. Paste a menu link or menu text in Notes, or attach a PDF, Word document, text file, or menu image below.
       </p>
 
       <div class="hero-actions">
-        <a class="btn primary" href="#checkout" data-start-menu>Start My $129 Menu</a>
+        <a class="btn primary" href="#checkout" data-start-menu>Start My Menu</a>
         <a class="btn ghost" href="#inquiry">Questions before you buy?</a>
       </div>
 
       <p class="conversion-help"><a href="sample-menu.html">Try the sample menu</a> · <a href="#inquiry">Ask about your project</a></p>
       <p class="muted-note">
-        The $129 one-time menu package includes a branded online menu of up to 3 pages, a QR code, and two revisions. Additional pages cost $20 each. Hosting is $15/year ($144 for the first year before additional pages). Checkout collects the $129 setup payment only; contact us to arrange hosting. <a href="services.html#purchase-scope">Read the included work and required materials</a>. For custom work or questions about hosting and revisions, send an inquiry before paying.
+        One checkout covers $129 setup plus $15 first-year hosting: $144 for up to 3 menu pages, a QR code, and two revisions. Additional pages cost $20 each. Hosting renews at $15/year, arranged separately, with no automatic subscription. <a href="services.html#purchase-scope">Read the included work and required materials</a>. For custom work or questions about hosting and revisions, send an inquiry before paying.
       </p>
     </div>
 
@@ -352,80 +376,41 @@
 
     <header class="section-head">
       <h2>Start your mobile menu</h2>
-      <p>The $129 menu package is the starting point. Other services are optional.</p>
+      <p>Choose your page count and see the full first-year price before paying. Other services are optional.</p>
     </header>
 
     <div class="start-grid">
 
-      <!-- LEFT: Products -->
-      <div>
-
-        <div class="product-grid">
-
-          <article class="service-card" data-sku="online_menu_qr" data-name="Online Menu + QR" data-price="12900" data-price-label="$129" data-price-id="price_1T6OzbHw7f6jhUv8Epy5oYMf">
-            <h3>Online Menu + QR</h3>
-            <p>Mobile-first menu page customers open instantly. Clean layout, fast load, QR-ready delivery. Standard menu turnaround: 48 hours after all required materials are received and validated. Incomplete materials or custom work require a confirmed delivery date.</p>
-            <div class="card-actions">
-              <span class="price-tag">$129</span>
-              <button class="btn primary js-add" type="button">Add Menu</button>
-            </div>
-          </article>
-
-          <article class="service-card" data-sku="conversion_fix" data-name="Conversion Fix" data-price="29900" data-price-label="$299" data-price-id="price_1T6P5tHw7f6jhUv8zQ7pGEoJ">
-            <h3>Conversion Fix</h3>
-            <p>Fix what blocks action: clarity, CTAs, layout flow, mobile usability, speed issues.</p>
-            <div class="card-actions">
-              <span class="price-tag">$299</span>
-              <button class="btn primary js-add" type="button">Add</button>
-            </div>
-          </article>
-
-          <article class="service-card" data-sku="google_visibility" data-name="Google Visibility" data-price="14900" data-price-label="$149" data-price-id="price_1T6iC6Hw7f6jhUv8iYYYZK0T">
-            <h3>Google Visibility</h3>
-            <p>Google Business Profile creation or improvements to business details, categories, and menu/website links. Website SEO changes are scoped separately. Google placement is not guaranteed.</p>
-            <div class="card-actions">
-              <span class="price-tag">$149</span>
-              <button class="btn primary js-add" type="button">Add</button>
-            </div>
-          </article>
-
-          <article class="service-card" data-sku="accessibility_upgrade" data-name="Accessibility Upgrade (Yearly)" data-price="25000" data-price-label="$250 / year" data-price-id="price_1T6j0xHw7f6jhUv8Ci1ZQ9qS">
-            <h3>Accessibility Upgrade</h3>
-            <p>Site-wide toolkit + usability fixes for keyboard navigation, contrast, labels, and forms.</p>
-            <div class="card-actions">
-              <span class="price-tag">$250 / year</span>
-              <button class="btn primary js-add" type="button">Add</button>
-            </div>
-          </article>
-
-        </div>
-
-        <div style="height:24px;"></div>
-
-        <div class="service-card">
-          <h3>What happens next</h3>
-          <p>
-            Choose your service and provide your contact details. Paste a menu link or attach your menu document before checkout. After payment, complete the project information form with your logo, colors, and destination link. Menu turnaround begins after required materials are received and validated; custom delivery dates are confirmed separately.
-          </p>
-        </div>
-
-      </div>
-
-      <!-- RIGHT: Cart + Intake + Checkout -->
-      <aside class="cart" aria-label="Cart">
+      <!-- Order summary and contact details come first for every screen size. -->
+      <aside class="cart" aria-label="Your order">
         <div class="cart-panel">
           <div class="cart-head">
             <div>
-              <h3>Your cart</h3>
-              <p class="cart-sub">Start with Online Menu + QR, or add upgrades if you need them now.</p>
+              <h3>Your order</h3>
+              <p class="cart-sub">Your complete price is shown before secure payment.</p>
             </div>
           </div>
 
           <ul class="cart-items" id="cartItems" aria-live="polite"></ul>
 
+          <div class="menu-config" id="menuConfig" hidden>
+            <div class="field">
+              <label for="menuPages">How many pages are in your current menu?</label>
+              <input id="menuPages" name="menu_pages" type="number" min="1" max="50" step="1" value="3" inputmode="numeric" aria-describedby="menuPagesHelp menuPagesError">
+              <div class="mini" id="menuPagesHelp">Count the pages in the menu you send us. Up to 3 pages are included; each additional page is $20. For more than 50 pages, <a href="#inquiry">request a quote</a>.</div>
+              <div class="validation-msg" id="menuPagesError" aria-live="polite">Enter a whole number from 1 to 50.</div>
+            </div>
+            <dl class="menu-breakdown" aria-label="Menu price breakdown">
+              <div><dt>Menu setup · up to 3 pages</dt><dd>$129.00</dd></div>
+              <div><dt>First-year hosting</dt><dd>$15.00</dd></div>
+              <div><dt id="extraPagesLabel">Additional pages · 0</dt><dd id="extraPagesAmount">$0.00</dd></div>
+            </dl>
+            <p class="mini">Two revisions included. Future menu edits are quoted before work begins. Hosting renews at $15/year, arranged separately; no automatic subscription.</p>
+          </div>
+
           <div class="cart-total">
-            <span>Selected services · USD</span>
-            <strong id="cartTotal">$0</strong>
+            <span>Total due today · USD</span>
+            <strong id="cartTotal" aria-live="polite" aria-atomic="true">$0.00</strong>
           </div>
 
           <div class="cart-actions">
@@ -434,10 +419,10 @@
           </div>
 
           <div class="status" id="status" role="status" aria-live="polite"></div>
-          <p class="mini" id="billingSummary">Menu setup costs $129 and includes up to 3 pages and two revisions. Additional pages are $20 each; request them through the inquiry form before checkout. This checkout collects the base package price only. Hosting is an additional $15/year, arranged separately ($144 first year before additional pages). Conversion Fix and Google Visibility are one-time purchases. Accessibility covers one year, paid upfront. Confirm the final amount at checkout before paying.</p>
+          <details class="billing-details"><summary>How billing works</summary><p class="mini" id="billingSummary">One payment covers the services you select. Menu hosting for the first year and additional pages are included in the displayed total. Conversion Fix and Google Visibility are one-time purchases. Accessibility covers one year, paid upfront. Review the final total at Stripe before paying.</p></details>
 
           <div class="intake" id="intakeStep">
-            <div style="height:10px;"></div>
+            <h4>Your contact details</h4>
 
             <div class="field">
               <label for="lead_name">Name *</label>
@@ -486,7 +471,7 @@
 
             <div class="cart-actions" style="margin-top:12px;">
               <button class="btn primary" id="checkoutBtn" type="button">Proceed to secure checkout</button>
-              <button class="btn secondary" id="backBtn" type="button">Back</button>
+              <button class="btn secondary" id="backBtn" type="button">Hide contact details</button>
             </div>
 
             <div class="mini" style="margin-top:10px;">
@@ -494,9 +479,7 @@
             </div>
           </div>
 
-          <p class="muted-note">
-            Enter your contact details so we can follow up about your project. You’ll then continue to secure checkout for payment.
-          </p>
+          <p class="mini order-security">Payment is handled securely by Stripe. MENU-MADE does not collect your card details on this page. After payment, we’ll guide you through the remaining project materials.</p>
 
           <div style="margin-top:10px;">
             <a class="cta-pill" href="services.html">Review services</a>
@@ -504,6 +487,64 @@
           </div>
         </div>
       </aside>
+
+      <details class="optional-services" id="optionalServices">
+        <summary>Change services or add an upgrade<span>Optional website, visibility, and accessibility services</span></summary>
+        <div class="optional-content">
+
+        <div class="product-grid">
+
+          <article class="service-card" data-sku="online_menu_qr" data-name="Online Menu + QR" data-price="12900" data-price-label="$144 first year" data-price-id="price_1T6OzbHw7f6jhUv8Epy5oYMf">
+            <h3>Online Menu + QR</h3>
+            <p>Mobile-first menu page customers open instantly. Clean layout, fast load, QR-ready delivery. Standard menu turnaround: 48 hours after all required materials are received and validated. Incomplete materials or custom work require a confirmed delivery date.</p>
+            <div class="card-actions">
+              <span class="price-tag">$144 first year</span>
+              <button class="btn primary js-add" type="button">Add Menu</button>
+            </div>
+          </article>
+
+          <article class="service-card" data-sku="conversion_fix" data-name="Conversion Fix" data-price="29900" data-price-label="$299" data-price-id="price_1T6P5tHw7f6jhUv8zQ7pGEoJ">
+            <h3>Conversion Fix</h3>
+            <p>Fix what blocks action: clarity, CTAs, layout flow, mobile usability, speed issues.</p>
+            <div class="card-actions">
+              <span class="price-tag">$299</span>
+              <button class="btn primary js-add" type="button">Add</button>
+            </div>
+          </article>
+
+          <article class="service-card" data-sku="google_visibility" data-name="Google Visibility" data-price="14900" data-price-label="$149" data-price-id="price_1T6iC6Hw7f6jhUv8iYYYZK0T">
+            <h3>Google Visibility</h3>
+            <p>Google Business Profile creation or improvements to business details, categories, and menu/website links. Website SEO changes are scoped separately. Google placement is not guaranteed.</p>
+            <div class="card-actions">
+              <span class="price-tag">$149</span>
+              <button class="btn primary js-add" type="button">Add</button>
+            </div>
+          </article>
+
+          <article class="service-card" data-sku="accessibility_upgrade" data-name="Accessibility Upgrade (Yearly)" data-price="25000" data-price-label="$250 / year" data-price-id="price_1T6j0xHw7f6jhUv8Ci1ZQ9qS">
+            <h3>Accessibility Upgrade</h3>
+            <p>Site-wide toolkit + usability fixes for keyboard navigation, contrast, labels, and forms.</p>
+            <div class="card-actions">
+              <span class="price-tag">$250 / year</span>
+              <button class="btn primary js-add" type="button">Add</button>
+            </div>
+          </article>
+
+        </div>
+
+        <div style="height:24px;"></div>
+
+        <div class="service-card">
+          <h3>What happens next</h3>
+          <p>
+            Choose your service and provide your contact details. Paste a menu link or attach your menu document before checkout. After payment, complete the project information form with your logo, colors, and destination link. Menu turnaround begins after required materials are received and validated; custom delivery dates are confirmed separately.
+          </p>
+        </div>
+
+        </div>
+      </details>
+
+
 
     </div>
 
@@ -514,11 +555,11 @@
   <div class="container cta">
     <div>
       <h2>Ready to start your menu?</h2>
-      <p>Add Online Menu + QR, continue to details, then checkout securely.</p>
+      <p>Choose your page count, send your details, and continue to secure payment.</p>
     </div>
 
     <div class="cta-actions">
-      <a class="btn primary" href="#checkout" data-start-menu>Start My $129 Menu</a>
+      <a class="btn primary" href="#checkout" data-start-menu>Start My Menu</a>
       <a class="btn ghost" href="index.html">Home</a>
     </div>
   </div>
@@ -579,105 +620,9 @@
 </footer>
 
 <script src="document-upload.js?v=20261009" defer></script>
-<script src="start.js?v=20261013-direct-start" defer></script>
+<script src="start.js?v=20261015-complete-order" defer></script>
 
-<script>
-  document.addEventListener("DOMContentLoaded", () => {
-    const emailInput = document.getElementById("lead_email");
-    const phoneInput = document.getElementById("lead_phone");
-    const emailError = document.getElementById("lead_email_error");
-    const phoneError = document.getElementById("lead_phone_error");
-    const status = document.getElementById("status");
-    const checkoutBtn = document.getElementById("checkoutBtn");
 
-    const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    const phonePattern = /^[0-9+\-\s().]{7,}$/;
-
-    function showToast(message) {
-      status.textContent = message;
-      status.classList.add("show");
-    }
-
-    function clearToast() {
-      status.textContent = "";
-      status.classList.remove("show");
-    }
-
-    function setFieldState(input, errorEl, isValid, message) {
-      input.classList.toggle("invalid", !isValid);
-      input.setAttribute("aria-invalid", String(!isValid));
-      errorEl.textContent = message;
-      errorEl.classList.toggle("show", !isValid);
-    }
-
-    function validateEmailField() {
-      const value = emailInput.value.trim();
-      const valid = emailPattern.test(value);
-      setFieldState(emailInput, emailError, valid, "Enter a valid email address.");
-      return valid;
-    }
-
-    function validatePhoneField() {
-      const value = phoneInput.value.trim();
-      const valid = value === "" || phonePattern.test(value);
-      setFieldState(phoneInput, phoneError, valid, "Enter a valid phone number.");
-      return valid;
-    }
-
-    emailInput.addEventListener("input", () => {
-      clearToast();
-      if (emailInput.value.trim() === "") {
-        emailInput.classList.remove("invalid");
-        emailInput.setAttribute("aria-invalid", "false");
-        emailError.classList.remove("show");
-        return;
-      }
-      validateEmailField();
-    });
-
-    emailInput.addEventListener("blur", () => {
-      if (emailInput.value.trim() !== "") validateEmailField();
-    });
-
-    phoneInput.addEventListener("input", () => {
-      clearToast();
-      if (phoneInput.value.trim() === "") {
-        phoneInput.classList.remove("invalid");
-        phoneInput.setAttribute("aria-invalid", "false");
-        phoneError.classList.remove("show");
-        return;
-      }
-      validatePhoneField();
-    });
-
-    phoneInput.addEventListener("blur", () => {
-      if (phoneInput.value.trim() !== "") validatePhoneField();
-    });
-
-    checkoutBtn.addEventListener("click", (event) => {
-      const emailValid = validateEmailField();
-      const phoneValid = validatePhoneField();
-
-      if (!emailValid) {
-        event.preventDefault();
-        event.stopImmediatePropagation();
-        showToast("Please enter a valid email address.");
-        emailInput.focus();
-        return;
-      }
-
-      if (!phoneValid) {
-        event.preventDefault();
-        event.stopImmediatePropagation();
-        showToast("Please enter a valid phone number.");
-        phoneInput.focus();
-        return;
-      }
-
-      clearToast();
-    }, true);
-  });
-</script>
 
 <script>
 document.addEventListener("DOMContentLoaded", () => {
