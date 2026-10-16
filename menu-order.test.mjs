@@ -58,19 +58,19 @@ function page(search = '') {
     fail() { failCheckout = true; }, recover() { failCheckout = false; } };
 }
 
-test('generic and unknown service links preload the menu at the hero with contact details closed', async () => {
+test('generic and unknown service links start empty at the hero with picker and contact details closed', async () => {
   for (const search of ['', '?service=', '?service=unknown', '?service=__proto__', '?service=constructor', '?utm_source=test']) {
     const p = page(search); p.fill();
-    assert.deepEqual(Object.keys(p.cart()), ['online_menu_qr']);
-    assert.equal(p.cart().online_menu_qr.qty, 1);
+    assert.deepEqual(p.cart(), {});
     assert.equal(p.get('menuPages').value, '3');
-    assert.equal(p.get('cartTotal').textContent, '$144.00');
+    assert.equal(p.get('cartTotal').textContent, '$0.00');
     assert.equal(p.get('websiteQuotePanel').hidden, true);
-    assert.equal(p.get('emptyOrder').hidden, true);
+    assert.equal(p.get('emptyOrder').hidden, false);
     assert.equal(p.get('optionalServices').open, false);
-    assert.equal(p.get('menuConfig').hidden, false);
+    assert.equal(p.get('menuConfig').hidden, true);
     assert.equal(p.get('intakeStep').classList.contains('show'), false);
-    assert.equal(p.get('continueBtn').disabled, false);
+    assert.equal(p.get('continueBtn').disabled, true);
+    assert.equal(p.get('checkoutBtn').disabled, true);
     assert.equal(p.cartSection.scrolled, undefined);
     assert.equal(p.get('lead_name').focused, undefined);
     assert.equal(p.get('inquiryService').value, '');
@@ -80,7 +80,10 @@ test('generic and unknown service links preload the menu at the hero with contac
     await p.chooseButtons[0].fire('click');
     assert.equal(p.get('optionalServices').open, true);
     assert.equal(p.get('serviceChoicesSummary').focused, true);
-    assert.deepEqual(Object.keys(p.cart()), ['online_menu_qr']);
+    assert.deepEqual(p.cart(), {});
+    await p.get('checkoutBtn').fire('click');
+    assert.equal(p.sent.length, 0);
+    assert.match(p.get('status').textContent, /Choose a service/);
     await p.startButtons[0].fire('click');
     assert.equal(p.get('intakeStep').classList.contains('show'), true);
     assert.equal(p.cart().online_menu_qr.qty, 1);
@@ -134,8 +137,8 @@ test('choosing a priced service replaces an explicit website quote before openin
   assert.equal(p.sent[0].body.menu_pages, 3);
 });
 
-test('adding another priced service keeps the generic menu selection', async () => {
-  const p = page();
+test('adding another priced service keeps an explicitly selected menu', async () => {
+  const p = page('?service=menu');
   await p.addButtons[1].fire('click');
   assert.deepEqual(Object.keys(p.cart()), ['online_menu_qr', 'conversion_fix']);
   assert.equal(p.cart().online_menu_qr.qty, 1);
@@ -248,9 +251,9 @@ test('explicit custom website links preload the quote and preserve the inquiry d
   }
 });
 
-test('clearing or removing the generic menu leaves an empty order until selected again', async () => {
+test('clearing or removing an explicitly selected menu leaves an empty order until selected again', async () => {
   for (const action of ['clear', 'remove']) {
-    const p = page();
+    const p = page('?service=menu');
     if (action === 'clear') await p.get('clearBtn').fire('click');
     else await p.get('cartItems').fire('click', { target: { dataset: { remove: 'online_menu_qr' } } });
     assert.deepEqual(p.cart(), {});

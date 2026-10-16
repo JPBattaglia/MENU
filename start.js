@@ -492,12 +492,6 @@ if (Object.hasOwn(serviceSkus, requestedService)) {
 else if (requestedService === 'website') {
   selectWebsiteQuote(location.hash !== '#inquiry');
 }
-else if (requestedService !== 'app') {
-  // A generic Start opens at the introduction with the menu selected; the
-  // visitor opens contact details when ready to continue.
-  const menuCard = document.querySelector(`.service-card[data-sku="${MENU_SKU}"]`);
-  if (menuCard) addItem(menuCard);
-}
 if (requestedService === 'app' || (requestedService === 'website' && location.hash === '#inquiry')) {
   const service = document.getElementById('inquiryService');
   if (service) service.value = 'Other project';
