@@ -11,4 +11,5 @@ node_modules/
 wrangler.jsonc
 # Backend code, reports, and tests are not served by the static website.
 booking-api/
+menu-made-worker/
 *.test.mjs
