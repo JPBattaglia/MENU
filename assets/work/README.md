@@ -17,6 +17,9 @@ Images are archival examples, not statements about current menu prices, restaura
 ## Project page source previews
 
 - `marios-source-desktop.webp` and `marios-source-mobile.webp`: actual screenshots of the existing Mario’s / index.html project source at 1440×900 and 390×844. Captured after its original loading overlay closes; no source edits or form submission.
-- `nino-source-desktop.webp` and `nino-source-mobile.webp`: actual screenshots of the existing NinoSite / index.html project source at 1440×900 and 390×844. These show the layout present in those source files, which differs from the older saved NinoSite.png archive image.
 
 These captures demonstrate the archived implementations. They do not claim a currently live client relationship, current business details, or business performance results.
+
+## Nino live website previews
+
+- `nino-live-desktop.webp` and `nino-live-mobile.webp`: screenshots captured from https://ninobattaglia.com/ at 1440×900 and 390×844 on October 16, 2026 (America/Los_Angeles). These replace the newer local-source previews on the Nino project page so it matches the live teal design. The original Nino project files were not modified.
