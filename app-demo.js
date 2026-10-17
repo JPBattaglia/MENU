@@ -11,9 +11,9 @@
   let updateIndex = 0;
   const initialUpdate = document.getElementById('appDemoUpdates').firstElementChild.cloneNode(true);
   const announcements = [
-    ['A table worth sharing.', 'A fictional invitation to discover a seasonal menu.'],
-    ['Something new for the weekend.', 'A sample update about a new dish or a special opening time.'],
-    ['Your next visit, made simple.', 'An example of news customers could read inside an app.']
+    ['A table worth sharing', 'A fictional invitation to discover a seasonal menu.'],
+    ['Something new for the weekend', 'A sample update about a new dish or a special opening time.'],
+    ['Your next visit, made simple', 'An example of news customers could read inside an app.']
   ];
   function announce(text) { status.textContent = text; }
   function selectTab(tab, focus = false) {
