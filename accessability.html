@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>MENU-MADE — Accessibility</title>
+  <title>Our Website Accessibility &amp; Controls — MENU-MADE</title>
   <meta name="description" content="Accessibility statement and service options (Menu-Made toolkit or accessiBe integration).">
 
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -14,12 +14,29 @@
   <link rel="shortcut icon" href="MENU=.png">
   <link rel="apple-touch-icon" href="MENU=.png">
 
-  <link rel="stylesheet" href="main.css?v=20261016-order-spacing-v2">
+  <link rel="stylesheet" href="main.css?v=20261016-complete-upgrade">
+<script src="site-nav.js?v=20261016-accessible-navigation" defer></script>
+<script src="funnel.js?v=20261016-service-measurement" defer></script>
+<link rel="canonical" href="https://menu-made.com/accessability">
+<meta property="og:type" content="website">
+<meta property="og:locale" content="en_US">
+<meta property="og:site_name" content="MENU-MADE">
+<meta property="og:title" content="Our Website Accessibility &amp; Controls — MENU-MADE">
+<meta property="og:description" content="Accessibility statement and service options (Menu-Made toolkit or accessiBe integration).">
+<meta property="og:url" content="https://menu-made.com/accessability">
+<meta property="og:image" content="https://menu-made.com/assets/social-preview.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="MENU-MADE — Websites, menus, and digital presence">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Our Website Accessibility &amp; Controls — MENU-MADE">
+<meta name="twitter:description" content="Accessibility statement and service options (Menu-Made toolkit or accessiBe integration).">
+<meta name="twitter:image" content="https://menu-made.com/assets/social-preview.png">
 </head>
 
 <body class="accessibility-page">
 
-<a class="skip-link" href="#main">Skip to content</a>
+<a class="site-skip" href="#main">Skip to content</a>
 
 <header class="header">
   <div class="container header-inner">
@@ -34,13 +51,9 @@
       </a>
     </div>
 
-    <input class="nav-toggle" type="checkbox" id="navToggle" aria-label="Toggle menu">
+    <button class="gear-burger" type="button" aria-expanded="false" aria-controls="primaryNav" aria-label="Open navigation menu" hidden><img src="MENU=.png" alt="" aria-hidden="true"></button>
 
-    <label class="gear-burger" for="navToggle" aria-label="Open menu" role="button">
-      <img src="MENU=.png" alt="Menu">
-    </label>
-
-    <nav class="nav" aria-label="Primary">
+    <nav class="nav" id="primaryNav" aria-label="Primary">
       <a href="index.html">Home</a>
       <a href="services.html">Services</a>
       <a href="portfolio.html">Our Work</a>
@@ -52,7 +65,7 @@
   </div>
 </header>
 
-<main id="main">
+<main id="main" tabindex="-1">
 
   <section class="hero" aria-label="Accessibility">
     <div class="container hero-split">
@@ -184,7 +197,7 @@
 
 <footer class="footer">
   <div class="container footer-inner">
-    <div class="footer-copy">© 2019 MENU-MADE</div>
+    <div class="footer-copy">© 2019–2026 MENU-MADE</div>
 
     <a class="footer-logo" href="index.html" aria-label="Home">
       <img src="MENU1.png" alt="MENU-MADE">
@@ -202,8 +215,10 @@
       </a>
     </div>
   </div>
+
+  <nav class="footer-links" aria-label="More from MENU-MADE"><a href="website-design.html">Website Design</a><a href="google-visibility.html">Google Visibility</a><a href="accessibility-services.html">Accessibility Services</a><a href="portfolio.html">Our Work</a><a href="about.html">Meet JP &amp; Nino</a><a href="services.html#after-launch">After Launch</a></nav>
 </footer>
-<script src="mm-a11y-widget.js" defer></script>
+<script src="mm-a11y-widget.js?v=20261016-smooth-panel" defer></script>
 
 <!-- ONLY ADDITION: PARALLAX -->
 <script src="section-parallax.js?v=20261015-unified" defer></script>

@@ -13,10 +13,13 @@
   <link rel="shortcut icon" href="MENU=.png">
   <link rel="apple-touch-icon" href="MENU=.png">
 
-  <link rel="stylesheet" href="main.css?v=20261016-order-spacing-v2">
+  <link rel="stylesheet" href="main.css?v=20261016-complete-upgrade">
+<script src="site-nav.js?v=20261016-accessible-navigation" defer></script>
+<meta name="robots" content="noindex,follow">
 </head>
 
 <body>
+<a class="site-skip" href="#main-content">Skip to content</a>
 
 <header class="header">
   <div class="container header-inner">
@@ -30,14 +33,12 @@
       </a>
     </div>
 
-    <input class="nav-toggle" type="checkbox" id="navToggle">
-    <label class="gear-burger" for="navToggle">
-      <img src="MENU=.png" alt="Menu">
-    </label>
+    <button class="gear-burger" type="button" aria-expanded="false" aria-controls="primaryNav" aria-label="Open navigation menu" hidden><img src="MENU=.png" alt="" aria-hidden="true"></button>
 
-    <nav class="nav">
+    <nav class="nav" id="primaryNav" aria-label="Primary">
       <a href="index.html">Home</a>
       <a href="services.html">Services</a>
+      <a href="portfolio.html">Our Work</a>
       <a href="about.html">About</a>
       <a href="accessability.html">Access</a>
       <a class="nav-cta" href="contact.html">Start</a>
@@ -46,7 +47,7 @@
   </div>
 </header>
 
-<main>
+<main id="main-content" tabindex="-1">
 
 <section class="hero">
   <div class="container">
@@ -68,7 +69,7 @@
 
 <footer class="footer">
   <div class="container footer-inner">
-    <div class="footer-copy">© 2019 MENU-MADE</div>
+    <div class="footer-copy">© 2019–2026 MENU-MADE</div>
 
     <a class="footer-logo" href="index.html">
       <img src="MENU1.png" alt="MENU-MADE">
@@ -87,7 +88,7 @@
     </div>
   </div>
 </footer>
-<script src="mm-a11y-widget.js" defer></script>
+<script src="mm-a11y-widget.js?v=20261016-smooth-panel" defer></script>
 
 </body>
 </html>

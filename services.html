@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>MENU-MADE — Services</title>
+  <title>Website, Menu &amp; Digital Services — MENU-MADE</title>
   <meta name="description" content="Custom website design, website improvements, mobile apps, Google visibility, accessibility services, and online menus for independent businesses and personal brands.">
 
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -14,11 +14,28 @@
   <link rel="shortcut icon" href="MENU=.png">
   <link rel="apple-touch-icon" href="MENU=.png">
 
-  <link rel="stylesheet" href="main.css?v=20261016-order-spacing-v2">
-<script src="funnel.js?v=20261015-start-choice" defer></script>
+  <link rel="stylesheet" href="main.css?v=20261016-complete-upgrade">
+<script src="funnel.js?v=20261016-service-measurement" defer></script>
+<script src="site-nav.js?v=20261016-accessible-navigation" defer></script>
+<link rel="canonical" href="https://menu-made.com/services">
+<meta property="og:type" content="website">
+<meta property="og:locale" content="en_US">
+<meta property="og:site_name" content="MENU-MADE">
+<meta property="og:title" content="Website, Menu &amp; Digital Services — MENU-MADE">
+<meta property="og:description" content="Custom website design, website improvements, mobile apps, Google visibility, accessibility services, and online menus for independent businesses and personal brands.">
+<meta property="og:url" content="https://menu-made.com/services">
+<meta property="og:image" content="https://menu-made.com/assets/social-preview.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="MENU-MADE — Websites, menus, and digital presence">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Website, Menu &amp; Digital Services — MENU-MADE">
+<meta name="twitter:description" content="Custom website design, website improvements, mobile apps, Google visibility, accessibility services, and online menus for independent businesses and personal brands.">
+<meta name="twitter:image" content="https://menu-made.com/assets/social-preview.png">
 </head>
 
 <body class="services-page">
+<a class="site-skip" href="#main-content">Skip to content</a>
 
 <header class="header">
   <div class="container header-inner">
@@ -33,13 +50,9 @@
       </a>
     </div>
 
-    <input class="nav-toggle" type="checkbox" id="navToggle" aria-label="Toggle menu">
+    <button class="gear-burger" type="button" aria-expanded="false" aria-controls="primaryNav" aria-label="Open navigation menu" hidden><img src="MENU=.png" alt="" aria-hidden="true"></button>
 
-    <label class="gear-burger" for="navToggle" aria-label="Open menu" role="button">
-      <img src="MENU=.png" alt="Menu">
-    </label>
-
-    <nav class="nav" aria-label="Primary">
+    <nav class="nav" id="primaryNav" aria-label="Primary">
       <a href="index.html">Home</a>
       <a class="active" href="services.html">Services</a>
       <a href="portfolio.html">Our Work</a>
@@ -51,7 +64,7 @@
   </div>
 </header>
 
-<main>
+<main id="main-content" tabindex="-1">
 
 <section class="hero services-hero">
   <div class="container services-hero-layout">
@@ -87,6 +100,7 @@
       <article class="service-card" id="websites">
         <h3>Website Design &amp; Custom Builds</h3>
         <p>A new website or a broader redesign built around your business, content, and customer needs. We agree on pages, features, materials, delivery, and price before the work begins.</p>
+        <a class="service-details-link" href="website-design.html">Explore website design →</a>
         <div class="service-bottom">
           <span class="price">Quoted for your project</span>
           <a class="cta-pill" href="contact.html?service=website#inquiry">Discuss Your Website</a>
@@ -105,6 +119,7 @@
       <article class="service-card" id="google-visibility">
         <h3>Google Visibility</h3>
         <p>Google Business Profile creation or improvements to business details, categories, and menu/website links. Website SEO changes are scoped separately. Google placement is not guaranteed.</p>
+        <a class="service-details-link" href="google-visibility.html">Explore Google Visibility →</a>
         <div class="service-bottom">
           <span class="price">$149 one-time</span>
           <a class="cta-pill" href="contact.html?service=google">Update My Google Profile</a>
@@ -114,6 +129,7 @@
       <article class="service-card" id="accessibility">
         <h3>Accessibility Services</h3>
         <p>Our site-wide accessibility widget and targeted improvements to keyboard navigation, contrast, labels, and forms. A year of the Accessibility Upgrade is paid upfront. This service does not guarantee legal compliance.</p>
+        <a class="service-details-link" href="accessibility-services.html">Explore accessibility services →</a>
         <div class="service-bottom">
           <span class="price">$250 for one year</span>
           <a class="cta-pill" href="contact.html?service=accessibility">Improve Accessibility</a>
@@ -178,7 +194,7 @@
 
       <div class="premium-bottom">
         <span class="price big">$999</span>
-        <a class="btn primary app-purchase-link" href="contact.html?service=app">Discuss My App</a>
+        <div class="hero-actions"><a class="btn primary app-purchase-link" href="contact.html?service=app">Discuss My App</a><a class="btn ghost" href="app-demo.html">Try the App Walkthrough</a></div>
       </div>
     </div>
 
@@ -203,11 +219,20 @@
   </div>
 </section>
 
+<section class="section after-launch" id="after-launch" aria-labelledby="after-launch-title"><div class="container">
+<header class="section-head"><h2 id="after-launch-title">Plan for life after launch.</h2><p>Before you approve the work, confirm these details in your written project scope.</p></header>
+<div class="after-launch-grid">
+<article class="after-launch-card"><h3>Your accounts and access</h3><p>Agree who manages the domain, hosting, and connected services, which accounts are used, and how access will be handed over.</p></article>
+<article class="after-launch-card"><h3>Your content and deliverables</h3><p>Confirm the files, content, and agreed rights included in your project, along with any third-party licenses or provider requirements.</p></article>
+<article class="after-launch-card"><h3>Hosting and renewals</h3><p>Menu hosting is $15/year after the first year, arranged separately with no automatic subscription. Website, domain, and app provider costs depend on the agreed scope.</p></article>
+<article class="after-launch-card"><h3>Future edits and support</h3><p>The menu package includes two revisions. Confirm how later changes, ongoing support, and additional features will be requested and quoted before work begins.</p></article>
+</div><p class="conversion-help"><a href="contact.html#inquiry">Ask about handover and ongoing costs</a>.</p>
+</div></section>
 </main>
 
 <footer class="footer">
   <div class="container footer-inner">
-    <div class="footer-copy">© 2019 MENU-MADE</div>
+    <div class="footer-copy">© 2019–2026 MENU-MADE</div>
 
     <a class="footer-logo" href="index.html" aria-label="Home">
       <img src="MENU1.png" alt="MENU-MADE">
@@ -225,8 +250,10 @@
       </a>
     </div>
   </div>
+
+  <nav class="footer-links" aria-label="More from MENU-MADE"><a href="website-design.html">Website Design</a><a href="google-visibility.html">Google Visibility</a><a href="accessibility-services.html">Accessibility Services</a><a href="portfolio.html">Our Work</a><a href="about.html">Meet JP &amp; Nino</a><a href="services.html#after-launch">After Launch</a></nav>
 </footer>
-<script src="mm-a11y-widget.js" defer></script>
+<script src="mm-a11y-widget.js?v=20261016-smooth-panel" defer></script>
 
 <script src="section-parallax.js?v=20261015-unified" defer></script>
 

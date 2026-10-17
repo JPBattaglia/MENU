@@ -5,10 +5,15 @@
   if (!['menu-made.com', 'www.menu-made.com'].includes(windowHost)) return;
   const query = new URLSearchParams(location.search);
   if (navigator.globalPrivacyControl || navigator.doNotTrack === '1' || query.get('mm_measurement') === 'off') return;
-  const paths = new Set(['/', '/index', '/index.html', '/services', '/services.html', '/contact', '/contact.html', '/about', '/about.html', '/accessability', '/accessability.html', '/portfolio', '/portfolio.html', '/sample-menu', '/sample-menu.html', '/checkoutsuccess', '/checkoutsuccess.html']);
+  const pageNames = ['index', 'services', 'contact', 'about', 'accessability', 'portfolio', 'sample-menu', 'checkoutsuccess', 'website-design', 'google-visibility', 'accessibility-services', 'work-pinecrest', 'work-nino', 'work-marios', 'app-demo'];
+  const paths = new Set(['/', ...pageNames.flatMap(name => ['/' + name, '/' + name + '.html'])]);
   const path = paths.has(location.pathname) ? location.pathname : '/other';
   const token = value => /^[a-z0-9_-]{1,64}$/i.test(value || '') ? value.toLowerCase() : null;
-  const offers = { online_menu_qr: 'offer_online_menu_qr', conversion_fix: 'offer_conversion_fix', google_visibility: 'offer_google_visibility', accessibility_upgrade: 'offer_accessibility_upgrade', menu: 'offer_online_menu_qr', conversion: 'offer_conversion_fix', google: 'offer_google_visibility', accessibility: 'offer_accessibility_upgrade' };
+  const services = { online_menu_qr: 'online_menu_qr', menu: 'online_menu_qr', 'online-menu-qr': 'online_menu_qr', conversion_fix: 'conversion_fix', conversion: 'conversion_fix', google_visibility: 'google_visibility', google: 'google_visibility', accessibility_upgrade: 'accessibility_upgrade', accessibility: 'accessibility_upgrade', website: 'website', app: 'app', other: 'other' };
+  const serviceSlug = value => typeof value === 'string' && Object.hasOwn(services, value) ? services[value] : undefined;
+  const offers = { online_menu_qr: 'offer_online_menu_qr', conversion_fix: 'offer_conversion_fix', google_visibility: 'offer_google_visibility', accessibility_upgrade: 'offer_accessibility_upgrade' };
+  const pageServices = { 'website-design': 'website', 'google-visibility': 'google_visibility', 'accessibility-services': 'accessibility_upgrade' };
+  const caseServices = { 'work-pinecrest': 'online_menu_qr', 'work-nino': 'website', 'work-marios': 'website' };
   let referrer = null;
   try { const u = new URL(document.referrer); if (!['menu-made.com', 'www.menu-made.com'].includes(u.hostname)) referrer = u.hostname.slice(0, 100); } catch {}
   let session;
@@ -25,15 +30,17 @@
   try { sessionStorage.setItem('mm_funnel_session', JSON.stringify(session)); } catch {}
   const tracking = () => ({ visitor_id: session.id, session_id: session.id, source: session.source,
     medium: session.medium, campaign: session.campaign, referrer: session.referrer, landing_path: session.landing_path });
-  const stages = new Set(['sample_menu_view', 'start_clicked', 'service_selected', 'details_opened', 'checkout_attempt', 'checkout_error', 'inquiry_attempt', 'inquiry_received', 'booking_link_clicked', 'onboarding_opened', 'onboarding_completed', 'service_link_clicked']);
+  const stages = new Set(['sample_menu_view', 'start_clicked', 'service_selected', 'details_opened', 'checkout_attempt', 'checkout_error', 'inquiry_attempt', 'inquiry_received', 'quote_started', 'quote_received', 'booking_link_clicked', 'onboarding_opened', 'onboarding_completed', 'service_link_clicked', 'case_study_view', 'demo_view']);
   const seen = new Set();
   function send(eventType, stage, service) {
-    const key = eventType + ':' + stage + ':' + (service || '');
+    const selectedService = serviceSlug(service);
+    const key = eventType + ':' + stage + ':' + (selectedService || '');
     if (seen.has(key)) return;
     seen.add(key);
     const payload = { ...tracking(), event_type: eventType,
-      metadata: { instrumentation: 'mm_funnel_v1', stage, page: path, is_test: session.test } };
-    if (offers[service]) payload.offer_id = offers[service];
+      metadata: { instrumentation: 'mm_funnel_v1', stage, page: path, is_test: session.test,
+        ...(selectedService ? { service: selectedService } : {}) } };
+    if (selectedService && Object.hasOwn(offers, selectedService)) payload.offer_id = offers[selectedService];
     // Best-effort measurement must never block a form, upload, or navigation.
     try { Promise.resolve(fetch('/api/funnel-event', { method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload), keepalive: true })).catch(() => {}); } catch {}
@@ -42,6 +49,10 @@
   window.MenuMadeFunnel = api;
   send('SITE_VISIT', 'page_view');
   if (/^\/sample-menu(?:\.html)?$/.test(path)) api.track('sample_menu_view', 'online_menu_qr');
+  const pageName = path.slice(1).replace(/\.html$/, '');
+  if (Object.hasOwn(pageServices, pageName)) send('OFFER_VIEW', 'offer_view', pageServices[pageName]);
+  if (Object.hasOwn(caseServices, pageName)) api.track('case_study_view', caseServices[pageName]);
+  if (pageName === 'app-demo') api.track('demo_view', 'app');
   document.addEventListener('click', event => {
     const menuControl = event.target.closest?.('[data-start-menu]');
     let isStart = Boolean(menuControl || event.target.closest?.('[data-funnel-start]'));
@@ -51,10 +62,12 @@
       const u = new URL(a.href, location.href);
       if (u.hostname === 'www.everyexpert.com' || u.hostname === 'everyexpert.com') api.track('booking_link_clicked');
       else if (u.origin === location.origin && /^\/contact(?:\.html)?$/.test(u.pathname)) {
-        const service = u.searchParams.get('service');
-        if (offers[service]) api.track('service_link_clicked', service);
-        const menuLink = offers[service] === 'offer_online_menu_qr';
-        const defaultStart = !service && ['', '#checkout', '#details'].includes(u.hash);
+        const rawService = u.searchParams.get('service');
+        const service = serviceSlug(rawService);
+        if (service) api.track('service_link_clicked', service);
+        if (service === 'website' || service === 'app') api.track('quote_started', service);
+        const menuLink = service === 'online_menu_qr';
+        const defaultStart = !rawService && ['', '#checkout', '#details'].includes(u.hash);
         if (u.hash === '#inquiry') isStart = false;
         else if (menuLink || defaultStart) {
           isStart = true;
@@ -68,8 +81,8 @@
     const observer = new IntersectionObserver(entries => {
       for (const entry of entries) if (entry.isIntersecting) {
         const card = entry.target;
-        const service = card.dataset.sku || (() => { try { return new URL(card.querySelector('a[href]')?.href).searchParams.get('service'); } catch { return null; } })();
-        if (offers[service]) send('OFFER_VIEW', 'offer_view', service);
+        const service = serviceSlug(card.dataset.sku || (() => { try { return new URL(card.querySelector('a[href]')?.href).searchParams.get('service'); } catch { return null; } })());
+        if (service) send('OFFER_VIEW', 'offer_view', service);
         observer.unobserve(card);
       }
     }, { threshold: 0.5 });
