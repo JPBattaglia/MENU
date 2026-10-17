@@ -125,7 +125,7 @@ const range = (rows, field, digits = 0) => {
     const newIcon = fs.statSync(path.join(root, 'assets/accessibility-launcher-192.webp')).size;
     const comparisonSection = '\n## Before/after widget optimization\n\nBefore: ' + previous.started + ' through ' + previous.finished
       + '. After: ' + started + ' through ' + report.finished + '. Each dataset has twelve runs with the same settings. The widget launcher changed from a 900×891 PNG (' + oldIcon.toLocaleString('en-US')
-      + ' bytes) to a 192×190 transparent lossless WebP (' + newIcon.toLocaleString('en-US') + ' bytes), a' + number((1-newIcon/oldIcon)*100,2)
+      + ' bytes) to a 192×190 transparent lossless WebP (' + newIcon.toLocaleString('en-US') + ' bytes), a ' + number((1-newIcon/oldIcon)*100,2)
       + '% asset-byte reduction. The original artwork is preserved. Widget panel animation/outline styles and cache versions were also updated between datasets; this is not an isolated single-variable experiment.\n\n'
       + '| Page | FCP before / after (ms) | Observed LCP before / after (ms) | Initial CLS before / after | Load before / after (ms) | Transfer before / after (KiB) | Transfer reduction |\n'
       + '| --- | ---: | ---: | ---: | ---: | ---: | ---: |\n' + comparison + '\n\n'
