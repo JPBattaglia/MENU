@@ -4,13 +4,13 @@ import vm from 'node:vm';
 import { readFile } from 'node:fs/promises';
 import { webcrypto } from 'node:crypto';
 const script = await readFile(new URL('./funnel.js', import.meta.url), 'utf8');
-function page({ storage = new Map(), search = '', pathname = '/contact', privacy = false, dnt = false, fail = false, referrer = '', hostname = 'menu-made.com' } = {}) {
+function page({ storage = new Map(), search = '', pathname = '/contact', privacy = false, dnt = false, fail = false, reject = false, referrer = '', hostname = 'menu-made.com' } = {}) {
   const sent = [], listeners = {}, window = {};
   const context = { window, location: { hostname, origin: 'https://' + hostname, pathname, search, href: 'https://' + hostname + pathname + search },
     navigator: { globalPrivacyControl: privacy, doNotTrack: dnt ? '1' : undefined }, URL, URLSearchParams, Date, crypto: webcrypto,
     sessionStorage: { getItem: k => storage.get(k), setItem: (k, v) => storage.set(k, v) },
     document: { referrer, addEventListener: (k, fn) => listeners[k] = fn, querySelectorAll: () => [] },
-    fetch: (_url, options) => { if (fail) throw new Error('offline'); sent.push(JSON.parse(options.body)); return Promise.resolve({ ok: true }); } };
+    fetch: (_url, options) => { if (fail) throw new Error('offline'); if (reject) return Promise.reject(new Error('offline')); sent.push(JSON.parse(options.body)); return Promise.resolve({ ok: true }); } };
   vm.runInNewContext(script, context);
   const click = (href, start = '') => listeners.click?.({ target: { closest: selector => {
     if (selector === 'a[href]') return href ? { href } : null;
@@ -107,4 +107,70 @@ test('inquiries, other services, and unrelated or external links are not menu st
   for (const href of ['https://menu-made.com/contact.html#inquiry', 'https://menu-made.com/contact.html?service=menu#inquiry', 'https://menu-made.com/contact?service=conversion', 'https://menu-made.com/contact?service=app', 'https://example.com/contact?service=menu', 'https://menu-made.com/sample-menu.html']) p.click(href);
   assert.equal(p.sent.some(event => event.metadata.stage === 'start_clicked'), false);
   assert.equal(p.sent.some(event => event.metadata.stage === 'service_link_clicked' && event.offer_id === 'offer_conversion_fix'), true);
+});
+test('website and app inquiry links record quote interest without inventing paid offers', () => {
+  const p = page({ pathname: '/services.html' });
+  for (const service of ['website', 'app']) {
+    p.click('https://menu-made.com/contact.html?service=' + service + '#inquiry');
+    p.api.track('inquiry_attempt', service);
+    p.api.track('inquiry_received', service);
+    p.api.track('quote_received', service);
+    p.api.track('quote_received', service);
+    const events = p.sent.filter(event => event.metadata.service === service);
+    assert.equal(events.filter(event => event.metadata.stage === 'quote_started').length, 1);
+    assert.equal(events.filter(event => event.metadata.stage === 'inquiry_received').length, 1);
+    assert.equal(events.filter(event => event.metadata.stage === 'quote_received').length, 1);
+    assert.equal(events.every(event => event.event_type === 'CTA_CLICK' && !Object.hasOwn(event, 'offer_id')), true);
+  }
+});
+test('service metadata accepts only known slugs and preserves the four existing paid offer IDs', () => {
+  const p = page();
+  const paid = ['online_menu_qr', 'conversion_fix', 'google_visibility', 'accessibility_upgrade'];
+  for (const service of paid) {
+    p.api.track('inquiry_received', service);
+    const event = p.sent.find(event => event.metadata.service === service);
+    assert.equal(event.offer_id, 'offer_' + service);
+  }
+  for (const bad of ['private@example.com', 'https://example.com/private-menu.pdf', '__proto__', 'constructor', { name: 'Private Person' }]) p.api.track('quote_received', bad);
+  const unknown = p.sent.filter(event => event.metadata.stage === 'quote_received');
+  assert.equal(unknown.length, 1);
+  assert.equal(Object.hasOwn(unknown[0].metadata, 'service'), false);
+  assert.equal(Object.hasOwn(unknown[0], 'offer_id'), false);
+  assert.equal(JSON.stringify(p.sent).includes('private'), false);
+  assert.equal(JSON.stringify(p.sent).includes('Private Person'), false);
+});
+test('focused service and case/demo routes keep approved paths and send the right interest signal', () => {
+  const routes = [
+    ['website-design', 'OFFER_VIEW', 'offer_view', 'website'],
+    ['google-visibility', 'OFFER_VIEW', 'offer_view', 'google_visibility'],
+    ['accessibility-services', 'OFFER_VIEW', 'offer_view', 'accessibility_upgrade'],
+    ['work-marios', 'CTA_CLICK', 'case_study_view', 'website'],
+    ['work-nino', 'CTA_CLICK', 'case_study_view', 'website'],
+    ['work-pinecrest', 'CTA_CLICK', 'case_study_view', 'online_menu_qr'],
+    ['app-demo', 'CTA_CLICK', 'demo_view', 'app']
+  ];
+  for (const [name, type, stage, service] of routes) for (const suffix of ['', '.html']) {
+    const pathname = '/' + name + suffix;
+    const p = page({ pathname, search: '?email=private@example.com&token=secret' });
+    assert.equal(p.sent[0].metadata.page, pathname);
+    assert.equal(p.sent[1].event_type, type);
+    assert.equal(p.sent[1].metadata.stage, stage);
+    assert.equal(p.sent[1].metadata.service, service);
+    assert.equal(JSON.stringify(p.sent).includes('private'), false);
+    assert.equal(JSON.stringify(p.sent).includes('secret'), false);
+  }
+  assert.equal(page({ pathname: '/private-customer-name.html' }).sent[0].metadata.page, '/other');
+});
+test('quote completion is private, opt-out aware, nonblocking and never a browser purchase', async () => {
+  for (const options of [{ privacy: true }, { dnt: true }, { search: '?mm_measurement=off' }]) {
+    const p = page(options);
+    p.api?.track('quote_received', 'website');
+    assert.equal(p.sent.length, 0);
+  }
+  assert.doesNotThrow(() => page({ fail: true }).api.track('quote_received', 'website'));
+  assert.doesNotThrow(() => page({ reject: true }).api.track('quote_received', 'app'));
+  await new Promise(resolve => setImmediate(resolve));
+  const p = page();
+  p.api.track('PURCHASE_COMPLETED', 'website');
+  assert.equal(p.sent.some(event => event.event_type === 'PURCHASE_COMPLETED'), false);
 });

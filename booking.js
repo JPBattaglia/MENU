@@ -18,18 +18,59 @@
   let requestId = '';
   let requestPayload = '';
   let received = false;
+  const receipts = [];
+  let previousReceiptNotice = null;
+  const serviceChoices = {
+    'Online Menu + QR': { slug: 'online_menu_qr', backend: 'Online Menu + QR' },
+    'Conversion Fix': { slug: 'conversion_fix', backend: 'Conversion Fix' },
+    'Google Visibility': { slug: 'google_visibility', backend: 'Google Visibility' },
+    'Accessibility Upgrade': { slug: 'accessibility_upgrade', backend: 'Accessibility Upgrade' },
+    website: { slug: 'website', backend: 'Other project', title: 'Website Design & Custom Builds' },
+    app: { slug: 'app', backend: 'Other project', title: 'Mobile app project' },
+    'Other project': { slug: 'other', backend: 'Other project' }
+  };
+  form.addEventListener('menumade:quote-intent', event => {
+    const kind = event.detail?.service;
+    if (!['website', 'app'].includes(kind)) return;
+    if (submitting) { event.preventDefault(); return; }
+    if (!received) return;
+    const lastReceipt = receipts.at(-1);
+    if (lastReceipt?.service === kind) {
+      event.preventDefault();
+      showStatus(`Your ${serviceChoices[kind].title} inquiry was already received. Reference: ${lastReceipt.reference}. We’ll reply with the next steps.`);
+      return;
+    }
+    // Selecting another quote is explicit new-project intent. Keep the prior
+    // receipt visible, while a new submission gets its own idempotency key.
+    received = false;
+    requestId = '';
+    requestPayload = '';
+    form.querySelectorAll('input, select, textarea, button').forEach(control => { control.disabled = false; });
+    submit.textContent = 'Send inquiry';
+    if (!previousReceiptNotice) {
+      previousReceiptNotice = document.createElement('p');
+      previousReceiptNotice.className = 'mini';
+      previousReceiptNotice.setAttribute('role', 'status');
+      form.prepend(previousReceiptNotice);
+    }
+    previousReceiptNotice.textContent = 'Previous inquiries received: ' + receipts.map(receipt => receipt.reference).join(', ') + '. This new inquiry will receive a separate reference.';
+    toast.hidden = true;
+  });
   form.addEventListener('submit', async event => {
     if (submitting || received) { event.preventDefault(); return; }
     event.preventDefault();
     if (!form.reportValidity()) return;
     const data = new FormData(form);
+    const rawService = data.get('service');
+    if (!Object.hasOwn(serviceChoices, rawService)) { showStatus('Please choose a service.'); return; }
+    const serviceChoice = serviceChoices[rawService];
     if (!data.get('name').trim()) {
       showStatus('Please enter your name.');
       document.getElementById('bookingName').focus();
       return;
     }
     const payload = {
-      type: 'inquiry', service: data.get('service'),
+      type: 'inquiry', service: serviceChoice.backend,
       name: data.get('name').trim(), email: data.get('email').trim(),
       business: data.get('business').trim(), notes: data.get('notes').trim(),
       website: data.get('website') || ''
@@ -39,19 +80,12 @@
       document.getElementById('bookingNotes').focus();
       return;
     }
+    if (serviceChoice.title) payload.notes = (`Project: ${serviceChoice.title}\n` + payload.notes).slice(0, 1200);
     const file = document.getElementById('bookingDocument').files[0];
-    let fileFingerprint;
-    submitting = true;
-    try { fileFingerprint = await window.MenuMadeDocuments.fingerprint(file); }
-    catch (error) { submitting = false; showStatus(error.message); return; }
-    // Include file contents when deciding whether a retry is the same request.
-    const serialized = JSON.stringify(payload) + fileFingerprint;
-    if (serialized !== requestPayload) {
-      requestId = crypto.randomUUID();
-      requestPayload = serialized;
-    }
     submitting = true;
     const controls = [...form.querySelectorAll('input, select, textarea, button')];
+    const outsideControls = [...document.querySelectorAll('[data-quote-service], .js-add')].map(control => [control, control.disabled]);
+    outsideControls.forEach(([control]) => { control.disabled = true; });
     controls.forEach(control => { control.disabled = true; });
     form.setAttribute('aria-busy', 'true');
     submit.textContent = 'Sending…';
@@ -59,10 +93,17 @@
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 60000);
     try {
-      window.MenuMadeFunnel?.track("inquiry_attempt");
+      const fileFingerprint = await window.MenuMadeDocuments.fingerprint(file);
+      // Include file contents when deciding whether a retry is the same request.
+      const serialized = JSON.stringify(payload) + fileFingerprint;
+      if (serialized !== requestPayload) { requestId = crypto.randomUUID(); requestPayload = serialized; }
+      if (serviceChoice.title) window.MenuMadeFunnel?.track('quote_started', serviceChoice.slug);
+      window.MenuMadeFunnel?.track('inquiry_attempt', serviceChoice.slug);
       const result = await window.MenuMadeDocuments.send({ ...payload, requestId }, file, controller.signal);
       received = true;
-      window.MenuMadeFunnel?.track("inquiry_received");
+      receipts.push({ service: serviceChoice.slug, reference: result.requestId });
+      window.MenuMadeFunnel?.track('inquiry_received', serviceChoice.slug);
+      if (serviceChoice.title) window.MenuMadeFunnel?.track('quote_received', serviceChoice.slug);
       submit.textContent = 'Inquiry received';
       showStatus(`Your project inquiry was received. Reference: ${result.requestId}. We’ll reply with the next steps.`);
     } catch (error) {
@@ -75,6 +116,7 @@
       clearTimeout(timeout);
       submitting = false;
       form.removeAttribute('aria-busy');
+      outsideControls.forEach(([control, disabled]) => { control.disabled = disabled; });
       if (!received) controls.forEach(control => { control.disabled = false; });
     }
   });

@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630" role="img" aria-labelledby="title desc">
+<title id="title">MENU-MADE — Your business. Better online.</title><desc id="desc">Website design, online menus, Google visibility, accessibility, and mobile apps. A teal branded graphic with responsive website illustrations.</desc>
+<defs><linearGradient id="bg" x2="1" y2="1"><stop stop-color="#003344"/><stop offset="1" stop-color="#075b60"/></linearGradient><linearGradient id="cyan" x2="1" y2="1"><stop stop-color="#00d6e6"/><stop offset="1" stop-color="#5ff2ff"/></linearGradient></defs>
+<rect width="1200" height="630" fill="url(#bg)"/>
+<circle cx="1115" cy="55" r="280" fill="#5ff2ff" opacity=".05"/><circle cx="1100" cy="670" r="380" fill="#5ff2ff" opacity=".06"/>
+<path d="M64 146H1136" stroke="#5ff2ff" stroke-opacity=".3"/>
+<text x="64" y="99" fill="#5ff2ff" font-family="Arial,Helvetica,sans-serif" font-size="36" font-weight="700" letter-spacing="3">MENU-MADE</text>
+<text x="64" y="231" fill="#d9f3f6" font-family="Arial,Helvetica,sans-serif" font-size="19" letter-spacing="3">DIGITAL SERVICES FOR YOUR BUSINESS</text>
+<g fill="#fff" font-family="Arial,Helvetica,sans-serif" font-size="66" font-weight="700" letter-spacing="-2"><text x="61" y="324">Your business.</text><text x="61" y="403">Better online.</text></g>
+<text x="64" y="470" fill="#d9f3f6" font-family="Arial,Helvetica,sans-serif" font-size="21">Websites · Menus · Visibility</text>
+<text x="64" y="506" fill="#d9f3f6" font-family="Arial,Helvetica,sans-serif" font-size="21">Accessibility · Mobile apps</text>
+<rect x="687" y="215" width="441" height="283" rx="19" fill="#092932" stroke="#5ff2ff" stroke-width="2"/>
+<rect x="687" y="215" width="441" height="37" rx="19" fill="#0b414a"/>
+<path d="M687 251H1128" stroke="#5ff2ff" stroke-opacity=".3"/>
+<g fill="#5ff2ff"><circle cx="708" cy="234" r="4"/><circle cx="722" cy="234" r="4"/><circle cx="736" cy="234" r="4"/></g>
+<text x="714" y="294" fill="#5ff2ff" font-family="Arial,Helvetica,sans-serif" font-size="12" font-weight="700" letter-spacing="1">YOUR BRAND</text>
+<text x="713" y="336" fill="#fff" font-family="Arial,Helvetica,sans-serif" font-size="28" font-weight="700">A clearer next step.</text>
+<rect x="715" y="357" width="199" height="8" rx="4" fill="#d9f3f6" opacity=".5"/><rect x="715" y="377" width="169" height="8" rx="4" fill="#d9f3f6" opacity=".3"/>
+<rect x="714" y="408" width="136" height="38" rx="10" fill="url(#cyan)"/><text x="735" y="432" fill="#003344" font-family="Arial,Helvetica,sans-serif" font-size="12" font-weight="700">LET’S CONNECT</text>
+<rect x="952" y="357" width="94" height="67" rx="9" fill="#14717a"/><rect x="1056" y="357" width="45" height="67" rx="9" fill="#0a505b"/>
+<rect x="1010" y="339" width="118" height="220" rx="21" fill="#031e28" stroke="#c6d0d4" stroke-width="3"/><rect x="1020" y="367" width="98" height="168" rx="6" fill="#0c505c"/>
+<rect x="1042" y="350" width="53" height="5" rx="3" fill="#c6d0d4" opacity=".7"/><rect x="1032" y="384" width="73" height="10" rx="4" fill="#5ff2ff"/><rect x="1032" y="410" width="73" height="47" rx="5" fill="#16717b"/><rect x="1032" y="474" width="63" height="6" rx="3" fill="#d9f3f6" opacity=".5"/><rect x="1032" y="491" width="53" height="6" rx="3" fill="#d9f3f6" opacity=".3"/><rect x="1032" y="511" width="73" height="14" rx="5" fill="url(#cyan)"/>
+<text x="64" y="580" fill="#5ff2ff" font-family="Arial,Helvetica,sans-serif" font-size="20" letter-spacing="1">menu-made.com</text>
+</svg>

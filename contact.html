@@ -4,7 +4,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>MENU-MADE — Choose a Service and Start Your Project</title>
+  <title>Choose a Service or Request a Quote — MENU-MADE</title>
   <meta name="description" content="Choose a menu, website conversion, Google visibility, or accessibility service for your business. Review your order and full price before secure checkout.">
 
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -15,12 +15,29 @@
   <link rel="shortcut icon" href="MENU=.png">
   <link rel="apple-touch-icon" href="MENU=.png">
 
-  <link rel="stylesheet" href="main.css?v=20261016-order-spacing-v2">
+  <link rel="stylesheet" href="main.css?v=20261016-complete-upgrade">
 
-<script src="funnel.js?v=20261015-start-choice" defer></script>
+<script src="funnel.js?v=20261016-service-measurement" defer></script>
+<script src="site-nav.js?v=20261016-accessible-navigation" defer></script>
+<link rel="canonical" href="https://menu-made.com/contact">
+<meta property="og:type" content="website">
+<meta property="og:locale" content="en_US">
+<meta property="og:site_name" content="MENU-MADE">
+<meta property="og:title" content="Choose a Service or Request a Quote — MENU-MADE">
+<meta property="og:description" content="Choose a menu, website conversion, Google visibility, or accessibility service for your business. Review your order and full price before secure checkout.">
+<meta property="og:url" content="https://menu-made.com/contact">
+<meta property="og:image" content="https://menu-made.com/assets/social-preview.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="MENU-MADE — Websites, menus, and digital presence">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Choose a Service or Request a Quote — MENU-MADE">
+<meta name="twitter:description" content="Choose a menu, website conversion, Google visibility, or accessibility service for your business. Review your order and full price before secure checkout.">
+<meta name="twitter:image" content="https://menu-made.com/assets/social-preview.png">
 </head>
 
 <body class="start-page">
+<a class="site-skip" href="#main-content">Skip to content</a>
 
 <header class="header">
   <div class="container header-inner">
@@ -35,13 +52,9 @@
       </a>
     </div>
 
-    <input class="nav-toggle" type="checkbox" id="navToggle" aria-label="Toggle menu">
+    <button class="gear-burger" type="button" aria-expanded="false" aria-controls="primaryNav" aria-label="Open navigation menu" hidden><img src="MENU=.png" alt="" aria-hidden="true"></button>
 
-    <label class="gear-burger" for="navToggle" aria-label="Open menu" role="button">
-      <img src="MENU=.png" alt="Menu">
-    </label>
-
-    <nav class="nav" aria-label="Primary">
+    <nav class="nav" id="primaryNav" aria-label="Primary">
       <a href="index.html">Home</a>
       <a href="services.html">Services</a>
       <a href="portfolio.html">Our Work</a>
@@ -53,7 +66,7 @@
   </div>
 </header>
 
-<main>
+<main id="main-content" tabindex="-1">
 
 <section class="hero" aria-label="Start">
   <div class="container hero-grid">
@@ -69,7 +82,7 @@
       <div class="hero-actions">
         <a class="btn primary" href="#optionalServices" data-choose-services>Choose a Service</a>
         <a class="btn ghost" href="#checkout" data-start-menu>Start My Menu</a>
-        <a class="btn ghost" href="#inquiry">Questions before you buy?</a>
+        <a class="btn ghost" href="#inquiry">Questions before checkout?</a>
       </div>
 
       <p class="conversion-help"><a href="sample-menu.html">Try the sample menu</a> · <a href="#inquiry">Ask about your project</a></p>
@@ -86,7 +99,7 @@
         <img src="hospitality-owner.webp" alt="Illustrative restaurant owner preparing a menu at a café counter" class="hero-image hospitality-photo" width="1536" height="1024">
         <div class="media-overlay">
           <strong>Your next step, made simple</strong>
-          <span>Choose your service and review the price before you pay.</span>
+          <span>Choose your service and review the price before you checkout.</span>
         </div>
       </div>
     </div>
@@ -106,6 +119,93 @@
 
     <div class="start-grid">
 
+      <details class="optional-services" id="optionalServices">
+        <summary class="service-picker-summary" id="serviceChoicesSummary">
+          <span class="service-picker-copy">
+            <span class="service-picker-title">Choose or add a service</span>
+            <span class="service-picker-help">Tap or click to browse all services</span>
+          </span>
+          <span class="service-picker-action" aria-hidden="true">
+            <span class="service-picker-show">View services</span>
+            <span class="service-picker-hide">Hide services</span>
+            <span class="service-picker-chevron"></span>
+          </span>
+        </summary>
+        <div class="optional-content">
+          <section class="service-choice-group" aria-labelledby="fixedServiceTitle">
+          <h3 id="fixedServiceTitle">Choose a focused service</h3>
+          <p class="mini">Review the fixed price, share a short brief, and continue to secure payment. Each service is selected once per project.</p>
+        <div class="product-grid">
+
+
+
+          <article class="service-card" data-sku="online_menu_qr" data-name="Online Menu + QR" data-price="12900" data-price-label="$144 first year" data-price-id="price_1T6OzbHw7f6jhUv8Epy5oYMf">
+            <h3>Online Menu + QR</h3>
+            <p>Mobile-first menu page customers open instantly. Clean layout, fast load, QR-ready delivery. Standard menu turnaround: 48 hours after all required materials are received and validated. Incomplete materials or custom work require a confirmed delivery date.</p>
+            <div class="card-actions">
+              <span class="price-tag">$144 first year</span>
+              <button class="btn primary js-add" type="button" data-select-label="Select menu" aria-pressed="false">Select menu</button>
+            </div>
+          </article>
+
+          <article class="service-card" data-sku="conversion_fix" data-name="Conversion Fix" data-price="29900" data-price-label="$299" data-price-id="price_1T6P5tHw7f6jhUv8zQ7pGEoJ">
+            <h3>Conversion Fix</h3>
+            <p>Fix what blocks action: clarity, CTAs, layout flow, mobile usability, speed issues.</p>
+            <div class="card-actions">
+              <span class="price-tag">$299</span>
+              <button class="btn primary js-add" type="button" data-select-label="Select website fixes" aria-pressed="false">Select website fixes</button>
+            </div>
+          </article>
+
+          <article class="service-card" data-sku="google_visibility" data-name="Google Visibility" data-price="14900" data-price-label="$149" data-price-id="price_1T6iC6Hw7f6jhUv8iYYYZK0T">
+            <h3>Google Visibility</h3>
+            <p>Google Business Profile creation or improvements to business details, categories, and menu/website links. Website SEO changes are scoped separately. Google placement is not guaranteed.</p>
+            <div class="card-actions">
+              <span class="price-tag">$149</span>
+              <button class="btn primary js-add" type="button" data-select-label="Select Google help" aria-pressed="false">Select Google help</button>
+            </div>
+          </article>
+
+          <article class="service-card" data-sku="accessibility_upgrade" data-name="Accessibility Upgrade (Yearly)" data-price="25000" data-price-label="$250 / year" data-price-id="price_1T6j0xHw7f6jhUv8Ci1ZQ9qS">
+            <h3>Accessibility Upgrade</h3>
+            <p>Site-wide toolkit + usability fixes for keyboard navigation, contrast, labels, and forms.</p>
+            <div class="card-actions">
+              <span class="price-tag">$250 / year</span>
+              <button class="btn primary js-add" type="button" data-select-label="Select accessibility" aria-pressed="false">Select accessibility</button>
+            </div>
+          </article>
+
+        </div>
+
+          </section>
+          <section class="service-choice-group quote-choice-group" aria-labelledby="customServiceTitle">
+            <h3 id="customServiceTitle">Plan a custom project</h3>
+            <p class="mini">Tell us what you want to build. These choices open a project inquiry; they do not add a payment to your order.</p>
+            <div class="quote-choice-grid">
+              <article class="service-card">
+                <h4>Website Design &amp; Custom Builds</h4>
+                <p>A new website or broader redesign, scoped around your business, pages, and features.</p>
+                <div class="service-bottom"><span class="price">Custom quote</span><button class="btn primary" type="button" data-quote-service="website">Request a Website Quote</button></div>
+              </article>
+              <article class="service-card">
+                <h4>Mobile App · iOS + Android</h4>
+                <p>The $999 menu app scope includes offline menus, push notifications, native navigation, and publishing support. Custom requirements are quoted separately.</p>
+                <div class="service-bottom"><span class="price">Discuss scope first</span><button class="btn primary" type="button" data-quote-service="app">Discuss an App</button></div>
+              </article>
+            </div>
+          </section>
+        <div class="service-summary-spacer"></div>
+
+        <div class="service-card">
+          <h3>What happens next</h3>
+          <p>
+            Choose a service and provide your contact details. Include your website and project goals; for menu projects, share your current menu. After payment, provide the information required for your selected service. We confirm scope, missing materials, and delivery timing. Custom websites and app requirements begin with an inquiry and quote.
+          </p>
+        </div>
+
+        </div>
+      </details>
+
       <!-- Order summary and contact details come first for every screen size. -->
       <aside class="cart" aria-label="Your order">
         <div class="cart-panel">
@@ -117,7 +217,7 @@
           </div>
 
           <ul class="cart-items" id="cartItems" aria-live="polite"></ul>
-          <p class="mini" id="emptyOrder">Your order is empty. Tap or click View services to choose a service and see its price and next steps.</p>
+          <p class="mini" id="emptyOrder">Ready when you are. Use View services above to choose what you need; your selection and next steps will appear here.</p>
 
           <div class="menu-config" id="menuConfig" hidden>
             <div class="field">
@@ -134,15 +234,11 @@
             <p class="mini">Two revisions included. Future menu edits are quoted before work begins. Hosting renews at $15/year, arranged separately; no automatic subscription.</p>
           </div>
 
-          <div class="cart-total">
+          <div class="cart-total" id="orderTotalRow" hidden>
             <span id="orderTotalLabel">Total due today · USD</span>
             <strong id="cartTotal" aria-live="polite" aria-atomic="true">$0.00</strong>
           </div>
 
-          <div id="websiteQuotePanel" hidden>
-            <p class="mini">Website Design &amp; Custom Builds is quoted for your project. Tell us about your pages, goals, and features so we can agree on the scope, price, and delivery before work begins.</p>
-            <a class="btn primary" id="requestWebsiteQuote" href="#inquiry">Request a Website Quote</a>
-          </div>
 
           <div class="cart-actions" id="orderActions" hidden>
             <button class="btn primary" id="continueBtn" type="button" disabled>Continue to details</button>
@@ -179,10 +275,26 @@
               </div>
             </div>
 
+            <fieldset class="service-brief" id="conversionBrief" hidden>
+              <legend>For your Website Conversion Fix</legend>
+              <p class="mini">These details help us confirm the site and the customer action you want to improve. Public links only; do not send passwords.</p>
+              <div class="field"><label for="conversionUrl">Current website *</label><input id="conversionUrl" type="url" maxlength="180" autocomplete="url" placeholder="https://yourbusiness.com" aria-describedby="conversionUrlError"><div class="validation-msg" id="conversionUrlError" aria-live="polite"></div></div>
+              <div class="field"><label for="conversionGoal">Main customer action *</label><input id="conversionGoal" maxlength="80" placeholder="For example: calls, reservations, or messages" aria-describedby="conversionGoalError"><div class="validation-msg" id="conversionGoalError" aria-live="polite"></div></div>
+            </fieldset>
+            <fieldset class="service-brief" id="googleBrief" hidden>
+              <legend>For your Google Visibility service</legend>
+              <div class="field"><label for="googleMode">What do you need? *</label><select id="googleMode" aria-describedby="googleModeError"><option value="">Choose profile help</option><option value="existing">Improve an existing profile</option><option value="new">Create a new profile</option></select><div class="validation-msg" id="googleModeError" aria-live="polite"></div></div>
+              <div class="field" id="googleUrlField" hidden><label for="googleUrl">Existing profile link (optional)</label><input id="googleUrl" type="url" maxlength="180" placeholder="Paste a public Google profile link" aria-describedby="googleUrlError"><div class="validation-msg" id="googleUrlError" aria-live="polite"></div></div>
+            </fieldset>
+            <fieldset class="service-brief" id="accessibilityBrief" hidden>
+              <legend>For your Accessibility Upgrade</legend>
+              <div class="field"><label for="accessibilityUrl">Website to improve *</label><input id="accessibilityUrl" type="url" maxlength="180" autocomplete="url" placeholder="https://yourbusiness.com" aria-describedby="accessibilityUrlError"><div class="validation-msg" id="accessibilityUrlError" aria-live="polite"></div></div>
+              <div class="field"><label for="accessibilityPriority">Priority or known issue (optional)</label><input id="accessibilityPriority" maxlength="80" placeholder="For example: keyboard navigation" aria-describedby="accessibilityPriorityError"><div class="validation-msg" id="accessibilityPriorityError" aria-live="polite"></div></div>
+            </fieldset>
             <div class="field">
-              <label for="lead_notes">Notes (optional)</label>
+              <label for="lead_notes">Other notes (optional)</label>
               <textarea id="lead_notes" maxlength="400" placeholder="Share your website, project goals, priorities, and desired deadline. Do not send passwords."></textarea>
-              <div class="mini">For menu projects, share a menu link, paste the menu text, or attach your current menu below.</div>
+              <div class="mini">For menu projects, share a menu link or attach your current menu below. Your service brief is included first; use an attachment for longer background.</div>
             </div>
 
 
@@ -219,81 +331,7 @@
         </div>
       </aside>
 
-      <details class="optional-services" id="optionalServices">
-        <summary class="service-picker-summary" id="serviceChoicesSummary">
-          <span class="service-picker-copy">
-            <span class="service-picker-title">Choose or add a service</span>
-            <span class="service-picker-help">Tap or click to browse all services</span>
-          </span>
-          <span class="service-picker-action" aria-hidden="true">
-            <span class="service-picker-show">View services</span>
-            <span class="service-picker-hide">Hide services</span>
-            <span class="service-picker-chevron"></span>
-          </span>
-        </summary>
-        <div class="optional-content">
-          <p class="mini">Custom websites and apps begin with a scope discussion. Choose a website project below or <a href="contact.html?service=app#inquiry">ask about an app</a>.</p>
 
-        <div class="product-grid">
-
-          <article class="service-card">
-            <h3>Website Design &amp; Custom Builds</h3>
-            <p>A new website or a broader redesign built around your business. We agree on pages, features, materials, delivery, and price before work begins.</p>
-            <div class="card-actions">
-              <span class="price-tag">To be quoted</span>
-              <button class="btn primary" type="button" data-select-website>Select Website Design</button>
-            </div>
-          </article>
-
-          <article class="service-card" data-sku="online_menu_qr" data-name="Online Menu + QR" data-price="12900" data-price-label="$144 first year" data-price-id="price_1T6OzbHw7f6jhUv8Epy5oYMf">
-            <h3>Online Menu + QR</h3>
-            <p>Mobile-first menu page customers open instantly. Clean layout, fast load, QR-ready delivery. Standard menu turnaround: 48 hours after all required materials are received and validated. Incomplete materials or custom work require a confirmed delivery date.</p>
-            <div class="card-actions">
-              <span class="price-tag">$144 first year</span>
-              <button class="btn primary js-add" type="button">Add Menu</button>
-            </div>
-          </article>
-
-          <article class="service-card" data-sku="conversion_fix" data-name="Conversion Fix" data-price="29900" data-price-label="$299" data-price-id="price_1T6P5tHw7f6jhUv8zQ7pGEoJ">
-            <h3>Conversion Fix</h3>
-            <p>Fix what blocks action: clarity, CTAs, layout flow, mobile usability, speed issues.</p>
-            <div class="card-actions">
-              <span class="price-tag">$299</span>
-              <button class="btn primary js-add" type="button">Add</button>
-            </div>
-          </article>
-
-          <article class="service-card" data-sku="google_visibility" data-name="Google Visibility" data-price="14900" data-price-label="$149" data-price-id="price_1T6iC6Hw7f6jhUv8iYYYZK0T">
-            <h3>Google Visibility</h3>
-            <p>Google Business Profile creation or improvements to business details, categories, and menu/website links. Website SEO changes are scoped separately. Google placement is not guaranteed.</p>
-            <div class="card-actions">
-              <span class="price-tag">$149</span>
-              <button class="btn primary js-add" type="button">Add</button>
-            </div>
-          </article>
-
-          <article class="service-card" data-sku="accessibility_upgrade" data-name="Accessibility Upgrade (Yearly)" data-price="25000" data-price-label="$250 / year" data-price-id="price_1T6j0xHw7f6jhUv8Ci1ZQ9qS">
-            <h3>Accessibility Upgrade</h3>
-            <p>Site-wide toolkit + usability fixes for keyboard navigation, contrast, labels, and forms.</p>
-            <div class="card-actions">
-              <span class="price-tag">$250 / year</span>
-              <button class="btn primary js-add" type="button">Add</button>
-            </div>
-          </article>
-
-        </div>
-
-        <div class="service-summary-spacer"></div>
-
-        <div class="service-card">
-          <h3>What happens next</h3>
-          <p>
-            Choose a service and provide your contact details. Include your website and project goals; for menu projects, share your current menu. After payment, provide the information required for your selected service. We confirm scope, missing materials, and delivery timing. Custom websites and app requirements begin with an inquiry and quote.
-          </p>
-        </div>
-
-        </div>
-      </details>
 
 
 
@@ -325,7 +363,7 @@
       <div class="booking-summary"><p>Talk directly with MENU-MADE about your website, app, visibility, accessibility, or design project.</p><a href="mailto:info@menu-made.com">info@menu-made.com</a><p class="mini">Requesting a call does not reserve an appointment. We’ll agree on a time by email.</p></div>
     </div>
     <form class="booking-card booking-form" id="bookingForm" action="/api/inquiry" method="post">
-      <div class="field"><label for="inquiryService">Service of interest *</label><select id="inquiryService" name="service" required><option value="">Choose a service</option><option>Online Menu + QR</option><option>Conversion Fix</option><option>Google Visibility</option><option>Accessibility Upgrade</option><option value="Other project">Custom website, app, or other project</option></select></div>
+      <div class="field"><label for="inquiryService">Service of interest *</label><select id="inquiryService" name="service" required><option value="">Choose a service</option><option>Online Menu + QR</option><option>Conversion Fix</option><option>Google Visibility</option><option>Accessibility Upgrade</option><option value="website">Website Design &amp; Custom Builds</option><option value="app">Mobile app project</option><option value="Other project">Other project</option></select></div>
       <div class="two">
         <div class="field"><label for="bookingName">Name *</label><input id="bookingName" name="name" autocomplete="name" maxlength="100" required></div>
         <div class="field"><label for="bookingEmail">Email *</label><input id="bookingEmail" name="email" type="email" autocomplete="email" maxlength="150" required></div>
@@ -350,7 +388,7 @@
 
 <footer class="footer">
   <div class="container footer-inner">
-    <div class="footer-copy">© 2019 MENU-MADE</div>
+    <div class="footer-copy">© 2019–2026 MENU-MADE</div>
 
     <a class="footer-logo" href="index.html" aria-label="Home">
       <img src="MENU1.png" alt="MENU-MADE">
@@ -368,31 +406,22 @@
       </a>
     </div>
   </div>
+
+  <nav class="footer-links" aria-label="More from MENU-MADE"><a href="website-design.html">Website Design</a><a href="google-visibility.html">Google Visibility</a><a href="accessibility-services.html">Accessibility Services</a><a href="portfolio.html">Our Work</a><a href="about.html">Meet JP &amp; Nino</a><a href="services.html#after-launch">After Launch</a></nav>
 </footer>
 
 <script src="document-upload.js?v=20261009" defer></script>
-<script src="start.js?v=20261016-no-preload" defer></script>
+<script src="start.js?v=20261016-buyer-flow" defer></script>
 
 
 
-<script>
-document.addEventListener("DOMContentLoaded", () => {
-  const navToggle = document.getElementById("navToggle");
-  const navLinks = document.querySelectorAll(".nav a");
 
-  navLinks.forEach(link => {
-    link.addEventListener("click", () => {
-      navToggle.checked = false;
-    });
-  });
-});
-</script>
-<script src="mm-a11y-widget.js" defer></script>
+<script src="mm-a11y-widget.js?v=20261016-smooth-panel" defer></script>
 
 <!-- Match the Tech background parallax used on the other pages. -->
 <script src="section-parallax.js?v=20261015-unified" defer></script>
 
-<script src="booking.js?v=20261009-funnel" defer></script>
+<script src="booking.js?v=20261016-buyer-flow" defer></script>
 <script src="home-package.js?v=20261015-start-details" defer></script>
 </body>
 </html>

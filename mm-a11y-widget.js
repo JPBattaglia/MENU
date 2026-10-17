@@ -4,7 +4,7 @@
   window.MenuMadeAccessibilityWidgetLoaded = true;
 
   var KEY = "mm_a11y_widget_v4";
-  var ICON_SRC = window.MM_A11Y_ICON_SRC || "Brainard Icon menu Ruby.png";
+  var ICON_SRC = window.MM_A11Y_ICON_SRC || "assets/accessibility-launcher-192.webp";
 
   var DEFAULTS = {
     open: false,
@@ -210,7 +210,9 @@
   }
 
   function resetState(){
+    var wasOpen = state.open;
     state = clone(DEFAULTS);
+    state.open = wasOpen;
     save();
     apply();
   }
@@ -314,6 +316,8 @@
     launcher.className = "mm-a11y-launcher";
     launcher.id = "mmA11yLauncher";
     launcher.setAttribute("aria-label", "Accessibility tools");
+    launcher.setAttribute("aria-controls", "mmA11yPanel");
+    launcher.setAttribute("aria-expanded", state.open ? "true" : "false");
     launcher.innerHTML =
       '<img src="' + ICON_SRC + '" alt="Accessibility" class="mm-a11y-launcher-img">';
 
@@ -323,6 +327,7 @@
     panel.setAttribute("role", "dialog");
     panel.setAttribute("aria-label", "Accessibility tools panel");
     panel.setAttribute("aria-hidden", state.open ? "false" : "true");
+    panel.inert = !state.open;
 
     panel.innerHTML =
       '<div class="mm-a11y-head">' +
@@ -408,31 +413,31 @@
     document.body.appendChild(panel);
     document.body.appendChild(guide);
 
-    launcher.addEventListener("click", function(){
-      state.open = !state.open;
+    function setPanelOpen(open){
+      state.open = open;
       save();
-      panel.setAttribute("aria-hidden", state.open ? "false" : "true");
-      if (state.open){
+      if (!open && panel.contains(document.activeElement)) launcher.focus({ preventScroll: true });
+      panel.inert = !open;
+      panel.setAttribute("aria-hidden", open ? "false" : "true");
+      launcher.setAttribute("aria-expanded", open ? "true" : "false");
+      if (open){
         var close = document.getElementById("mmA11yClose");
-        if (close) close.focus();
+        if (close) close.focus({ preventScroll: true });
       }
+    }
+
+    launcher.addEventListener("click", function(){
+      setPanelOpen(!state.open);
     });
 
     panel.addEventListener("keydown", function(e){
       if (e.key === "Escape"){
-        state.open = false;
-        save();
-        panel.setAttribute("aria-hidden", "true");
-        launcher.focus();
+        e.preventDefault();
+        setPanelOpen(false);
       }
     });
 
-    on("mmA11yClose", function(){
-      state.open = false;
-      save();
-      panel.setAttribute("aria-hidden", "true");
-      launcher.focus();
-    });
+    on("mmA11yClose", function(){ setPanelOpen(false); });
 
     on("mmA11yText0", function(){ state.text = 0; save(); apply(); });
     on("mmA11yText1", function(){ state.text = 1; save(); apply(); });
