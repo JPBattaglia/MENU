@@ -2464,7 +2464,7 @@ body.sample-menu-page {
   z-index: 2147483000;
   width: 62px;
   height: 62px;
-  border: 1px solid rgba(0,255,255,0.7);
+  border: 0;
   border-radius: 999px;
   background: linear-gradient(145deg, rgba(0,120,130,0.4), rgba(0,30,35,0.92));
   box-shadow: 0 10px 30px rgba(0,0,0,0.28);
@@ -2732,12 +2732,12 @@ html[data-mm-a11y-guide="1"] .mm-a11y-guide{
 }
 
 /* Keep the widget's cyan edges independent of the site's silver buttons. */
-.mm-a11y-panel button,
-button.mm-a11y-launcher{
+.mm-a11y-panel button{
   border:2px solid rgba(0,255,255,.7);
   box-shadow:none;
 }
 button.mm-a11y-launcher{
+  border:0;
   box-shadow:0 10px 30px rgba(0,0,0,.28);
 }
 .mm-a11y-cancel{
