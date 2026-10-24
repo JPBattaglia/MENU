@@ -1380,7 +1380,6 @@ body:not(.sample-menu-page).services-page .premium-media .hospitality-photo {
 :where(body.home-page, body.work-page) :is(.restaurant-work-card, .work-visual) img.work-preview-lower { object-position:center 80%; }
 :where(body.services-page) .premium-bottom > a.app-purchase-link { margin-left:10px; }
 :where(body.accessibility-page) p.tiny-note.accessibility-lead-note { margin-top:14px; }
-:where(body.accessibility-page) img.accessibility-partner-logo { height:44px; width:150px; margin:8px 0; }
 :where(body.accessibility-page) .accessibility-followup { margin-top:12px; }
 
 
