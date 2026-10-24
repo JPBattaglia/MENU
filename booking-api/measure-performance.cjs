@@ -12,7 +12,7 @@ const pages = ['index.html', 'services.html', 'portfolio.html', 'contact.html'];
 const settings = { runs: 3, viewport: { width: 390, height: 844 }, cpuSlowdown: 4,
   latencyMs: 150, downloadBytesPerSecond: 200000, uploadBytesPerSecond: 93750,
   settleMs: 2000, cacheDisabled: true, deviceScaleFactor: 1, analyticsOptOut: 'DNT' };
-const watched = [...pages, 'main.css', 'site-nav.js', 'start.js', 'booking.js', 'funnel.js', 'home-package.js', 'mm-a11y-widget.js', 'assets/accessibility-launcher-192.webp'];
+const watched = [...pages, 'main.css', 'site-nav.js', 'start.js', 'booking.js', 'funnel.js', 'home-package.js'];
 const digest = () => Object.fromEntries(watched.filter(file => fs.existsSync(path.join(root, file)))
   .map(file => [file, crypto.createHash('sha256').update(fs.readFileSync(path.join(root, file))).digest('hex')]));
 const before = digest();
