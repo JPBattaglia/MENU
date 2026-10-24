@@ -12,3 +12,6 @@
 .DS_Store
 .vscode/
 node_modules/
+
+# Local Claude instructions (private pointer)
+CLAUDE.md
