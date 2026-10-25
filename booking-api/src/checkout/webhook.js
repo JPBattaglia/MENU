@@ -4,6 +4,7 @@ import { EXTRAS_WINDOW_MINUTES, addDaysIso } from "../lib/config.js";
 import { jsonResponse, nowIso } from "../lib/http.js";
 import { attachCheckoutMenuDocument, createMenuQrInputs } from "../onboarding/menu-inputs.js";
 import { refreshOnboardingState } from "../onboarding/onboarding.js";
+import { handleExtraPagesPaid } from "../producers/menu-qr/page-billing.js";
 
 async function handleStripeWebhook(request, env) {
   try {
@@ -167,10 +168,14 @@ async function handleStripeWebhook(request, env) {
     }
     try {
       if (event.type === "checkout.session.completed") {
-        await handleCheckoutCompleted(
-          event,
-          env
-        );
+        if (event.data?.object?.metadata?.purpose === "extra_menu_pages") {
+          await handleExtraPagesPaid(event.data.object, env);
+        } else {
+          await handleCheckoutCompleted(
+            event,
+            env
+          );
+        }
       }
       await env.DB.prepare(`
           UPDATE provider_events

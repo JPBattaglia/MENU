@@ -5,6 +5,7 @@ import { jsonResponse, nowIso, parseJsonOrNull } from "../../lib/http.js";
 import { signLinkToken } from "../../lib/links.js";
 import { getInputValue, loadPreparedPayload } from "./inputs.js";
 import { completeStep, retryStepLater } from "../../workflows/runner.js";
+import { pageBillingNote } from "./page-billing.js";
 
 async function loadDeliveryContext(projectId, env) {
   return env.DB.prepare(`
@@ -98,6 +99,7 @@ async function notifyOwnerForApproval(targetStep, context, files, approval, env)
       WHERE workflow_run_id = ? AND step_key = 'GENERATE_MENU_DRAFT' AND status = 'SUCCEEDED' LIMIT 1
     `).bind(targetStep.workflow_run_id).first();
   const extraction = parseJsonOrNull(draftStep?.output_json)?.source?.extraction || null;
+  const pagesNote = pageBillingNote((await loadPreparedPayload(targetStep, env).catch(() => null))?.page_billing);
   const readingNote = extraction
     ? `Read from the uploaded menu file: ${extraction.item_count} items.${extraction.unreadable ? ` Check carefully: ${extraction.unreadable}` : ""}`
     : "";
@@ -108,6 +110,7 @@ async function notifyOwnerForApproval(targetStep, context, files, approval, env)
     paragraphs: [
       "The menu page and QR code were produced automatically. Nothing goes to the buyer until you approve.",
       ...readingNote ? [escapeHtml(readingNote)] : [],
+      ...pagesNote ? [escapeHtml(`Menu pages: ${pagesNote}`)] : [],
       "Preview both files, then approve to send them to the buyer."
     ],
     rows: [["Business", business], ["Buyer", buyer], ["Order", context.order_id], ["Link expires", `${APPROVAL_TTL_DAYS} days`]],
@@ -117,6 +120,7 @@ async function notifyOwnerForApproval(targetStep, context, files, approval, env)
   const text = [
     `${business}'s online menu and QR code are ready for your review. Nothing goes to the buyer until you approve.`,
     ...readingNote ? ["", readingNote] : [],
+    ...pagesNote ? ["", `Menu pages: ${pagesNote}`] : [],
     "",
     ...previews.map((p) => `${p.label}: ${p.url}`),
     "",

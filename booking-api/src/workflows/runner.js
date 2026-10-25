@@ -6,6 +6,7 @@ import { runPrepareInputsStep } from "../producers/menu-qr/inputs.js";
 import { runPackageDeliverablesStep } from "../producers/menu-qr/package.js";
 import { runGenerateQrStep } from "../producers/menu-qr/qr-step.js";
 import { runQualityCheckStep } from "../producers/menu-qr/quality-check.js";
+import { sendPageBillingReminders } from "../producers/menu-qr/page-billing.js";
 
 function verifyProductionRunner(request, env) {
   if (!env.PRODUCTION_RUNNER_SECRET) {
@@ -538,6 +539,11 @@ async function alertOwnerOfFailure(env, body) {
 
 async function runScheduledProduction(env) {
   if (!env.DB || !env.PRODUCTION_RUNNER_SECRET) return { skipped: true };
+  try {
+    await sendPageBillingReminders(env);
+  } catch (error) {
+    console.error("Extra pages reminders failed:", error instanceof Error ? error.message : String(error));
+  }
   const createdAfter = env.AUTOMATION_START_AT || AUTOMATION_START_AT;
   const started = Date.now();
   const seenSteps = new Set();
