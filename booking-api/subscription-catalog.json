@@ -1,0 +1,116 @@
+{
+  "stripe_account": "acct_1Ll8crHw7f6jhUv8",
+  "created": "2026-10-24",
+  "note": "Live Stripe prices for the automated lineup. Annual = 10x monthly (2 months free). Source of truth for checkout and site pricing.",
+  "subscriptions": {
+    "REVIEW_REPLIES": {
+      "name": "Review Replies",
+      "product": "prod_VVKagWNofwKCJV",
+      "monthly": { "price": "price_1UUJveHw7f6jhUv8Fltyk2X8", "amount": 4900 },
+      "annual": { "price": "price_1UUJwtHw7f6jhUv8Uo7yUNbk", "amount": 49000 }
+    },
+    "MENU_CARE": {
+      "name": "Menu Care",
+      "product": "prod_VVKbOVTgTHbxj5",
+      "monthly": { "price": "price_1UUJvpHw7f6jhUv8ztqe6z87", "amount": 2900 },
+      "annual": { "price": "price_1UUJwuHw7f6jhUv8KV0Zpdl8", "amount": 29000 }
+    },
+    "GOOGLE_PROFILE_CARE": {
+      "name": "Google Profile Care",
+      "product": "prod_VVKbfXz2EFZ648",
+      "monthly": { "price": "price_1UUJvuHw7f6jhUv8msP7zslK", "amount": 14900 },
+      "annual": { "price": "price_1UUJwwHw7f6jhUv80mcaG6M0", "amount": 149000 }
+    },
+    "SOCIAL_POSTS": {
+      "name": "Social Posts",
+      "product": "prod_VVKbIrMLYTjw4S",
+      "monthly": { "price": "price_1UUJw0Hw7f6jhUv8UExY8gre", "amount": 12900 },
+      "annual": { "price": "price_1UUJwxHw7f6jhUv8ss0mpsJO", "amount": 129000 }
+    },
+    "WEBSITE_CARE": {
+      "name": "Website Care",
+      "product": "prod_VVKbtuOfdXmjEV",
+      "monthly": { "price": "price_1UUJw4Hw7f6jhUv8RxCroO3S", "amount": 4900 },
+      "annual": { "price": "price_1UUJwzHw7f6jhUv8Jnsl35lP", "amount": 49000 }
+    },
+    "ACCESSIBILITY_MONITORING": {
+      "name": "Accessibility Monitoring",
+      "product": "prod_VVKbCgmbwUHs93",
+      "monthly": { "price": "price_1UUJwAHw7f6jhUv8v4gouIGG", "amount": 3900 },
+      "annual": { "price": "price_1UUJx0Hw7f6jhUv8XzPkf5oT", "amount": 39000 }
+    },
+    "GUEST_APP": {
+      "name": "Guest App",
+      "product": "prod_VVKbNm7SEAn6UN",
+      "monthly": { "price": "price_1UUJwVHw7f6jhUv8E5E7lpwN", "amount": 2900 },
+      "annual": { "price": "price_1UUJx2Hw7f6jhUv8kemsJ8Y2", "amount": 29000 },
+      "requires_setup": "GUEST_APP_SETUP"
+    }
+  },
+  "bundles": {
+    "BUNDLE_STARTER": {
+      "name": "Starter Plan",
+      "product": "prod_VVKbKRMN5J266n",
+      "includes": ["MENU_CARE", "REVIEW_REPLIES", "ACCESSIBILITY_MONITORING"],
+      "monthly": { "price": "price_1UUJweHw7f6jhUv8gW0UlQfE", "amount": 7900 },
+      "annual": { "price": "price_1UUJx4Hw7f6jhUv8H56xNtR0", "amount": 79000 }
+    },
+    "BUNDLE_GROWTH": {
+      "name": "Growth Plan",
+      "product": "prod_VVKb8E54P6cyhq",
+      "includes": ["MENU_CARE", "REVIEW_REPLIES", "ACCESSIBILITY_MONITORING", "GOOGLE_PROFILE_CARE"],
+      "monthly": { "price": "price_1UUJwhHw7f6jhUv8lRAL6qhh", "amount": 17900 },
+      "annual": { "price": "price_1UUJx5Hw7f6jhUv8yrDptjRK", "amount": 179000 }
+    },
+    "BUNDLE_PRO": {
+      "name": "Pro Plan",
+      "product": "prod_VVKbx3bkMst6Cz",
+      "includes": ["MENU_CARE", "REVIEW_REPLIES", "ACCESSIBILITY_MONITORING", "GOOGLE_PROFILE_CARE", "SOCIAL_POSTS", "WEBSITE_CARE"],
+      "monthly": { "price": "price_1UUJwkHw7f6jhUv8PEZWGIUd", "amount": 29900 },
+      "annual": { "price": "price_1UUJx6Hw7f6jhUv8YxoO1atJ", "amount": 299000 }
+    }
+  },
+  "one_time": {
+    "WEBSITE_PACKAGE": {
+      "name": "Website Package",
+      "product": "prod_VVKc49zc6ayEua",
+      "price": "price_1UUJwmHw7f6jhUv8AXFEfNmW",
+      "amount": 49900,
+      "includes_trial": { "offer": "WEBSITE_CARE", "months": 3 }
+    },
+    "GUEST_APP_SETUP": {
+      "name": "Guest App Setup",
+      "product": "prod_VVKccyVfhHqZgY",
+      "price": "price_1UUJwoHw7f6jhUv8lV5p2GSI",
+      "amount": 29900
+    },
+    "ONLINE_MENU_QR": {
+      "name": "Online Menu + QR",
+      "product": "prod_U4Y5qipQccmf8d",
+      "price": "price_1T6OzbHw7f6jhUv8Epy5oYMf",
+      "amount": 12900,
+      "pairs_with": "MENU_CARE"
+    },
+    "GOOGLE_VISIBILITY": {
+      "name": "Google Visibility",
+      "product": "prod_U4rv3K2zNpvebl",
+      "price": "price_1T6iC6Hw7f6jhUv8iYYYZK0T",
+      "amount": 14900,
+      "pairs_with": "GOOGLE_PROFILE_CARE"
+    },
+    "CONVERSION_FIX": {
+      "name": "Conversion Fix",
+      "product": "prod_U4YCl2wMaKG6H3",
+      "price": "price_1T6P5tHw7f6jhUv8zQ7pGEoJ",
+      "amount": 29900,
+      "pairs_with": "WEBSITE_CARE"
+    }
+  },
+  "to_retire_after_site_switch": {
+    "ACCESSIBILITY_UPGRADE": {
+      "product": "prod_U4smjwFzpQBz9M",
+      "price": "price_1T6j0xHw7f6jhUv8Ci1ZQ9qS",
+      "replaced_by": "ACCESSIBILITY_MONITORING"
+    }
+  }
+}
