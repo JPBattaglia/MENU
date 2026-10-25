@@ -56,7 +56,7 @@ function appendCheckoutLineItem(params, item, index, environment) {
   params.append(`${prefix}[quantity]`, String(item.quantity));
 }
 
-async function normalizeCheckoutItems(itemsInput, env, checkoutOptions = {}) {
+async function normalizeCheckoutItems(itemsInput, env, checkoutOptions = {}, { requirePublic = true } = {}) {
   const normalizedItems = [];
   let menuSelected = false;
   for (const item of itemsInput) {
@@ -66,7 +66,8 @@ async function normalizeCheckoutItems(itemsInput, env, checkoutOptions = {}) {
     }
     const catalogRow = await resolveActiveOffer(
       identifier,
-      env
+      env,
+      { requirePublic }
     );
     if (!catalogRow) {
       continue;

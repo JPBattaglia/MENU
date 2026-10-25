@@ -5,6 +5,7 @@ import { jsonResponse, nowIso } from "../lib/http.js";
 import { attachCheckoutMenuDocument, createMenuQrInputs } from "../onboarding/menu-inputs.js";
 import { refreshOnboardingState } from "../onboarding/onboarding.js";
 import { handleExtraPagesPaid } from "../producers/menu-qr/page-billing.js";
+import { SUBSCRIPTION_EVENTS, handleSubscriptionEvent, onSubscriptionCheckoutCompleted } from "../subscriptions/webhooks.js";
 
 async function handleStripeWebhook(request, env) {
   try {
@@ -175,7 +176,10 @@ async function handleStripeWebhook(request, env) {
             event,
             env
           );
+          await onSubscriptionCheckoutCompleted(event.data?.object, env, verifiedEnvironment);
         }
+      } else if (SUBSCRIPTION_EVENTS.has(event.type)) {
+        await handleSubscriptionEvent(event, env, verifiedEnvironment);
       }
       await env.DB.prepare(`
           UPDATE provider_events
@@ -405,6 +409,7 @@ async function handleCheckoutCompleted(event, env) {
             ON o.id =
               oi.offer_id
           WHERE oi.order_id = ?
+            AND o.billing_type != 'RECURRING'
         `).bind(orderId).all();
     for (const item of orderItems.results || []) {
       const existingProject = await env.DB.prepare(`
@@ -471,14 +476,19 @@ async function handleCheckoutCompleted(event, env) {
       }
     }
   }
+  // A plan-only order has nothing to onboard: its work arrives as monthly period jobs (stage 3).
+  const oneTimeItems = await env.DB.prepare(`
+      SELECT COUNT(*) AS n FROM order_items oi JOIN offers o ON o.id = oi.offer_id
+      WHERE oi.order_id = ? AND o.billing_type != 'RECURRING'
+    `).bind(orderId).first();
   await env.DB.prepare(`
       UPDATE orders
       SET
-        status =
-          'ONBOARDING_REQUIRED',
+        status = ?,
         updated_at = ?
       WHERE id = ?
     `).bind(
+    Number(oneTimeItems?.n || 0) > 0 ? "ONBOARDING_REQUIRED" : "COMPLETED",
     timestamp,
     orderId
   ).run();

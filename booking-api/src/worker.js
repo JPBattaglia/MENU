@@ -8,6 +8,9 @@ import { handleStripeWebhook } from "./checkout/webhook.js";
 import { handleDeliveryDownload, handleHostedMenu } from "./delivery/delivery.js";
 import { handleExtraPagesDone, handleExtraPagesPay } from "./producers/menu-qr/page-billing.js";
 import { advanceSelfTests } from "./selftest/menu-qr-selftest.js";
+import { advanceSubscriptionSelfTests } from "./selftest/subscription-selftest.js";
+import { runDailySubscriptionPass } from "./subscriptions/daily.js";
+import { handleBillingPortal } from "./subscriptions/portal.js";
 import { databaseHealthCheck } from "./lib/db.js";
 import { corsHeaders, jsonResponse } from "./lib/http.js";
 import { startProductionNow } from "./onboarding/extras.js";
@@ -29,6 +32,10 @@ var worker_default = {
     const extraPagesMatch = url.pathname.match(/^\/api\/extra-pages\/([A-Za-z0-9-]{1,64})(\/done)?$/);
     if (extraPagesMatch && request.method === "GET") {
       return extraPagesMatch[2] ? handleExtraPagesDone(request) : handleExtraPagesPay(request, env, extraPagesMatch[1]);
+    }
+    const portalMatch = url.pathname.match(/^\/api\/billing-portal\/([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})$/i);
+    if (portalMatch && (request.method === "GET" || request.method === "POST")) {
+      return handleBillingPortal(request, env, portalMatch[1].toLowerCase());
     }
     const deliveryMatch = url.pathname.match(/^\/api\/delivery\/([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})$/i);
     if (deliveryMatch && request.method === "GET") {
@@ -139,6 +146,9 @@ const mmWorkerWithBooking = {
         console.error("Scheduled production failed:", error instanceof Error ? error.message : String(error));
       });
       await advanceSelfTests(env, app).catch((error) => console.error("Self-test failed:", error instanceof Error ? error.message : String(error)));
+      await advanceSubscriptionSelfTests(env, app).catch((error) => console.error("Subscription self-test failed:", error instanceof Error ? error.message : String(error)));
+      // Once a day: reconcile subscriptions with Stripe and create annual plans' monthly jobs.
+      await runDailySubscriptionPass(env).catch((error) => console.error("Daily subscription pass failed:", error instanceof Error ? error.message : String(error)));
     })());
     return mmBookingHandler.scheduled(event, mmBookingEnvironment(env), ctx);
   }

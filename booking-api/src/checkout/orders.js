@@ -264,7 +264,8 @@ async function createPendingOrder(data, normalizedItems, env, environment) {
       JSON.stringify({
         offer_code: item.offerCode,
         environment,
-        ...(item.menuPackage ? { menu_package: item.menuPackage } : {})
+        ...(item.menuPackage ? { menu_package: item.menuPackage } : {}),
+        ...(item.extraMetadata || {})
       })
     ).run();
   }

@@ -94,8 +94,8 @@ async function payTestCheckout(env, sessionId) {
 
 async function loadActiveTests(env) {
   return (await env.DB.prepare(`
-      SELECT * FROM self_tests WHERE status IN ('REQUESTED', 'RUNNING') ORDER BY created_at ASC LIMIT 3
-    `).all()).results || [];
+      SELECT * FROM self_tests WHERE status IN ('REQUESTED', 'RUNNING') AND kind = ? ORDER BY created_at ASC LIMIT 3
+    `).bind(KIND).all()).results || [];
 }
 
 async function updateTest(env, test, patch) {
@@ -330,6 +330,8 @@ async function advanceSelfTests(env, app) {
 }
 
 export {
+  stripeTest,
+  updateTest,
   buildMenuPdf,
   payTestCheckout,
   advanceSelfTests,
