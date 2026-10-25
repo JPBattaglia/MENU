@@ -120,7 +120,8 @@
   const $ = id => document.getElementById(id);
   const labels = {
     business_name: "Business name",
-    menu_source: "Current menu URL",
+    menu_source: "Menu link",
+    menu_file: "Menu file (PDF or photo)",
     logo: "Logo",
     brand_colors: "Brand colors",
     qr_destination: "QR code destination URL",
@@ -129,7 +130,8 @@
     special_instructions: "Special instructions"
   };
   const help = {
-    menu_source: "Link to the menu we should use as the source.",
+    menu_source: "A link to your current menu — or upload the menu file below instead.",
+    menu_file: "PDF, PNG, JPEG, or WebP, up to 20 MB. A clear phone photo works.",
     logo: "PNG, JPEG, WebP, or SVG. Maximum 10 MB.",
     brand_colors: "Example: navy and gold, or provide hex values.",
     qr_destination: "The URL customers should reach when they scan the QR code.",
@@ -171,7 +173,7 @@
       control.type = "file";
       control.id = `field-${input.key}`;
       control.name = input.key;
-      control.accept = "image/png,image/jpeg,image/webp,image/svg+xml";
+      control.accept = input.key === "menu_file" ? "application/pdf,image/png,image/jpeg,image/webp" : "image/png,image/jpeg,image/webp,image/svg+xml";
       control.dataset.kind = "FILE";
       control.dataset.currentStatus = input.status || "MISSING";
       if (input.required && input.status !== "VALID") control.required = true;
@@ -180,7 +182,7 @@
       if (input.status === "VALID") {
         const note = document.createElement("p");
         note.className = "field-note";
-        note.textContent = "Logo already received. Choose a new file only to replace it.";
+        note.textContent = `${labels[input.key] || "File"} already received. Choose a new file only to replace it.`;
         wrap.appendChild(note);
       }
     } else {
@@ -285,6 +287,13 @@
   $("onboardingForm").addEventListener("submit", async event => {
     event.preventDefault();
     if (!$("onboardingForm").reportValidity()) return;
+    const menuLink = document.querySelector("#onboardingFields [name='menu_source']");
+    const menuFile = document.querySelector("#onboardingFields input[type='file'][name='menu_file']");
+    if (menuLink && menuFile && !menuLink.value.trim() && !menuFile.files.length && menuFile.dataset.currentStatus !== "VALID") {
+      status("Add a link to your menu or upload the menu file.");
+      menuFile.focus();
+      return;
+    }
 
     $("saveButton").disabled = true;
     $("saveButton").textContent = "Saving…";

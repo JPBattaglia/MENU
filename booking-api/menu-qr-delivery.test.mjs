@@ -18,7 +18,7 @@ const MENU_STEPS = JSON.stringify([
   { key: 'GENERATE_QR', order: 30 }, { key: 'QUALITY_CHECK', order: 40 }, { key: 'PACKAGE_DELIVERABLES', order: 50 },
 ]);
 
-function setup({ automationStart = '2000-01-01T00:00:00.000Z', menuStatus = 200 } = {}) {
+function setup({ automationStart = '2000-01-01T00:00:00.000Z', menuStatus = 200, menuFile = false } = {}) {
   const DB = createD1();
   const ASSETS = createR2();
   const sql = (q, ...a) => DB.raw.prepare(q).run(...a);
@@ -35,7 +35,14 @@ function setup({ automationStart = '2000-01-01T00:00:00.000Z', menuStatus = 200 
     `INSERT INTO project_inputs (id, project_id, input_key, input_type, value_text, asset_id, required, status, created_at, updated_at) VALUES (?, 'proj', ?, ?, ?, ?, 1, 'VALID', ?, ?)`,
     `in-${key}`, key, type, value, assetId, t, t);
   input('business_name', 'TEXT', 'Proof Cafe');
-  input('menu_source', 'URL', MENU_URL);
+  if (menuFile) {
+    sql(`INSERT INTO assets (id, business_id, customer_id, project_id, asset_type, storage_key, original_filename, mime_type, size_bytes, status, uploaded_at) VALUES ('menupdf', 'biz', 'cust', 'proj', 'MENU_SOURCE', 'uploads/menu.pdf', 'menu.pdf', 'application/pdf', 9, 'VALID', ?)`, t);
+    input('menu_file', 'FILE', null, 'menupdf');
+    sql(`INSERT INTO project_inputs (id, project_id, input_key, input_type, required, status, created_at, updated_at) VALUES ('in-menu_source', 'proj', 'menu_source', 'URL', 0, 'MISSING', ?, ?)`, t, t);
+    ASSETS.put('uploads/menu.pdf', '%PDF-1.4 fake');
+  } else {
+    input('menu_source', 'URL', MENU_URL);
+  }
   input('logo', 'FILE', null, 'logo');
   input('brand_colors', 'TEXT', '#071f2c, #00d6e6');
   input('qr_destination', 'URL', QR_URL);
@@ -51,6 +58,14 @@ function setup({ automationStart = '2000-01-01T00:00:00.000Z', menuStatus = 200 
       emails.push({ ...JSON.parse(init.body), idempotencyKey: init.headers['Idempotency-Key'] });
       return Response.json({ id: `email-${emails.length}` });
     }
+    if (target === 'https://api.anthropic.com/v1/messages') {
+      const body = JSON.parse(init.body);
+      state.claudeRequest = { body, headers: init.headers };
+      return Response.json({ model: body.model, usage: { input_tokens: 1500, output_tokens: 300 }, content: [{ type: 'tool_use', name: 'record_menu', input: {
+        sections: [{ name: 'Starters', items: [{ name: 'Tomato Soup', description: 'Basil, cream', price: '$9' }, { name: 'Caesar Salad', description: '', price: '$11' }] },
+          { name: 'Drinks', items: [{ name: 'Espresso', description: '', price: '$4' }] }],
+        notes: 'Ask about allergens.', unreadable: 'The dessert prices were smudged.' } }] });
+    }
     if (target === MENU_URL) {
       return new Response('Soup $12\nSalad $9\nCoffee $4', { status: state.menuStatus, headers: { 'content-type': 'text/plain' } });
     }
@@ -60,6 +75,7 @@ function setup({ automationStart = '2000-01-01T00:00:00.000Z', menuStatus = 200 
     DB, ASSETS,
     PRODUCTION_RUNNER_SECRET: 'test-runner-secret',
     RESEND_API_KEY: 're_test_placeholder',
+    ANTHROPIC_API_KEY: 'sk-ant-test-placeholder',
     AUTOMATION_START_AT: automationStart,
   };
   const pending = [];
@@ -262,5 +278,23 @@ test('an expired approval link queues a fresh approval request', async () => {
     await api.runScheduledProduction(f.env);
     assert.equal(f.rows(`SELECT id FROM approvals WHERE status = 'PENDING'`).length, 1);
     assert.equal(f.emails.filter(e => e.subject.includes('Approve')).length, 2);
+  });
+});
+
+test('an uploaded menu PDF is read by Claude and the owner sees what to double-check', async () => {
+  const f = setup({ menuFile: true });
+  await withFetch(f.fetch, async () => {
+    await queueRun(f);
+    await api.runScheduledProduction(f.env);
+    const sent = f.state.claudeRequest;
+    assert.equal(sent.headers['x-api-key'], 'sk-ant-test-placeholder');
+    assert.equal(sent.body.content ?? sent.body.messages[0].content[0].type, 'document');
+    assert.equal(sent.body.tool_choice.name, 'record_menu');
+    const draft = f.row(`SELECT a.storage_key FROM deliverables d JOIN assets a ON a.id = d.asset_id WHERE d.deliverable_type = 'MENU_DRAFT'`);
+    const html = new TextDecoder().decode(f.ASSETS.objects.get(draft.storage_key).data);
+    assert.match(html, /STARTERS/); assert.match(html, /Tomato Soup — \$9/); assert.match(html, /Espresso — \$4/);
+    assert.doesNotMatch(html, /Draft generated from/);
+    assert.equal(f.emails.length, 1);
+    assert.match(f.emails[0].text, /Read from the uploaded menu file: 3 items\. Check carefully: The dessert prices were smudged\./);
   });
 });
