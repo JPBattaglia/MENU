@@ -327,3 +327,21 @@ test('the menu uploaded at checkout is attached, and the hosted menu page goes l
     assert.match(f.emails[1].text, /Your menu is live at https:\/\/menu-made\.com\/api\/menu\//);
   });
 });
+
+test('production waits for the optional extras window until the buyer starts it', async () => {
+  const f = setup();
+  await withFetch(f.fetch, async () => {
+    const run = await queueRun(f);
+    f.sql(`UPDATE projects SET metadata_json = json_set('{}', '$.extras_until', ?) WHERE id = 'proj'`, new Date(Date.now() + 30 * 60e3).toISOString());
+    const waiting = await api.runScheduledProduction(f.env);
+    assert.equal(waiting.results[0].processed, false);
+    const onboarding = await (await call(f, 'https://menu-made.com/api/onboarding?order_id=order&session_id=cs_test_proof')).json();
+    assert.ok(onboarding.onboarding.extras_open_until);
+    const denied = await call(f, 'https://menu-made.com/api/onboarding/start', { method: 'POST', body: JSON.stringify({ order_id: 'order', session_id: 'cs_test_wrong' }) });
+    assert.equal(denied.status, 403);
+    const started = await call(f, 'https://menu-made.com/api/onboarding/start', { method: 'POST', body: JSON.stringify({ order_id: 'order', session_id: 'cs_test_proof' }) });
+    assert.equal(started.status, 200);
+    await api.runScheduledProduction(f.env);
+    assert.equal(f.row(`SELECT status FROM workflow_steps WHERE workflow_run_id = ? AND step_key = 'PACKAGE_DELIVERABLES'`, run.id).status, 'WAITING');
+  });
+});

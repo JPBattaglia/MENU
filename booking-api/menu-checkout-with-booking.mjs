@@ -3964,6 +3964,7 @@ async function getOnboarding(request, env) {
             p.workflow_version,
             p.business_id,
             p.customer_id,
+            p.metadata_json,
             b.name AS business_name,
             c.email AS customer_email,
             c.first_name,
@@ -4043,6 +4044,11 @@ async function getOnboarding(request, env) {
       },
       onboarding: {
         complete: missingRequired.length === 0,
+        // After payment the buyer may add optional extras (logo, colors, notes) before production starts.
+        extras_open_until: (() => {
+          const until = parseJsonOrNull(project.metadata_json)?.extras_until;
+          return until && until > nowIso() ? until : null;
+        })(),
         missing_required: missingRequired.map(
           (input) => input.input_key
         ),
@@ -5842,7 +5848,11 @@ async function handleCheckoutCompleted(event, env) {
     `).bind(orderId).all();
   for (const menuProject of menuProjects.results || []) {
     try {
-      await attachCheckoutMenuDocument(menuProject.id, orderId, env);
+      if (await attachCheckoutMenuDocument(menuProject.id, orderId, env)) {
+        await env.DB.prepare(`
+            UPDATE projects SET metadata_json = json_set(COALESCE(metadata_json, '{}'), '$.extras_until', ?) WHERE id = ?
+          `).bind(addDaysIso(EXTRAS_WINDOW_MINUTES / 1440), menuProject.id).run();
+      }
       await refreshOnboardingState(menuProject.id, orderId, order.customer_id, "MENU_QR_V1", env);
     } catch (attachError) {
       console.error("Checkout menu attachment failed:", attachError instanceof Error ? attachError.message : String(attachError));
@@ -8021,6 +8031,10 @@ async function runNextProductionStep(request, env, options = {}) {
             AND (? IS NULL OR wr.id = ?)
             AND (? IS NULL OR ws.step_key = ?)
             AND (? IS NULL OR wr.created_at >= ?)
+            AND NOT EXISTS (
+              SELECT 1 FROM projects px
+              WHERE px.id = wr.project_id AND json_extract(px.metadata_json, '$.extras_until') > ?
+            )
 
             AND wr.status IN (
               'QUEUED',
@@ -8046,7 +8060,7 @@ async function runNextProductionStep(request, env, options = {}) {
           LIMIT 1
         `).bind(selection.workflow_run_id || null, selection.workflow_run_id || null,
           selection.step_key || null, selection.step_key || null,
-          createdAfter, createdAfter).first();
+          createdAfter, createdAfter, nowIso()).first();
     if (!targetStep) {
       return jsonResponse({
         ok: true,
@@ -8259,6 +8273,7 @@ var AUTOMATION_START_AT = "2026-10-25T00:00:00.000Z";
 var APPROVAL_TTL_DAYS = 14;
 var DELIVERY_LINK_TTL_DAYS = 90;
 var EMAIL_MAX_ATTEMPTS = 5;
+var EXTRAS_WINDOW_MINUTES = 30;
 var SCHEDULED_RUNNER_MAX_STEPS = 10;
 var SCHEDULED_RUNNER_BUDGET_MS = 20000;
 var DELIVERABLE_LABELS = {
@@ -8970,6 +8985,24 @@ async function runScheduledProduction(env) {
   return { steps: results.length, results };
 }
 __name(runScheduledProduction, "runScheduledProduction");
+// Buyer finished (or skipped) the optional extras: close the window so production starts on the next tick.
+async function startProductionNow(request, env) {
+  let body;
+  try {
+    body = await request.json();
+  } catch {
+    return jsonResponse({ ok: false, error: "Invalid request" }, 400);
+  }
+  const access = await verifyCheckoutAccess(String(body?.order_id || ""), String(body?.session_id || ""), env);
+  if (!access.ok) return jsonResponse({ ok: false, error: access.error }, access.status);
+  await env.DB.prepare(`
+      UPDATE projects
+      SET metadata_json = json_remove(COALESCE(metadata_json, '{}'), '$.extras_until'), updated_at = ?
+      WHERE order_id = ?
+    `).bind(nowIso(), access.order.id).run();
+  return jsonResponse({ ok: true, started: true });
+}
+__name(startProductionNow, "startProductionNow");
 
 // src/worker.js
 async function databaseHealthCheck(env) {
@@ -9067,6 +9100,9 @@ var worker_default = {
         request,
         env
       );
+    }
+    if (request.method === "POST" && url.pathname === "/api/onboarding/start") {
+      return startProductionNow(request, env);
     }
     if (request.method === "POST" && url.pathname === "/api/onboarding/upload") {
       return uploadOnboardingAsset(
