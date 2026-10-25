@@ -2610,3 +2610,12 @@ main[tabindex="-1"]:focus{outline:none;}
   :where(body:not(.sample-menu-page)) .gear-burger[aria-expanded="true"] img,
   :where(body:not(.sample-menu-page)) .gear-link:hover .brand-mark{transform:none;}
 }
+
+/* Service cards: breathing room between the details link and the price/button row (Oct 2026). */
+:where(body:not(.sample-menu-page)) .service-card .service-details-link{margin-bottom:28px;}
+:where(body:not(.sample-menu-page)) .service-card .service-bottom{padding-top:20px;border-top:1px solid rgba(255,255,255,.16);flex-wrap:wrap;row-gap:14px;}
+:where(body:not(.sample-menu-page)) .service-card .service-bottom .price{white-space:nowrap;}
+@media (max-width:560px){
+  :where(body:not(.sample-menu-page)) .service-card .service-bottom{flex-direction:column;align-items:stretch;}
+  :where(body:not(.sample-menu-page)) .service-card .service-bottom .cta-pill{text-align:center;}
+}
