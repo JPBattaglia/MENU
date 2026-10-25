@@ -385,3 +385,85 @@ CREATE TABLE provider_events (
 );
 CREATE INDEX idx_provider_events_status
 ON provider_events(provider, status, received_at);
+CREATE TABLE IF NOT EXISTS self_tests (
+    id TEXT PRIMARY KEY,
+    kind TEXT NOT NULL,
+    status TEXT NOT NULL CHECK (status IN ('REQUESTED','RUNNING','PASSED','FAILED')),
+    stage TEXT,
+    requested_by TEXT,
+    order_id TEXT,
+    project_id TEXT,
+    state_json TEXT,
+    log_json TEXT,
+    error TEXT,
+    created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL,
+    stage_started_at TEXT,
+    finished_at TEXT
+);
+CREATE TABLE customer_businesses (
+    customer_id TEXT NOT NULL,
+    business_id TEXT NOT NULL,
+    role TEXT,
+    is_primary INTEGER NOT NULL DEFAULT 0 CHECK (is_primary IN (0,1)),
+    created_at TEXT NOT NULL,
+    PRIMARY KEY (customer_id, business_id),
+    FOREIGN KEY (customer_id) REFERENCES customers(id) ON DELETE RESTRICT,
+    FOREIGN KEY (business_id) REFERENCES businesses(id) ON DELETE RESTRICT
+);
+CREATE TABLE funnel_events (
+    id TEXT PRIMARY KEY,
+    created_at TEXT NOT NULL,
+    event_type TEXT NOT NULL CHECK (
+        event_type IN (
+            'SITE_VISIT',
+            'OFFER_VIEW',
+            'CTA_CLICK',
+            'CHECKOUT_STARTED',
+            'PURCHASE_COMPLETED'
+        )
+    ),
+    visitor_id TEXT,
+    session_id TEXT,
+    offer_id TEXT,
+    offer_version_id TEXT,
+    order_id TEXT,
+    source TEXT,
+    medium TEXT,
+    campaign TEXT,
+    referrer TEXT,
+    landing_path TEXT,
+    metadata_json TEXT,
+    FOREIGN KEY (offer_id) REFERENCES offers(id) ON DELETE SET NULL,
+    FOREIGN KEY (offer_version_id) REFERENCES offer_versions(id) ON DELETE SET NULL,
+    FOREIGN KEY (order_id) REFERENCES orders(id) ON DELETE SET NULL
+);
+CREATE TABLE payments (
+    id TEXT PRIMARY KEY,
+    order_id TEXT NOT NULL,
+    customer_id TEXT NOT NULL,
+    provider TEXT NOT NULL DEFAULT 'STRIPE',
+    provider_payment_id TEXT NOT NULL,
+    provider_checkout_session_id TEXT,
+    status TEXT NOT NULL CHECK (status IN (
+        'PENDING','SUCCEEDED','FAILED','CANCELLED',
+        'PARTIALLY_REFUNDED','REFUNDED','DISPUTED'
+    )),
+    amount_cents INTEGER NOT NULL CHECK (amount_cents >= 0),
+    currency TEXT NOT NULL DEFAULT 'USD',
+    payment_method_type TEXT,
+    created_at TEXT NOT NULL,
+    paid_at TEXT,
+    failed_at TEXT,
+    failure_code TEXT,
+    failure_message TEXT,
+    provider_event_id TEXT,
+    metadata_json TEXT,
+    FOREIGN KEY (order_id) REFERENCES orders(id) ON DELETE RESTRICT,
+    FOREIGN KEY (customer_id) REFERENCES customers(id) ON DELETE RESTRICT,
+    UNIQUE (provider, provider_payment_id)
+);
+CREATE UNIQUE INDEX IF NOT EXISTS ux_customers_email ON customers(lower(email));
+CREATE UNIQUE INDEX IF NOT EXISTS ux_orders_checkout_session ON orders(stripe_checkout_session_id) WHERE stripe_checkout_session_id IS NOT NULL;
+CREATE UNIQUE INDEX IF NOT EXISTS ux_workflow_runs_ready_trigger ON workflow_runs (project_id, workflow_key, workflow_version, trigger_type, trigger_reference);
+CREATE UNIQUE INDEX IF NOT EXISTS ux_offers_code ON offers(code);

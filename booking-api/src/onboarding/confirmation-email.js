@@ -1,4 +1,4 @@
-import { FROM_ADDRESS, INTERNAL_BCC, REPLY_TO_ADDRESS, RESEND_ENDPOINT, escapeHtml, logEmailEvent } from "../lib/email.js";
+import { FROM_ADDRESS, INTERNAL_BCC, REPLY_TO_ADDRESS, RESEND_ENDPOINT, SELF_TEST_EMAIL, escapeHtml, logEmailEvent } from "../lib/email.js";
 
 function formatCustomerName(firstName, lastName) {
   return [
@@ -435,9 +435,8 @@ async function sendOnboardingConfirmationEmail({
           to: [
             recipient
           ],
-          bcc: [
-            INTERNAL_BCC
-          ],
+          // Self-test orders don't copy the internal inbox.
+          ...recipient === SELF_TEST_EMAIL ? {} : { bcc: [INTERNAL_BCC] },
           reply_to: REPLY_TO_ADDRESS,
           subject: email.subject,
           html: email.html,

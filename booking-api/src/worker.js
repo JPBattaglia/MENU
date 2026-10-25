@@ -7,6 +7,7 @@ import { createCheckoutSession, createCheckoutSessionTest } from "./checkout/ses
 import { handleStripeWebhook } from "./checkout/webhook.js";
 import { handleDeliveryDownload, handleHostedMenu } from "./delivery/delivery.js";
 import { handleExtraPagesDone, handleExtraPagesPay } from "./producers/menu-qr/page-billing.js";
+import { advanceSelfTests } from "./selftest/menu-qr-selftest.js";
 import { databaseHealthCheck } from "./lib/db.js";
 import { corsHeaders, jsonResponse } from "./lib/http.js";
 import { startProductionNow } from "./onboarding/extras.js";
@@ -130,9 +131,15 @@ const mmWorkerWithBooking = {
     return worker_default.fetch(request, env, ctx);
   },
   async scheduled(event, env, ctx) {
-    ctx.waitUntil(runScheduledProduction(env).catch((error) => {
-      console.error("Scheduled production failed:", error instanceof Error ? error.message : String(error));
-    }));
+    const app = (request) => mmWorkerWithBooking.fetch(request, env, ctx);
+    ctx.waitUntil((async () => {
+      // Sandbox self-test steps run before and after production so a test order moves quickly.
+      await advanceSelfTests(env, app).catch((error) => console.error("Self-test failed:", error instanceof Error ? error.message : String(error)));
+      await runScheduledProduction(env).catch((error) => {
+        console.error("Scheduled production failed:", error instanceof Error ? error.message : String(error));
+      });
+      await advanceSelfTests(env, app).catch((error) => console.error("Self-test failed:", error instanceof Error ? error.message : String(error)));
+    })());
     return mmBookingHandler.scheduled(event, mmBookingEnvironment(env), ctx);
   }
 };

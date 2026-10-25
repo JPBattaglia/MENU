@@ -1,6 +1,6 @@
 import { APPROVAL_TTL_DAYS, DELIVERABLE_LABELS, DELIVERY_LINK_TTL_DAYS, addDaysIso, ownerEmailAddress, publicBaseUrl } from "../../lib/config.js";
 import { recordProjectEvent } from "../../lib/db.js";
-import { brandedEmailHtml, escapeHtml, looksLikeEmail, sendTransactionalEmail } from "../../lib/email.js";
+import { SELF_TEST_EMAIL, brandedEmailHtml, escapeHtml, looksLikeEmail, sendTransactionalEmail } from "../../lib/email.js";
 import { jsonResponse, nowIso, parseJsonOrNull } from "../../lib/http.js";
 import { signLinkToken } from "../../lib/links.js";
 import { getInputValue, loadPreparedPayload } from "./inputs.js";
@@ -131,7 +131,8 @@ async function notifyOwnerForApproval(targetStep, context, files, approval, env)
     `This link expires in ${APPROVAL_TTL_DAYS} days.`
   ].join("\n");
   return sendTransactionalEmail(env, {
-    to: ownerEmailAddress(env),
+    // Self-test orders keep their approval request out of the owner's inbox.
+    to: context.customer_email === SELF_TEST_EMAIL ? SELF_TEST_EMAIL : ownerEmailAddress(env),
     subject,
     html,
     text,

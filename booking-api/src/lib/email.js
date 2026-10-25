@@ -2,6 +2,9 @@ import { nowIso } from "./http.js";
 
 var RESEND_ENDPOINT = "https://api.resend.com/emails";
 
+// Buyer address used by the sandbox self-test: Resend accepts it and delivers nowhere.
+var SELF_TEST_EMAIL = "delivered@resend.dev";
+
 var FROM_ADDRESS = "Menu-Made <orders@updates.menu-made.com>";
 
 var REPLY_TO_ADDRESS = "info@menu-made.com";
@@ -99,7 +102,7 @@ async function sendTransactionalEmail(env, { to, subject, html, text, idempotenc
         body: JSON.stringify({
           from: FROM_ADDRESS,
           to: [to],
-          ...bccInternal ? { bcc: [INTERNAL_BCC] } : {},
+          ...bccInternal && to !== SELF_TEST_EMAIL ? { bcc: [INTERNAL_BCC] } : {},
           reply_to: REPLY_TO_ADDRESS,
           subject,
           html,
@@ -155,6 +158,7 @@ async function sendTransactionalEmail(env, { to, subject, html, text, idempotenc
 }
 
 export {
+  SELF_TEST_EMAIL,
   RESEND_ENDPOINT,
   FROM_ADDRESS,
   REPLY_TO_ADDRESS,
