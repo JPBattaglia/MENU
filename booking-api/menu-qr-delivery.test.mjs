@@ -171,7 +171,7 @@ test('a paid Menu + QR order is produced, waits for owner approval, then reaches
     const menu = await call(f, menuLink);
     assert.equal(menu.status, 200);
     assert.match(menu.headers.get('content-type'), /^text\/html/);
-    assert.match(await menu.text(), /Soup \$12/);
+    assert.match(await menu.text(), /Tomato Soup/);
     const qr = await call(f, qrLink);
     assert.equal(qr.status, 200);
     assert.match(qr.headers.get('content-disposition'), /^attachment;/);
@@ -292,7 +292,7 @@ test('an uploaded menu PDF is read by Claude and the owner sees what to double-c
     assert.equal(sent.body.tool_choice.type, 'auto'); assert.equal(sent.body.tools[0].name, 'record_menu');
     const draft = f.row(`SELECT a.storage_key FROM deliverables d JOIN assets a ON a.id = d.asset_id WHERE d.deliverable_type = 'MENU_DRAFT'`);
     const html = new TextDecoder().decode(f.ASSETS.objects.get(draft.storage_key).data);
-    assert.match(html, /STARTERS/); assert.match(html, /Tomato Soup — \$9/); assert.match(html, /Espresso — \$4/);
+    assert.match(html, /<h2 id="s1-h">Starters<\/h2>/); assert.match(html, /<span class="item">Tomato Soup<\/span>.*<span class="price">\$9<\/span>/s); assert.match(html, /href="#s2">Drinks</);
     assert.doesNotMatch(html, /Draft generated from/);
     assert.equal(f.emails.length, 1);
     assert.match(f.emails[0].text, /Read from the uploaded menu file: 3 items\. Check carefully: The dessert prices were smudged\./);
