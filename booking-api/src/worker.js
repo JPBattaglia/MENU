@@ -6,6 +6,7 @@ import { CheckoutValidationError, quoteMenuPackage } from "./checkout/quote.js";
 import { createCheckoutSession, createCheckoutSessionTest } from "./checkout/session.js";
 import { handleStripeWebhook } from "./checkout/webhook.js";
 import { handleDeliveryDownload, handleHostedMenu } from "./delivery/delivery.js";
+import { handleExtraPagesDone, handleExtraPagesPay } from "./producers/menu-qr/page-billing.js";
 import { databaseHealthCheck } from "./lib/db.js";
 import { corsHeaders, jsonResponse } from "./lib/http.js";
 import { startProductionNow } from "./onboarding/extras.js";
@@ -23,6 +24,10 @@ var worker_default = {
     const hostedMenuMatch = url.pathname.match(/^\/api\/menu\/([a-z0-9-]{1,60})$/);
     if (hostedMenuMatch && request.method === "GET") {
       return handleHostedMenu(request, env, hostedMenuMatch[1]);
+    }
+    const extraPagesMatch = url.pathname.match(/^\/api\/extra-pages\/([A-Za-z0-9-]{1,64})(\/done)?$/);
+    if (extraPagesMatch && request.method === "GET") {
+      return extraPagesMatch[2] ? handleExtraPagesDone(request) : handleExtraPagesPay(request, env, extraPagesMatch[1]);
     }
     const deliveryMatch = url.pathname.match(/^\/api\/delivery\/([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})$/i);
     if (deliveryMatch && request.method === "GET") {

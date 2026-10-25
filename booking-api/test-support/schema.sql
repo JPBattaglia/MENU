@@ -364,3 +364,24 @@ CREATE TABLE workflow_steps (
 CREATE UNIQUE INDEX ux_workflow_runs_ready_trigger
 ON workflow_runs (project_id, workflow_key, workflow_version, trigger_type, trigger_reference);
 CREATE TABLE mm_booking_requests (   id TEXT PRIMARY KEY,   payload TEXT NOT NULL,   ip_hash TEXT NOT NULL,   created_at INTEGER NOT NULL,   owner_sent INTEGER NOT NULL DEFAULT 0,   customer_sent INTEGER NOT NULL DEFAULT 0,   attempts INTEGER NOT NULL DEFAULT 0 );
+CREATE TABLE provider_events (
+    id TEXT PRIMARY KEY,
+    provider TEXT NOT NULL,
+    provider_event_id TEXT NOT NULL,
+    event_type TEXT NOT NULL,
+    received_at TEXT NOT NULL,
+    processed_at TEXT,
+    status TEXT NOT NULL DEFAULT 'RECEIVED' CHECK (status IN (
+        'RECEIVED','PROCESSED','FAILED','IGNORED'
+    )),
+    attempt_count INTEGER NOT NULL DEFAULT 0 CHECK (attempt_count >= 0),
+    last_error TEXT,
+    payload_json TEXT,
+    related_order_id TEXT,
+    related_customer_id TEXT,
+    FOREIGN KEY (related_order_id) REFERENCES orders(id) ON DELETE SET NULL,
+    FOREIGN KEY (related_customer_id) REFERENCES customers(id) ON DELETE SET NULL,
+    UNIQUE (provider, provider_event_id)
+);
+CREATE INDEX idx_provider_events_status
+ON provider_events(provider, status, received_at);

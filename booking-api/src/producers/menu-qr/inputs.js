@@ -1,5 +1,6 @@
 import { jsonResponse, nowIso, parseJsonOrNull } from "../../lib/http.js";
 import { completeStep, loadProject } from "../../workflows/runner.js";
+import { checkPageBilling } from "./page-billing.js";
 
 function extractReadableText(html) {
   return String(
@@ -265,6 +266,11 @@ async function runPrepareInputsStep(targetStep, env) {
       "Production project could not be loaded"
     );
   }
+  // More pages than the order paid for: park here until the buyer pays the balance.
+  const billing = await checkPageBilling(targetStep, project, prepared.inputs, env);
+  if (!billing.proceed) {
+    return { waiting: true, response: billing.response };
+  }
   const preparedPayload = {
     prepared_at: nowIso(),
     project: {
@@ -289,7 +295,8 @@ async function runPrepareInputsStep(targetStep, env) {
         project.last_name
       ].filter(Boolean).join(" ")
     },
-    inputs: prepared.inputs
+    inputs: prepared.inputs,
+    page_billing: billing.summary
   };
   await completeStep(
     targetStep,
