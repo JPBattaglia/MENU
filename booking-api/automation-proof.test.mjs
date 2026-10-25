@@ -69,7 +69,8 @@ test('deployed runner selection and dry-run preview remain read-only after the c
   assert.equal(result.processed, false);
   assert.equal(result.selected_step.key, 'QUALITY_CHECK');
   // The trailing pair is the scheduled runner's created-after cutoff; HTTP requests never set it.
-  assert.deepEqual(reads[0].args, [runId, runId, 'QUALITY_CHECK', 'QUALITY_CHECK', null, null]);
+  assert.deepEqual(reads[0].args.slice(0, 6), [runId, runId, 'QUALITY_CHECK', 'QUALITY_CHECK', null, null]);
+  assert.match(reads[0].args[6], /^\d{4}-\d{2}-\d{2}T/);
   assert.match(reads[0].sql, /ws\.step_key NOT IN \('QUALITY_CHECK', 'PACKAGE_DELIVERABLES'\) OR wr\.workflow_key = 'MENU_QR_V1'/);
   assert.equal(writes.length, 0);
 });

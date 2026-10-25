@@ -65,11 +65,12 @@
     </div>
 
     <form id="onboardingForm" class="onboarding-panel" hidden novalidate>
-      <h2>Project information</h2>
+      <h2 id="formHeading">Project information</h2>
       <p>Required items must be completed before production can begin.</p>
       <div id="onboardingFields" class="onboarding-grid"></div>
       <div class="hero-actions">
         <button id="saveButton" class="btn primary" type="submit">Save &amp; Continue</button>
+        <button id="skipExtras" class="btn" type="button" hidden>Skip — start my menu now</button>
       </div>
       <p id="formStatus" class="onboarding-status" role="status" aria-live="polite" hidden></p>
     </form>
@@ -229,7 +230,8 @@
       $("loadingState").hidden = true;
       $("errorState").hidden = true;
 
-      if (data.onboarding?.complete) {
+      extrasMode = Boolean(data.onboarding?.complete && data.onboarding?.extras_open_until);
+      if (data.onboarding?.complete && !extrasMode) {
         if (data.environment === "live") window.MenuMadeFunnel?.track("onboarding_completed");
         $("onboardingForm").hidden = true;
         $("completeState").hidden = false;
@@ -238,15 +240,40 @@
 
       const box = $("onboardingFields");
       box.replaceChildren();
+      const extraKeys = ["logo", "brand_colors", "menu_notes", "special_instructions"];
+      $("formHeading").textContent = extrasMode ? "Your menu is in. Make it yours (optional)" : "Project information";
+      $("saveButton").textContent = extrasMode ? "Save & start my menu" : "Save & Continue";
+      $("skipExtras").hidden = !extrasMode;
+      const intro = $("onboardingForm").querySelector("h2 + p");
+      if (intro) intro.textContent = extrasMode
+        ? "Add your logo and brand colors so your menu matches your look. Nothing here is required — if you skip it, we start automatically in 30 minutes."
+        : "Required items must be completed before production can begin.";
       const fieldOrder = ["menu_file", "menu_source", "business_name", "contact_email", "logo", "brand_colors", "qr_destination", "menu_notes", "special_instructions"];
       const rank = key => { const i = fieldOrder.indexOf(key); return i === -1 ? fieldOrder.length : i; };
-      [...(data.onboarding?.inputs || [])].sort((a, b) => rank(a.key) - rank(b.key)).forEach(input => box.appendChild(buildField(input)));
+      [...(data.onboarding?.inputs || [])].filter(input => !extrasMode || extraKeys.includes(input.key)).sort((a, b) => rank(a.key) - rank(b.key)).forEach(input => box.appendChild(buildField(input)));
       $("completeState").hidden = true;
       $("onboardingForm").hidden = false;
     } catch (e) {
       fail(e.message || "Unable to load onboarding.");
     }
   }
+
+  let extrasMode = false;
+  async function startProduction() {
+    const res = await fetch("/api/onboarding/start", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Accept: "application/json" },
+      body: JSON.stringify({ order_id: orderId, session_id: sessionId })
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok || !data.ok) throw new Error(data.error || "Unable to start production.");
+  }
+  $("skipExtras").addEventListener("click", async () => {
+    $("skipExtras").disabled = true;
+    try { await startProduction(); await load(); status(""); }
+    catch (e) { status(e.message || "Something went wrong."); }
+    finally { $("skipExtras").disabled = false; }
+  });
 
   async function saveText() {
     const fields = {};
@@ -304,6 +331,7 @@
     try {
       await saveText();
       await uploadFiles();
+      if (extrasMode) await startProduction();
       status("Saved. Checking project readiness…");
       await load();
       if (!$("completeState").hidden) status("");
