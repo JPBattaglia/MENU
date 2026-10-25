@@ -3788,6 +3788,13 @@ async function refreshOnboardingState(projectId, orderId, customerId, workflowKe
         ORDER BY input_key ASC
       `).bind(projectId).all();
   const remaining = remainingResult.results || [];
+  const menuInputs = await env.DB.prepare(`
+        SELECT input_key, status FROM project_inputs
+        WHERE project_id = ? AND input_key IN ('menu_source', 'menu_file')
+      `).bind(projectId).all();
+  if (menuSourceMissing(menuInputs.results || [])) {
+    remaining.push({ input_key: "menu_source", input_type: "URL", status: "MISSING" });
+  }
   const timestamp = nowIso();
   if (remaining.length === 0) {
     await env.DB.prepare(`
@@ -4007,6 +4014,7 @@ async function getOnboarding(request, env) {
         input.required
       ) === 1 && input.status !== "VALID"
     );
+    if (menuSourceMissing(rows)) missingRequired.push({ input_key: "menu_source" });
     return jsonResponse({
       ok: true,
       environment: access.environment,
@@ -4300,9 +4308,17 @@ async function createMenuQrInputs(projectId, order, timestamp, env) {
       status: business?.name ? "VALID" : "MISSING"
     },
     {
+      // A menu link OR an uploaded menu file (PDF/photo) is required; see menuSourceMissing().
       key: "menu_source",
       type: "URL",
-      required: 1,
+      required: 0,
+      value: null,
+      status: "MISSING"
+    },
+    {
+      key: "menu_file",
+      type: "FILE",
+      required: 0,
       value: null,
       status: "MISSING"
     },
@@ -5947,7 +5963,12 @@ async function uploadOnboardingAsset(request, env) {
         400
       );
     }
-    if (input.input_key !== "logo") {
+    const uploadRules = {
+      logo: { assetType: "LOGO", label: "Logo", maxMb: 10, types: ["image/png", "image/jpeg", "image/webp", "image/svg+xml"], typeText: "PNG, JPEG, WebP, or SVG" },
+      menu_file: { assetType: "MENU_SOURCE", label: "Menu file", maxMb: 20, types: ["application/pdf", "image/png", "image/jpeg", "image/webp"], typeText: "PDF, PNG, JPEG, or WebP" }
+    };
+    const rule = uploadRules[input.input_key];
+    if (!rule) {
       return jsonResponse(
         {
           ok: false,
@@ -5956,27 +5977,27 @@ async function uploadOnboardingAsset(request, env) {
         400
       );
     }
-    const allowedMimeTypes = /* @__PURE__ */ new Set([
-      "image/png",
-      "image/jpeg",
-      "image/webp",
-      "image/svg+xml"
-    ]);
     const mimeType = String(
       file.type || ""
     ).toLowerCase();
-    if (!allowedMimeTypes.has(
+    if (!rule.types.includes(
       mimeType
     )) {
       return jsonResponse(
         {
           ok: false,
-          error: "Logo must be PNG, JPEG, WebP, or SVG"
+          error: `${rule.label} must be ${rule.typeText}`
         },
         400
       );
     }
-    const maxBytes = 10 * 1024 * 1024;
+    if (mimeType === "application/pdf") {
+      const head = new Uint8Array(await file.slice(0, 5).arrayBuffer());
+      if (String.fromCharCode(...head) !== "%PDF-") {
+        return jsonResponse({ ok: false, error: "Menu file is not a valid PDF" }, 400);
+      }
+    }
+    const maxBytes = rule.maxMb * 1024 * 1024;
     if (Number(file.size) <= 0) {
       return jsonResponse(
         {
@@ -5990,7 +6011,7 @@ async function uploadOnboardingAsset(request, env) {
       return jsonResponse(
         {
           ok: false,
-          error: "Logo must be 10 MB or smaller"
+          error: `${rule.label} must be ${rule.maxMb} MB or smaller`
         },
         413
       );
@@ -6066,7 +6087,7 @@ async function uploadOnboardingAsset(request, env) {
             ?,
             ?,
             ?,
-            'LOGO',
+            ?,
             'R2',
             ?,
             ?,
@@ -6086,6 +6107,7 @@ async function uploadOnboardingAsset(request, env) {
         project.business_id || null,
         project.customer_id,
         project.id,
+        rule.assetType,
         storageKey,
         originalFilename,
         mimeType,
@@ -6338,6 +6360,14 @@ function extractReadableText(html) {
   ).trim();
 }
 __name(extractReadableText, "extractReadableText");
+// Projects created after menu file uploads launched have both a menu_file and a menu_source row;
+// either one being VALID satisfies the menu requirement. Older projects keep menu_source required.
+function menuSourceMissing(rows) {
+  const byKey = Object.fromEntries((rows || []).map((row) => [row.input_key, row.status]));
+  if (!("menu_file" in byKey)) return false;
+  return byKey.menu_file !== "VALID" && byKey.menu_source !== "VALID";
+}
+__name(menuSourceMissing, "menuSourceMissing");
 function getInputValue(inputs, key) {
   const input = inputs?.[key];
   if (!input) {
@@ -6390,6 +6420,7 @@ async function prepareProjectInputs(projectId, env) {
   const invalidRequired = rows.filter(
     (row) => Number(row.required) === 1 && row.status !== "VALID"
   );
+  if (menuSourceMissing(rows)) invalidRequired.push({ input_key: "menu_source", status: "MISSING" });
   if (invalidRequired.length > 0) {
     return {
       ok: false,
@@ -6806,6 +6837,134 @@ async function fetchMenuSource(menuSource) {
   };
 }
 __name(fetchMenuSource, "fetchMenuSource");
+// Reads an uploaded menu PDF or photo with Claude and returns the menu as clean, structured text.
+var ANTHROPIC_MESSAGES_ENDPOINT = "https://api.anthropic.com/v1/messages";
+var MENU_EXTRACTION_MODEL = "claude-sonnet-5-5";
+var MENU_EXTRACTION_TOOL = {
+  name: "record_menu",
+  description: "Record every section and item on the menu exactly as printed.",
+  input_schema: {
+    type: "object",
+    properties: {
+      sections: {
+        type: "array",
+        items: {
+          type: "object",
+          properties: {
+            name: { type: "string", description: "Section heading as printed, e.g. Starters. Use 'Menu' if the menu has no headings." },
+            items: {
+              type: "array",
+              items: {
+                type: "object",
+                properties: {
+                  name: { type: "string" },
+                  description: { type: "string", description: "Description as printed; empty if none." },
+                  price: { type: "string", description: "Price exactly as printed, e.g. $12 or 12 / 18. Empty if none." }
+                },
+                required: ["name", "description", "price"]
+              }
+            }
+          },
+          required: ["name", "items"]
+        }
+      },
+      notes: { type: "string", description: "Printed footnotes worth keeping (allergens, surcharges, hours). Empty if none." },
+      unreadable: { type: "string", description: "Describe any part you could not read with confidence. Empty if everything was legible." }
+    },
+    required: ["sections", "notes", "unreadable"]
+  }
+};
+function bytesToBase64(bytes) {
+  let binary = "";
+  const chunk = 32768;
+  for (let i = 0; i < bytes.length; i += chunk) {
+    binary += String.fromCharCode(...bytes.subarray(i, i + chunk));
+  }
+  return btoa(binary);
+}
+function formatExtractedMenu(menu) {
+  const clean = (value, max) => String(value ?? "").replace(/\s+/g, " ").trim().slice(0, max);
+  const lines = [];
+  let itemCount = 0;
+  for (const section of (menu.sections || []).slice(0, 60)) {
+    const items = (section.items || []).slice(0, 200).filter((item) => clean(item?.name, 200));
+    if (!items.length) continue;
+    lines.push(clean(section.name, 120).toUpperCase() || "MENU");
+    for (const item of items) {
+      const price = clean(item.price, 40);
+      lines.push(price ? `${clean(item.name, 200)} — ${price}` : clean(item.name, 200));
+      const description = clean(item.description, 600);
+      if (description) lines.push(`  ${description}`);
+      itemCount++;
+    }
+    lines.push("");
+  }
+  const notes = clean(menu.notes, 1000);
+  if (notes) lines.push(notes);
+  return { text: lines.join("\n").trim(), itemCount };
+}
+async function extractMenuFromFile(asset, env) {
+  if (!env.ANTHROPIC_API_KEY) throw new Error("ANTHROPIC_API_KEY is not configured");
+  if (!env.ASSETS) throw new Error("R2 ASSETS binding is not available");
+  const mime = String(asset.mime_type || "").toLowerCase();
+  if (!["application/pdf", "image/png", "image/jpeg", "image/webp"].includes(mime)) {
+    throw new Error(`Menu file type ${mime || "unknown"} is not supported`);
+  }
+  const object = await env.ASSETS.get(asset.storage_key);
+  if (!object) throw new Error("Menu file is missing from storage");
+  const data = bytesToBase64(new Uint8Array(await object.arrayBuffer()));
+  const fileBlock = mime === "application/pdf"
+    ? { type: "document", source: { type: "base64", media_type: mime, data } }
+    : { type: "image", source: { type: "base64", media_type: mime, data } };
+  const response = await fetch(ANTHROPIC_MESSAGES_ENDPOINT, {
+    method: "POST",
+    headers: {
+      "x-api-key": env.ANTHROPIC_API_KEY,
+      "anthropic-version": "2023-06-01",
+      "content-type": "application/json"
+    },
+    body: JSON.stringify({
+      model: env.MENU_EXTRACTION_MODEL || MENU_EXTRACTION_MODEL,
+      max_tokens: 16000,
+      tools: [MENU_EXTRACTION_TOOL],
+      tool_choice: { type: "tool", name: "record_menu" },
+      messages: [{
+        role: "user",
+        content: [
+          fileBlock,
+          { type: "text", text: "This is a restaurant or food business menu. Transcribe it with record_menu. Copy names, descriptions and prices exactly as printed; never invent, correct, translate or round anything. Keep the menu's own section order. Skip decorative text, logos and page numbers." }
+        ]
+      }]
+    })
+  });
+  let result = null;
+  try {
+    result = await response.json();
+  } catch {
+    result = null;
+  }
+  if (!response.ok) {
+    throw new Error(`Menu reading failed: ${result?.error?.message || `Anthropic API returned HTTP ${response.status}`}`);
+  }
+  const menu = (result?.content || []).find((block) => block.type === "tool_use" && block.name === "record_menu")?.input;
+  if (!menu) throw new Error("Menu reading returned no menu");
+  const { text, itemCount } = formatExtractedMenu(menu);
+  if (itemCount === 0) throw new Error("No menu items could be read from the uploaded file");
+  return {
+    requested_url: null,
+    resolved_url: "",
+    content_type: mime,
+    text,
+    extraction: {
+      model: result.model || null,
+      item_count: itemCount,
+      unreadable: String(menu.unreadable || "").slice(0, 500),
+      input_tokens: result.usage?.input_tokens ?? null,
+      output_tokens: result.usage?.output_tokens ?? null
+    }
+  };
+}
+__name(extractMenuFromFile, "extractMenuFromFile");
 function buildMenuDraftHtml({
   businessName,
   brandColors,
@@ -6907,14 +7066,14 @@ function buildMenuDraftHtml({
       aria-label="${safeBusiness} menu"
     >${safeMenu}</section>
 
-    <footer>
+    ${safeSource ? `<footer>
       <p>
         Draft generated from
         <a href="${safeSource}">
           supplied menu source
         </a>.
       </p>
-    </footer>
+    </footer>` : ""}
   </main>
 </body>
 </html>`;
@@ -6943,9 +7102,13 @@ async function runGenerateMenuDraftStep(targetStep, env) {
     preparedPayload.inputs,
     "menu_source"
   );
-  if (!menuSource) {
+  const menuFile = getInputValue(
+    preparedPayload.inputs,
+    "menu_file"
+  );
+  if (!menuSource && !menuFile) {
     throw new Error(
-      "menu_source is required to generate the menu draft"
+      "A menu link or menu file is required to generate the menu draft"
     );
   }
   const businessName = getInputValue(
@@ -6956,7 +7119,8 @@ async function runGenerateMenuDraftStep(targetStep, env) {
     preparedPayload.inputs,
     "brand_colors"
   );
-  const source = await fetchMenuSource(
+  // An uploaded PDF/photo takes priority: it is what the owner chose to send.
+  const source = menuFile ? await extractMenuFromFile(menuFile, env) : await fetchMenuSource(
     menuSource
   );
   const draftHtml = buildMenuDraftHtml({
@@ -7186,7 +7350,8 @@ async function runGenerateMenuDraftStep(targetStep, env) {
     source: {
       requested_url: source.requested_url,
       resolved_url: source.resolved_url,
-      content_type: source.content_type
+      content_type: source.content_type,
+      ...source.extraction ? { extraction: source.extraction } : {}
     },
     asset: {
       id: assetId,
@@ -8150,12 +8315,21 @@ async function notifyOwnerForApproval(targetStep, context, files, approval, env)
   const business = context.business_name || "A customer";
   const buyer = [context.first_name, context.last_name].filter(Boolean).join(" ") || context.customer_email;
   const subject = `${test ? "[TEST] " : ""}Approve ${business}'s online menu + QR`;
+  const draftStep = await env.DB.prepare(`
+      SELECT output_json FROM workflow_steps
+      WHERE workflow_run_id = ? AND step_key = 'GENERATE_MENU_DRAFT' AND status = 'SUCCEEDED' LIMIT 1
+    `).bind(targetStep.workflow_run_id).first();
+  const extraction = parseJsonOrNull(draftStep?.output_json)?.source?.extraction || null;
+  const readingNote = extraction
+    ? `Read from the uploaded menu file: ${extraction.item_count} items.${extraction.unreadable ? ` Check carefully: ${extraction.unreadable}` : ""}`
+    : "";
   const html = brandedEmailHtml({
     preheader: `${business}'s menu and QR code are ready for your review.`,
     eyebrow: test ? "TEST ORDER · OWNER APPROVAL" : "OWNER APPROVAL",
     heading: `${business}'s menu is ready to review`,
     paragraphs: [
       "The menu page and QR code were produced automatically. Nothing goes to the buyer until you approve.",
+      ...readingNote ? [escapeHtml(readingNote)] : [],
       "Preview both files, then approve to send them to the buyer."
     ],
     rows: [["Business", business], ["Buyer", buyer], ["Order", context.order_id], ["Link expires", `${APPROVAL_TTL_DAYS} days`]],
@@ -8164,6 +8338,7 @@ async function notifyOwnerForApproval(targetStep, context, files, approval, env)
   });
   const text = [
     `${business}'s online menu and QR code are ready for your review. Nothing goes to the buyer until you approve.`,
+    ...readingNote ? ["", readingNote] : [],
     "",
     ...previews.map((p) => `${p.label}: ${p.url}`),
     "",
