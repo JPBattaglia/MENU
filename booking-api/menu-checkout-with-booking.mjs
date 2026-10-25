@@ -6987,12 +6987,13 @@ async function extractMenuFromFile(asset, env) {
       model: env.MENU_EXTRACTION_MODEL || MENU_EXTRACTION_MODEL,
       max_tokens: 16000,
       tools: [MENU_EXTRACTION_TOOL],
-      tool_choice: { type: "tool", name: "record_menu" },
+      // Forced tool_choice is not supported by every model; the instruction below requires the tool instead.
+      tool_choice: { type: "auto" },
       messages: [{
         role: "user",
         content: [
           fileBlock,
-          { type: "text", text: "This is a restaurant or food business menu. Transcribe it with record_menu. Copy names, descriptions and prices exactly as printed; never invent, correct, translate or round anything. Keep the menu's own section order. Skip decorative text, logos and page numbers." }
+          { type: "text", text: "This is a restaurant or food business menu. Respond only by calling the record_menu tool once, with the whole menu. Copy names, descriptions and prices exactly as printed; never invent, correct, translate or round anything. Keep the menu's own section order. Skip decorative text, logos and page numbers." }
         ]
       }]
     })
@@ -9029,6 +9030,11 @@ function validate(data, now = new Date()) {
       if (key !== 'notes' && /[\r\n\x00]/.test(clean[key])) return null;
     }
     if (!clean.name || !clean.notes || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(clean.email) || !SERVICES.has(clean.service)) return null;
+    // A menu attached during checkout is stored for the order, not treated as an inquiry (no emails).
+    if (data.purpose !== undefined) {
+      if (data.purpose !== 'checkout') return null;
+      clean.purpose = 'checkout';
+    }
     if (!/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(clean.requestId)) return null;
     return clean;
   }
@@ -9100,6 +9106,10 @@ ${owner ? '' : '<p style="margin:24px 0 0;font-size:15px;color:#071f2c;">The MEN
 
 async function deliver(env, row) {
   const data = JSON.parse(row.payload);
+  if (data.purpose === 'checkout') {
+    await env.DB.prepare('UPDATE mm_booking_requests SET owner_sent = 1, customer_sent = 1 WHERE id = ?').bind(row.id).run();
+    return;
+  }
   const inquiry = data.type === 'inquiry';
   const details = inquiry ? `Service: ${data.service}\nName: ${data.name}\nEmail: ${data.email}\nBusiness: ${data.business || 'Not provided'}\nProject details: ${data.notes}\nReference: ${row.id}` : `Session: ${data.session}\nPreferred date: ${data.date}\nPreferred time: ${data.time}\nTimezone: ${data.timezone}\nName: ${data.name}\nEmail: ${data.email}\nBusiness: ${data.business || 'Not provided'}\nNotes: ${data.notes || 'None'}\nReference: ${row.id}`;
   for (const kind of ['owner', 'customer']) {

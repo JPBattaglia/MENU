@@ -289,7 +289,7 @@ test('an uploaded menu PDF is read by Claude and the owner sees what to double-c
     const sent = f.state.claudeRequest;
     assert.equal(sent.headers['x-api-key'], 'sk-ant-test-placeholder');
     assert.equal(sent.body.content ?? sent.body.messages[0].content[0].type, 'document');
-    assert.equal(sent.body.tool_choice.name, 'record_menu');
+    assert.equal(sent.body.tool_choice.type, 'auto'); assert.equal(sent.body.tools[0].name, 'record_menu');
     const draft = f.row(`SELECT a.storage_key FROM deliverables d JOIN assets a ON a.id = d.asset_id WHERE d.deliverable_type = 'MENU_DRAFT'`);
     const html = new TextDecoder().decode(f.ASSETS.objects.get(draft.storage_key).data);
     assert.match(html, /STARTERS/); assert.match(html, /Tomato Soup — \$9/); assert.match(html, /Espresso — \$4/);
