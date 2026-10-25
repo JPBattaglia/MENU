@@ -1,0 +1,52 @@
+# Tests and deploys the menu-checkout worker (booking-api/) on every push to master.
+# Deploy runs only after all tests pass, and only once the repo has the
+# CLOUDFLARE_API_TOKEN and CLOUDFLARE_ACCOUNT_ID secrets.
+name: menu-checkout
+
+on:
+  push:
+    branches: [master]
+    paths:
+      - "booking-api/**"
+      - "*.test.mjs"
+      - ".github/workflows/menu-checkout.yml"
+  workflow_dispatch:
+
+concurrency:
+  group: menu-checkout-deploy
+  cancel-in-progress: false
+
+jobs:
+  test-and-deploy:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: booking-api
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm install --no-audit --no-fund
+      - name: Tests
+        run: npm test
+      - name: Dry run
+        if: env.CLOUDFLARE_API_TOKEN != ''
+        run: npx wrangler deploy --dry-run --outdir dist
+      - name: Deploy
+        if: env.CLOUDFLARE_API_TOKEN != ''
+        run: npx wrangler deploy
+      - name: Smoke test
+        if: env.CLOUDFLARE_API_TOKEN != ''
+        run: |
+          set -e
+          curl -fsS https://menu-made.com/api/db-health | grep -q '"ok":true'
+          curl -fsS "https://menu-made.com/api/menu-package-quote?pages=3" | grep -q '"total_cents":14400'
+          curl -fsS https://menu-made.com/api/offers | grep -q '"ok":true'
+          echo "Smoke tests passed"
+      - name: Deploy skipped
+        if: env.CLOUDFLARE_API_TOKEN == ''
+        run: echo "::notice::Tests passed. Deploy skipped - add CLOUDFLARE_API_TOKEN and CLOUDFLARE_ACCOUNT_ID repo secrets."
