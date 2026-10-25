@@ -4282,6 +4282,53 @@ async function saveOnboarding(request, env) {
   }
 }
 __name(saveOnboarding, "saveOnboarding");
+function hostedMenuSlug(projectId, businessName) {
+  const base = String(businessName || "menu").toLowerCase().normalize("NFKD").replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 40) || "menu";
+  return `${base}-${String(projectId).replace(/-/g, "").slice(0, 8)}`;
+}
+function hostedMenuUrl(projectId, businessName) {
+  return `${PUBLIC_BASE_URL}/api/menu/${hostedMenuSlug(projectId, businessName)}`;
+}
+async function attachCheckoutMenuDocument(projectId, orderId, env) {
+  const order = await env.DB.prepare(`SELECT notes FROM orders WHERE id = ?`).bind(orderId).first();
+  const reference = /Document ref: ([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})/i.exec(order?.notes || "")?.[1];
+  if (!reference) return false;
+  const request = await env.DB.prepare(`SELECT payload FROM mm_booking_requests WHERE id = ?`).bind(reference.toLowerCase()).first();
+  const document = parseJsonOrNull(request?.payload)?.document;
+  const mime = String(document?.contentType || "").toLowerCase();
+  if (!document?.storageKey || !["application/pdf", "image/png", "image/jpeg", "image/webp"].includes(mime)) return false;
+  const project = await env.DB.prepare(`SELECT business_id, customer_id FROM projects WHERE id = ?`).bind(projectId).first();
+  const timestamp = nowIso();
+  await env.DB.prepare(`
+      INSERT OR IGNORE INTO assets (
+        id, business_id, customer_id, project_id, asset_type, storage_provider, storage_key,
+        original_filename, mime_type, size_bytes, checksum, status, uploaded_at, validated_at,
+        approved_for_use, is_customer_supplied, rights_confirmed, metadata_json
+      )
+      VALUES (?, ?, ?, ?, 'MENU_SOURCE', 'R2', ?, ?, ?, ?, ?, 'VALID', ?, ?, 1, 1, 1, ?)
+    `).bind(
+    crypto.randomUUID(),
+    project?.business_id || null,
+    project?.customer_id || null,
+    projectId,
+    document.storageKey,
+    String(document.name || "menu").slice(0, 200),
+    mime,
+    Number(document.size || 0),
+    document.checksum || null,
+    timestamp,
+    timestamp,
+    JSON.stringify({ source: "checkout_upload", inquiry_request_id: reference })
+  ).run();
+  const asset = await env.DB.prepare(`SELECT id FROM assets WHERE storage_provider = 'R2' AND storage_key = ?`).bind(document.storageKey).first();
+  if (!asset) return false;
+  const updated = await env.DB.prepare(`
+      UPDATE project_inputs
+      SET asset_id = ?, status = 'VALID', validation_message = NULL, submitted_at = ?, validated_at = ?, updated_at = ?
+      WHERE project_id = ? AND input_key = 'menu_file' AND status != 'VALID'
+    `).bind(asset.id, timestamp, timestamp, timestamp, projectId).run();
+  return Number(updated.meta?.changes || 0) > 0;
+}
 async function createMenuQrInputs(projectId, order, timestamp, env) {
   const business = await env.DB.prepare(`
         SELECT name
@@ -4325,23 +4372,24 @@ async function createMenuQrInputs(projectId, order, timestamp, env) {
     {
       key: "logo",
       type: "FILE",
-      required: 1,
+      required: 0,
       value: null,
       status: "MISSING"
     },
     {
       key: "brand_colors",
       type: "TEXT",
-      required: 1,
+      required: 0,
       value: null,
       status: "MISSING"
     },
     {
+      // Defaults to the menu page Menu-Made hosts for this project; the buyer may override it.
       key: "qr_destination",
       type: "URL",
       required: 1,
-      value: null,
-      status: "MISSING"
+      value: hostedMenuUrl(projectId, business?.name),
+      status: "VALID"
     },
     {
       key: "contact_email",
@@ -5788,6 +5836,18 @@ async function handleCheckoutCompleted(event, env) {
     timestamp,
     orderId
   ).run();
+  // The Start page uploads the menu before payment; attach it so the buyer is not asked again.
+  const menuProjects = await env.DB.prepare(`
+      SELECT id FROM projects WHERE order_id = ? AND workflow_key = 'MENU_QR_V1' AND status = 'AWAITING_INPUTS'
+    `).bind(orderId).all();
+  for (const menuProject of menuProjects.results || []) {
+    try {
+      await attachCheckoutMenuDocument(menuProject.id, orderId, env);
+      await refreshOnboardingState(menuProject.id, orderId, order.customer_id, "MENU_QR_V1", env);
+    } catch (attachError) {
+      console.error("Checkout menu attachment failed:", attachError instanceof Error ? attachError.message : String(attachError));
+    }
+  }
   const existingAudit = await env.DB.prepare(`
         SELECT id
         FROM business_events
@@ -8376,6 +8436,7 @@ async function deliverPackageToBuyer(targetStep, context, files, approval, env) 
   }
   const qrDestination = getInputValue(prepared.inputs, "qr_destination");
   const base = publicBaseUrl(env);
+  const hosted = typeof qrDestination === "string" && qrDestination.startsWith(`${base}/api/menu/`);
   const links = [];
   for (const file of files) {
     const token = await signLinkToken(env, { kind: "deliver", id: file.id, ttlDays: DELIVERY_LINK_TTL_DAYS });
@@ -8396,7 +8457,7 @@ async function deliverPackageToBuyer(targetStep, context, files, approval, env) 
     paragraphs: [
       `Hi ${escapeHtml(firstName)},`,
       "Your mobile-friendly menu page and QR code are finished. Use the buttons below to open and save them.",
-      qrDestination ? `Your QR code opens <strong>${escapeHtml(qrDestination)}</strong>. Put the menu page at that address (or send it to whoever manages your website), then print the QR code for your tables.` : "Print the QR code for your tables and place the menu page where it points."
+      hosted ? `Your menu is live at <a href="${escapeHtml(qrDestination)}">${escapeHtml(qrDestination)}</a>, and your QR code opens it. Print the QR code for your tables; there's nothing else to set up.` : qrDestination ? `Your QR code opens <strong>${escapeHtml(qrDestination)}</strong>. Put the menu page at that address (or send it to whoever manages your website), then print the QR code for your tables.` : "Print the QR code for your tables and place the menu page where it points."
     ],
     buttons: links.map((link, index) => ({ label: link.label, url: link.url, primary: index === 0 })),
     footnote: `These links work for ${DELIVERY_LINK_TTL_DAYS} days, so save both files. Questions or changes? Reply to this email.`
@@ -8408,7 +8469,7 @@ async function deliverPackageToBuyer(targetStep, context, files, approval, env) 
     "",
     ...links.map((link) => `${link.label}: ${link.url}`),
     "",
-    qrDestination ? `Your QR code opens ${qrDestination}. Put the menu page at that address, then print the QR code for your tables.` : "",
+    hosted ? `Your menu is live at ${qrDestination}, and your QR code opens it. Print the QR code for your tables; there's nothing else to set up.` : qrDestination ? `Your QR code opens ${qrDestination}. Put the menu page at that address, then print the QR code for your tables.` : "",
     `These links work for ${DELIVERY_LINK_TTL_DAYS} days, so save both files. Questions or changes? Reply to this email.`,
     "",
     "The MENU-MADE team"
@@ -8659,6 +8720,38 @@ async function handleDeliveryDownload(request, env, deliverableId) {
   });
 }
 __name(handleDeliveryDownload, "handleDeliveryDownload");
+// Public menu page that each QR code opens. Shows the approved menu only; before approval, a holding page.
+async function handleHostedMenu(request, env, slug) {
+  if (!env.DB || !env.ASSETS) return simplePage(503, "Temporarily unavailable", "<p>Please try again in a minute.</p>");
+  const hostedUrl = `${publicBaseUrl(env)}/api/menu/${slug}`;
+  const row = await env.DB.prepare(`
+      SELECT a.storage_key
+      FROM project_inputs pi
+      JOIN deliverables d ON d.project_id = pi.project_id
+      JOIN assets a ON a.id = d.asset_id
+      WHERE pi.input_key = 'qr_destination' AND pi.value_text = ?
+        AND d.deliverable_type = 'MENU_DRAFT' AND d.status = 'FINAL' AND d.customer_visible = 1
+      ORDER BY d.version DESC, d.delivered_at DESC
+      LIMIT 1
+    `).bind(hostedUrl).first();
+  const object = row ? await env.ASSETS.get(row.storage_key) : null;
+  if (!object) {
+    const known = await env.DB.prepare(`SELECT 1 AS found FROM project_inputs WHERE input_key = 'qr_destination' AND value_text = ? LIMIT 1`).bind(hostedUrl).first();
+    return known
+      ? simplePage(200, "Menu coming soon", "<p>This menu is being prepared. Please check back shortly.</p>")
+      : simplePage(404, "Menu not found", "<p>This menu link isn't active.</p>");
+  }
+  return new Response(object.body, {
+    status: 200,
+    headers: {
+      "Content-Type": "text/html; charset=utf-8",
+      "Cache-Control": "public, max-age=300",
+      "X-Content-Type-Options": "nosniff",
+      "Content-Security-Policy": "sandbox; default-src 'none'; img-src https: data:; style-src 'unsafe-inline'; font-src https: data:"
+    }
+  });
+}
+__name(handleHostedMenu, "handleHostedMenu");
 async function alertOwnerOfFailure(env, body) {
   const runId = body.workflow_run_id || null;
   try {
@@ -8760,6 +8853,10 @@ var worker_default = {
     const approvalMatch = url.pathname.match(/^\/api\/approvals\/([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})$/i);
     if (approvalMatch && (request.method === "GET" || request.method === "POST")) {
       return handleApprovalRequest(request, env, ctx, approvalMatch[1].toLowerCase());
+    }
+    const hostedMenuMatch = url.pathname.match(/^\/api\/menu\/([a-z0-9-]{1,60})$/);
+    if (hostedMenuMatch && request.method === "GET") {
+      return handleHostedMenu(request, env, hostedMenuMatch[1]);
     }
     const deliveryMatch = url.pathname.match(/^\/api\/delivery\/([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})$/i);
     if (deliveryMatch && request.method === "GET") {
