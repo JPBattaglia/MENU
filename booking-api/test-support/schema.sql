@@ -467,3 +467,57 @@ CREATE UNIQUE INDEX IF NOT EXISTS ux_customers_email ON customers(lower(email));
 CREATE UNIQUE INDEX IF NOT EXISTS ux_orders_checkout_session ON orders(stripe_checkout_session_id) WHERE stripe_checkout_session_id IS NOT NULL;
 CREATE UNIQUE INDEX IF NOT EXISTS ux_workflow_runs_ready_trigger ON workflow_runs (project_id, workflow_key, workflow_version, trigger_type, trigger_reference);
 CREATE UNIQUE INDEX IF NOT EXISTS ux_offers_code ON offers(code);
+CREATE TABLE subscriptions (
+    id TEXT PRIMARY KEY,
+    customer_id TEXT NOT NULL,
+    business_id TEXT NOT NULL,
+    offer_id TEXT NOT NULL,
+    offer_version_id TEXT NOT NULL,
+    provider TEXT NOT NULL DEFAULT 'STRIPE',
+    provider_subscription_id TEXT NOT NULL,
+    provider_customer_id TEXT NOT NULL,
+    status TEXT NOT NULL CHECK (status IN (
+        'INCOMPLETE','TRIALING','ACTIVE','PAST_DUE','PAUSED',
+        'CANCELLED','EXPIRED','UNPAID'
+    )),
+    billing_interval TEXT NOT NULL CHECK (billing_interval IN ('MONTH','YEAR')),
+    amount_cents INTEGER NOT NULL CHECK (amount_cents >= 0),
+    currency TEXT NOT NULL DEFAULT 'USD',
+    current_period_start TEXT,
+    current_period_end TEXT,
+    cancel_at_period_end INTEGER NOT NULL DEFAULT 0 CHECK (cancel_at_period_end IN (0,1)),
+    started_at TEXT NOT NULL,
+    cancelled_at TEXT,
+    ended_at TEXT,
+    trial_ends_at TEXT,
+    grace_ends_at TEXT,
+    created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL,
+    FOREIGN KEY (customer_id) REFERENCES customers(id) ON DELETE RESTRICT,
+    FOREIGN KEY (business_id) REFERENCES businesses(id) ON DELETE RESTRICT,
+    FOREIGN KEY (offer_id) REFERENCES offers(id) ON DELETE RESTRICT,
+    FOREIGN KEY (offer_version_id) REFERENCES offer_versions(id) ON DELETE RESTRICT,
+    UNIQUE (provider, provider_subscription_id)
+);
+CREATE TABLE entitlements (
+    id TEXT PRIMARY KEY,
+    customer_id TEXT NOT NULL,
+    business_id TEXT NOT NULL,
+    subscription_id TEXT,
+    order_item_id TEXT,
+    entitlement_type TEXT NOT NULL,
+    status TEXT NOT NULL CHECK (status IN ('ACTIVE','SUSPENDED','EXPIRED')),
+    starts_at TEXT NOT NULL,
+    ends_at TEXT,
+    quantity_limit INTEGER CHECK (quantity_limit IS NULL OR quantity_limit >= 0),
+    quantity_used INTEGER NOT NULL DEFAULT 0 CHECK (quantity_used >= 0),
+    metadata_json TEXT,
+    created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL,
+    FOREIGN KEY (customer_id) REFERENCES customers(id) ON DELETE RESTRICT,
+    FOREIGN KEY (business_id) REFERENCES businesses(id) ON DELETE RESTRICT,
+    FOREIGN KEY (subscription_id) REFERENCES subscriptions(id) ON DELETE SET NULL,
+    FOREIGN KEY (order_item_id) REFERENCES order_items(id) ON DELETE SET NULL,
+    CHECK (subscription_id IS NOT NULL OR order_item_id IS NOT NULL)
+);
+CREATE UNIQUE INDEX IF NOT EXISTS ux_offers_public_slug ON offers(public_slug) WHERE public_slug IS NOT NULL;
