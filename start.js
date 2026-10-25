@@ -1,3 +1,12 @@
+// Owner testing: add ?checkout=test to the Start page URL to use Stripe test mode (no real charges).
+const TEST_CHECKOUT = new URLSearchParams(location.search).get('checkout') === 'test';
+if (TEST_CHECKOUT) document.addEventListener('DOMContentLoaded', () => {
+  const note = document.createElement('div');
+  note.textContent = 'TEST MODE — Stripe test checkout. Use card 4242 4242 4242 4242. No real charge.';
+  note.setAttribute('role', 'status');
+  note.style.cssText = 'position:sticky;top:0;z-index:1000;background:#ffd84d;color:#071f2c;font-weight:700;text-align:center;padding:10px 16px;';
+  document.body.prepend(note);
+});
 // Paid services use one selection per project. Custom work goes straight to inquiry.
 const cart = {};
 const itemsEl = document.getElementById('cartItems');
@@ -290,7 +299,7 @@ checkoutBtn.addEventListener('click', async () => {
       document.getElementById('lead_document_status').textContent = 'Document received. Reference: ' + uploadedDocumentRequest.payload.requestId;
     }
     checkoutBtn.textContent = 'Opening secure checkout…'; window.MenuMadeFunnel?.track('checkout_attempt');
-    const response = await fetch('/api/create-checkout', { method: 'POST', signal: controller.signal, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ items, ...(quote ? { menu_pages: quote.pages } : {}), tracking: window.MenuMadeFunnel?.tracking(), customer }) });
+    const response = await fetch(TEST_CHECKOUT ? '/api/create-checkout-test' : '/api/create-checkout', { method: 'POST', signal: controller.signal, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ items, ...(quote ? { menu_pages: quote.pages } : {}), tracking: window.MenuMadeFunnel?.tracking(), customer }) });
     const result = await response.json();
     if (!response.ok) { window.MenuMadeFunnel?.track('checkout_error'); showStatus(result?.error?.message || result?.error || 'Checkout error. Please refresh and try again.'); return; }
     if (result.url) { window.location.href = result.url; return; }
