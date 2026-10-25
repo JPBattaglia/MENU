@@ -291,7 +291,7 @@ checkoutBtn.addEventListener('click', async () => {
     timeout = setTimeout(() => controller.abort(), 60000);
     if (file) {
       const documentNotes = composeNotes(brief, 'Services: ' + Object.values(cart).map(item => item.name).join(', ') + '\n' + notes, 1200);
-      const payload = { type: 'inquiry', service: 'Other project', name, business, email, notes: documentNotes, website: '' };
+      const payload = { type: 'inquiry', purpose: 'checkout', service: 'Other project', name, business, email, notes: documentNotes, website: '' };
       const key = JSON.stringify(payload) + fingerprint;
       if (!uploadedDocumentRequest || uploadedDocumentRequest.key !== key) uploadedDocumentRequest = { key, payload: { ...payload, requestId: crypto.randomUUID() }, received: false };
       if (!uploadedDocumentRequest.received) { await window.MenuMadeDocuments.send(uploadedDocumentRequest.payload, file, controller.signal); uploadedDocumentRequest.received = true; }
