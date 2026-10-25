@@ -1,0 +1,17 @@
+{
+  "name": "menu-checkout",
+  "private": true,
+  "type": "module",
+  "description": "Menu-made checkout, onboarding and production worker (Cloudflare worker menu-checkout).",
+  "scripts": {
+    "test": "cd .. && node --no-warnings --test booking-api/*.test.mjs *.test.mjs",
+    "check": "wrangler deploy --dry-run --outdir dist",
+    "deploy": "wrangler deploy"
+  },
+  "dependencies": {
+    "qrcode": "1.5.4"
+  },
+  "devDependencies": {
+    "wrangler": "^4"
+  }
+}

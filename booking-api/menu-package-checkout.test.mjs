@@ -1,11 +1,12 @@
-import { readFile } from 'node:fs/promises';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { webcrypto } from 'node:crypto';
 
 globalThis.crypto ??= webcrypto;
-const source = await readFile(new URL('./menu-checkout-with-booking.mjs', import.meta.url), 'utf8');
-const api = await import('data:text/javascript;base64,' + Buffer.from(source + '\nexport { quoteMenuPackage, normalizeCheckoutItems };').toString('base64'));
+const api = {
+  ...(await import('./src/worker.js')),
+  ...(await import('./src/checkout/quote.js')),
+};
 
 const menuOffer = {
   offer_id: 'offer_online_menu_qr', offer_code: 'ONLINE_MENU_QR', offer_name: 'Online Menu + QR',

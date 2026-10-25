@@ -1,0 +1,26 @@
+// Deploy config for the live `menu-checkout` worker (NOT the static site — that is ../wrangler.jsonc).
+// Deploy: cd booking-api && npx wrangler deploy
+// Secrets (Stripe, Resend, Anthropic, runner secret) live in Cloudflare only and are never written here.
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "menu-checkout",
+  "main": "src/worker.js",
+  // VERIFY against the live worker before the first deploy (dashboard → menu-checkout → Settings).
+  "compatibility_date": "2025-09-27",
+  // Keep any plain-text variables already set in the dashboard (OWNER_EMAIL, PUBLIC_BASE_URL, BOOKING_*, ...).
+  "keep_vars": true,
+  "d1_databases": [
+    { "binding": "DB", "database_name": "menu-made-db", "database_id": "1387bcdc-e462-41ce-bc6b-5cc1b0a47ad0" }
+  ],
+  "r2_buckets": [
+    { "binding": "ASSETS", "bucket_name": "menu-made-assets" }
+  ],
+  "triggers": { "crons": ["*/5 * * * *"] },
+  // VERIFY: must list exactly the routes shown under Domains & Routes for menu-checkout.
+  "routes": [
+    { "pattern": "menu-made.com/api/*", "zone_name": "menu-made.com" },
+    { "pattern": "www.menu-made.com/api/*", "zone_name": "menu-made.com" }
+  ],
+  "workers_dev": false,
+  "observability": { "enabled": true }
+}

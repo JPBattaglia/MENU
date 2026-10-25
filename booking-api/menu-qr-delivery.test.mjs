@@ -1,15 +1,17 @@
 // Stage 2 end-to-end tests: a paid Online Menu + QR order is produced on the scheduled tick, waits for
 // owner approval, and is delivered to the buyer — against a real SQLite copy of the production schema.
 // Run: node --no-warnings --test menu-qr-delivery.test.mjs
-import { readFile } from 'node:fs/promises';
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { createD1, createR2 } from './test-support/d1.mjs';
 
-const source = await readFile(new URL('./menu-checkout-with-booking.mjs', import.meta.url), 'utf8');
-const api = await import('data:text/javascript;base64,' + Buffer.from(
-  source + '\nexport {ensureProductionWorkflow, runScheduledProduction, signLinkToken, attachCheckoutMenuDocument, hostedMenuUrl};'
-).toString('base64'));
+const api = {
+  ...(await import('./src/worker.js')),
+  ...(await import('./src/workflows/definitions.js')),
+  ...(await import('./src/workflows/runner.js')),
+  ...(await import('./src/lib/links.js')),
+  ...(await import('./src/onboarding/menu-inputs.js')),
+};
 
 const MENU_URL = 'https://proofcafe.example/menu';
 const QR_URL = 'https://proofcafe.example/table-menu';
