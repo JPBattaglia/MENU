@@ -3535,6 +3535,39 @@ async function ensureProductionWorkflow(projectId, workflowKey, workflowVersion,
   ).first();
   let workflowRunId = existingRun?.id || null;
   let created = false;
+  if (existingRun?.id && existingRun.status === "WAITING") {
+    // A run parks in WAITING when PREPARE_INPUTS found missing inputs. This function is only called
+    // once every required input is VALID again, so release the run for the next runner tick.
+    const requeuedAt = nowIso();
+    const released = await env.DB.prepare(`
+        UPDATE workflow_steps
+        SET status = 'QUEUED', error_message = NULL
+        WHERE workflow_run_id = ?
+          AND step_key = 'PREPARE_INPUTS'
+          AND status = 'WAITING'
+      `).bind(existingRun.id).run();
+    if (Number(released.meta?.changes || 0) > 0) {
+      await env.DB.prepare(`
+          UPDATE workflow_runs
+          SET status = 'QUEUED', error_code = NULL, error_message = NULL
+          WHERE id = ?
+            AND status = 'WAITING'
+        `).bind(existingRun.id).run();
+      await env.DB.prepare(`
+          INSERT INTO business_events (
+            id, created_at, event_type, entity_type, entity_id,
+            actor_type, actor_id, correlation_id, payload_json
+          )
+          VALUES (?, ?, 'PRODUCTION_WORKFLOW_REQUEUED', 'PROJECT', ?, 'SYSTEM', 'MENU_MADE_AUTOMATION', ?, ?)
+        `).bind(
+        crypto.randomUUID(),
+        requeuedAt,
+        projectId,
+        existingRun.id,
+        JSON.stringify({ reason: "inputs_now_valid" })
+      ).run();
+    }
+  }
   if (!workflowRunId) {
     workflowRunId = crypto.randomUUID();
     const timestamp2 = nowIso();
@@ -7518,7 +7551,10 @@ async function runQualityCheckStep(targetStep, env) {
   await completeStep(targetStep, output, env);
   return output;
 }
-async function runNextProductionStep(request, env) {
+async function runNextProductionStep(request, env, options = {}) {
+  // options.createdAfter is set only by the scheduled runner (never from the request body), so older
+  // runs that predate automated production are left for an explicit, manual decision.
+  const createdAfter = typeof options.createdAfter === "string" && options.createdAfter ? options.createdAfter : null;
   const auth = verifyProductionRunner(
     request,
     env
@@ -7549,7 +7585,7 @@ async function runNextProductionStep(request, env) {
     if (!selection || typeof selection !== "object" || Array.isArray(selection)
       || Object.keys(selection).some(key => !["workflow_run_id","step_key","dry_run"].includes(key))
       || (selection.workflow_run_id !== undefined && !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(selection.workflow_run_id))
-      || (selection.step_key !== undefined && !["PREPARE_INPUTS","GENERATE_MENU_DRAFT","GENERATE_QR","QUALITY_CHECK"].includes(selection.step_key))
+      || (selection.step_key !== undefined && !["PREPARE_INPUTS","GENERATE_MENU_DRAFT","GENERATE_QR","QUALITY_CHECK","PACKAGE_DELIVERABLES"].includes(selection.step_key))
       || (selection.dry_run !== undefined && typeof selection.dry_run !== "boolean")) {
       return jsonResponse({ok:false,error:"Invalid runner selection"},400);
     }
@@ -7593,12 +7629,14 @@ async function runNextProductionStep(request, env) {
               'PREPARE_INPUTS',
               'GENERATE_MENU_DRAFT',
               'GENERATE_QR',
-              'QUALITY_CHECK'
+              'QUALITY_CHECK',
+              'PACKAGE_DELIVERABLES'
             )
 
-            AND (ws.step_key != 'QUALITY_CHECK' OR wr.workflow_key = 'MENU_QR_V1')
+            AND (ws.step_key NOT IN ('QUALITY_CHECK', 'PACKAGE_DELIVERABLES') OR wr.workflow_key = 'MENU_QR_V1')
             AND (? IS NULL OR wr.id = ?)
             AND (? IS NULL OR ws.step_key = ?)
+            AND (? IS NULL OR wr.created_at >= ?)
 
             AND wr.status IN (
               'QUEUED',
@@ -7623,7 +7661,8 @@ async function runNextProductionStep(request, env) {
 
           LIMIT 1
         `).bind(selection.workflow_run_id || null, selection.workflow_run_id || null,
-          selection.step_key || null, selection.step_key || null).first();
+          selection.step_key || null, selection.step_key || null,
+          createdAfter, createdAfter).first();
     if (!targetStep) {
       return jsonResponse({
         ok: true,
@@ -7723,6 +7762,12 @@ async function runNextProductionStep(request, env) {
       );
     } else if (targetStep.step_key === "QUALITY_CHECK") {
       stepOutput = await runQualityCheckStep(targetStep, env);
+    } else if (targetStep.step_key === "PACKAGE_DELIVERABLES") {
+      const result = await runPackageDeliverablesStep(targetStep, env);
+      if (result.waiting) {
+        return result.response;
+      }
+      stepOutput = result.output;
     } else {
       throw new Error(
         `Unsupported production step ${targetStep.step_key}`
@@ -7813,13 +7858,691 @@ async function runNextProductionStep(request, env) {
     return jsonResponse(
       {
         ok: false,
-        error: errorMessage
+        error: errorMessage,
+        workflow_run_id: targetStep?.workflow_run_id || null,
+        step_key: targetStep?.step_key || null
       },
       500
     );
   }
 }
 __name(runNextProductionStep, "runNextProductionStep");
+
+// src/delivery/delivery.js
+// Stage 2 (Oct 2026): owner approval, buyer delivery, signed links and the scheduled production runner.
+var PUBLIC_BASE_URL = "https://menu-made.com";
+var AUTOMATION_START_AT = "2026-10-25T00:00:00.000Z";
+var APPROVAL_TTL_DAYS = 14;
+var DELIVERY_LINK_TTL_DAYS = 90;
+var EMAIL_MAX_ATTEMPTS = 5;
+var SCHEDULED_RUNNER_MAX_STEPS = 10;
+var SCHEDULED_RUNNER_BUDGET_MS = 20000;
+var DELIVERABLE_LABELS = {
+  MENU_DRAFT: "Online menu (web page)",
+  QR_CODE: "QR code (SVG, prints at any size)"
+};
+function ownerEmailAddress(env) {
+  return env.OWNER_EMAIL || REPLY_TO_ADDRESS;
+}
+function publicBaseUrl(env) {
+  return String(env.PUBLIC_BASE_URL || PUBLIC_BASE_URL).replace(/\/+$/, "");
+}
+function addDaysIso(days) {
+  return new Date(Date.now() + days * 864e5).toISOString();
+}
+function base64UrlEncode(bytes) {
+  let binary = "";
+  for (const byte of bytes) binary += String.fromCharCode(byte);
+  return btoa(binary).replaceAll("+", "-").replaceAll("/", "_").replace(/=+$/, "");
+}
+function base64UrlDecode(text) {
+  if (!/^[A-Za-z0-9_-]*$/.test(text)) throw new Error("Invalid base64url");
+  const padded = text.replaceAll("-", "+").replaceAll("_", "/") + "===".slice((text.length + 3) % 4);
+  return Uint8Array.from(atob(padded), (c) => c.charCodeAt(0));
+}
+async function linkSigningKey(env) {
+  if (!env.PRODUCTION_RUNNER_SECRET) throw new Error("Link signing secret is not configured");
+  return crypto.subtle.importKey(
+    "raw",
+    new TextEncoder().encode(`menu-made-links-v1:${env.PRODUCTION_RUNNER_SECRET}`),
+    { name: "HMAC", hash: "SHA-256" },
+    false,
+    ["sign", "verify"]
+  );
+}
+async function signLinkToken(env, { kind, id, ttlDays }) {
+  const payload = { k: kind, i: id, e: Math.floor(Date.now() / 1e3) + Math.round(ttlDays * 86400) };
+  const body = base64UrlEncode(new TextEncoder().encode(JSON.stringify(payload)));
+  const signature = new Uint8Array(await crypto.subtle.sign("HMAC", await linkSigningKey(env), new TextEncoder().encode(body)));
+  return `${body}.${base64UrlEncode(signature)}`;
+}
+// Returns the payload, { expired: true, ... } for a genuine but expired token, or null when invalid.
+async function verifyLinkToken(env, token, kinds, id) {
+  if (typeof token !== "string" || token.length < 10 || token.length > 1024) return null;
+  const parts = token.split(".");
+  if (parts.length !== 2) return null;
+  try {
+    const valid = await crypto.subtle.verify(
+      "HMAC",
+      await linkSigningKey(env),
+      base64UrlDecode(parts[1]),
+      new TextEncoder().encode(parts[0])
+    );
+    if (!valid) return null;
+    const payload = JSON.parse(new TextDecoder().decode(base64UrlDecode(parts[0])));
+    if (!payload || !kinds.includes(payload.k) || payload.i !== id || !Number.isFinite(payload.e)) return null;
+    if (payload.e < Math.floor(Date.now() / 1e3)) return { ...payload, expired: true };
+    return payload;
+  } catch {
+    return null;
+  }
+}
+function looksLikeEmail(value) {
+  return typeof value === "string" && value.length <= 254 && /^[^\s@<>"]+@[^\s@<>"]+\.[^\s@<>"]+$/.test(value.trim());
+}
+function brandedEmailHtml({ preheader, eyebrow, heading, paragraphs = [], buttons = [], rows = [], footnote = "" }) {
+  const p = (html) => `<p style="margin:0 0 16px;font-size:16px;line-height:1.6;color:#26434f;">${html}</p>`;
+  const button = (b) => `<tr><td style="padding:0 0 12px;"><a href="${escapeHtml(b.url)}" style="display:inline-block;background-color:${b.primary ? "#00a7b5" : "#071f2c"};color:#ffffff;text-decoration:none;font-size:15px;font-weight:bold;padding:13px 22px;border-radius:6px;">${escapeHtml(b.label)}</a></td></tr>`;
+  const row = (r) => `<tr><td style="padding:10px 14px;border-bottom:1px solid #dce8ec;font-size:12px;font-weight:bold;color:#45616c;width:120px;vertical-align:top;">${escapeHtml(r[0])}</td><td style="padding:10px 14px;border-bottom:1px solid #dce8ec;font-size:14px;color:#102f3d;overflow-wrap:anywhere;">${escapeHtml(r[1])}</td></tr>`;
+  return `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${escapeHtml(heading)}</title></head>
+<body style="margin:0;padding:0;background-color:#edf3f5;font-family:Arial,Helvetica,sans-serif;">
+<div style="display:none;font-size:1px;color:#edf3f5;max-height:0;overflow:hidden;">${escapeHtml(preheader)}</div>
+<table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="background-color:#edf3f5;"><tr><td align="center" style="padding:28px 12px;">
+<table role="presentation" width="600" cellspacing="0" cellpadding="0" border="0" style="width:100%;max-width:600px;background-color:#ffffff;border:1px solid #dce8ec;">
+<tr><td style="background-color:#071f2c;padding:28px 32px;border-bottom:4px solid #00d6e6;"><a href="https://menu-made.com" style="text-decoration:none;"><img src="https://menu-made.com/MENU1.png" width="220" alt="MENU-MADE" style="display:block;width:220px;max-width:100%;height:auto;border:0;"></a></td></tr>
+<tr><td style="padding:32px;">
+<p style="margin:0 0 12px;font-size:12px;font-weight:bold;letter-spacing:1px;color:#08747b;">${escapeHtml(eyebrow)}</p>
+<h1 style="margin:0 0 24px;font-size:26px;line-height:1.25;color:#071f2c;">${escapeHtml(heading)}</h1>
+${paragraphs.map(p).join("\n")}
+${rows.length ? `<table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="background-color:#f3f8f9;border:1px solid #dce8ec;margin:0 0 24px;">${rows.map(row).join("")}</table>` : ""}
+${buttons.length ? `<table role="presentation" cellspacing="0" cellpadding="0" border="0">${buttons.map(button).join("")}</table>` : ""}
+${footnote ? `<p style="margin:16px 0 0;font-size:13px;line-height:1.6;color:#5b7480;">${footnote}</p>` : ""}
+</td></tr>
+<tr><td style="padding:24px 32px;background-color:#071f2c;"><p style="margin:0;font-size:14px;line-height:1.6;color:#e8f6f7;"><a href="https://menu-made.com" style="color:#5ff2ff;">menu-made.com</a> &nbsp;·&nbsp; <a href="mailto:info@menu-made.com" style="color:#5ff2ff;">info@menu-made.com</a></p></td></tr>
+</table></td></tr></table></body></html>`;
+}
+async function sendTransactionalEmail(env, { to, subject, html, text, idempotencyKey, purpose, templateKey, context = {}, bccInternal = false }) {
+  let ok = false;
+  let providerId = null;
+  let error = null;
+  if (!env.RESEND_API_KEY) {
+    error = "RESEND_API_KEY is not configured";
+  } else {
+    try {
+      const response = await fetch(RESEND_ENDPOINT, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${env.RESEND_API_KEY}`,
+          "Content-Type": "application/json",
+          "Idempotency-Key": idempotencyKey
+        },
+        body: JSON.stringify({
+          from: FROM_ADDRESS,
+          to: [to],
+          ...bccInternal ? { bcc: [INTERNAL_BCC] } : {},
+          reply_to: REPLY_TO_ADDRESS,
+          subject,
+          html,
+          text
+        })
+      });
+      let data = null;
+      try {
+        data = await response.json();
+      } catch {
+        data = null;
+      }
+      if (response.ok) {
+        ok = true;
+        providerId = data?.id || null;
+      } else {
+        error = data?.message || data?.error || `Resend returned HTTP ${response.status}`;
+      }
+    } catch (sendError) {
+      error = sendError instanceof Error ? sendError.message : String(sendError);
+    }
+  }
+  try {
+    const timestamp = nowIso();
+    await env.DB.prepare(`
+        INSERT INTO communications (
+          id, created_at, customer_id, business_id, order_id, project_id,
+          channel, direction, purpose, template_key, subject, recipient,
+          status, provider_message_id, sent_at, error_message, metadata_json
+        )
+        VALUES (?, ?, ?, ?, ?, ?, 'EMAIL', 'OUTBOUND', ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      `).bind(
+      crypto.randomUUID(),
+      timestamp,
+      context.customerId || null,
+      context.businessId || null,
+      context.orderId || null,
+      context.projectId || null,
+      purpose,
+      templateKey,
+      subject,
+      to,
+      ok ? "SENT" : "FAILED",
+      providerId,
+      ok ? timestamp : null,
+      ok ? null : String(error).slice(0, 500),
+      JSON.stringify({ idempotency_key: idempotencyKey })
+    ).run();
+  } catch (logError) {
+    console.error("Communication log failed:", logError instanceof Error ? logError.message : String(logError));
+  }
+  return { ok, id: providerId, error };
+}
+async function recordProjectEvent(env, projectId, eventType, correlationId, payload, actorType = "SYSTEM", actorId = "MENU_MADE_AUTOMATION") {
+  await env.DB.prepare(`
+      INSERT INTO business_events (
+        id, created_at, event_type, entity_type, entity_id,
+        actor_type, actor_id, correlation_id, payload_json
+      )
+      VALUES (?, ?, ?, 'PROJECT', ?, ?, ?, ?, ?)
+    `).bind(crypto.randomUUID(), nowIso(), eventType, projectId, actorType, actorId, correlationId, JSON.stringify(payload || {})).run();
+}
+async function loadDeliveryContext(projectId, env) {
+  return env.DB.prepare(`
+      SELECT
+        p.id, p.order_id, p.order_item_id, p.customer_id, p.business_id, p.workflow_key, p.status,
+        b.name AS business_name,
+        c.email AS customer_email, c.first_name, c.last_name,
+        o.stripe_checkout_session_id
+      FROM projects p
+      JOIN businesses b ON b.id = p.business_id
+      JOIN customers c ON c.id = p.customer_id
+      JOIN orders o ON o.id = p.order_id
+      WHERE p.id = ?
+      LIMIT 1
+    `).bind(projectId).first();
+}
+function isTestOrder(context) {
+  return String(context?.stripe_checkout_session_id || "").startsWith("cs_test_");
+}
+async function loadPackageDeliverables(projectId, env) {
+  const rows = (await env.DB.prepare(`
+      SELECT d.id, d.deliverable_type, d.version, d.status, d.customer_visible,
+        a.original_filename, a.mime_type, a.size_bytes, a.storage_key
+      FROM deliverables d
+      JOIN assets a ON a.id = d.asset_id
+      WHERE d.project_id = ?
+        AND d.deliverable_type IN ('MENU_DRAFT', 'QR_CODE')
+        AND d.status != 'SUPERSEDED'
+      ORDER BY d.deliverable_type ASC, d.version DESC
+    `).bind(projectId).all()).results || [];
+  const newest = {};
+  for (const row of rows) {
+    if (!newest[row.deliverable_type]) newest[row.deliverable_type] = row;
+  }
+  if (!newest.MENU_DRAFT || !newest.QR_CODE) {
+    throw new Error("PACKAGE_DELIVERABLES: a menu draft and a QR code are required");
+  }
+  return [newest.MENU_DRAFT, newest.QR_CODE];
+}
+async function currentStepAttempts(targetStep, env) {
+  const row = await env.DB.prepare(`SELECT attempt_count FROM workflow_steps WHERE id = ?`).bind(targetStep.workflow_step_id).first();
+  return Number(row?.attempt_count || 0);
+}
+// Put the claimed step back in the queue so the next runner tick retries it (used when an email fails).
+async function retryStepLater(targetStep, env, reason) {
+  if (await currentStepAttempts(targetStep, env) >= EMAIL_MAX_ATTEMPTS) {
+    throw new Error(`${reason} after ${EMAIL_MAX_ATTEMPTS} attempts`);
+  }
+  await env.DB.prepare(`
+      UPDATE workflow_steps SET status = 'QUEUED', error_message = ? WHERE id = ? AND status = 'RUNNING'
+    `).bind(String(reason).slice(0, 500), targetStep.workflow_step_id).run();
+  return {
+    waiting: true,
+    response: jsonResponse({
+      ok: false,
+      processed: true,
+      status: "RETRY_SCHEDULED",
+      workflow_run_id: targetStep.workflow_run_id,
+      workflow_step_id: targetStep.workflow_step_id,
+      step_key: targetStep.step_key,
+      error: reason
+    }, 503)
+  };
+}
+async function parkForOwnerApproval(targetStep, context, approval, env) {
+  const timestamp = nowIso();
+  await env.DB.prepare(`
+      UPDATE workflow_steps SET status = 'WAITING', error_message = NULL, output_json = ? WHERE id = ?
+    `).bind(JSON.stringify({ waiting_for: "OWNER_APPROVAL", approval_id: approval.id }), targetStep.workflow_step_id).run();
+  await env.DB.prepare(`
+      UPDATE workflow_runs SET status = 'WAITING', error_code = 'OWNER_APPROVAL_REQUIRED', error_message = 'Waiting for owner approval' WHERE id = ?
+    `).bind(targetStep.workflow_run_id).run();
+  await env.DB.prepare(`
+      UPDATE projects SET status = 'QC_REQUIRED', updated_at = ? WHERE id = ?
+    `).bind(timestamp, context.id).run();
+  await env.DB.prepare(`
+      UPDATE orders SET status = 'QC_REQUIRED', updated_at = ?
+      WHERE id = ? AND status NOT IN ('CANCELLED', 'REFUND_PENDING', 'REFUNDED', 'DELIVERED', 'COMPLETED')
+    `).bind(timestamp, context.order_id).run();
+  await env.DB.prepare(`
+      UPDATE order_items SET fulfillment_status = 'AWAITING_APPROVAL' WHERE id = ?
+    `).bind(context.order_item_id).run();
+  return {
+    waiting: true,
+    response: jsonResponse({
+      ok: true,
+      processed: true,
+      status: "WAITING",
+      waiting_for: "OWNER_APPROVAL",
+      approval_id: approval.id,
+      workflow_run_id: targetStep.workflow_run_id,
+      workflow_step_id: targetStep.workflow_step_id,
+      step_key: targetStep.step_key
+    }, 202)
+  };
+}
+async function notifyOwnerForApproval(targetStep, context, files, approval, env) {
+  const base = publicBaseUrl(env);
+  const approveToken = await signLinkToken(env, { kind: "approve", id: approval.id, ttlDays: APPROVAL_TTL_DAYS });
+  const approveUrl = `${base}/api/approvals/${approval.id}?t=${approveToken}`;
+  const previews = [];
+  for (const file of files) {
+    const token = await signLinkToken(env, { kind: "preview", id: file.id, ttlDays: APPROVAL_TTL_DAYS });
+    previews.push({ label: `Preview ${DELIVERABLE_LABELS[file.deliverable_type] || file.deliverable_type}`, url: `${base}/api/delivery/${file.id}?t=${token}` });
+  }
+  const test = isTestOrder(context);
+  const business = context.business_name || "A customer";
+  const buyer = [context.first_name, context.last_name].filter(Boolean).join(" ") || context.customer_email;
+  const subject = `${test ? "[TEST] " : ""}Approve ${business}'s online menu + QR`;
+  const html = brandedEmailHtml({
+    preheader: `${business}'s menu and QR code are ready for your review.`,
+    eyebrow: test ? "TEST ORDER · OWNER APPROVAL" : "OWNER APPROVAL",
+    heading: `${business}'s menu is ready to review`,
+    paragraphs: [
+      "The menu page and QR code were produced automatically. Nothing goes to the buyer until you approve.",
+      "Preview both files, then approve to send them to the buyer."
+    ],
+    rows: [["Business", business], ["Buyer", buyer], ["Order", context.order_id], ["Link expires", `${APPROVAL_TTL_DAYS} days`]],
+    buttons: [...previews, { label: "Review and approve", url: approveUrl, primary: true }],
+    footnote: "If the files need changes, reply to this email. Change requests from this email arrive in a later update."
+  });
+  const text = [
+    `${business}'s online menu and QR code are ready for your review. Nothing goes to the buyer until you approve.`,
+    "",
+    ...previews.map((p) => `${p.label}: ${p.url}`),
+    "",
+    `Review and approve: ${approveUrl}`,
+    "",
+    `Buyer: ${buyer}`,
+    `Order: ${context.order_id}`,
+    `This link expires in ${APPROVAL_TTL_DAYS} days.`
+  ].join("\n");
+  return sendTransactionalEmail(env, {
+    to: ownerEmailAddress(env),
+    subject,
+    html,
+    text,
+    idempotencyKey: `owner-approval/${approval.id}`,
+    purpose: "OWNER_APPROVAL_REQUEST",
+    templateKey: "owner_approval_menu_qr_v1",
+    context: { orderId: context.order_id, projectId: context.id, businessId: context.business_id }
+  });
+}
+async function deliverPackageToBuyer(targetStep, context, files, approval, env) {
+  const timestamp = nowIso();
+  for (const file of files) {
+    await env.DB.prepare(`
+        UPDATE deliverables
+        SET status = 'FINAL', customer_visible = 1, delivered_at = COALESCE(delivered_at, ?)
+        WHERE id = ? AND status != 'SUPERSEDED'
+      `).bind(timestamp, file.id).run();
+  }
+  const prepared = await loadPreparedPayload(targetStep, env);
+  const contactEmail = getInputValue(prepared.inputs, "contact_email");
+  const recipient = looksLikeEmail(contactEmail) ? String(contactEmail).trim() : String(context.customer_email || "").trim();
+  if (!looksLikeEmail(recipient)) {
+    throw new Error("No valid buyer email address for delivery");
+  }
+  const qrDestination = getInputValue(prepared.inputs, "qr_destination");
+  const base = publicBaseUrl(env);
+  const links = [];
+  for (const file of files) {
+    const token = await signLinkToken(env, { kind: "deliver", id: file.id, ttlDays: DELIVERY_LINK_TTL_DAYS });
+    links.push({
+      type: file.deliverable_type,
+      label: file.deliverable_type === "MENU_DRAFT" ? "View your online menu" : "Download your QR code",
+      url: `${base}/api/delivery/${file.id}?t=${token}${file.deliverable_type === "QR_CODE" ? "&download=1" : ""}`,
+      filename: file.original_filename
+    });
+  }
+  const business = context.business_name || "your business";
+  const firstName = context.first_name || "there";
+  const subject = `${isTestOrder(context) ? "[TEST] " : ""}Your online menu and QR code are ready`;
+  const html = brandedEmailHtml({
+    preheader: `Your MENU-MADE menu page and QR code for ${business} are ready.`,
+    eyebrow: "YOUR ORDER IS READY",
+    heading: `${business}'s menu and QR code are ready`,
+    paragraphs: [
+      `Hi ${escapeHtml(firstName)},`,
+      "Your mobile-friendly menu page and QR code are finished. Use the buttons below to open and save them.",
+      qrDestination ? `Your QR code opens <strong>${escapeHtml(qrDestination)}</strong>. Put the menu page at that address (or send it to whoever manages your website), then print the QR code for your tables.` : "Print the QR code for your tables and place the menu page where it points."
+    ],
+    buttons: links.map((link, index) => ({ label: link.label, url: link.url, primary: index === 0 })),
+    footnote: `These links work for ${DELIVERY_LINK_TTL_DAYS} days, so save both files. Questions or changes? Reply to this email.`
+  });
+  const text = [
+    `Hi ${firstName},`,
+    "",
+    `Your menu page and QR code for ${business} are ready.`,
+    "",
+    ...links.map((link) => `${link.label}: ${link.url}`),
+    "",
+    qrDestination ? `Your QR code opens ${qrDestination}. Put the menu page at that address, then print the QR code for your tables.` : "",
+    `These links work for ${DELIVERY_LINK_TTL_DAYS} days, so save both files. Questions or changes? Reply to this email.`,
+    "",
+    "The MENU-MADE team"
+  ].join("\n");
+  const sent = await sendTransactionalEmail(env, {
+    to: recipient,
+    subject,
+    html,
+    text,
+    idempotencyKey: `delivery/${context.id}/${approval.id}`,
+    purpose: "ORDER_DELIVERY",
+    templateKey: "delivery_menu_qr_v1",
+    context: { customerId: context.customer_id, businessId: context.business_id, orderId: context.order_id, projectId: context.id },
+    bccInternal: true
+  });
+  if (!sent.ok) {
+    return retryStepLater(targetStep, env, `Delivery email failed: ${sent.error}`);
+  }
+  const output = {
+    delivered_at: timestamp,
+    recipient,
+    approval_id: approval.id,
+    email_id: sent.id,
+    link_ttl_days: DELIVERY_LINK_TTL_DAYS,
+    files: files.map((f) => ({ deliverable_id: f.id, type: f.deliverable_type, filename: f.original_filename }))
+  };
+  await completeStep(targetStep, output, env);
+  await env.DB.prepare(`
+      UPDATE workflow_runs
+      SET status = 'SUCCEEDED', completed_at = ?, output_json = ?, error_code = NULL, error_message = NULL
+      WHERE id = ?
+    `).bind(timestamp, JSON.stringify(output), targetStep.workflow_run_id).run();
+  await env.DB.prepare(`
+      UPDATE projects
+      SET status = 'DELIVERED', completed_at = COALESCE(completed_at, ?), blocked_reason = NULL, updated_at = ?
+      WHERE id = ?
+    `).bind(timestamp, timestamp, context.id).run();
+  await env.DB.prepare(`
+      UPDATE order_items SET fulfillment_status = 'FULFILLED' WHERE id = ?
+    `).bind(context.order_item_id).run();
+  const open = await env.DB.prepare(`
+      SELECT COUNT(*) AS remaining FROM projects
+      WHERE order_id = ? AND status NOT IN ('DELIVERED', 'COMPLETED', 'CANCELLED')
+    `).bind(context.order_id).first();
+  if (Number(open?.remaining || 0) === 0) {
+    await env.DB.prepare(`
+        UPDATE orders SET status = 'DELIVERED', updated_at = ?
+        WHERE id = ? AND status NOT IN ('CANCELLED', 'REFUND_PENDING', 'REFUNDED')
+      `).bind(timestamp, context.order_id).run();
+  }
+  await recordProjectEvent(env, context.id, "PROJECT_DELIVERED", targetStep.workflow_run_id, {
+    approval_id: approval.id,
+    recipient,
+    deliverable_ids: files.map((f) => f.id)
+  });
+  return { waiting: false, output };
+}
+async function runPackageDeliverablesStep(targetStep, env) {
+  if (!env.ASSETS) throw new Error("R2 ASSETS binding is not available");
+  const context = await loadDeliveryContext(targetStep.project_id, env);
+  if (!context) throw new Error("Production project could not be loaded");
+  const files = await loadPackageDeliverables(context.id, env);
+  let approval = await env.DB.prepare(`
+      SELECT * FROM approvals
+      WHERE project_id = ? AND approval_type = 'OWNER_RELEASE'
+      ORDER BY requested_at DESC, rowid DESC
+      LIMIT 1
+    `).bind(context.id).first();
+  if (!approval || approval.status === "EXPIRED" || approval.status === "CANCELLED") {
+    const requestedAt = nowIso();
+    approval = {
+      id: crypto.randomUUID(),
+      status: "PENDING",
+      metadata_json: JSON.stringify({
+        workflow_run_id: targetStep.workflow_run_id,
+        deliverable_ids: files.map((f) => f.id),
+        owner_notified_at: null
+      })
+    };
+    await env.DB.prepare(`
+        INSERT INTO approvals (
+          id, project_id, approval_type, status, revision_number, revision_limit,
+          requested_at, expires_at, metadata_json
+        )
+        VALUES (?, ?, 'OWNER_RELEASE', 'PENDING', 1, 2, ?, ?, ?)
+      `).bind(approval.id, context.id, requestedAt, addDaysIso(APPROVAL_TTL_DAYS), approval.metadata_json).run();
+    await recordProjectEvent(env, context.id, "OWNER_APPROVAL_REQUESTED", targetStep.workflow_run_id, { approval_id: approval.id });
+  }
+  if (approval.status === "PENDING") {
+    const metadata = parseJsonOrNull(approval.metadata_json) || {};
+    if (!metadata.owner_notified_at) {
+      const sent = await notifyOwnerForApproval(targetStep, context, files, approval, env);
+      if (!sent.ok) {
+        return retryStepLater(targetStep, env, `Owner approval email failed: ${sent.error}`);
+      }
+      metadata.owner_notified_at = nowIso();
+      await env.DB.prepare(`UPDATE approvals SET metadata_json = ? WHERE id = ?`).bind(JSON.stringify(metadata), approval.id).run();
+    }
+    return parkForOwnerApproval(targetStep, context, approval, env);
+  }
+  if (approval.status === "APPROVED") {
+    return deliverPackageToBuyer(targetStep, context, files, approval, env);
+  }
+  throw new Error(`Owner approval is ${approval.status}; revisions are handled in a later stage`);
+}
+__name(runPackageDeliverablesStep, "runPackageDeliverablesStep");
+function internalRunnerRequest(env, selection = {}) {
+  return new Request(`${publicBaseUrl(env)}/api/production/run-next`, {
+    method: "POST",
+    headers: { Authorization: `Bearer ${env.PRODUCTION_RUNNER_SECRET}`, "Content-Type": "application/json" },
+    body: JSON.stringify(selection)
+  });
+}
+function simplePage(status, title, bodyHtml) {
+  const html = `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex"><title>${escapeHtml(title)} · MENU-MADE</title>
+<style>body{margin:0;background:#edf3f5;font-family:Arial,Helvetica,sans-serif;color:#26434f}main{max-width:560px;margin:40px auto;background:#fff;border:1px solid #dce8ec;padding:32px}h1{color:#071f2c;font-size:24px;margin:0 0 16px}p{line-height:1.6}a.btn,button{display:inline-block;background:#071f2c;color:#fff;border:0;border-radius:6px;padding:12px 20px;font-size:15px;font-weight:bold;text-decoration:none;margin:0 8px 12px 0;cursor:pointer}button{background:#00a7b5}dl{background:#f3f8f9;border:1px solid #dce8ec;padding:12px 16px}dt{font-size:12px;font-weight:bold;color:#45616c}dd{margin:0 0 8px}</style></head>
+<body><main><h1>${escapeHtml(title)}</h1>${bodyHtml}</main></body></html>`;
+  return new Response(html, {
+    status,
+    headers: {
+      "Content-Type": "text/html; charset=utf-8",
+      "Cache-Control": "no-store",
+      "Referrer-Policy": "no-referrer",
+      "X-Robots-Tag": "noindex",
+      "X-Content-Type-Options": "nosniff",
+      "Content-Security-Policy": "default-src 'none'; style-src 'unsafe-inline'; img-src 'self'; form-action 'self'; base-uri 'none'; frame-ancestors 'none'"
+    }
+  });
+}
+async function requeueForNewApproval(approval, env) {
+  const metadata = parseJsonOrNull(approval.metadata_json) || {};
+  await env.DB.prepare(`UPDATE approvals SET status = 'EXPIRED', responded_at = ? WHERE id = ? AND status = 'PENDING'`).bind(nowIso(), approval.id).run();
+  if (metadata.workflow_run_id) {
+    await env.DB.prepare(`
+        UPDATE workflow_steps SET status = 'QUEUED', error_message = NULL
+        WHERE workflow_run_id = ? AND step_key = 'PACKAGE_DELIVERABLES' AND status = 'WAITING'
+      `).bind(metadata.workflow_run_id).run();
+    await env.DB.prepare(`
+        UPDATE workflow_runs SET status = 'RUNNING', error_code = NULL, error_message = NULL
+        WHERE id = ? AND status = 'WAITING'
+      `).bind(metadata.workflow_run_id).run();
+  }
+}
+async function handleApprovalRequest(request, env, ctx, approvalId) {
+  if (!env.DB) return simplePage(503, "Temporarily unavailable", "<p>Please try again in a minute.</p>");
+  let token = new URL(request.url).searchParams.get("t");
+  if (request.method === "POST") {
+    try {
+      const form = await request.formData();
+      token = form.get("t");
+    } catch {
+      token = null;
+    }
+  }
+  const payload = await verifyLinkToken(env, token, ["approve"], approvalId);
+  if (!payload) {
+    return simplePage(403, "This link isn't valid", "<p>Open the approval link from your most recent approval email.</p>");
+  }
+  const approval = await env.DB.prepare(`SELECT * FROM approvals WHERE id = ? AND approval_type = 'OWNER_RELEASE' LIMIT 1`).bind(approvalId).first();
+  if (!approval) return simplePage(404, "Approval not found", "<p>This approval no longer exists.</p>");
+  const context = await loadDeliveryContext(approval.project_id, env);
+  const business = context?.business_name || "This order";
+  const pastExpiry = approval.expires_at && approval.expires_at < nowIso();
+  if (approval.status === "PENDING" && (payload.expired || pastExpiry)) {
+    await requeueForNewApproval(approval, env);
+    return simplePage(410, "This approval link expired", "<p>A fresh approval email will arrive within a few minutes.</p>");
+  }
+  if (approval.status === "APPROVED") {
+    return simplePage(200, "Already approved", `<p>${escapeHtml(business)}'s files were approved${approval.approved_at ? ` on ${escapeHtml(approval.approved_at.slice(0, 10))}` : ""}. The buyer's delivery email is sent automatically.</p>`);
+  }
+  if (approval.status !== "PENDING") {
+    return simplePage(409, "Nothing to approve", `<p>This approval is ${escapeHtml(approval.status.toLowerCase())}.</p>`);
+  }
+  if (request.method !== "POST") {
+    const metadata = parseJsonOrNull(approval.metadata_json) || {};
+    const previews = [];
+    for (const deliverableId of metadata.deliverable_ids || []) {
+      const row = await env.DB.prepare(`SELECT deliverable_type FROM deliverables WHERE id = ?`).bind(deliverableId).first();
+      if (!row) continue;
+      const previewToken = await signLinkToken(env, { kind: "preview", id: deliverableId, ttlDays: 1 });
+      previews.push(`<a class="btn" href="/api/delivery/${escapeHtml(deliverableId)}?t=${escapeHtml(previewToken)}" target="_blank" rel="noopener">Preview ${escapeHtml(DELIVERABLE_LABELS[row.deliverable_type] || row.deliverable_type)}</a>`);
+    }
+    return simplePage(200, `Approve ${business}'s menu + QR`, `
+<p>Check both files. Approving sends them to the buyer right away.</p>
+<dl><dt>Business</dt><dd>${escapeHtml(business)}</dd><dt>Buyer</dt><dd>${escapeHtml(context?.customer_email || "")}</dd><dt>Order</dt><dd>${escapeHtml(context?.order_id || "")}${isTestOrder(context) ? " (test order)" : ""}</dd></dl>
+<p>${previews.join("")}</p>
+<form method="post" action="/api/approvals/${escapeHtml(approvalId)}"><input type="hidden" name="t" value="${escapeHtml(token)}"><button type="submit">Approve and send to buyer</button></form>`);
+  }
+  const respondedAt = nowIso();
+  const updated = await env.DB.prepare(`
+      UPDATE approvals
+      SET status = 'APPROVED', responded_at = ?, approved_at = ?, approved_by = 'OWNER'
+      WHERE id = ? AND status = 'PENDING'
+    `).bind(respondedAt, respondedAt, approvalId).run();
+  if (Number(updated.meta?.changes || 0) === 0) {
+    return simplePage(200, "Already handled", "<p>This approval was already answered.</p>");
+  }
+  const metadata = parseJsonOrNull(approval.metadata_json) || {};
+  if (metadata.workflow_run_id) {
+    await env.DB.prepare(`
+        UPDATE workflow_steps SET status = 'QUEUED', error_message = NULL
+        WHERE workflow_run_id = ? AND step_key = 'PACKAGE_DELIVERABLES' AND status = 'WAITING'
+      `).bind(metadata.workflow_run_id).run();
+    await env.DB.prepare(`
+        UPDATE workflow_runs SET status = 'RUNNING', error_code = NULL, error_message = NULL
+        WHERE id = ? AND status = 'WAITING'
+      `).bind(metadata.workflow_run_id).run();
+  }
+  await recordProjectEvent(env, approval.project_id, "OWNER_APPROVAL_GRANTED", metadata.workflow_run_id || null, { approval_id: approvalId }, "ADMIN", "OWNER");
+  if (metadata.workflow_run_id && env.PRODUCTION_RUNNER_SECRET) {
+    const deliverNow = runNextProductionStep(internalRunnerRequest(env, { workflow_run_id: metadata.workflow_run_id, step_key: "PACKAGE_DELIVERABLES" }), env)
+      .catch((error) => console.error("Immediate delivery failed; the scheduled runner will retry:", error instanceof Error ? error.message : String(error)));
+    if (ctx?.waitUntil) ctx.waitUntil(deliverNow);
+  }
+  return simplePage(200, "Approved", `<p>${escapeHtml(business)}'s menu and QR code are on their way to the buyer. You'll see the delivery email in your BCC copy within a minute.</p>`);
+}
+__name(handleApprovalRequest, "handleApprovalRequest");
+async function handleDeliveryDownload(request, env, deliverableId) {
+  const url = new URL(request.url);
+  const denied = () => simplePage(403, "This link has expired or isn't valid", "<p>Reply to your delivery email and we'll send fresh links.</p>");
+  if (!env.DB || !env.ASSETS) return simplePage(503, "Temporarily unavailable", "<p>Please try again in a minute.</p>");
+  const payload = await verifyLinkToken(env, url.searchParams.get("t"), ["deliver", "preview"], deliverableId);
+  if (!payload || payload.expired) return denied();
+  const row = await env.DB.prepare(`
+      SELECT d.id, d.status, d.customer_visible, a.storage_key, a.mime_type, a.original_filename
+      FROM deliverables d JOIN assets a ON a.id = d.asset_id
+      WHERE d.id = ? LIMIT 1
+    `).bind(deliverableId).first();
+  if (!row) return simplePage(404, "File not found", "<p>This file is no longer available.</p>");
+  if (payload.k === "deliver" && !(row.status === "FINAL" && Number(row.customer_visible) === 1)) {
+    return simplePage(404, "File not found", "<p>This file is no longer available.</p>");
+  }
+  const object = await env.ASSETS.get(row.storage_key);
+  if (!object) return simplePage(404, "File not found", "<p>This file is no longer available.</p>");
+  const filename = String(row.original_filename || "download").replace(/[^A-Za-z0-9._-]+/g, "-").slice(0, 120);
+  const mime = String(row.mime_type || "application/octet-stream");
+  return new Response(object.body, {
+    status: 200,
+    headers: {
+      "Content-Type": mime === "text/html" ? "text/html; charset=utf-8" : mime,
+      "Content-Disposition": `${url.searchParams.get("download") === "1" ? "attachment" : "inline"}; filename="${filename}"`,
+      "Cache-Control": "private, no-store",
+      "Referrer-Policy": "no-referrer",
+      "X-Robots-Tag": "noindex",
+      "X-Content-Type-Options": "nosniff",
+      "Content-Security-Policy": "sandbox; default-src 'none'; img-src https: data:; style-src 'unsafe-inline'; font-src https: data:"
+    }
+  });
+}
+__name(handleDeliveryDownload, "handleDeliveryDownload");
+async function alertOwnerOfFailure(env, body) {
+  const runId = body.workflow_run_id || null;
+  try {
+    await env.DB.prepare(`
+        INSERT INTO system_errors (id, created_at, updated_at, error_type, severity, status, message, workflow_run_id, manual_intervention_required, details_json)
+        VALUES (?, ?, ?, 'PRODUCTION_STEP_FAILED', 'ERROR', 'OPEN', ?, ?, 1, ?)
+      `).bind(crypto.randomUUID(), nowIso(), nowIso(), String(body.error || "Production step failed").slice(0, 500), runId, JSON.stringify({ step_key: body.step_key || null })).run();
+  } catch (error) {
+    console.error("Could not record production failure:", error instanceof Error ? error.message : String(error));
+  }
+  if (!runId) return;
+  await sendTransactionalEmail(env, {
+    to: ownerEmailAddress(env),
+    subject: "Automation stopped on an order",
+    html: brandedEmailHtml({
+      preheader: "A production step failed and needs a look.",
+      eyebrow: "AUTOMATION ALERT",
+      heading: "A production step failed",
+      paragraphs: ["The automation stopped on one order and won't retry this step on its own."],
+      rows: [["Workflow run", runId], ["Step", body.step_key || "unknown"], ["Error", String(body.error || "").slice(0, 300)]]
+    }),
+    text: `A production step failed.\nWorkflow run: ${runId}\nStep: ${body.step_key || "unknown"}\nError: ${String(body.error || "").slice(0, 300)}`,
+    idempotencyKey: `production-failed/${runId}/${body.step_key || "unknown"}`,
+    purpose: "AUTOMATION_ALERT",
+    templateKey: "automation_failure_v1"
+  });
+}
+async function runScheduledProduction(env) {
+  if (!env.DB || !env.PRODUCTION_RUNNER_SECRET) return { skipped: true };
+  const createdAfter = env.AUTOMATION_START_AT || AUTOMATION_START_AT;
+  const started = Date.now();
+  const seenSteps = new Set();
+  const results = [];
+  for (let i = 0; i < SCHEDULED_RUNNER_MAX_STEPS; i++) {
+    if (Date.now() - started > SCHEDULED_RUNNER_BUDGET_MS) break;
+    let body;
+    try {
+      const response = await runNextProductionStep(internalRunnerRequest(env, {}), env, { createdAfter });
+      body = await response.json();
+      body.http_status = response.status;
+    } catch (error) {
+      console.error("Scheduled production runner error:", error instanceof Error ? error.message : String(error));
+      break;
+    }
+    results.push(body);
+    if (body.processed === false) break;
+    if (body.http_status === 500) {
+      await alertOwnerOfFailure(env, body);
+      continue;
+    }
+    const stepId = body.completed_step?.id || body.workflow_step_id;
+    if (stepId) {
+      if (seenSteps.has(stepId)) break;
+      seenSteps.add(stepId);
+    }
+  }
+  return { steps: results.length, results };
+}
+__name(runScheduledProduction, "runScheduledProduction");
 
 // src/worker.js
 async function databaseHealthCheck(env) {
@@ -7857,8 +8580,16 @@ async function databaseHealthCheck(env) {
 }
 __name(databaseHealthCheck, "databaseHealthCheck");
 var worker_default = {
-  async fetch(request, env) {
+  async fetch(request, env, ctx) {
     const url = new URL(request.url);
+    const approvalMatch = url.pathname.match(/^\/api\/approvals\/([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})$/i);
+    if (approvalMatch && (request.method === "GET" || request.method === "POST")) {
+      return handleApprovalRequest(request, env, ctx, approvalMatch[1].toLowerCase());
+    }
+    const deliveryMatch = url.pathname.match(/^\/api\/delivery\/([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})$/i);
+    if (deliveryMatch && request.method === "GET") {
+      return handleDeliveryDownload(request, env, deliveryMatch[1].toLowerCase());
+    }
     if (request.method === "OPTIONS") {
       return new Response(
         null,
@@ -8220,6 +8951,9 @@ const mmWorkerWithBooking = {
     return worker_default.fetch(request, env, ctx);
   },
   async scheduled(event, env, ctx) {
+    ctx.waitUntil(runScheduledProduction(env).catch((error) => {
+      console.error("Scheduled production failed:", error instanceof Error ? error.message : String(error));
+    }));
     return mmBookingHandler.scheduled(event, mmBookingEnvironment(env), ctx);
   }
 };
