@@ -124,17 +124,17 @@
     menu_file: "Menu file (PDF or photo)",
     logo: "Logo",
     brand_colors: "Brand colors",
-    qr_destination: "QR code destination URL",
+    qr_destination: "QR code opens",
     contact_email: "Contact email",
     menu_notes: "Menu notes",
     special_instructions: "Special instructions"
   };
   const help = {
-    menu_source: "A link to your current menu — or upload the menu file below instead.",
+    menu_source: "Or paste a link to your current menu instead of uploading a file.",
     menu_file: "PDF, PNG, JPEG, or WebP, up to 20 MB. A clear phone photo works.",
     logo: "PNG, JPEG, WebP, or SVG. Maximum 10 MB.",
     brand_colors: "Example: navy and gold, or provide hex values.",
-    qr_destination: "The URL customers should reach when they scan the QR code.",
+    qr_destination: "Already set to your Menu-Made menu page. Change it only if the QR code should open a different page.",
     menu_notes: "Optional changes, corrections, or menu-specific notes.",
     special_instructions: "Optional production or design instructions."
   };
@@ -238,7 +238,9 @@
 
       const box = $("onboardingFields");
       box.replaceChildren();
-      (data.onboarding?.inputs || []).forEach(input => box.appendChild(buildField(input)));
+      const fieldOrder = ["menu_file", "menu_source", "business_name", "contact_email", "logo", "brand_colors", "qr_destination", "menu_notes", "special_instructions"];
+      const rank = key => { const i = fieldOrder.indexOf(key); return i === -1 ? fieldOrder.length : i; };
+      [...(data.onboarding?.inputs || [])].sort((a, b) => rank(a.key) - rank(b.key)).forEach(input => box.appendChild(buildField(input)));
       $("completeState").hidden = true;
       $("onboardingForm").hidden = false;
     } catch (e) {

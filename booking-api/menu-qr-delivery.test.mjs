@@ -8,7 +8,7 @@ import { createD1, createR2 } from './test-support/d1.mjs';
 
 const source = await readFile(new URL('./menu-checkout-with-booking.mjs', import.meta.url), 'utf8');
 const api = await import('data:text/javascript;base64,' + Buffer.from(
-  source + '\nexport {ensureProductionWorkflow, runScheduledProduction, signLinkToken};'
+  source + '\nexport {ensureProductionWorkflow, runScheduledProduction, signLinkToken, attachCheckoutMenuDocument, hostedMenuUrl};'
 ).toString('base64'));
 
 const MENU_URL = 'https://proofcafe.example/menu';
@@ -296,5 +296,34 @@ test('an uploaded menu PDF is read by Claude and the owner sees what to double-c
     assert.doesNotMatch(html, /Draft generated from/);
     assert.equal(f.emails.length, 1);
     assert.match(f.emails[0].text, /Read from the uploaded menu file: 3 items\. Check carefully: The dessert prices were smudged\./);
+  });
+});
+
+test('the menu uploaded at checkout is attached, and the hosted menu page goes live after approval', async () => {
+  const f = setup({ menuFile: true });
+  await withFetch(f.fetch, async () => {
+    // Simulate the Start page upload: an inquiry holding the PDF, referenced from the order notes.
+    const ref = '11111111-2222-4333-8444-555555555555';
+    f.sql(`UPDATE project_inputs SET status = 'MISSING', asset_id = NULL WHERE input_key = 'menu_file'`);
+    f.sql(`INSERT INTO mm_booking_requests (id, payload, ip_hash, created_at) VALUES (?, ?, 'x', 0)`, ref,
+      JSON.stringify({ document: { name: 'menu.pdf', contentType: 'application/pdf', size: 9, checksum: 'abc', storageKey: `private/inquiries/${ref}/abc` } }));
+    await f.ASSETS.put(`private/inquiries/${ref}/abc`, '%PDF-1.4 fake');
+    f.sql(`UPDATE orders SET notes = ? WHERE id = 'order'`, `Menu + QR\nDocument ref: ${ref}\nThanks`);
+    const hostedUrl = api.hostedMenuUrl('proj', 'Proof Cafe');
+    f.sql(`UPDATE project_inputs SET value_text = ? WHERE input_key = 'qr_destination'`, hostedUrl);
+    assert.equal(await api.attachCheckoutMenuDocument('proj', 'order', f.env), true);
+    assert.equal(f.row(`SELECT status FROM project_inputs WHERE input_key = 'menu_file'`).status, 'VALID');
+
+    await queueRun(f);
+    await api.runScheduledProduction(f.env);
+    assert.match(hostedUrl, /^https:\/\/menu-made\.com\/api\/menu\/proof-cafe-[0-9a-z]+$/);
+    assert.match(await (await call(f, hostedUrl)).text(), /Menu coming soon/);
+    const [approveUrl] = linksIn(f.emails[0].text, '/api/approvals/');
+    await call(f, approveUrl.split('?')[0], { method: 'POST', body: new URLSearchParams({ t: new URL(approveUrl).searchParams.get('t') }) });
+    await Promise.all(f.pending);
+    const live = await call(f, hostedUrl);
+    assert.equal(live.status, 200);
+    assert.match(await live.text(), /Tomato Soup/);
+    assert.match(f.emails[1].text, /Your menu is live at https:\/\/menu-made\.com\/api\/menu\//);
   });
 });

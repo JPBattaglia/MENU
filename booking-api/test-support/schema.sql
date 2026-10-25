@@ -363,3 +363,4 @@ CREATE TABLE workflow_steps (
 );
 CREATE UNIQUE INDEX ux_workflow_runs_ready_trigger
 ON workflow_runs (project_id, workflow_key, workflow_version, trigger_type, trigger_reference);
+CREATE TABLE mm_booking_requests (   id TEXT PRIMARY KEY,   payload TEXT NOT NULL,   ip_hash TEXT NOT NULL,   created_at INTEGER NOT NULL,   owner_sent INTEGER NOT NULL DEFAULT 0,   customer_sent INTEGER NOT NULL DEFAULT 0,   attempts INTEGER NOT NULL DEFAULT 0 );
