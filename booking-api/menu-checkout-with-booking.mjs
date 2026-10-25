@@ -4404,20 +4404,6 @@ async function createMenuQrInputs(projectId, order, timestamp, env) {
       value: customer?.email || null,
       status: customer?.email ? "VALID" : "MISSING"
     },
-    {
-      key: "menu_notes",
-      type: "TEXT",
-      required: 0,
-      value: null,
-      status: "MISSING"
-    },
-    {
-      key: "special_instructions",
-      type: "TEXT",
-      required: 0,
-      value: null,
-      status: "MISSING"
-    }
   ];
   for (const input of onboardingInputs) {
     await env.DB.prepare(`
@@ -8275,7 +8261,7 @@ var DELIVERY_LINK_TTL_DAYS = 90;
 var EMAIL_MAX_ATTEMPTS = 5;
 var EXTRAS_WINDOW_MINUTES = 30;
 var SCHEDULED_RUNNER_MAX_STEPS = 10;
-var SCHEDULED_RUNNER_BUDGET_MS = 20000;
+var SCHEDULED_RUNNER_BUDGET_MS = 90000;
 var DELIVERABLE_LABELS = {
   MENU_DRAFT: "Online menu (web page)",
   QR_CODE: "QR code (SVG, prints at any size)"

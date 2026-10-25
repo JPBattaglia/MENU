@@ -240,7 +240,7 @@
 
       const box = $("onboardingFields");
       box.replaceChildren();
-      const extraKeys = ["logo", "brand_colors", "menu_notes", "special_instructions"];
+      const extraKeys = ["logo", "brand_colors"];
       $("formHeading").textContent = extrasMode ? "Your menu is in. Make it yours (optional)" : "Project information";
       $("saveButton").textContent = extrasMode ? "Save & start my menu" : "Save & Continue";
       $("skipExtras").hidden = !extrasMode;
