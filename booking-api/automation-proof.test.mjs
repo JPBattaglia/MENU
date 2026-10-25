@@ -1,10 +1,12 @@
-import {readFile} from 'node:fs/promises';
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
 import {webcrypto} from 'node:crypto';
 globalThis.crypto ??= webcrypto;
-const source = await readFile(new URL('./menu-checkout-with-booking.mjs', import.meta.url), 'utf8');
-const api = await import('data:text/javascript;base64,' + Buffer.from(source + '\nexport {runGenerateMenuDraftStep,runGenerateQrStep};').toString('base64'));
+const api = {
+  ...(await import('./src/worker.js')),
+  ...(await import('./src/producers/menu-qr/draft-step.js')),
+  ...(await import('./src/producers/menu-qr/qr-step.js')),
+};
 function fixture({failDeliverable=false,pdf=false}={}) {
   const writes=[], objects=new Map(), existing=new Map();
   const inputs={business_name:{value:'Proof Cafe'},menu_source:{value:'https://example.com/menu'},qr_destination:{value:'https://example.com/published-menu'}};
