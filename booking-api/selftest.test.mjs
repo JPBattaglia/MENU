@@ -19,9 +19,9 @@ function setup({ stripeConfirmFails = false } = {}) {
   const ASSETS = createR2();
   const sql = (q, ...a) => DB.raw.prepare(q).run(...a);
   const t = new Date().toISOString();
-  // Production catalog rows (Oct 25, 2026).
+  // Production catalog rows (Oct 25, 2026), with requires_approval=1 as set by migration 0002_menu_qr_routing.sql.
   sql(`INSERT INTO offers (id, created_at, updated_at, code, name, category, status, billing_type, fulfillment_type, requires_approval, requires_assets, default_workflow_key, public_slug, description, sort_order, is_public, is_featured, cta_text)
-       VALUES ('offer_online_menu_qr', ?, ?, 'ONLINE_MENU_QR', 'Online Menu + QR', 'MENU', 'ACTIVE', 'ONE_TIME', 'DIGITAL', 0, 1, 'MENU_QR_V1', 'online-menu-qr', 'Online menu and QR service', 1, 1, 0, 'Get Started')`, t, t);
+       VALUES ('offer_online_menu_qr', ?, ?, 'ONLINE_MENU_QR', 'Online Menu + QR', 'MENU', 'ACTIVE', 'ONE_TIME', 'DIGITAL', 1, 1, 'MENU_QR_V1', 'online-menu-qr', 'Online menu and QR service', 1, 1, 0, 'Get Started')`, t, t);
   sql(`INSERT INTO offer_versions (id, offer_id, version_number, created_at, effective_from, status, price_cents, currency, scope_json, stripe_price_id)
        VALUES ('offerv1_online_menu_qr', 'offer_online_menu_qr', 1, ?, ?, 'ACTIVE', 12900, 'USD', '{"service":"online_menu_qr"}', 'price_1T6OzbHw7f6jhUv8Epy5oYMf')`, t, t);
   sql(`INSERT INTO workflow_definitions (id, workflow_key, version, status, steps_json, created_at, updated_at) VALUES ('wd', 'MENU_QR_V1', 1, 'ACTIVE', ?, ?, ?)`,
