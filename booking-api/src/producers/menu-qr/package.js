@@ -1,31 +1,10 @@
-import { APPROVAL_TTL_DAYS, DELIVERABLE_LABELS, DELIVERY_LINK_TTL_DAYS, addDaysIso, ownerEmailAddress, publicBaseUrl } from "../../lib/config.js";
-import { recordProjectEvent } from "../../lib/db.js";
-import { SELF_TEST_EMAIL, brandedEmailHtml, escapeHtml, looksLikeEmail, sendTransactionalEmail } from "../../lib/email.js";
-import { jsonResponse, nowIso, parseJsonOrNull } from "../../lib/http.js";
-import { signLinkToken } from "../../lib/links.js";
+import { APPROVAL_TTL_DAYS, DELIVERABLE_LABELS, DELIVERY_LINK_TTL_DAYS } from "../../lib/config.js";
+import { brandedEmailHtml, escapeHtml, looksLikeEmail as looksLikeEmailValue } from "../../lib/email.js";
+import { parseJsonOrNull } from "../../lib/http.js";
+import { publicBaseUrl } from "../../lib/config.js";
 import { getInputValue, loadPreparedPayload } from "./inputs.js";
-import { completeStep, retryStepLater } from "../../workflows/runner.js";
+import { isTestOrder, loadDeliveryContext, runDeliverStep } from "../../approvals/release.js";
 import { pageBillingNote } from "./page-billing.js";
-
-async function loadDeliveryContext(projectId, env) {
-  return env.DB.prepare(`
-      SELECT
-        p.id, p.order_id, p.order_item_id, p.customer_id, p.business_id, p.workflow_key, p.status,
-        b.name AS business_name,
-        c.email AS customer_email, c.first_name, c.last_name,
-        o.stripe_checkout_session_id
-      FROM projects p
-      JOIN businesses b ON b.id = p.business_id
-      JOIN customers c ON c.id = p.customer_id
-      JOIN orders o ON o.id = p.order_id
-      WHERE p.id = ?
-      LIMIT 1
-    `).bind(projectId).first();
-}
-
-function isTestOrder(context) {
-  return String(context?.stripe_checkout_session_id || "").startsWith("cs_test_");
-}
 
 async function loadPackageDeliverables(projectId, env) {
   const rows = (await env.DB.prepare(`
@@ -48,48 +27,8 @@ async function loadPackageDeliverables(projectId, env) {
   return [newest.MENU_DRAFT, newest.QR_CODE];
 }
 
-async function parkForOwnerApproval(targetStep, context, approval, env) {
-  const timestamp = nowIso();
-  await env.DB.prepare(`
-      UPDATE workflow_steps SET status = 'WAITING', error_message = NULL, output_json = ? WHERE id = ?
-    `).bind(JSON.stringify({ waiting_for: "OWNER_APPROVAL", approval_id: approval.id }), targetStep.workflow_step_id).run();
-  await env.DB.prepare(`
-      UPDATE workflow_runs SET status = 'WAITING', error_code = 'OWNER_APPROVAL_REQUIRED', error_message = 'Waiting for owner approval' WHERE id = ?
-    `).bind(targetStep.workflow_run_id).run();
-  await env.DB.prepare(`
-      UPDATE projects SET status = 'QC_REQUIRED', updated_at = ? WHERE id = ?
-    `).bind(timestamp, context.id).run();
-  await env.DB.prepare(`
-      UPDATE orders SET status = 'QC_REQUIRED', updated_at = ?
-      WHERE id = ? AND status NOT IN ('CANCELLED', 'REFUND_PENDING', 'REFUNDED', 'DELIVERED', 'COMPLETED')
-    `).bind(timestamp, context.order_id).run();
-  await env.DB.prepare(`
-      UPDATE order_items SET fulfillment_status = 'AWAITING_APPROVAL' WHERE id = ?
-    `).bind(context.order_item_id).run();
-  return {
-    waiting: true,
-    response: jsonResponse({
-      ok: true,
-      processed: true,
-      status: "WAITING",
-      waiting_for: "OWNER_APPROVAL",
-      approval_id: approval.id,
-      workflow_run_id: targetStep.workflow_run_id,
-      workflow_step_id: targetStep.workflow_step_id,
-      step_key: targetStep.step_key
-    }, 202)
-  };
-}
-
-async function notifyOwnerForApproval(targetStep, context, files, approval, env) {
-  const base = publicBaseUrl(env);
-  const approveToken = await signLinkToken(env, { kind: "approve", id: approval.id, ttlDays: APPROVAL_TTL_DAYS });
-  const approveUrl = `${base}/api/approvals/${approval.id}?t=${approveToken}`;
-  const previews = [];
-  for (const file of files) {
-    const token = await signLinkToken(env, { kind: "preview", id: file.id, ttlDays: APPROVAL_TTL_DAYS });
-    previews.push({ label: `Preview ${DELIVERABLE_LABELS[file.deliverable_type] || file.deliverable_type}`, url: `${base}/api/delivery/${file.id}?t=${token}` });
-  }
+// Owner email for one waiting Menu + QR order (the shared digest uses this when a single item is waiting).
+async function menuQrOwnerEmail({ context, files, previews, approveUrl, targetStep, env }) {
   const test = isTestOrder(context);
   const business = context.business_name || "A customer";
   const buyer = [context.first_name, context.last_name].filter(Boolean).join(" ") || context.customer_email;
@@ -115,7 +54,7 @@ async function notifyOwnerForApproval(targetStep, context, files, approval, env)
     ],
     rows: [["Business", business], ["Buyer", buyer], ["Order", context.order_id], ["Link expires", `${APPROVAL_TTL_DAYS} days`]],
     buttons: [...previews, { label: "Review and approve", url: approveUrl, primary: true }],
-    footnote: "If the files need changes, reply to this email. Change requests from this email arrive in a later update."
+    footnote: "On the review page you can approve, or request changes."
   });
   const text = [
     `${business}'s online menu and QR code are ready for your review. Nothing goes to the buyer until you approve.`,
@@ -130,44 +69,22 @@ async function notifyOwnerForApproval(targetStep, context, files, approval, env)
     `Order: ${context.order_id}`,
     `This link expires in ${APPROVAL_TTL_DAYS} days.`
   ].join("\n");
-  return sendTransactionalEmail(env, {
-    // Self-test orders keep their approval request out of the owner's inbox.
-    to: context.customer_email === SELF_TEST_EMAIL ? SELF_TEST_EMAIL : ownerEmailAddress(env),
-    subject,
-    html,
-    text,
-    idempotencyKey: `owner-approval/${approval.id}`,
-    purpose: "OWNER_APPROVAL_REQUEST",
-    templateKey: "owner_approval_menu_qr_v1",
-    context: { orderId: context.order_id, projectId: context.id, businessId: context.business_id }
-  });
+  return { subject, html, text, templateKey: "owner_approval_menu_qr_v1" };
 }
 
-async function deliverPackageToBuyer(targetStep, context, files, approval, env) {
-  const timestamp = nowIso();
-  for (const file of files) {
-    await env.DB.prepare(`
-        UPDATE deliverables
-        SET status = 'FINAL', customer_visible = 1, delivered_at = COALESCE(delivered_at, ?)
-        WHERE id = ? AND status != 'SUPERSEDED'
-      `).bind(timestamp, file.id).run();
-  }
+async function menuQrBuyerEmail({ context, files, linkFor, targetStep, env }) {
   const prepared = await loadPreparedPayload(targetStep, env);
   const contactEmail = getInputValue(prepared.inputs, "contact_email");
-  const recipient = looksLikeEmail(contactEmail) ? String(contactEmail).trim() : String(context.customer_email || "").trim();
-  if (!looksLikeEmail(recipient)) {
-    throw new Error("No valid buyer email address for delivery");
-  }
+  const recipient = looksLikeEmailValue(contactEmail) ? String(contactEmail).trim() : String(context.customer_email || "").trim();
   const qrDestination = getInputValue(prepared.inputs, "qr_destination");
   const base = publicBaseUrl(env);
   const hosted = typeof qrDestination === "string" && qrDestination.startsWith(`${base}/api/menu/`);
   const links = [];
   for (const file of files) {
-    const token = await signLinkToken(env, { kind: "deliver", id: file.id, ttlDays: DELIVERY_LINK_TTL_DAYS });
     links.push({
       type: file.deliverable_type,
       label: file.deliverable_type === "MENU_DRAFT" ? "View your online menu" : "Download your QR code",
-      url: `${base}/api/delivery/${file.id}?t=${token}${file.deliverable_type === "QR_CODE" ? "&download=1" : ""}`,
+      url: await linkFor(file, { download: file.deliverable_type === "QR_CODE" }),
       filename: file.original_filename
     });
   }
@@ -198,115 +115,29 @@ async function deliverPackageToBuyer(targetStep, context, files, approval, env) 
     "",
     "The MENU-MADE team"
   ].join("\n");
-  const sent = await sendTransactionalEmail(env, {
-    to: recipient,
-    subject,
-    html,
-    text,
-    idempotencyKey: `delivery/${context.id}/${approval.id}`,
-    purpose: "ORDER_DELIVERY",
-    templateKey: "delivery_menu_qr_v1",
-    context: { customerId: context.customer_id, businessId: context.business_id, orderId: context.order_id, projectId: context.id },
-    bccInternal: true
-  });
-  if (!sent.ok) {
-    return retryStepLater(targetStep, env, `Delivery email failed: ${sent.error}`);
-  }
-  const output = {
-    delivered_at: timestamp,
-    recipient,
-    approval_id: approval.id,
-    email_id: sent.id,
-    link_ttl_days: DELIVERY_LINK_TTL_DAYS,
-    files: files.map((f) => ({ deliverable_id: f.id, type: f.deliverable_type, filename: f.original_filename }))
-  };
-  await completeStep(targetStep, output, env);
-  await env.DB.prepare(`
-      UPDATE workflow_runs
-      SET status = 'SUCCEEDED', completed_at = ?, output_json = ?, error_code = NULL, error_message = NULL
-      WHERE id = ?
-    `).bind(timestamp, JSON.stringify(output), targetStep.workflow_run_id).run();
-  await env.DB.prepare(`
-      UPDATE projects
-      SET status = 'DELIVERED', completed_at = COALESCE(completed_at, ?), blocked_reason = NULL, updated_at = ?
-      WHERE id = ?
-    `).bind(timestamp, timestamp, context.id).run();
-  await env.DB.prepare(`
-      UPDATE order_items SET fulfillment_status = 'FULFILLED' WHERE id = ?
-    `).bind(context.order_item_id).run();
-  const open = await env.DB.prepare(`
-      SELECT COUNT(*) AS remaining FROM projects
-      WHERE order_id = ? AND status NOT IN ('DELIVERED', 'COMPLETED', 'CANCELLED')
-    `).bind(context.order_id).first();
-  if (Number(open?.remaining || 0) === 0) {
-    await env.DB.prepare(`
-        UPDATE orders SET status = 'DELIVERED', updated_at = ?
-        WHERE id = ? AND status NOT IN ('CANCELLED', 'REFUND_PENDING', 'REFUNDED')
-      `).bind(timestamp, context.order_id).run();
-  }
-  await recordProjectEvent(env, context.id, "PROJECT_DELIVERED", targetStep.workflow_run_id, {
-    approval_id: approval.id,
-    recipient,
-    deliverable_ids: files.map((f) => f.id)
-  });
-  return { waiting: false, output };
+  return { recipient, subject, html, text, templateKey: "delivery_menu_qr_v1" };
 }
 
-async function runPackageDeliverablesStep(targetStep, env) {
-  if (!env.ASSETS) throw new Error("R2 ASSETS binding is not available");
-  const context = await loadDeliveryContext(targetStep.project_id, env);
-  if (!context) throw new Error("Production project could not be loaded");
-  const files = await loadPackageDeliverables(context.id, env);
-  let approval = await env.DB.prepare(`
-      SELECT * FROM approvals
-      WHERE project_id = ? AND approval_type = 'OWNER_RELEASE'
-      ORDER BY requested_at DESC, rowid DESC
-      LIMIT 1
-    `).bind(context.id).first();
-  if (!approval || approval.status === "EXPIRED" || approval.status === "CANCELLED") {
-    const requestedAt = nowIso();
-    approval = {
-      id: crypto.randomUUID(),
-      status: "PENDING",
-      metadata_json: JSON.stringify({
-        workflow_run_id: targetStep.workflow_run_id,
-        deliverable_ids: files.map((f) => f.id),
-        owner_notified_at: null
-      })
-    };
-    await env.DB.prepare(`
-        INSERT INTO approvals (
-          id, project_id, approval_type, status, revision_number, revision_limit,
-          requested_at, expires_at, metadata_json
-        )
-        VALUES (?, ?, 'OWNER_RELEASE', 'PENDING', 1, 2, ?, ?, ?)
-      `).bind(approval.id, context.id, requestedAt, addDaysIso(APPROVAL_TTL_DAYS), approval.metadata_json).run();
-    await recordProjectEvent(env, context.id, "OWNER_APPROVAL_REQUESTED", targetStep.workflow_run_id, { approval_id: approval.id });
-  }
-  if (approval.status === "PENDING") {
-    const metadata = parseJsonOrNull(approval.metadata_json) || {};
-    if (!metadata.owner_notified_at) {
-      const sent = await notifyOwnerForApproval(targetStep, context, files, approval, env);
-      if (!sent.ok) {
-        return retryStepLater(targetStep, env, `Owner approval email failed: ${sent.error}`);
-      }
-      metadata.owner_notified_at = nowIso();
-      await env.DB.prepare(`UPDATE approvals SET metadata_json = ? WHERE id = ?`).bind(JSON.stringify(metadata), approval.id).run();
-    }
-    return parkForOwnerApproval(targetStep, context, approval, env);
-  }
-  if (approval.status === "APPROVED") {
-    return deliverPackageToBuyer(targetStep, context, files, approval, env);
-  }
-  throw new Error(`Owner approval is ${approval.status}; revisions are handled in a later stage`);
+const menuQrPresenter = {
+  name: "MENU_QR",
+  async loadFiles(context, targetStep, env) {
+    return (await loadPackageDeliverables(context.id, env)).map((file) => ({ ...file, approval: null }));
+  },
+  ownerLabel(context) {
+    return `${context.business_name || "A customer"} - Online menu + QR`;
+  },
+  ownerEmail: menuQrOwnerEmail,
+  buyerEmail: menuQrBuyerEmail
+};
+
+function runPackageDeliverablesStep(targetStep, env) {
+  return runDeliverStep(targetStep, env, menuQrPresenter);
 }
 
 export {
   loadDeliveryContext,
   isTestOrder,
   loadPackageDeliverables,
-  parkForOwnerApproval,
-  notifyOwnerForApproval,
-  deliverPackageToBuyer,
+  menuQrPresenter,
   runPackageDeliverablesStep
 };

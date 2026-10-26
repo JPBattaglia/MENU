@@ -233,10 +233,10 @@ async function stageAwaitApproval(env, app, test) {
       SELECT id FROM approvals WHERE project_id = ? AND approval_type = 'OWNER_RELEASE' AND status = 'PENDING' LIMIT 1
     `).bind(test.project_id).first();
   if (!approval) return null;
-  const ownerEmail = await env.DB.prepare(`
-      SELECT recipient FROM communications WHERE project_id = ? AND purpose = 'OWNER_APPROVAL_REQUEST' AND status = 'SENT' LIMIT 1
-    `).bind(test.project_id).first();
-  if (!ownerEmail) return null;
+  const notified = await env.DB.prepare(`
+      SELECT 1 AS ok FROM approvals WHERE id = ? AND json_extract(metadata_json, '$.owner_notified_at') IS NOT NULL
+    `).bind(approval.id).first();
+  if (!notified) return null; // the owner's email (single or digest) goes out at the end of the runner tick
   const token = await signLinkToken(env, { kind: "approve", id: approval.id, ttlDays: 1 });
   const form = new FormData();
   form.append("t", token);
