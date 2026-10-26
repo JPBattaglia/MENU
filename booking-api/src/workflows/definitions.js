@@ -95,9 +95,19 @@ async function loadWorkflowDefinition(workflowKey, workflowVersion, env) {
       }
       seenKeys.add(key);
       seenOrders.add(order);
+      // Stage 4 routing options (all optional): approval "auto" | "owner" overrides the offer's
+      // requires_approval for the delivering step; auto_release_days lets a waiting approval release itself
+      // (off unless set); regenerate_from names the step to re-run once when the owner requests changes.
+      const approval = ["auto", "owner"].includes(step?.approval) ? step.approval : null;
+      const autoReleaseDays = Number.isFinite(Number(step?.auto_release_days)) && Number(step.auto_release_days) > 0
+        ? Number(step.auto_release_days) : null;
+      const regenerateFrom = typeof step?.regenerate_from === "string" && step.regenerate_from.trim() ? step.regenerate_from.trim() : null;
       return {
         key,
-        order
+        order,
+        ...(approval ? { approval } : {}),
+        ...(autoReleaseDays ? { autoReleaseDays } : {}),
+        ...(regenerateFrom ? { regenerateFrom } : {})
       };
     }
   );

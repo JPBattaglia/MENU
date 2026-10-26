@@ -1,4 +1,5 @@
-import { handleApprovalRequest } from "./approvals/approvals.js";
+import { handleAdminQueue } from "./admin/queue.js";
+import { handleApprovalRequest, handleBatchApprovalRequest } from "./approvals/approvals.js";
 import { mmBookingEnvironment, mmBookingHandler } from "./booking/booking.js";
 import { getPublicOffers } from "./checkout/catalog.js";
 import { recordFunnelEvent } from "./checkout/funnel.js";
@@ -8,6 +9,7 @@ import { handleStripeWebhook } from "./checkout/webhook.js";
 import { handleDeliveryDownload, handleHostedMenu } from "./delivery/delivery.js";
 import { handleExtraPagesDone, handleExtraPagesPay } from "./producers/menu-qr/page-billing.js";
 import { advanceSelfTests } from "./selftest/menu-qr-selftest.js";
+import { advanceRoutingSelfTests } from "./selftest/routing-selftest.js";
 import { advanceSubscriptionSelfTests } from "./selftest/subscription-selftest.js";
 import { runDailySubscriptionPass } from "./subscriptions/daily.js";
 import { handleBillingPortal } from "./subscriptions/portal.js";
@@ -21,6 +23,13 @@ import { runNextProductionStep, runScheduledProduction } from "./workflows/runne
 var worker_default = {
   async fetch(request, env, ctx) {
     const url = new URL(request.url);
+    if (url.pathname === "/api/admin/queue" && (request.method === "GET" || request.method === "POST")) {
+      return handleAdminQueue(request, env);
+    }
+    const batchMatch = url.pathname.match(/^\/api\/approvals\/batch\/([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})$/i);
+    if (batchMatch && (request.method === "GET" || request.method === "POST")) {
+      return handleBatchApprovalRequest(request, env, ctx, batchMatch[1].toLowerCase());
+    }
     const approvalMatch = url.pathname.match(/^\/api\/approvals\/([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})$/i);
     if (approvalMatch && (request.method === "GET" || request.method === "POST")) {
       return handleApprovalRequest(request, env, ctx, approvalMatch[1].toLowerCase());
@@ -147,6 +156,7 @@ const mmWorkerWithBooking = {
       });
       await advanceSelfTests(env, app).catch((error) => console.error("Self-test failed:", error instanceof Error ? error.message : String(error)));
       await advanceSubscriptionSelfTests(env, app).catch((error) => console.error("Subscription self-test failed:", error instanceof Error ? error.message : String(error)));
+      await advanceRoutingSelfTests(env, app).catch((error) => console.error("Routing self-test failed:", error instanceof Error ? error.message : String(error)));
       // Once a day: reconcile subscriptions with Stripe and create annual plans' monthly jobs.
       await runDailySubscriptionPass(env).catch((error) => console.error("Daily subscription pass failed:", error instanceof Error ? error.message : String(error)));
     })());
