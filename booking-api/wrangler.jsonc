@@ -22,7 +22,10 @@
   "triggers": { "crons": ["*/5 * * * *"] },
   "routes": [
     { "pattern": "menu-made.com/api/*", "zone_name": "menu-made.com" },
-    { "pattern": "www.menu-made.com/api/*", "zone_name": "menu-made.com" }
+    { "pattern": "www.menu-made.com/api/*", "zone_name": "menu-made.com" },
+    // Generated customer sites live at <slug>.menu-made.com. www is redirected
+    // to the apex by a Cloudflare redirect rule before it reaches the Worker.
+    { "pattern": "*.menu-made.com/*", "zone_name": "menu-made.com" }
   ],
   // Fonts for Social Posts graphics are read as raw bytes.
   "rules": [{ "type": "Data", "globs": ["**/*.ttf"], "fallthrough": true }],
