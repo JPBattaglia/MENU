@@ -33,11 +33,15 @@ function notFound(build, headers = {}) {
 
 async function handleLiveSite(request, env, slug, path) {
   if (!env.DB || !env.ASSETS) return simplePage(503, "Temporarily unavailable", "<p>Please try again in a minute.</p>");
+  // Newest approved build for this site from ANY project of the business: the original Website Package or a later
+  // Website Care edit. The slug check keeps one business's two sites apart.
   const row = await env.DB.prepare(`
       SELECT a.storage_key FROM website_sites s
-      JOIN deliverables d ON d.project_id = s.project_id AND d.deliverable_type = 'SITE_BUILD' AND d.status = 'FINAL' AND d.customer_visible = 1
+      JOIN projects p ON p.business_id = s.business_id
+      JOIN deliverables d ON d.project_id = p.id AND d.deliverable_type = 'SITE_BUILD' AND d.status = 'FINAL' AND d.customer_visible = 1
       JOIN assets a ON a.id = d.asset_id
-      WHERE s.slug = ? ORDER BY d.version DESC LIMIT 1
+      WHERE s.slug = ? AND json_extract(a.metadata_json, '$.website.slug') = s.slug
+      ORDER BY d.delivered_at DESC, d.created_at DESC, d.version DESC LIMIT 1
     `).bind(slug).first();
   if (!row) {
     const known = await env.DB.prepare(`SELECT 1 AS found FROM website_sites WHERE slug = ?`).bind(slug).first();
