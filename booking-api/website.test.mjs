@@ -10,7 +10,7 @@ const api = { ...(await import('./src/worker.js')), ...(await import('./src/work
 const { parseOfferings, parseHours, buildSite } = await import('./src/producers/website/build.js');
 const { checkSite } = await import('./src/producers/website/check.js');
 const { validateCopy } = await import('./src/producers/website/copy.js');
-const { STYLES, contrast, css, hexOk } = await import('./src/producers/website/styles.js');
+const { STYLES, contrast, css, hexOk, paletteFor } = await import('./src/producers/website/styles.js');
 const { slugify, validSlug, sniffImage, startWebsiteIntake, intakeLink } = await import('./src/producers/website/intake.js');
 const read = (name) => readFileSync(new URL(`./migrations/${name}`, import.meta.url), 'utf8');
 
@@ -31,15 +31,26 @@ test('offerings and hours parse into sections, items, prices and lines', () => {
   assert.deepEqual(parseHours(SITE.hours).map((h) => h.time), ['11am-9pm', '12pm-10pm']);
 });
 
-test('the three styles all keep text readable (WCAG AA) and a custom brand colour that fails is corrected', () => {
-  for (const key of Object.keys(STYLES)) {
-    const sheet = css(key, '');
-    assert.ok(sheet.length > 200);
+test('every template style keeps text readable (WCAG AA), with or without a brand colour, and builds a site that passes all checks', () => {
+  const keys = Object.keys(STYLES);
+  assert.ok(keys.length >= 8, `only ${keys.length} styles`);
+  assert.ok(['classic', 'modern', 'bold'].every((k) => keys.includes(k)));
+  const seen = new Set();
+  for (const key of keys) {
+    const st = STYLES[key];
+    assert.ok(st.label && st.blurb, key);
+    assert.ok(contrast(st.ink, st.bg) >= 7, `${key} ink`); assert.ok(contrast(st.muted, st.bg) >= 4.5, `${key} muted`); assert.ok(contrast(st.ink, st.card) >= 7, `${key} card`);
+    for (const brand of ['', '#fffacd', '#000000', '#b3261e']) {
+      const { onBrand, brand: b, link } = paletteFor(key, brand);
+      assert.ok(contrast(onBrand, b) >= 4.5, `${key} ${brand} button`); assert.ok(contrast(link, st.bg) >= 4.5, `${key} ${brand} link`);
+    }
+    const sheet = css(key, ''); seen.add(sheet); assert.ok(sheet.length > 200);
+    const pages = buildSite({ ...SITE, style: key }, COPY);
+    assert.deepEqual(checkSite({ pages, images: IMAGES, site: { ...SITE, style: key } }), [], key);
   }
-  assert.ok(contrast('#000000', '#ffffff') > 20);
+  assert.equal(seen.size, keys.length, 'every style must look different');
   assert.equal(hexOk('#b3261e'), true); assert.equal(hexOk('red'), false); assert.equal(hexOk('#fff'), false);
-  const pale = css('modern', '#fffacd');
-  assert.ok(pale.length > 200);
+  assert.ok(css('no-such-style', '').length > 200);
 });
 
 test('buildSite makes 5 pages that pass every automated check; broken sites are caught', () => {

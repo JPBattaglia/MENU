@@ -1,4 +1,4 @@
-// The three Website Package template styles (stage 7). Colours are derived from the buyer's brand colour, and text
+// The Website Package template styles (stage 7). Colours are derived from the buyer's brand colour, and text
 // colours are always chosen for contrast, so a bad brand colour can never produce unreadable text.
 const hexOk = (v) => /^#[0-9a-f]{6}$/i.test(String(v ?? "").trim());
 function luminance(hex) {
@@ -13,10 +13,19 @@ const readableOn = (bg) => (contrast("#111111", bg) >= contrast("#ffffff", bg) ?
 // A colour usable as text/links on `bg`: the brand colour if readable, otherwise the plain text colour.
 const textOn = (colour, bg, fallback) => (contrast(colour, bg) >= 4.5 ? colour : fallback);
 
+const SANS = "system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif";
+const SERIF = "Georgia, 'Times New Roman', serif";
+// blurb is shown on the intake form; card is the panel colour (contact card, etc.).
 const STYLES = {
-  classic: { label: "Classic", bg: "#faf6ef", ink: "#2a2420", muted: "#5a5049", defaultBrand: "#7a2e2e", font: "Georgia, 'Times New Roman', serif", heading: "Georgia, 'Times New Roman', serif", align: "center", radius: "2px", upper: false },
-  modern: { label: "Modern", bg: "#ffffff", ink: "#16181d", muted: "#4b5160", defaultBrand: "#0f766e", font: "system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif", heading: "system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif", align: "left", radius: "12px", upper: false },
-  bold: { label: "Bold", bg: "#121212", ink: "#f5f5f5", muted: "#c9c9c9", defaultBrand: "#f5b700", font: "system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif", heading: "Impact, 'Arial Black', system-ui, sans-serif", align: "left", radius: "0", upper: true }
+  classic: { label: "Classic", blurb: "warm, serif type, traditional", bg: "#faf6ef", card: "#ffffff", ink: "#2a2420", muted: "#5a5049", defaultBrand: "#7a2e2e", font: SERIF, heading: SERIF, align: "center", radius: "2px", upper: false },
+  modern: { label: "Modern", blurb: "clean, light, simple", bg: "#ffffff", card: "#f5f6f8", ink: "#16181d", muted: "#4b5160", defaultBrand: "#0f766e", font: SANS, heading: SANS, align: "left", radius: "12px", upper: false },
+  bold: { label: "Bold", blurb: "dark, big type, high energy", bg: "#121212", card: "#1d1d1d", ink: "#f5f5f5", muted: "#c9c9c9", defaultBrand: "#f5b700", font: SANS, heading: "Impact, 'Arial Black', system-ui, sans-serif", align: "left", radius: "0", upper: true },
+  rustic: { label: "Rustic", blurb: "earthy, cosy, hand-made feel", bg: "#f3ead8", card: "#fbf6ea", ink: "#33261a", muted: "#5c4a3a", defaultBrand: "#8a4b1f", font: SERIF, heading: "'Palatino Linotype', Palatino, 'Book Antiqua', serif", align: "left", radius: "6px", upper: false },
+  elegant: { label: "Elegant", blurb: "refined, spaced capitals, fine dining", bg: "#fbfaf8", card: "#ffffff", ink: "#1c1c1c", muted: "#555555", defaultBrand: "#6b5420", font: "'Palatino Linotype', Palatino, 'Book Antiqua', serif", heading: "'Palatino Linotype', Palatino, 'Book Antiqua', serif", align: "center", radius: "0", upper: true },
+  fresh: { label: "Fresh", blurb: "light green, healthy, friendly", bg: "#f3fbf3", card: "#ffffff", ink: "#14301a", muted: "#3f5a45", defaultBrand: "#2e7d32", font: SANS, heading: SANS, align: "left", radius: "16px", upper: false },
+  playful: { label: "Playful", blurb: "bright, rounded, fun - great for cafes and kids", bg: "#fff8e7", card: "#ffffff", ink: "#2b2140", muted: "#5a4d73", defaultBrand: "#c2185b", font: "'Trebuchet MS', 'Segoe UI', system-ui, sans-serif", heading: "'Trebuchet MS', 'Segoe UI', system-ui, sans-serif", align: "center", radius: "24px", upper: false },
+  midnight: { label: "Midnight", blurb: "dark navy, modern, bars and late-night", bg: "#0f1b2d", card: "#17263d", ink: "#eef2f8", muted: "#b8c4d6", defaultBrand: "#4fc3f7", font: SANS, heading: SANS, align: "left", radius: "8px", upper: false },
+  minimal: { label: "Minimal", blurb: "black and white, lots of space", bg: "#ffffff", card: "#f4f4f4", ink: "#000000", muted: "#555555", defaultBrand: "#111111", font: "Helvetica, Arial, sans-serif", heading: "Helvetica, Arial, sans-serif", align: "left", radius: "0", upper: false }
 };
 
 function paletteFor(styleKey, brandInput) {
@@ -41,7 +50,7 @@ main{max-width:980px;margin:0 auto;padding:36px 20px 64px;text-align:${s.align}}
 .menu-section{text-align:left;max-width:720px;${s.align === "center" ? "margin:0 auto" : ""}}.menu-section ul{list-style:none;padding:0;margin:0}.menu-section li{padding:14px 0;border-bottom:1px solid ${s.muted}44;display:grid;grid-template-columns:1fr auto;gap:2px 16px}.menu-section .n{font-weight:700}.menu-section .p{font-weight:700;color:${s.ink}}.menu-section .d{grid-column:1/2;color:${s.muted};font-size:16px}
 .gallery{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:14px;margin:0;padding:0;list-style:none}.gallery img{width:100%;height:230px;object-fit:cover;border-radius:${s.radius}}
 dl.hours{display:grid;grid-template-columns:auto 1fr;gap:6px 22px;text-align:left;max-width:420px;${s.align === "center" ? "margin:0 auto" : ""}}dl.hours dt{font-weight:700}dl.hours dd{margin:0}
-.card{background:${s.bg === "#ffffff" ? "#f5f6f8" : s.bg === "#121212" ? "#1d1d1d" : "#fff"};border:1px solid ${s.muted}33;border-radius:${s.radius};padding:22px;text-align:left;max-width:560px;${s.align === "center" ? "margin:0 auto" : ""}}
+.card{background:${s.card};border:1px solid ${s.muted}33;border-radius:${s.radius};padding:22px;text-align:left;max-width:560px;${s.align === "center" ? "margin:0 auto" : ""}}
 footer.site{border-top:1px solid ${s.muted}33;padding:28px 20px;text-align:center;color:${s.muted};font-size:15px}
 @media (max-width:560px){body{font-size:17px}header.site .in{justify-content:center}}`;
 }
