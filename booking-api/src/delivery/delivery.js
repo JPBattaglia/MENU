@@ -42,11 +42,13 @@ async function handleHostedMenu(request, env, slug) {
   const row = await env.DB.prepare(`
       SELECT a.storage_key
       FROM project_inputs pi
-      JOIN deliverables d ON d.project_id = pi.project_id
+      JOIN projects p0 ON p0.id = pi.project_id
+      JOIN projects p ON p.business_id = p0.business_id AND p.workflow_key IN ('MENU_QR_V1', 'MENU_CARE_V1')
+      JOIN deliverables d ON d.project_id = p.id
       JOIN assets a ON a.id = d.asset_id
       WHERE pi.input_key = 'qr_destination' AND pi.value_text = ?
         AND d.deliverable_type = 'MENU_DRAFT' AND d.status = 'FINAL' AND d.customer_visible = 1
-      ORDER BY d.version DESC, d.delivered_at DESC
+      ORDER BY d.delivered_at DESC, d.version DESC
       LIMIT 1
     `).bind(hostedUrl).first();
   const object = row ? await env.ASSETS.get(row.storage_key) : null;
