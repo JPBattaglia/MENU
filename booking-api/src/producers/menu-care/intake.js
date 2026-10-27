@@ -10,6 +10,7 @@ import { verifyLinkToken } from "../../lib/links.js";
 import { loadWorkflowDefinition } from "../../workflows/definitions.js";
 import { PRODUCING, stableId } from "../../subscriptions/sync.js";
 import { LINK_KIND } from "./care-step.js";
+import { loadSuggestion, requestText, validPrice } from "./seasonal.js";
 
 const ABUSE_LIMIT = 100;
 const MAX_REQUEST_CHARS = 2000;
@@ -79,6 +80,15 @@ async function createMenuChangeRequest(env, subscriptionId, text, { source = "FO
   return { requestId, projectId, runId };
 }
 
+function acceptPage(subscriptionId, token, month, suggestion, { error = null } = {}) {
+  const body = `${error ? `<p style="color:#9b1c1c"><strong>${escapeHtml(error)}</strong></p>` : ""}
+<p>This month's idea: <strong>${escapeHtml(suggestion.name)}</strong> - ${escapeHtml(suggestion.description)}</p>
+<form method="post" action="/api/menu-care/${escapeHtml(subscriptionId)}"><input type="hidden" name="t" value="${escapeHtml(token)}"><input type="hidden" name="s" value="${escapeHtml(month)}">
+<p><label for="price"><strong>Price</strong></label><br><input id="price" name="price" required inputmode="decimal" placeholder="14" style="font:inherit;padding:10px"></p>
+<button type="submit">Add it to my menu</button></form><p style="font-size:13px">We check the update before it goes live.</p>`;
+  return simplePage(error ? 400 : 200, "Add this month's special", body);
+}
+
 function formPage(subscriptionId, token, { error = null, notice = null } = {}) {
   const body = `${notice ? `<p><strong>${escapeHtml(notice)}</strong></p>` : ""}${error ? `<p style="color:#9b1c1c"><strong>${escapeHtml(error)}</strong></p>` : ""}
 <p>Tell us what should change on your online menu - prices, dishes added or removed, descriptions. Include the exact new prices.</p>
@@ -97,13 +107,28 @@ async function handleMenuCareRequest(request, env, subscriptionId) {
   if (request.method === "GET") {
     const token = url.searchParams.get("t") || "";
     const payload = await verifyLinkToken(env, token, [LINK_KIND], subscriptionId);
-    return !payload || payload.expired ? denied() : formPage(subscriptionId, token);
+    if (!payload || payload.expired) return denied();
+    const month = url.searchParams.get("s");
+    if (month) {
+      const idea = await loadSuggestion(env, subscriptionId, month).catch(() => null);
+      return idea ? acceptPage(subscriptionId, token, month, idea) : formPage(subscriptionId, token);
+    }
+    return formPage(subscriptionId, token);
   }
   let form;
   try { form = await request.formData(); } catch { return simplePage(400, "Something went wrong", "<p>Please go back and try again.</p>"); }
   const token = String(form.get("t") || "");
   const payload = await verifyLinkToken(env, token, [LINK_KIND], subscriptionId);
   if (!payload || payload.expired) return denied();
+  const month = String(form.get("s") || "");
+  if (month) {
+    const idea = await loadSuggestion(env, subscriptionId, month).catch(() => null);
+    if (!idea) return formPage(subscriptionId, token);
+    if (!validPrice(form.get("price"))) return acceptPage(subscriptionId, token, month, idea, { error: "Enter the price as a number, like 14 or 14.50." });
+    try { await createMenuChangeRequest(env, subscriptionId, requestText(idea, form.get("price")), { source: "SUGGESTION" }); }
+    catch (error) { if (error instanceof IntakeError) return simplePage(error.status, "We can't take this change", `<p>${escapeHtml(error.message)}</p>`); throw error; }
+    return simplePage(200, "Got it", "<p>We're adding it to your menu. You'll get an email when it's live, usually within a few hours.</p>");
+  }
   try {
     await createMenuChangeRequest(env, subscriptionId, form.get("change"));
   } catch (error) {

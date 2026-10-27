@@ -14,6 +14,7 @@ import { loadRegenerationNote } from "../../approvals/actions.js";
 import { loadDeliveryContext } from "../../approvals/release.js";
 import { completeStep } from "../../workflows/runner.js";
 import { buildDesignedMenuHtml, assertMenuRendered } from "../menu-qr/design.js";
+import { suggestSpecial } from "./seasonal.js";
 import { MenuCareError, applyMenuChange, describeDiff, parseMenuHtml } from "./menu-edit.js";
 
 const LINK_KIND = "menucare";
@@ -55,8 +56,23 @@ async function finishRun(targetStep, context, output, env) {
   await env.DB.prepare(`UPDATE order_items SET fulfillment_status = 'FULFILLED' WHERE id = ?`).bind(context.order_item_id).run();
 }
 
-async function runMonthOpening(targetStep, context, metadata, env) {
+async function monthSuggestion(env, context, metadata, targetStep, deps) {
+  // One optional idea per month; any failure just means the email goes out without it.
+  try {
+    const html = await loadLiveMenu(env, context.business_id);
+    if (!html) return null;
+    const date = new Date(metadata.period_start || Date.now());
+    const monthLabel = date.toLocaleString("en-US", { month: "long", year: "numeric", timeZone: "UTC" });
+    return await suggestSpecial(env, { menu: parseMenuHtml(html).menu, monthLabel, periodStart: metadata.period_start, subscriptionId: metadata.subscription_id,
+      scope: { entityType: "SUBSCRIPTION", entityId: metadata.subscription_id, correlationId: targetStep.workflow_run_id } }, deps.generate);
+  } catch { return null; }
+}
+
+async function runMonthOpening(targetStep, context, metadata, env, deps = {}) {
   const link = await menuCareLink(env, metadata.subscription_id);
+  const idea = await monthSuggestion(env, context, metadata, targetStep, deps);
+  const month = String(metadata.period_start || "").slice(0, 7);
+  const acceptLink = idea ? `${link}&s=${month}` : null;
   const business = context.business_name || "your business";
   const sent = await sendTransactionalEmail(env, {
     to: context.customer_email,
@@ -67,12 +83,13 @@ async function runMonthOpening(targetStep, context, metadata, env) {
       heading: "Need a change to your menu?",
       paragraphs: [
         `Hi ${escapeHtml(context.first_name || "there")},`,
-        "Type what should change - a new price, a dish added or removed, a new description - and we'll update your online menu. The new version appears at the same address and QR code. We check each update before it goes live."
+        "Type what should change - a new price, a dish added or removed, a new description - and we'll update your online menu. The new version appears at the same address and QR code. We check each update before it goes live.",
+        ...(idea ? [`<strong>An idea for this month:</strong> ${escapeHtml(idea.name)} - ${escapeHtml(idea.description)} Add it with one click; you only need to give the price.`] : [])
       ],
-      buttons: [{ label: "Send a menu change", url: link, primary: true }],
+      buttons: [{ label: "Send a menu change", url: link, primary: !idea }, ...(idea ? [{ label: `Add "${idea.name}"`, url: acceptLink, primary: true }] : [])],
       footnote: "Keep this email: the button works all month and every month while Menu Care is active."
     }),
-    text: `Need a change to your menu?\n\nType what should change and we'll update your online menu at the same address and QR code. We check each update before it goes live.\n\nSend a menu change: ${link}`,
+    text: `Need a change to your menu?\n\nType what should change and we'll update your online menu at the same address and QR code. We check each update before it goes live.\n\nSend a menu change: ${link}${idea ? `\n\nAn idea for this month: ${idea.name} - ${idea.description}\nAdd it (you only need to give the price): ${acceptLink}` : ""}`,
     idempotencyKey: `menu-care-open/${metadata.subscription_id}/${metadata.period_start}`,
     purpose: "MENU_CARE_OPEN",
     templateKey: "menu_care_open_v1",
@@ -129,7 +146,7 @@ async function runMenuCareProduceStep(targetStep, env, deps = {}) {
   if (!context) throw new Error("Production project could not be loaded");
   const project = await env.DB.prepare(`SELECT metadata_json FROM projects WHERE id = ?`).bind(context.id).first();
   const metadata = parseJsonOrNull(project?.metadata_json) || {};
-  if (metadata.source !== "MENU_CARE_REQUEST") return runMonthOpening(targetStep, context, metadata, env);
+  if (metadata.source !== "MENU_CARE_REQUEST") return runMonthOpening(targetStep, context, metadata, env, deps);
 
   const request = await env.DB.prepare(`SELECT * FROM menu_change_requests WHERE id = ?`).bind(metadata.request_id).first();
   if (!request) throw new Error("Menu change request not found");
