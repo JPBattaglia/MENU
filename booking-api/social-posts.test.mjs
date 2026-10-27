@@ -35,7 +35,7 @@ function setup() {
   sql(`INSERT INTO offers (id, created_at, updated_at, code, name, category, status, billing_type, fulfillment_type, requires_approval, default_workflow_key) VALUES ('offer_social', ?, ?, 'SOCIAL_POSTS', 'Social Posts', 'OTHER', 'ACTIVE', 'RECURRING', 'DIGITAL', 1, 'SOCIAL_POSTS_V1')`, t, t);
   sql(`INSERT INTO offer_versions (id, offer_id, version_number, created_at, effective_from, status, price_cents, billing_interval, scope_json) VALUES ('ov_social', 'offer_social', 1, ?, ?, 'ACTIVE', 12900, 'MONTH', '{}')`, t, t);
   sql(`INSERT INTO workflow_definitions (id, workflow_key, version, status, steps_json, created_at, updated_at) VALUES ('wd_s', 'SOCIAL_POSTS_V1', 1, 'ACTIVE', '[{"key":"PRODUCE","order":10},{"key":"DELIVER","order":20}]', ?, ?)`, t, t);
-  DB.raw.exec(read('0004_ai_usage_index.sql')); DB.raw.exec(read('0006_social_posts.sql'));
+  DB.raw.exec(read('0004_ai_usage_index.sql')); DB.raw.exec(read('0006_social_posts.sql')); DB.raw.exec(read('0007_plan_settings.sql'));
   // The buyer's live menu (from an earlier Menu + QR order).
   sql(`INSERT INTO orders (id, created_at, updated_at, customer_id, business_id, status, subtotal_cents, total_cents, payment_status) VALUES ('o0', ?, ?, 'cust', 'biz', 'DELIVERED', 0, 0, 'PAID')`, t, t);
   sql(`INSERT INTO order_items (id, order_id, offer_id, offer_version_id, unit_price_cents, line_total_cents) VALUES ('i0', 'o0', 'offer_social', 'ov_social', 0, 0)`);

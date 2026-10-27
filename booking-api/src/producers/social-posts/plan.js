@@ -64,16 +64,16 @@ function validatePosts(posts, { menu, sourceText }) {
   return { posts: clean, problems };
 }
 
-async function planPosts(env, { businessName, menu, monthLabel, scope }, deps) {
+async function planPosts(env, { businessName, menu, monthLabel, scope, extra = "" }, deps) {
   const menuText = menuToText(menu);
-  const sourceText = `${businessName}\n${menuText}`;
+  const sourceText = `${businessName}\n${menuText}\n${extra}`;
   let feedback = "";
   let last = { posts: [], problems: ["No attempt was made"] };
   for (let attempt = 1; attempt <= 2; attempt++) {
     const result = await generate(env, {
       purpose: "social_posts_plan",
       system: SYSTEM,
-      prompt: `BUSINESS DETAILS:\nName: ${businessName}\nMonth: ${monthLabel}\n\nMENU:\n${menuText || "(no menu on file - write general posts about the business, with no dish names)"}${feedback}`,
+      prompt: `BUSINESS DETAILS:\nName: ${businessName}\nMonth: ${monthLabel}${extra ? `\n${extra}` : ""}\n\nMENU:\n${menuText || "(no menu on file - write general posts about the business, with no dish names)"}${feedback}`,
       schema: SCHEMA,
       scope,
       maxTokens: 6000

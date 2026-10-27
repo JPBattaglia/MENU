@@ -11,6 +11,7 @@ import { loadDeliveryContext } from "../../approvals/release.js";
 import { completeStep } from "../../workflows/runner.js";
 import { loadLiveMenu, finishRun } from "../menu-care/care-step.js";
 import { parseMenuHtml } from "../menu-care/menu-edit.js";
+import { getSettings } from "../../subscriptions/settings.js";
 import { storeDeliverable } from "../shared/deliverables.js";
 import { POSTS_PER_MONTH, planPosts } from "./plan.js";
 import { createRasterizer } from "./rasterize.js";
@@ -79,9 +80,11 @@ async function runSocialPostsProduceStep(targetStep, env, deps = {}) {
   const liveHtml = await loadLiveMenu(env, context.business_id);
   if (liveHtml) { try { live = parseMenuHtml(liveHtml); } catch { live = null; } }
   const note = await loadRegenerationNote(env, context.id);
+  const settings = metadata.subscription_id ? await getSettings(env, metadata.subscription_id).catch(() => ({})) : {}; // optional extras: never block the posts
   const plan = await planPosts(env, {
     businessName: business,
     menu: live?.menu || null,
+    extra: [settings.voice && `Voice: ${settings.voice}`, settings.specials && `Specials and events to feature: ${settings.specials}`].filter(Boolean).join("\n"),
     monthLabel: note ? `${month.label}. Reviewer correction from a previous attempt: ${note.note}` : month.label,
     scope: { entityType: "SUBSCRIPTION", entityId: metadata.subscription_id || context.id, correlationId: targetStep.workflow_run_id }
   }, deps.generate).catch((error) => (error instanceof AiCapError ? { capped: error.message } : Promise.reject(error)));

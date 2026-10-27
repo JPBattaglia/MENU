@@ -6,11 +6,13 @@ import { recordFunnelEvent } from "./checkout/funnel.js";
 import { CheckoutValidationError, quoteMenuPackage } from "./checkout/quote.js";
 import { createCheckoutSession, createCheckoutSessionTest } from "./checkout/session.js";
 import { handleStripeWebhook } from "./checkout/webhook.js";
+import { handlePlanSettings } from "./subscriptions/settings.js";
 import { handleMenuCareRequest } from "./producers/menu-care/intake.js";
 import { handleDeliveryDownload, handleHostedMenu } from "./delivery/delivery.js";
 import { handleExtraPagesDone, handleExtraPagesPay } from "./producers/menu-qr/page-billing.js";
 import { advanceSelfTests } from "./selftest/menu-qr-selftest.js";
 import { advanceMenuCareSelfTests } from "./selftest/menu-care-selftest.js";
+import { advanceAccessibilitySelfTests } from "./selftest/accessibility-selftest.js";
 import { advanceSocialPostsSelfTests } from "./selftest/social-posts-selftest.js";
 import { advanceRoutingSelfTests } from "./selftest/routing-selftest.js";
 import { advanceSubscriptionSelfTests } from "./selftest/subscription-selftest.js";
@@ -44,6 +46,10 @@ var worker_default = {
     const careMatch = url.pathname.match(/^\/api\/menu-care\/([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}|[0-9a-f]{16,64})$/i);
     if (careMatch && (request.method === "GET" || request.method === "POST")) {
       return handleMenuCareRequest(request, env, careMatch[1]);
+    }
+    const settingsMatch = url.pathname.match(/^\/api\/plan-settings\/([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})$/i);
+    if (settingsMatch && (request.method === "GET" || request.method === "POST")) {
+      return handlePlanSettings(request, env, settingsMatch[1].toLowerCase());
     }
     const extraPagesMatch = url.pathname.match(/^\/api\/extra-pages\/([A-Za-z0-9-]{1,64})(\/done)?$/);
     if (extraPagesMatch && request.method === "GET") {
@@ -166,6 +172,7 @@ const mmWorkerWithBooking = {
       await advanceRoutingSelfTests(env, app).catch((error) => console.error("Routing self-test failed:", error instanceof Error ? error.message : String(error)));
       await advanceMenuCareSelfTests(env, app).catch((error) => console.error("Menu Care self-test failed:", error instanceof Error ? error.message : String(error)));
       await advanceSocialPostsSelfTests(env, app).catch((error) => console.error("Social Posts self-test failed:", error instanceof Error ? error.message : String(error)));
+      await advanceAccessibilitySelfTests(env, app).catch((error) => console.error("Accessibility self-test failed:", error instanceof Error ? error.message : String(error)));
       // Once a day: reconcile subscriptions with Stripe and create annual plans' monthly jobs.
       await runDailySubscriptionPass(env).catch((error) => console.error("Daily subscription pass failed:", error instanceof Error ? error.message : String(error)));
     })());

@@ -21,6 +21,7 @@ var DELIVERABLE_LABELS = {
   MENU_DRAFT: "Online menu (web page)",
   QR_CODE: "QR code (SVG, prints at any size)",
   SOCIAL_CALENDAR: "Posting calendar (web page)",
+  ACCESSIBILITY_REPORT: "Accessibility report (web page)",
   SOCIAL_PACK: "Graphics pack (ZIP of PNG graphics and captions)"
 };
 
