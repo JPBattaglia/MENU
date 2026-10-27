@@ -14,7 +14,7 @@ import { STYLES, hexOk } from "./styles.js";
 const LINK_KIND = "siteintake";
 const MAX_IMAGE = 1_500_000;
 const MAX_PHOTOS = 6;
-const RESERVED = new Set(["www", "api", "app", "mail", "admin", "ftp", "smtp", "blog", "shop", "store", "static", "assets", "cdn", "dev", "test", "staging", "sites", "dashboard", "login", "menu", "pay", "billing", "support", "help", "status"]);
+const RESERVED = new Set(["www", "api", "app", "mail", "admin", "ftp", "smtp", "blog", "shop", "store", "static", "assets", "cdn", "dev", "test", "staging", "sites", "dashboard", "login", "menu", "pay", "billing", "support", "help", "status", "send", "em", "email", "resend", "click", "track", "link", "links", "go", "docs", "news", "ns", "ns1", "ns2", "mx", "imap", "pop", "webmail", "autodiscover", "autoconfig", "cpanel", "vpn", "git", "portal", "my", "account", "accounts", "secure", "checkout", "order", "orders", "preview", "sandbox", "nino", "ninobattaglia"]);
 const FIELDS = [
   { key: "kind", label: "What kind of business?", type: "select", required: true, options: [["restaurant", "Restaurant, cafe or food business (we show a Menu page)"], ["services", "Services business (we show a Services page)"]] },
   { key: "about", label: "Tell us about your business", type: "textarea", required: true, max: 1500, help: "Your story, what makes you different, who you serve. We write the page from this and use no facts you don't give us." },
@@ -213,4 +213,4 @@ async function handleSiteIntake(request, env, projectId) {
   return simplePage(200, "Thank you", `<p>We have what we need and we're building your website now. You'll get an email with a preview link${slug.slug ? `; your address will be <strong>${escapeHtml(slug.slug)}.menu-made.com</strong>` : ""}.</p>`);
 }
 
-export { FIELDS, LINK_KIND, handleSiteIntake, intakeLink, slugify, sniffImage, startWebsiteIntake, validSlug };
+export { FIELDS, RESERVED, LINK_KIND, handleSiteIntake, intakeLink, slugify, sniffImage, startWebsiteIntake, validSlug };

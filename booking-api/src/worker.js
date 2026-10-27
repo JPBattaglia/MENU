@@ -6,6 +6,7 @@ import { recordFunnelEvent } from "./checkout/funnel.js";
 import { CheckoutValidationError, quoteMenuPackage } from "./checkout/quote.js";
 import { createCheckoutSession, createCheckoutSessionTest } from "./checkout/session.js";
 import { handleStripeWebhook } from "./checkout/webhook.js";
+import { siteHostAction } from "./producers/website/hosts.js";
 import { handleSiteCareRequest } from "./producers/website-care/intake.js";
 import { runSiteHealthPass } from "./producers/website-care/health.js";
 import { handleSiteIntake } from "./producers/website/intake.js";
@@ -177,6 +178,13 @@ var worker_default = {
 
 const mmWorkerWithBooking = {
   async fetch(request, env, ctx) {
+    // <name>.menu-made.com: reserved names pass through to the existing site, every other name is a customer website.
+    const host = siteHostAction(request, env);
+    if (host.action === "pass") return fetch(request);
+    if (host.action === "site") {
+      if (request.method !== "GET" && request.method !== "HEAD") return new Response("Method not allowed", { status: 405, headers: { Allow: "GET, HEAD" } });
+      return handleLiveSite(request, env, host.slug, host.path);
+    }
     if (['/api/booking', '/api/inquiry'].includes(new URL(request.url).pathname)) {
       return mmBookingHandler.fetch(request, mmBookingEnvironment(env), ctx);
     }

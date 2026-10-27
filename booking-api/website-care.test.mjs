@@ -220,3 +220,31 @@ test('the self-test runs a synthetic customer through a real AI edit to the live
     });
   }
 });
+
+test('subdomain hosting: <name>.menu-made.com serves the site; reserved names pass through; /api on www still reaches the Worker', async () => {
+  const { siteHostAction } = await import('./src/producers/website/hosts.js');
+  const env = {};
+  const act = (u) => siteHostAction(new Request(u), env);
+  assert.deepEqual(act('https://joes-pizza.menu-made.com/menu.html'), { action: 'site', slug: 'joes-pizza', path: 'menu.html' });
+  assert.deepEqual(act('https://joes-pizza.menu-made.com/'), { action: 'site', slug: 'joes-pizza', path: '' });
+  assert.equal(act('https://www.menu-made.com/about.html').action, 'pass');
+  assert.equal(act('https://www.menu-made.com/api/site/x/').action, 'none');
+  assert.equal(act('https://mail.menu-made.com/').action, 'pass');
+  assert.equal(act('https://menu-made.com/').action, 'none');
+  assert.equal(act('https://a.b.menu-made.com/').action, 'none');
+  assert.equal(act('https://example.org/').action, 'none');
+  assert.equal(act('https://joes-pizza.menu-made.com.evil.example/').action, 'none');
+  const f = setup();
+  const passed = [];
+  await withFetch(async (req, init) => { const u = req instanceof Request ? req.url : String(req); if (u.startsWith('https://www.menu-made.com/')) { passed.push(u); return new Response('static site'); } return f.fetch(req, init); }, async () => {
+    const page = await call(f, 'https://joes-pizza.menu-made.com/menu.html');
+    assert.equal(page.status, 200); assert.match(await page.text(), /Margherita/);
+    assert.match(await (await call(f, 'https://joes-pizza.menu-made.com/')).text(), /Fresh pizza, made daily/);
+    assert.equal((await call(f, 'https://joes-pizza.menu-made.com/api/menu-care/x')).status, 404);
+    assert.equal((await call(f, 'https://no-such-site.menu-made.com/')).status, 404);
+    assert.equal((await call(f, 'https://joes-pizza.menu-made.com/', { method: 'POST', body: 'x' })).status, 405);
+    const www = await call(f, 'https://www.menu-made.com/about.html');
+    assert.equal(await www.text(), 'static site'); assert.deepEqual(passed, ['https://www.menu-made.com/about.html']);
+    assert.equal((await call(f, 'https://www.menu-made.com/api/site/joes-pizza/menu.html')).status, 200);
+  });
+});
