@@ -244,7 +244,7 @@ async function runNextProductionStep(request, env, options = {}) {
               'SELFTEST_PRODUCE',
               'PRODUCE'
             )
-            AND (ws.step_key != 'PRODUCE' OR wr.workflow_key IN ('MENU_CARE_V1', 'SOCIAL_POSTS_V1', 'ACCESSIBILITY_MONITORING_V1'))
+            AND (ws.step_key != 'PRODUCE' OR wr.workflow_key IN ('MENU_CARE_V1', 'SOCIAL_POSTS_V1', 'ACCESSIBILITY_MONITORING_V1', 'CONVERSION_FIX_V1'))
             AND (ws.step_key != 'PRODUCE' OR json_extract(p.metadata_json, '$.source') != 'SUBSCRIPTION_PERIOD' OR NOT EXISTS (
               SELECT 1 FROM customers cx WHERE cx.id = p.customer_id AND cx.email = 'delivered@resend.dev'))
 

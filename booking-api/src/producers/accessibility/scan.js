@@ -144,4 +144,4 @@ function summarize(result) {
   return { issues, total: issues.reduce((n, i) => n + i.count, 0), rules: issues.length };
 }
 
-export { IMPACT_ORDER, RULES, sameSiteLinks, scanHtml, scanSite, summarize };
+export { IMPACT_ORDER, RULES, elementsOf, sameSiteLinks, scanHtml, scanSite, strip, summarize, tagsOf, text };
