@@ -15,6 +15,7 @@ const { buildDesignedMenuHtml } = await import('./src/producers/menu-qr/design.j
 const { parseMenuHtml, diffMenus, checkChange } = await import('./src/producers/menu-care/menu-edit.js');
 const { menuCareLink } = await import('./src/producers/menu-care/care-step.js');
 const migration = readFileSync(new URL('./migrations/0005_menu_care.sql', import.meta.url), 'utf8');
+const settingsMigration = readFileSync(new URL('./migrations/0007_plan_settings.sql', import.meta.url), 'utf8');
 const usageIndex = readFileSync(new URL('./migrations/0004_ai_usage_index.sql', import.meta.url), 'utf8');
 
 const HOSTED = 'https://menu-made.com/api/menu/proof-cafe';
@@ -41,7 +42,7 @@ function setup() {
   sql(`INSERT INTO offer_versions (id, offer_id, version_number, created_at, effective_from, status, price_cents, scope_json) VALUES ('ov_qr', 'offer_qr', 1, ?, ?, 'ACTIVE', 12900, '{}')`, t, t);
   sql(`INSERT INTO offer_versions (id, offer_id, version_number, created_at, effective_from, status, price_cents, billing_interval, scope_json) VALUES ('ov_care', 'offer_care', 1, ?, ?, 'ACTIVE', 2900, 'MONTH', '{}')`, t, t);
   sql(`INSERT INTO workflow_definitions (id, workflow_key, version, status, steps_json, created_at, updated_at) VALUES ('wd_care', 'MENU_CARE_V1', 1, 'ACTIVE', '[{"key":"PRODUCE","order":10},{"key":"DELIVER","order":20}]', ?, ?)`, t, t);
-  DB.raw.exec(usageIndex);
+  DB.raw.exec(usageIndex); DB.raw.exec(settingsMigration);
   DB.raw.exec(migration);
 
   // The customer's existing, approved Menu + QR project and its live menu page.
@@ -251,22 +252,59 @@ test('the change form needs a genuine link, an active plan, and never limits a n
   });
 });
 
-test('the monthly Menu Care job emails the customer their change link and finishes', async () => {
+function openMonth(f) {
+  const t = '2026-11-01T00:00:00.000Z';
+  f.sql(`INSERT INTO orders (id, created_at, updated_at, customer_id, business_id, status, subtotal_cents, total_cents, payment_status) VALUES ('o2', ?, ?, 'cust', 'biz', 'READY_FOR_PRODUCTION', 0, 0, 'PAID')`, t, t);
+  f.sql(`INSERT INTO order_items (id, order_id, offer_id, offer_version_id, unit_price_cents, line_total_cents) VALUES ('i2', 'o2', 'offer_care', 'ov_care', 0, 0)`);
+  f.sql(`INSERT INTO projects (id, order_id, order_item_id, business_id, customer_id, project_type, status, workflow_key, created_at, updated_at, metadata_json) VALUES ('p2', 'o2', 'i2', 'biz', 'cust', 'MENU', 'READY', 'MENU_CARE_V1', ?, ?, ?)`, t, t, JSON.stringify({ source: 'SUBSCRIPTION_PERIOD', subscription_id: SUB, period_start: t }));
+  f.sql(`INSERT INTO workflow_runs (id, project_id, workflow_key, workflow_version, status, trigger_type, trigger_reference, attempt_number, created_at) VALUES ('r2', 'p2', 'MENU_CARE_V1', 1, 'QUEUED', 'SUBSCRIPTION_PERIOD', 'x', 1, ?)`, t);
+  f.sql(`INSERT INTO workflow_steps (id, workflow_run_id, step_key, step_order, status, attempt_count) VALUES ('s1', 'r2', 'PRODUCE', 10, 'QUEUED', 0), ('s2', 'r2', 'DELIVER', 20, 'QUEUED', 0)`);
+}
+
+test('the monthly Menu Care job emails the customer their change link and finishes, even when no idea can be written', async () => {
   const f = setup();
   await withFetch(f.fetch, async () => {
-    const t = '2026-11-01T00:00:00.000Z';
-    f.sql(`INSERT INTO orders (id, created_at, updated_at, customer_id, business_id, status, subtotal_cents, total_cents, payment_status) VALUES ('o2', ?, ?, 'cust', 'biz', 'READY_FOR_PRODUCTION', 0, 0, 'PAID')`, t, t);
-    f.sql(`INSERT INTO order_items (id, order_id, offer_id, offer_version_id, unit_price_cents, line_total_cents) VALUES ('i2', 'o2', 'offer_care', 'ov_care', 0, 0)`);
-    f.sql(`INSERT INTO projects (id, order_id, order_item_id, business_id, customer_id, project_type, status, workflow_key, created_at, updated_at, metadata_json) VALUES ('p2', 'o2', 'i2', 'biz', 'cust', 'MENU', 'READY', 'MENU_CARE_V1', ?, ?, ?)`, t, t, JSON.stringify({ source: 'SUBSCRIPTION_PERIOD', subscription_id: SUB, period_start: t }));
-    f.sql(`INSERT INTO workflow_runs (id, project_id, workflow_key, workflow_version, status, trigger_type, trigger_reference, attempt_number, created_at) VALUES ('r2', 'p2', 'MENU_CARE_V1', 1, 'QUEUED', 'SUBSCRIPTION_PERIOD', 'x', 1, ?)`, t);
-    f.sql(`INSERT INTO workflow_steps (id, workflow_run_id, step_key, step_order, status, attempt_count) VALUES ('s1', 'r2', 'PRODUCE', 10, 'QUEUED', 0), ('s2', 'r2', 'DELIVER', 20, 'QUEUED', 0)`);
+    openMonth(f);
     await api.runScheduledProduction(f.env);
     assert.equal(f.emails.length, 1);
     assert.deepEqual(f.emails[0].to, ['owner@proofcafe.example']);
     const [formLink] = linksIn(f.emails[0].text, '/api/menu-care/');
     assert.equal((await call(f, formLink)).status, 200, 'the emailed link opens the form');
+    assert.doesNotMatch(f.emails[0].text, /idea for this month/);
     assert.equal(f.row(`SELECT status FROM workflow_runs WHERE id = 'r2'`).status, 'SUCCEEDED');
-    assert.equal(f.state.prompts.length, 0, 'no AI call without a request');
+  });
+});
+
+test('the monthly email carries one seasonal idea; accepting it asks only for a price and sends a normal change request', async () => {
+  const f = setup();
+  await withFetch(f.fetch, async () => {
+    openMonth(f);
+    f.state.outputs.push({ name: 'Pesto Margherita Flatbread', description: 'Mozzarella and basil on a thin crisp base.', section: 'Pizza' });
+    await api.runScheduledProduction(f.env);
+    const text = f.emails[0].text;
+    assert.match(text, /idea for this month: Pesto Margherita Flatbread/);
+    assert.doesNotMatch(text.split('idea for this month')[1], /\$\d/, 'the idea carries no price');
+    const accept = linksIn(text, '/api/menu-care/').find((u) => /[?&]s=2026-11/.test(u));
+    const page = await call(f, accept);
+    assert.equal(page.status, 200);
+    assert.match(await page.text(), /name="price"/);
+    const token = new URL(accept).searchParams.get('t');
+    const post = (price) => call(f, `https://menu-made.com/api/menu-care/${SUB}`, { method: 'POST', body: new URLSearchParams({ t: token, s: '2026-11', price }) });
+    assert.equal((await post('lots')).status, 400);
+    assert.equal(f.rows(`SELECT id FROM menu_change_requests`).length, 0);
+    assert.equal((await post('14')).status, 200);
+    const request = f.row(`SELECT request_text, source FROM menu_change_requests`);
+    assert.equal(request.source, 'SUGGESTION');
+    assert.match(request.request_text, /"Pesto Margherita Flatbread" to the "Pizza" section at \$14/);
+    // An idea with a made-up price or a duplicate dish is dropped, and the email still goes out.
+    const g = setup();
+    await withFetch(g.fetch, async () => {
+      openMonth(g);
+      g.state.outputs.push({ name: 'Margherita', description: 'Mozzarella and basil.', section: 'Pizza' });
+      await api.runScheduledProduction(g.env);
+      assert.equal(g.emails.length, 1);
+      assert.doesNotMatch(g.emails[0].text, /idea for this month/);
+    });
   });
 });
 
