@@ -3,6 +3,7 @@ import { verifyStripeSignature } from "./stripe-signature.js";
 import { EXTRAS_WINDOW_MINUTES, addDaysIso } from "../lib/config.js";
 import { jsonResponse, nowIso } from "../lib/http.js";
 import { attachCheckoutMenuDocument, createMenuQrInputs } from "../onboarding/menu-inputs.js";
+import { startConversionFix } from "../producers/conversion/intake.js";
 import { refreshOnboardingState } from "../onboarding/onboarding.js";
 import { handleExtraPagesPaid } from "../producers/menu-qr/page-billing.js";
 import { SUBSCRIPTION_EVENTS, handleSubscriptionEvent, onSubscriptionCheckoutCompleted } from "../subscriptions/webhooks.js";
@@ -247,7 +248,8 @@ async function handleCheckoutCompleted(event, env) {
           customer_id,
           business_id,
           payment_status,
-          status
+          status,
+          notes
         FROM orders
         WHERE id = ?
         LIMIT 1
@@ -506,6 +508,16 @@ async function handleCheckoutCompleted(event, env) {
       await refreshOnboardingState(menuProject.id, orderId, order.customer_id, "MENU_QR_V1", env);
     } catch (attachError) {
       console.error("Checkout menu attachment failed:", attachError instanceof Error ? attachError.message : String(attachError));
+    }
+  }
+  const conversionProjects = await env.DB.prepare(`
+      SELECT id FROM projects WHERE order_id = ? AND workflow_key = 'CONVERSION_FIX_V1' AND status = 'AWAITING_INPUTS'
+    `).bind(orderId).all();
+  for (const conversionProject of conversionProjects.results || []) {
+    try {
+      await startConversionFix(env, { projectId: conversionProject.id, orderId, customerId: order.customer_id, notes: order.notes });
+    } catch (startError) {
+      console.error("Conversion Fix start failed:", startError instanceof Error ? startError.message : String(startError));
     }
   }
   const existingAudit = await env.DB.prepare(`
