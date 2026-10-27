@@ -24,6 +24,8 @@
     { "pattern": "menu-made.com/api/*", "zone_name": "menu-made.com" },
     { "pattern": "www.menu-made.com/api/*", "zone_name": "menu-made.com" }
   ],
+  // Fonts for Social Posts graphics are read as raw bytes.
+  "rules": [{ "type": "Data", "globs": ["**/*.ttf"], "fallthrough": true }],
   "workers_dev": false,
   "observability": { "enabled": true }
 }

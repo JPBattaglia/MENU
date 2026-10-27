@@ -9,7 +9,7 @@ import { presenterFor } from "../approvals/presenters.js";
 import { runDeliverStep } from "../approvals/release.js";
 import { runPackageDeliverablesStep } from "../producers/menu-qr/package.js";
 import { runSelfTestProduceStep } from "../selftest/routing-selftest.js";
-import { runMenuCareProduceStep } from "../producers/menu-care/care-step.js";
+import { runProduceStep } from "../producers/produce.js";
 import { runGenerateQrStep } from "../producers/menu-qr/qr-step.js";
 import { runQualityCheckStep } from "../producers/menu-qr/quality-check.js";
 import { sendPageBillingReminders } from "../producers/menu-qr/page-billing.js";
@@ -244,7 +244,7 @@ async function runNextProductionStep(request, env, options = {}) {
               'SELFTEST_PRODUCE',
               'PRODUCE'
             )
-            AND (ws.step_key != 'PRODUCE' OR wr.workflow_key = 'MENU_CARE_V1')
+            AND (ws.step_key != 'PRODUCE' OR wr.workflow_key IN ('MENU_CARE_V1', 'SOCIAL_POSTS_V1'))
             AND (ws.step_key != 'PRODUCE' OR json_extract(p.metadata_json, '$.source') != 'SUBSCRIPTION_PERIOD' OR NOT EXISTS (
               SELECT 1 FROM customers cx WHERE cx.id = p.customer_id AND cx.email = 'delivered@resend.dev'))
 
@@ -395,7 +395,7 @@ async function runNextProductionStep(request, env, options = {}) {
       }
       stepOutput = result.output;
     } else if (targetStep.step_key === "PRODUCE") {
-      stepOutput = await runMenuCareProduceStep(targetStep, env);
+      stepOutput = await runProduceStep(targetStep, env);
     } else if (targetStep.step_key === "SELFTEST_PRODUCE") {
       stepOutput = await runSelfTestProduceStep(targetStep, env);
     } else {

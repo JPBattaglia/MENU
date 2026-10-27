@@ -11,6 +11,7 @@ import { handleDeliveryDownload, handleHostedMenu } from "./delivery/delivery.js
 import { handleExtraPagesDone, handleExtraPagesPay } from "./producers/menu-qr/page-billing.js";
 import { advanceSelfTests } from "./selftest/menu-qr-selftest.js";
 import { advanceMenuCareSelfTests } from "./selftest/menu-care-selftest.js";
+import { advanceSocialPostsSelfTests } from "./selftest/social-posts-selftest.js";
 import { advanceRoutingSelfTests } from "./selftest/routing-selftest.js";
 import { advanceSubscriptionSelfTests } from "./selftest/subscription-selftest.js";
 import { runDailySubscriptionPass } from "./subscriptions/daily.js";
@@ -164,6 +165,7 @@ const mmWorkerWithBooking = {
       await advanceSubscriptionSelfTests(env, app).catch((error) => console.error("Subscription self-test failed:", error instanceof Error ? error.message : String(error)));
       await advanceRoutingSelfTests(env, app).catch((error) => console.error("Routing self-test failed:", error instanceof Error ? error.message : String(error)));
       await advanceMenuCareSelfTests(env, app).catch((error) => console.error("Menu Care self-test failed:", error instanceof Error ? error.message : String(error)));
+      await advanceSocialPostsSelfTests(env, app).catch((error) => console.error("Social Posts self-test failed:", error instanceof Error ? error.message : String(error)));
       // Once a day: reconcile subscriptions with Stripe and create annual plans' monthly jobs.
       await runDailySubscriptionPass(env).catch((error) => console.error("Daily subscription pass failed:", error instanceof Error ? error.message : String(error)));
     })());

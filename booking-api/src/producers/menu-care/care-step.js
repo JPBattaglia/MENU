@@ -193,4 +193,4 @@ async function runMenuCareProduceStep(targetStep, env, deps = {}) {
   return output;
 }
 
-export { LINK_KIND, loadLiveMenu, menuCareLink, runMenuCareProduceStep };
+export { LINK_KIND, finishRun, loadLiveMenu, menuCareLink, runMenuCareProduceStep };
