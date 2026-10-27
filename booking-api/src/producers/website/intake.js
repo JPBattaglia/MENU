@@ -9,7 +9,7 @@ import { signLinkToken, verifyLinkToken } from "../../lib/links.js";
 import { sha256Hex } from "../../lib/util.js";
 import { refreshOnboardingState } from "../../onboarding/onboarding.js";
 import { loadDeliveryContext } from "../../approvals/release.js";
-import { hexOk } from "./styles.js";
+import { STYLES, hexOk } from "./styles.js";
 
 const LINK_KIND = "siteintake";
 const MAX_IMAGE = 1_500_000;
@@ -23,7 +23,7 @@ const FIELDS = [
   { key: "address", label: "Street address", type: "text", required: true, max: 160 },
   { key: "hours", label: "Opening hours", type: "textarea", required: true, max: 400, help: "One line per day or range. Example: Mon-Fri: 11am-9pm" },
   { key: "contact_email", label: "Public email address (optional)", type: "text", required: false, max: 120 },
-  { key: "style", label: "Style", type: "select", required: true, options: [["classic", "Classic - warm, serif type, traditional"], ["modern", "Modern - clean, light, simple"], ["bold", "Bold - dark, big type, high energy"]] },
+  { key: "style", label: "Style", type: "select", required: true, options: Object.entries(STYLES).map(([key, st]) => [key, `${st.label} - ${st.blurb}`])},
   { key: "brand_color", label: "Brand colour (optional, like #b3261e)", type: "text", required: false, max: 7 },
   { key: "subdomain", label: "Your web address", type: "text", required: false, max: 30, help: "Letters, numbers and dashes. Your site will be at yourname.menu-made.com. Leave blank and we'll choose one." },
   { key: "domain", label: "Your own domain, if you have one (optional)", type: "text", required: false, max: 80, help: "Like www.yourrestaurant.com. We'll email the exact steps to point it at your site." },
