@@ -248,3 +248,107 @@ test('subdomain hosting: <name>.menu-made.com serves the site; reserved names pa
     assert.equal((await call(f, 'https://www.menu-made.com/api/site/joes-pizza/menu.html')).status, 200);
   });
 });
+
+// ---- custom domains (Cloudflare for SaaS), mocked Cloudflare API ----
+function withSaas(f) {
+  f.env.CF_ZONE_ID = 'zone1'; f.env.CF_SAAS_TOKEN = 'cf-token';
+  f.DB.raw.exec(read('0011_website_domains.sql'));
+  const hostnames = new Map(); const calls = [];
+  const inner = f.fetch;
+  f.cf = { hostnames, calls };
+  f.fetch = async (url, init = {}) => {
+    const u = String(url);
+    if (!u.startsWith('https://api.cloudflare.com/client/v4/zones/zone1/custom_hostnames')) return inner(url, init);
+    calls.push({ method: init.method || 'GET', url: u, auth: init.headers?.Authorization });
+    if ((init.method || 'GET') === 'POST') {
+      const body = JSON.parse(init.body); const rec = { id: `ch_${hostnames.size + 1}`, hostname: body.hostname, status: 'pending', ssl: { status: 'pending_validation' } };
+      hostnames.set(body.hostname, rec); return Response.json({ success: true, result: rec });
+    }
+    const name = new URL(u).searchParams.get('hostname');
+    return Response.json({ success: true, result: hostnames.has(name) ? [hostnames.get(name)] : [] });
+  };
+  return f;
+}
+const domainPost = async (f, domain) => call(f, `https://menu-made.com/api/site-care/${SUB}`, { method: 'POST', body: new URLSearchParams({ t: await careToken(f), domain }) });
+
+test('custom domains: off until Cloudflare for SaaS is configured; hostnames are validated', async () => {
+  const f = setup();
+  await withFetch(f.fetch, async () => {
+    assert.doesNotMatch(await (await call(f, `https://menu-made.com/api/site-care/${SUB}?t=${await careToken(f)}`)).text(), /Use your own domain/);
+    const res = await domainPost(f, 'www.joespizza.com'); assert.equal(res.status, 400); assert.match(await res.text(), /available for your account/);
+  });
+  const g = withSaas(setup());
+  await withFetch(g.fetch, async () => {
+    assert.match(await (await call(g, `https://menu-made.com/api/site-care/${SUB}?t=${await careToken(g)}`)).text(), /Use your own domain/);
+    for (const bad of ['', 'localhost', '192.168.0.1', 'menu-made.com', 'shop.menu-made.com', 'not a domain', 'a_b.com']) assert.equal((await domainPost(g, bad)).status, 400, bad);
+    assert.equal(g.cf.calls.length, 0);
+  });
+});
+
+test('custom domains: request registers the hostname, emails the one DNS record, and a pending domain serves nothing', async () => {
+  const f = withSaas(setup());
+  await withFetch(f.fetch, async () => {
+    const res = await domainPost(f, 'https://WWW.JoesPizza.com/menu?x=1');
+    assert.equal(res.status, 200);
+    const page = await res.text();
+    assert.match(page, /www\.joespizza\.com/); assert.match(page, /sites\.menu-made\.com/);
+    assert.deepEqual(f.row(`SELECT custom_domain, domain_status FROM website_sites`), { custom_domain: 'www.joespizza.com', domain_status: 'PENDING' });
+    assert.equal(f.cf.calls.find((c) => c.method === 'POST').auth, 'Bearer cf-token');
+    const mail = f.emails.find((e) => /DNS record/.test(e.subject)); assert.ok(mail); assert.deepEqual(mail.to, ['joe@joespizza.example']);
+    assert.match(mail.html, /CNAME/); assert.match(mail.html, /sites\.menu-made\.com/);
+    // asking again reuses the Cloudflare record
+    await domainPost(f, 'www.joespizza.com');
+    assert.equal(f.cf.calls.filter((c) => c.method === 'POST').length, 1);
+    // pending: the customer's host is not served
+    const served = await api.default.fetch(new Request('https://www.joespizza.com/'), f.env, f.ctx);
+    assert.notEqual(served.status, 200);
+  });
+});
+
+test('custom domains: the watch activates a validated domain, emails once, then the site is served on it', async () => {
+  const f = withSaas(setup());
+  await withFetch(f.fetch, async () => {
+    await domainPost(f, 'www.joespizza.com');
+    f.sql(`UPDATE website_sites SET updated_at = '2026-10-01T00:00:00.000Z'`);
+    let out = await api_runDomainWatch(f);
+    assert.deepEqual(out, { checked: 1, activated: 0, failed: 0 });
+    assert.equal(f.row(`SELECT domain_status FROM website_sites`).domain_status, 'PENDING');
+    Object.assign(f.cf.hostnames.get('www.joespizza.com'), { status: 'active', ssl: { status: 'active' } });
+    f.sql(`UPDATE website_sites SET updated_at = '2026-10-01T00:00:00.000Z'`);
+    out = await api_runDomainWatch(f);
+    assert.deepEqual(out, { checked: 1, activated: 1, failed: 0 });
+    assert.equal(f.emails.filter((e) => /is live/.test(e.subject)).length, 1);
+    const res = await api.default.fetch(new Request('https://www.joespizza.com/'), f.env, f.ctx);
+    assert.equal(res.status, 200); assert.match(await res.text(), /Joe.s Pizza/);
+    assert.equal((await api.default.fetch(new Request('https://www.joespizza.com/', { method: 'POST' }), f.env, f.ctx)).status, 405);
+    // a different unknown host is never served
+    assert.notEqual((await api.default.fetch(new Request('https://www.other.com/'), f.env, f.ctx)).status, 200);
+    // nothing left to check
+    f.sql(`UPDATE website_sites SET updated_at = '2026-10-01T00:00:00.000Z'`);
+    assert.deepEqual(await api_runDomainWatch(f), { checked: 0, activated: 0, failed: 0 });
+  });
+});
+
+test('custom domains: a domain that never validates is given up on after 14 days and the customer is told', async () => {
+  const f = withSaas(setup());
+  await withFetch(f.fetch, async () => {
+    await domainPost(f, 'www.joespizza.com');
+    f.sql(`UPDATE website_sites SET updated_at = '2026-10-01T00:00:00.000Z', domain_requested_at = '2026-10-01T00:00:00.000Z'`);
+    assert.deepEqual(await api_runDomainWatch(f, new Date('2026-10-10T00:00:00.000Z')), { checked: 1, activated: 0, failed: 0 });
+    f.sql(`UPDATE website_sites SET updated_at = '2026-10-01T00:00:00.000Z'`);
+    assert.deepEqual(await api_runDomainWatch(f, new Date('2026-10-20T00:00:00.000Z')), { checked: 1, activated: 0, failed: 1 });
+    assert.equal(f.row(`SELECT domain_status FROM website_sites`).domain_status, 'FAILED');
+    assert.equal(f.emails.filter((e) => /couldn't connect/.test(e.subject)).length, 1);
+    assert.equal((await api.default.fetch(new Request('https://www.joespizza.com/'), f.env, f.ctx)).status === 200, false);
+  });
+});
+
+test('custom domains: one domain cannot be claimed by two sites', async () => {
+  const f = withSaas(setup());
+  f.sql(`INSERT INTO website_sites (id, slug, project_id, business_id, customer_id, style, custom_domain, domain_status, created_at, updated_at) VALUES ('ws2', 'other-site', 'p0', 'biz2', 'cust', 'modern', 'www.joespizza.com', 'ACTIVE', '2026-10-01T00:00:00.000Z', '2026-10-01T00:00:00.000Z')`);
+  await withFetch(f.fetch, async () => { const res = await domainPost(f, 'www.joespizza.com'); assert.equal(res.status, 400); assert.match(await res.text(), /already connected/); });
+});
+async function api_runDomainWatch(f, now = new Date('2026-10-02T00:00:00.000Z')) {
+  const { runDomainWatch } = await import('./src/producers/website/domains.js');
+  return runDomainWatch(f.env, { now, fetchImpl: f.fetch });
+}

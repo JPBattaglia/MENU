@@ -11,6 +11,7 @@ import { handleSiteCareRequest } from "./producers/website-care/intake.js";
 import { runSiteHealthPass } from "./producers/website-care/health.js";
 import { handleSiteIntake } from "./producers/website/intake.js";
 import { handleLiveSite, handleSitePreview } from "./producers/website/serve.js";
+import { customHostSlug, runDomainWatch } from "./producers/website/domains.js";
 import { handlePlanSettings } from "./subscriptions/settings.js";
 import { handleMenuCareRequest } from "./producers/menu-care/intake.js";
 import { handleDeliveryDownload, handleHostedMenu } from "./delivery/delivery.js";
@@ -185,6 +186,14 @@ const mmWorkerWithBooking = {
       if (request.method !== "GET" && request.method !== "HEAD") return new Response("Method not allowed", { status: 405, headers: { Allow: "GET, HEAD" } });
       return handleLiveSite(request, env, host.slug, host.path);
     }
+    if (host.action === "none") {
+      // A customer's own domain (via Cloudflare for SaaS). Our own hostnames never reach the database here.
+      const customSlug = await customHostSlug(env, new URL(request.url).hostname).catch(() => null);
+      if (customSlug) {
+        if (request.method !== "GET" && request.method !== "HEAD") return new Response("Method not allowed", { status: 405, headers: { Allow: "GET, HEAD" } });
+        return handleLiveSite(request, env, customSlug, new URL(request.url).pathname.replace(/^\/+/, ""));
+      }
+    }
     if (['/api/booking', '/api/inquiry'].includes(new URL(request.url).pathname)) {
       return mmBookingHandler.fetch(request, mmBookingEnvironment(env), ctx);
     }
@@ -207,6 +216,7 @@ const mmWorkerWithBooking = {
       await advanceConversionSelfTests(env, app).catch((error) => console.error("Conversion Fix self-test failed:", error instanceof Error ? error.message : String(error)));
       await advanceWebsiteSelfTests(env, app).catch((error) => console.error("Website Package self-test failed:", error instanceof Error ? error.message : String(error)));
       await advanceWebsiteCareSelfTests(env, app).catch((error) => console.error("Website Care self-test failed:", error instanceof Error ? error.message : String(error)));
+      await runDomainWatch(env).catch((error) => console.error("Domain watch failed:", error instanceof Error ? error.message : String(error)));
       await runSiteHealthPass(env).catch((error) => console.error("Site health pass failed:", error instanceof Error ? error.message : String(error)));
       // Once a day: reconcile subscriptions with Stripe and create annual plans' monthly jobs.
       await runDailySubscriptionPass(env).catch((error) => console.error("Daily subscription pass failed:", error instanceof Error ? error.message : String(error)));
