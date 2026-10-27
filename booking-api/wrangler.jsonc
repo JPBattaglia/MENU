@@ -22,7 +22,10 @@
   "triggers": { "crons": ["*/5 * * * *"] },
   "routes": [
     { "pattern": "menu-made.com/api/*", "zone_name": "menu-made.com" },
-    { "pattern": "www.menu-made.com/api/*", "zone_name": "menu-made.com" }
+    { "pattern": "www.menu-made.com/api/*", "zone_name": "menu-made.com" },
+    // Generated customer sites live at <slug>.menu-made.com. The Worker's
+    // host dispatcher passes every non-site host (www, etc.) straight through.
+    { "pattern": "*.menu-made.com/*", "zone_name": "menu-made.com" }
   ],
   // Fonts for Social Posts graphics are read as raw bytes.
   "rules": [{ "type": "Data", "globs": ["**/*.ttf"], "fallthrough": true }],
