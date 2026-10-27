@@ -9,6 +9,7 @@ import { verifyLinkToken } from "../../lib/links.js";
 import { loadWorkflowDefinition } from "../../workflows/definitions.js";
 import { PRODUCING, stableId } from "../../subscriptions/sync.js";
 import { loadLiveSite } from "./live.js";
+import { DomainError, emailInstructions, requestCustomDomain, saasConfig, dnsInstructions } from "../website/domains.js";
 
 const LINK_KIND = "sitecare";
 const ABUSE_LIMIT = 100;
@@ -81,15 +82,37 @@ async function createSiteChangeRequest(env, subscriptionId, text, { source = "FO
   return { requestId, projectId, runId, slug: live.slug };
 }
 
-function formPage(subscriptionId, token, { error = null } = {}) {
+function formPage(subscriptionId, token, { error = null, domain = null, notice = null } = {}) {
   const body = `${error ? `<p style="color:#9b1c1c"><strong>${escapeHtml(error)}</strong></p>` : ""}
 <p>Tell us what should change on your website - your menu or services and prices, opening hours, phone, address, links, the About text, or the style and colour. Include the exact new details.</p>
 <form method="post" action="/api/site-care/${escapeHtml(subscriptionId)}">
 <input type="hidden" name="t" value="${escapeHtml(token)}">
 <p><textarea name="change" rows="6" maxlength="${MAX_REQUEST_CHARS}" required style="width:100%;box-sizing:border-box;font:inherit;padding:10px" placeholder="Example: We're now open until 10pm on Fridays and Saturdays, and please add Garlic Bread, $6, under Starters."></textarea></p>
 <button type="submit">Send website change</button></form>
+${domain ? domainSection(subscriptionId, token, domain) : ""}
 <p style="font-size:13px">New photos or new pages? Reply to your Website Care email and we'll take care of it. We check each update before it goes live.</p>`;
-  return simplePage(error ? 400 : 200, "Update your website", body);
+  return simplePage(error ? 400 : 200, "Update your website", `${notice ? `<p style="color:#14532d"><strong>${escapeHtml(notice)}</strong></p>` : ""}${body}`);
+}
+
+// Own-domain section: only offered when Cloudflare for SaaS is switched on (saasConfig).
+function domainSection(subscriptionId, token, domain) {
+  const heading = "<h2 style=\"font-size:1.1rem;margin-top:28px\">Use your own domain</h2>";
+  if (domain.status === "ACTIVE") return `${heading}<p>Your website is live on <strong>https://${escapeHtml(domain.hostname)}/</strong>.</p>`;
+  if (domain.status === "PENDING") return `${heading}<p>We're waiting for <strong>${escapeHtml(domain.hostname)}</strong> to point at your website. Add this DNS record where you bought the domain: <strong>${escapeHtml(domain.dns.type)}</strong> record, name <strong>${escapeHtml(domain.hostname)}</strong>, value <strong>${escapeHtml(domain.dns.target)}</strong>. We email you as soon as it works.</p>`;
+  return `${heading}<p>Already own a domain like joespizza.com? Enter it and we'll tell you the one DNS record to add.</p>
+<form method="post" action="/api/site-care/${escapeHtml(subscriptionId)}"><input type="hidden" name="t" value="${escapeHtml(token)}">
+<p><input name="domain" required maxlength="253" placeholder="www.joespizza.com" style="width:100%;box-sizing:border-box;font:inherit;padding:10px"></p>
+<button type="submit">Connect my domain</button></form>`;
+}
+
+async function loadDomainState(env, subscriptionId) {
+  if (!saasConfig(env)) return null;
+  const subscription = await env.DB.prepare(`SELECT business_id FROM subscriptions WHERE id = ?`).bind(subscriptionId).first();
+  const live = subscription ? await loadLiveSite(env, subscription.business_id) : null;
+  if (!live?.build) return null;
+  const row = await env.DB.prepare(`SELECT custom_domain, domain_status FROM website_sites WHERE slug = ?`).bind(live.slug).first();
+  if (row?.custom_domain && ["PENDING", "ACTIVE"].includes(row.domain_status)) return { slug: live.slug, hostname: row.custom_domain, status: row.domain_status, dns: dnsInstructions(env, row.custom_domain) };
+  return { slug: live.slug, hostname: null, status: "NONE" };
 }
 
 async function handleSiteCareRequest(request, env, subscriptionId) {
@@ -99,13 +122,25 @@ async function handleSiteCareRequest(request, env, subscriptionId) {
     const token = new URL(request.url).searchParams.get("t") || "";
     const payload = await verifyLinkToken(env, token, [LINK_KIND], subscriptionId);
     if (!payload || payload.expired) return denied();
-    return formPage(subscriptionId, token);
+    return formPage(subscriptionId, token, { domain: await loadDomainState(env, subscriptionId).catch(() => null) });
   }
   let form;
   try { form = await request.formData(); } catch { return simplePage(400, "Something went wrong", "<p>Please go back and try again.</p>"); }
   const token = String(form.get("t") || "");
   const payload = await verifyLinkToken(env, token, [LINK_KIND], subscriptionId);
   if (!payload || payload.expired) return denied();
+  if (form.get("domain") !== null) {
+    const state = await loadDomainState(env, subscriptionId).catch(() => null);
+    try {
+      if (!state) throw new DomainError("Custom domains aren't available for your account yet. Reply to your last email and we'll set it up.", 503);
+      const requested = await requestCustomDomain(env, state.slug, form.get("domain"));
+      await emailInstructions(env, state.slug).catch((e) => console.error("Domain instructions email failed:", e instanceof Error ? e.message : String(e)));
+      return formPage(subscriptionId, token, { domain: { slug: state.slug, hostname: requested.hostname, status: requested.status, dns: requested.dns }, notice: "Thanks. We've emailed you the DNS record to add." });
+    } catch (error) {
+      if (error instanceof DomainError) return formPage(subscriptionId, token, { error: error.message, domain: state });
+      throw error;
+    }
+  }
   try {
     await createSiteChangeRequest(env, subscriptionId, form.get("change"));
   } catch (error) {
