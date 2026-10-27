@@ -2494,6 +2494,7 @@ body.sample-menu-page {
 :where(body.project-page) .project-lead-grid p { color:var(--muted); font-size:20px; line-height:1.6; }
 :where(body.project-page) .project-lead-image { width:100%; height:auto; aspect-ratio:3/2; object-fit:cover; object-position:top; border:var(--image-border); border-radius:22px; }
 :where(body.project-page) .project-lead-image.project-pinecrest-image { object-position:center 80%; }
+.project-lead-image.project-nino-image { aspect-ratio:1920/1089; object-fit:contain; }
 :where(body.project-page) .project-full-link { display:inline-block; margin-top:8px; line-height:1.5; }
 :where(body.project-page) .project-section { padding-top:32px; padding-bottom:44px; }
 :where(body.project-page) .project-story-grid { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:30px; }
