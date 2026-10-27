@@ -6,6 +6,8 @@ import { recordFunnelEvent } from "./checkout/funnel.js";
 import { CheckoutValidationError, quoteMenuPackage } from "./checkout/quote.js";
 import { createCheckoutSession, createCheckoutSessionTest } from "./checkout/session.js";
 import { handleStripeWebhook } from "./checkout/webhook.js";
+import { handleSiteCareRequest } from "./producers/website-care/intake.js";
+import { runSiteHealthPass } from "./producers/website-care/health.js";
 import { handleSiteIntake } from "./producers/website/intake.js";
 import { handleLiveSite, handleSitePreview } from "./producers/website/serve.js";
 import { handlePlanSettings } from "./subscriptions/settings.js";
@@ -15,6 +17,7 @@ import { handleExtraPagesDone, handleExtraPagesPay } from "./producers/menu-qr/p
 import { advanceSelfTests } from "./selftest/menu-qr-selftest.js";
 import { advanceMenuCareSelfTests } from "./selftest/menu-care-selftest.js";
 import { advanceConversionSelfTests } from "./selftest/conversion-selftest.js";
+import { advanceWebsiteCareSelfTests } from "./selftest/website-care-selftest.js";
 import { advanceWebsiteSelfTests } from "./selftest/website-selftest.js";
 import { advanceAccessibilitySelfTests } from "./selftest/accessibility-selftest.js";
 import { advanceSocialPostsSelfTests } from "./selftest/social-posts-selftest.js";
@@ -54,6 +57,10 @@ var worker_default = {
     const settingsMatch = url.pathname.match(/^\/api\/plan-settings\/([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})$/i);
     if (settingsMatch && (request.method === "GET" || request.method === "POST")) {
       return handlePlanSettings(request, env, settingsMatch[1].toLowerCase());
+    }
+    const siteCareMatch = url.pathname.match(/^\/api\/site-care\/([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}|[0-9a-f]{16,64})$/i);
+    if (siteCareMatch && (request.method === "GET" || request.method === "POST")) {
+      return handleSiteCareRequest(request, env, siteCareMatch[1]);
     }
     const siteIntakeMatch = url.pathname.match(/^\/api\/site-intake\/([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})$/i);
     if (siteIntakeMatch && (request.method === "GET" || request.method === "POST")) {
@@ -191,6 +198,8 @@ const mmWorkerWithBooking = {
       await advanceAccessibilitySelfTests(env, app).catch((error) => console.error("Accessibility self-test failed:", error instanceof Error ? error.message : String(error)));
       await advanceConversionSelfTests(env, app).catch((error) => console.error("Conversion Fix self-test failed:", error instanceof Error ? error.message : String(error)));
       await advanceWebsiteSelfTests(env, app).catch((error) => console.error("Website Package self-test failed:", error instanceof Error ? error.message : String(error)));
+      await advanceWebsiteCareSelfTests(env, app).catch((error) => console.error("Website Care self-test failed:", error instanceof Error ? error.message : String(error)));
+      await runSiteHealthPass(env).catch((error) => console.error("Site health pass failed:", error instanceof Error ? error.message : String(error)));
       // Once a day: reconcile subscriptions with Stripe and create annual plans' monthly jobs.
       await runDailySubscriptionPass(env).catch((error) => console.error("Daily subscription pass failed:", error instanceof Error ? error.message : String(error)));
     })());

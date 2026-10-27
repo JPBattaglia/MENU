@@ -74,7 +74,7 @@ async function runWebsiteProduceStep(targetStep, env, deps = {}) {
   const problems = checkSite({ pages, images: Object.fromEntries(images.map((i) => [i.path, i.size])), site });
   if (problems.length) return blocked("the built website failed its checks", problems);
 
-  const build = { version: 1, slug: siteRow.slug, style: site.style, built_at: new Date().toISOString(), pages, images };
+  const build = { version: 1, slug: siteRow.slug, style: site.style, built_at: new Date().toISOString(), pages, images, site, copy: written.copy };
   const stored = await storeDeliverable(env, context, { type: "SITE_BUILD", filename: `${siteRow.slug}-site-v.json`, mime: "application/json", bytes: new TextEncoder().encode(JSON.stringify(build)), folder: "site-build",
     metadata: { website: { slug: siteRow.slug, style: site.style, pages: Object.keys(pages).length, images: images.length, attempts: written.attempts, tagline: written.copy.tagline } } });
   const output = { outcome: "PRODUCED", slug: siteRow.slug, pages: Object.keys(pages).length, images: images.length, build_deliverable: stored.deliverableId, version: stored.version };
