@@ -2,7 +2,8 @@
 //   GET  /api/menu-care/<subscriptionId>?t=<token>   the form
 //   POST /api/menu-care/<subscriptionId>             form body: t, change  -> creates one request and one production run
 // The token (signLinkToken, kind "menucare") is the only credential. A request needs an active Menu Care
-// entitlement, and each subscription may send MONTHLY_REQUEST_LIMIT requests a calendar month.
+// entitlement. The plan promises unlimited changes, so there is no allowance; ABUSE_LIMIT is only a safety valve
+// against a stuck script, and the AI step's monthly token cap (src/ai/generate.js) bounds the cost.
 import { escapeHtml } from "../../lib/email.js";
 import { nowIso, parseJsonOrNull, simplePage } from "../../lib/http.js";
 import { verifyLinkToken } from "../../lib/links.js";
@@ -10,7 +11,7 @@ import { loadWorkflowDefinition } from "../../workflows/definitions.js";
 import { PRODUCING, stableId } from "../../subscriptions/sync.js";
 import { LINK_KIND } from "./care-step.js";
 
-const MONTHLY_REQUEST_LIMIT = 10;
+const ABUSE_LIMIT = 100;
 const MAX_REQUEST_CHARS = 2000;
 
 class IntakeError extends Error {
@@ -32,7 +33,7 @@ async function createMenuChangeRequest(env, subscriptionId, text, { source = "FO
 
   const monthStart = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1)).toISOString();
   const used = await env.DB.prepare(`SELECT COUNT(*) AS n FROM menu_change_requests WHERE subscription_id = ? AND created_at >= ?`).bind(subscriptionId, monthStart).first();
-  if (Number(used?.n || 0) >= MONTHLY_REQUEST_LIMIT) throw new IntakeError(`You've used this month's ${MONTHLY_REQUEST_LIMIT} menu changes. Reply to your last email if something is urgent.`, 429);
+  if (Number(used?.n || 0) >= ABUSE_LIMIT) throw new IntakeError("That's a lot of requests in one month, so we've paused new ones. Reply to your last email and we'll sort it out.", 429);
 
   const meta = parseJsonOrNull(entitlement.metadata_json) || {};
   const offer = await env.DB.prepare(`SELECT category FROM offers WHERE id = ?`).bind(meta.offer_id).first();
@@ -112,4 +113,4 @@ async function handleMenuCareRequest(request, env, subscriptionId) {
   return simplePage(200, "Got it", "<p>We're updating your menu. You'll get an email when it's live, usually within a few hours.</p>");
 }
 
-export { IntakeError, MONTHLY_REQUEST_LIMIT, createMenuChangeRequest, handleMenuCareRequest };
+export { IntakeError, ABUSE_LIMIT, createMenuChangeRequest, handleMenuCareRequest };

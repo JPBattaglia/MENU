@@ -227,7 +227,7 @@ test('owner asks for changes: the request is redone once with the owner\'s note,
 
 // ---------- intake ----------
 
-test('the change form needs a genuine link, an active plan, and respects the monthly limit', async () => {
+test('the change form needs a genuine link, an active plan, and never limits a normal month', async () => {
   const f = setup();
   await withFetch(f.fetch, async () => {
     const link = await menuCareLink(f.env, SUB);
@@ -238,9 +238,13 @@ test('the change form needs a genuine link, an active plan, and respects the mon
     assert.equal(f.rows(`SELECT id FROM menu_change_requests`).length, 0);
     assert.equal((await submit(f, 'hi')).status, 400, 'too short to be a change');
 
-    for (let i = 0; i < 10; i++) assert.equal((await submit(f, `Margherita is now $${16 + i}`)).status, 200);
-    assert.equal((await submit(f, 'Margherita is now $30')).status, 429);
-    assert.equal(f.rows(`SELECT id FROM menu_change_requests`).length, 10);
+    // The plan promises unlimited changes: a normal month's worth of requests is never refused.
+    for (let i = 0; i < 25; i++) assert.equal((await submit(f, `Margherita is now $${16 + i}`)).status, 200);
+    // Only a runaway script hits the safety valve.
+    f.sql(`INSERT INTO menu_change_requests (id, subscription_id, business_id, customer_id, request_text, status, created_at, updated_at)
+           WITH RECURSIVE n(i) AS (SELECT 1 UNION ALL SELECT i + 1 FROM n WHERE i < 80)
+           SELECT 'bulk' || i, '${SUB}', 'biz', 'cust', 'x', 'NOT_APPLIED', strftime('%Y-%m-%dT%H:%M:%fZ', 'now'), strftime('%Y-%m-%dT%H:%M:%fZ', 'now') FROM n`);
+    assert.equal((await submit(f, 'Margherita is now $50')).status, 429);
 
     f.sql(`UPDATE subscriptions SET status = 'CANCELLED'`);
     assert.equal((await submit(f, 'Margherita is now $31')).status, 403);
