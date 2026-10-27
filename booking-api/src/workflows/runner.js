@@ -9,6 +9,7 @@ import { presenterFor } from "../approvals/presenters.js";
 import { runDeliverStep } from "../approvals/release.js";
 import { runPackageDeliverablesStep } from "../producers/menu-qr/package.js";
 import { runSelfTestProduceStep } from "../selftest/routing-selftest.js";
+import { runMenuCareProduceStep } from "../producers/menu-care/care-step.js";
 import { runGenerateQrStep } from "../producers/menu-qr/qr-step.js";
 import { runQualityCheckStep } from "../producers/menu-qr/quality-check.js";
 import { sendPageBillingReminders } from "../producers/menu-qr/page-billing.js";
@@ -193,7 +194,7 @@ async function runNextProductionStep(request, env, options = {}) {
     if (!selection || typeof selection !== "object" || Array.isArray(selection)
       || Object.keys(selection).some(key => !["workflow_run_id","step_key","dry_run"].includes(key))
       || (selection.workflow_run_id !== undefined && !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(selection.workflow_run_id))
-      || (selection.step_key !== undefined && !["PREPARE_INPUTS","GENERATE_MENU_DRAFT","GENERATE_QR","QUALITY_CHECK","PACKAGE_DELIVERABLES","DELIVER","SELFTEST_PRODUCE"].includes(selection.step_key))
+      || (selection.step_key !== undefined && !["PREPARE_INPUTS","GENERATE_MENU_DRAFT","GENERATE_QR","QUALITY_CHECK","PACKAGE_DELIVERABLES","DELIVER","SELFTEST_PRODUCE","PRODUCE"].includes(selection.step_key))
       || (selection.dry_run !== undefined && typeof selection.dry_run !== "boolean")) {
       return jsonResponse({ok:false,error:"Invalid runner selection"},400);
     }
@@ -240,8 +241,12 @@ async function runNextProductionStep(request, env, options = {}) {
               'QUALITY_CHECK',
               'PACKAGE_DELIVERABLES',
               'DELIVER',
-              'SELFTEST_PRODUCE'
+              'SELFTEST_PRODUCE',
+              'PRODUCE'
             )
+            AND (ws.step_key != 'PRODUCE' OR wr.workflow_key = 'MENU_CARE_V1')
+            AND (ws.step_key != 'PRODUCE' OR json_extract(p.metadata_json, '$.source') != 'SUBSCRIPTION_PERIOD' OR NOT EXISTS (
+              SELECT 1 FROM customers cx WHERE cx.id = p.customer_id AND cx.email = 'delivered@resend.dev'))
 
             AND (ws.step_key NOT IN ('QUALITY_CHECK', 'PACKAGE_DELIVERABLES') OR wr.workflow_key = 'MENU_QR_V1')
             AND (ws.step_key != 'SELFTEST_PRODUCE' OR wr.workflow_key LIKE 'ROUTING_SELFTEST_%')
@@ -389,6 +394,8 @@ async function runNextProductionStep(request, env, options = {}) {
         return result.response;
       }
       stepOutput = result.output;
+    } else if (targetStep.step_key === "PRODUCE") {
+      stepOutput = await runMenuCareProduceStep(targetStep, env);
     } else if (targetStep.step_key === "SELFTEST_PRODUCE") {
       stepOutput = await runSelfTestProduceStep(targetStep, env);
     } else {

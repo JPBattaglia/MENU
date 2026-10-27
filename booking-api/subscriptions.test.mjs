@@ -416,7 +416,7 @@ test('Website Care trial: trialing subscription still gets its first month of jo
   } finally { h.restore(); }
 });
 
-test('period jobs wait for their producer: the runner never picks up PRODUCE steps', async () => {
+test('period jobs wait for their producer: the runner only picks up PRODUCE steps of workflows that have one (Menu Care)', async () => {
   const h = setup();
   try {
     const { sub, row } = await growthSubscriber(h);
@@ -424,8 +424,9 @@ test('period jobs wait for their producer: the runner never picks up PRODUCE ste
     await h.webhook('invoice.paid', h.invoice(sub, { id: 'in_1', start, end: addMonths(start, 1), amount: 17900 }));
     const res = await h.call('/api/production/run-next', { method: 'POST', headers: { Authorization: 'Bearer runner-secret-placeholder', 'Content-Type': 'application/json' }, body: '{}' });
     const body = await res.json();
-    assert.equal(body.processed, false, JSON.stringify(body));
-    assert.ok(h.jobs(row.id).every((j) => j.run_status === 'QUEUED'));
+    // Only Menu Care has a producer: exactly that one job moved, the other plans' jobs still wait for theirs.
+    assert.equal(body.workflow_run.workflow_key, 'MENU_CARE_V1', JSON.stringify(body));
+    assert.equal(h.jobs(row.id).filter((j) => j.run_status === 'QUEUED').length, 3);
   } finally { h.restore(); }
 });
 

@@ -25,7 +25,7 @@ async function filesFor(approval, env) {
   const files = [];
   for (const id of metadata.deliverable_ids || []) {
     const row = await env.DB.prepare(`
-        SELECT d.id, d.deliverable_type, a.original_filename FROM deliverables d JOIN assets a ON a.id = d.asset_id WHERE d.id = ?
+        SELECT d.id, d.deliverable_type, a.original_filename, a.metadata_json FROM deliverables d JOIN assets a ON a.id = d.asset_id WHERE d.id = ?
       `).bind(id).first();
     if (row) files.push(row);
   }

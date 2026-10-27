@@ -5,6 +5,7 @@ import { brandedEmailHtml, escapeHtml } from "../lib/email.js";
 import { itemApprovalFlag } from "./routing.js";
 import { isTestOrder } from "./release.js";
 import { menuQrPresenter } from "../producers/menu-qr/package.js";
+import { menuCareOverrides } from "../producers/menu-care/presenter.js";
 
 function humanize(type) {
   return String(type || "File").toLowerCase().replaceAll("_", " ").replace(/^./, (c) => c.toUpperCase());
@@ -93,7 +94,9 @@ const genericPresenter = {
 
 // Looked up at call time, not module load: these modules import each other in a cycle.
 function presenterFor(workflowKey) {
-  return workflowKey === "MENU_QR_V1" ? menuQrPresenter : genericPresenter;
+  if (workflowKey === "MENU_QR_V1") return menuQrPresenter;
+  if (workflowKey === "MENU_CARE_V1") return { ...genericPresenter, ...menuCareOverrides };
+  return genericPresenter;
 }
 
 export { genericPresenter, presenterFor, labelFor };
