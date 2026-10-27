@@ -35,7 +35,9 @@ async function handleLiveSite(request, env, slug, path) {
   if (!env.DB || !env.ASSETS) return simplePage(503, "Temporarily unavailable", "<p>Please try again in a minute.</p>");
   // Newest approved build for this site from ANY project of the business: the original Website Package or a later
   // Website Care edit. The slug check keeps one business's two sites apart.
-  const row = await env.DB.prepare(`
+  let row;
+  try {
+  row = await env.DB.prepare(`
       SELECT a.storage_key FROM website_sites s
       JOIN projects p ON p.business_id = s.business_id
       JOIN deliverables d ON d.project_id = p.id AND d.deliverable_type = 'SITE_BUILD' AND d.status = 'FINAL' AND d.customer_visible = 1
@@ -46,6 +48,11 @@ async function handleLiveSite(request, env, slug, path) {
   if (!row) {
     const known = await env.DB.prepare(`SELECT 1 AS found FROM website_sites WHERE slug = ?`).bind(slug).first();
     return known ? simplePage(200, "Website coming soon", "<p>This website is being prepared. Please check back shortly.</p>") : simplePage(404, "Website not found", "<p>This address isn't active.</p>");
+  }
+  } catch (error) {
+    // A missing table or a D1 limit must not crash the Worker for every visitor.
+    console.error("live site lookup failed", error?.message);
+    return simplePage(503, "Temporarily unavailable", "<p>Please try again in a minute.</p>");
   }
   const build = await loadBuild(env, row.storage_key);
   if (!build) return simplePage(503, "Temporarily unavailable", "<p>Please try again in a minute.</p>");
