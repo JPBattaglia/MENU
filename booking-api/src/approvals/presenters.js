@@ -6,6 +6,7 @@ import { itemApprovalFlag } from "./routing.js";
 import { isTestOrder } from "./release.js";
 import { menuQrPresenter } from "../producers/menu-qr/package.js";
 import { conversionOverrides } from "../producers/conversion/presenter.js";
+import { websiteOverrides } from "../producers/website/presenter.js";
 import { menuCareOverrides } from "../producers/menu-care/presenter.js";
 
 function humanize(type) {
@@ -97,6 +98,7 @@ const genericPresenter = {
 function presenterFor(workflowKey) {
   if (workflowKey === "MENU_QR_V1") return menuQrPresenter;
   if (workflowKey === "MENU_CARE_V1") return { ...genericPresenter, ...menuCareOverrides };
+  if (workflowKey === "WEBSITE_PACKAGE_V1") return { ...genericPresenter, ...websiteOverrides };
   if (workflowKey === "CONVERSION_FIX_V1") return { ...genericPresenter, ...conversionOverrides };
   return genericPresenter;
 }
