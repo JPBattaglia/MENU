@@ -3,6 +3,7 @@ import { verifyStripeSignature } from "./stripe-signature.js";
 import { EXTRAS_WINDOW_MINUTES, addDaysIso } from "../lib/config.js";
 import { jsonResponse, nowIso } from "../lib/http.js";
 import { attachCheckoutMenuDocument, createMenuQrInputs } from "../onboarding/menu-inputs.js";
+import { startWebsiteIntake } from "../producers/website/intake.js";
 import { startConversionFix } from "../producers/conversion/intake.js";
 import { refreshOnboardingState } from "../onboarding/onboarding.js";
 import { handleExtraPagesPaid } from "../producers/menu-qr/page-billing.js";
@@ -518,6 +519,16 @@ async function handleCheckoutCompleted(event, env) {
       await startConversionFix(env, { projectId: conversionProject.id, orderId, customerId: order.customer_id, notes: order.notes });
     } catch (startError) {
       console.error("Conversion Fix start failed:", startError instanceof Error ? startError.message : String(startError));
+    }
+  }
+  const websiteProjects = await env.DB.prepare(`
+      SELECT id FROM projects WHERE order_id = ? AND workflow_key = 'WEBSITE_PACKAGE_V1' AND status = 'AWAITING_INPUTS'
+    `).bind(orderId).all();
+  for (const websiteProject of websiteProjects.results || []) {
+    try {
+      await startWebsiteIntake(env, { projectId: websiteProject.id });
+    } catch (startError) {
+      console.error("Website intake start failed:", startError instanceof Error ? startError.message : String(startError));
     }
   }
   const existingAudit = await env.DB.prepare(`

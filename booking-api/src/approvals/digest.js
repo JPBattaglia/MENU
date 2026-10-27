@@ -42,7 +42,8 @@ async function describeApproval(env, approval) {
   const presenter = presenterFor(context.workflow_key);
   const files = await filesFor(approval, env);
   const previews = [];
-  for (const file of files) {
+  if (presenter.previewLinks) previews.push(...await presenter.previewLinks({ files, env }));
+  else for (const file of files) {
     const token = await signLinkToken(env, { kind: "preview", id: file.id, ttlDays: APPROVAL_TTL_DAYS });
     previews.push({ label: `Preview ${DELIVERABLE_LABELS[file.deliverable_type] || labelFor(file)}`, url: `${base}/api/delivery/${file.id}?t=${token}` });
   }

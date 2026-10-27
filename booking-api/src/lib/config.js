@@ -22,6 +22,7 @@ var DELIVERABLE_LABELS = {
   QR_CODE: "QR code (SVG, prints at any size)",
   SOCIAL_CALENDAR: "Posting calendar (web page)",
   ACCESSIBILITY_REPORT: "Accessibility report (web page)",
+  SITE_BUILD: "Website (generated pages)",
   CONVERSION_REPORT: "Conversion Fix report (web page)",
   CONVERSION_CHECKLIST: "Conversion Fix checklist (text)",
   SOCIAL_PACK: "Graphics pack (ZIP of PNG graphics and captions)"
