@@ -296,7 +296,10 @@ test('pay links must be signed for that project and unexpired; unsigned webhooks
     assert.equal((await call(f, `https://menu-made.com/api/extra-pages/proj?t=${other}`)).status, 403);
     assert.equal((await call(f, `https://menu-made.com/api/extra-pages/proj?t=${wrongKind}`)).status, 403);
     assert.equal((await call(f, `https://menu-made.com/api/extra-pages/proj?t=${expired}`)).status, 410);
-    assert.equal((await call(f, link.replace(/.$/, c => (c === 'A' ? 'B' : 'A')))).status, 403);
+    // Change a signature character that is fully significant: the last base64url character can carry unused padding
+    // bits (A and B differ only there), so editing it sometimes leaves the signature valid and made this test flaky.
+    const tampered = link.slice(0, -6) + (link.at(-6) === 'A' ? 'Q' : 'A') + link.slice(-5);
+    assert.equal((await call(f, tampered)).status, 403);
     assert.equal(f.stripeCalls.length, 0);
 
     const forged = await call(f, 'https://menu-made.com/api/stripe-webhook', { method: 'POST', headers: { 'Stripe-Signature': 't=1,v1=00' },
