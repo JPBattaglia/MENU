@@ -51,7 +51,8 @@ async function livePage(app, env, slug, page) {
 // A synthetic customer, business, Website Care subscription and an approved live website.
 async function scaffold(env, test) {
   const t = nowIso();
-  const short = test.id.slice(0, 8);
+  // Letters and digits only: a hand-named id like "wpkg-st-1" once made the invalid address "selftest-wpkg-st-".
+  const short = String(test.id).toLowerCase().replace(/[^a-z0-9]/g, "").slice(0, 8) || "x";
   let customer = await env.DB.prepare(`SELECT id FROM customers WHERE email = ? LIMIT 1`).bind(SELF_TEST_EMAIL).first();
   if (!customer) {
     customer = { id: crypto.randomUUID() };
