@@ -1,6 +1,7 @@
 // Guest App intake (stage 8): after payment the buyer gets a signed link to one form with everything the app is built
-// from. It is always the full form: nothing is copied over from a website or menu order, so the app shows exactly what
-// the owner typed here. Answers become project_inputs and guest_apps.data_json; the logo is checked by its bytes and
+// from. The form is pre-filled with what Menu-made already holds for the business (its website order's menu, phone,
+// address, hours and colour; its name), and the owner checks and corrects it. A logo from the website is used unless
+// a new one is uploaded. Answers become project_inputs and guest_apps.data_json; the logo is checked by its bytes and
 // stored as an asset. When the required answers are in, the project is released to production.
 //   GET/POST /api/app-intake/<projectId>?t=<token>     (token kind "appintake")
 // Address: a business that already has a Menu-made website keeps its slug (site at /, app at /app/); otherwise the
@@ -80,7 +81,7 @@ function formPage(action, token, values, { error = null, fields = FIELDS, logo =
   return simplePage(error ? 400 : 200, heading, `${intro}${error ? `<p style="color:#9b1c1c"><strong>${escapeHtml(error)}</strong></p>` : ""}
 <form method="post" action="${escapeHtml(action)}" enctype="multipart/form-data"><input type="hidden" name="t" value="${escapeHtml(token)}">
 ${fields.map((f) => control(f, values[f.key])).join("")}
-${logo ? `<p><label for="logo"><strong>Logo (optional)</strong></label><br><input id="logo" name="logo" type="file" accept="image/png,image/jpeg"><br><small>PNG or JPG, under 1.5 MB. A square logo looks best as a home-screen icon. Without one, the icon shows your initials.</small></p>` : ""}
+${logo ? `<p><label for="logo"><strong>Logo (optional)</strong></label><br><input id="logo" name="logo" type="file" accept="image/png,image/jpeg"><br><small>PNG or JPG, under 1.5 MB. A square logo looks best as a home-screen icon. Without one we use the logo from your Menu-made website if you have one, otherwise your initials.</small></p>` : ""}
 <button type="submit">Send</button></form>`);
 }
 
@@ -159,6 +160,22 @@ async function storeLogo(env, context, file) {
   return { id };
 }
 
+// What Menu-made already knows: answers saved on this form, else the business's newest website order, else its name.
+async function prefill(env, context) {
+  const saved = (await env.DB.prepare(`SELECT input_key, value_text FROM project_inputs WHERE project_id = ? AND value_text IS NOT NULL`).bind(context.id).all()).results || [];
+  if (saved.length) return Object.fromEntries(saved.map((r) => [r.input_key, r.value_text]));
+  const values = { app_name: context.business_name || "" };
+  const site = await env.DB.prepare(`
+      SELECT p.id FROM projects p WHERE p.business_id = ? AND p.workflow_key = 'WEBSITE_PACKAGE_V1' ORDER BY p.created_at DESC LIMIT 1
+    `).bind(context.business_id).first();
+  if (site) {
+    const rows = (await env.DB.prepare(`SELECT input_key, value_text FROM project_inputs WHERE project_id = ? AND status = 'VALID'`).bind(site.id).all()).results || [];
+    const v = Object.fromEntries(rows.map((r) => [r.input_key, r.value_text || ""]));
+    Object.assign(values, { menu: v.offerings || "", phone: v.phone || "", address: v.address || "", hours: v.hours || "", brand_color: v.brand_color || "" });
+  }
+  return values;
+}
+
 async function handleAppIntake(request, env, projectId) {
   if (!env.DB || !env.ASSETS) return simplePage(503, "Temporarily unavailable", "<p>Please try again in a minute.</p>");
   const denied = () => simplePage(403, "This link has expired or isn't valid", "<p>Reply to your latest email and we'll send a fresh one.</p>");
@@ -171,7 +188,7 @@ async function handleAppIntake(request, env, projectId) {
     const token = new URL(request.url).searchParams.get("t") || "";
     const payload = await verifyLinkToken(env, token, [LINK_KIND], projectId);
     if (!payload || payload.expired) return denied();
-    return locked ? lockedPage() : formPage(action, token, {});
+    return locked ? lockedPage() : formPage(action, token, await prefill(env, context), { intro: "<p>We've filled in what we already have for your business. Please check every answer and fix anything that's out of date.</p>" });
   }
   let form;
   try { form = await request.formData(); } catch { return simplePage(400, "Something went wrong", "<p>Please go back and try again.</p>"); }
