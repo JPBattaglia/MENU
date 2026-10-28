@@ -301,3 +301,20 @@ test('a step cut off mid-run is failed after 20 minutes and the owner is told, i
     assert.match(alert.text, /CPU limit/);
   });
 });
+
+test('graphics still undrawn an hour after queueing alert the owner once, with how to run the renderer', async () => {
+  const f = setup();
+  delete f.env.SOCIAL_RASTERIZER;
+  await withFetch(f.fetch, async () => {
+    f.state.outputs.push({ posts: goodPosts() });
+    await api.runScheduledProduction(f.env);
+    assert.deepEqual(await renderJobs.alertStaleRenders(f.env), [], 'a fresh job is left alone');
+    const later = Date.now() + 61 * 60000;
+    assert.deepEqual(await renderJobs.alertStaleRenders(f.env, later), ['s1']);
+    assert.deepEqual(await renderJobs.alertStaleRenders(f.env, later), [], 'only once per job');
+    const alerts = f.emails.filter((e) => /waiting to be drawn/.test(e.subject));
+    assert.equal(alerts.length, 1);
+    assert.match(alerts[0].text, /Run workflow/);
+    assert.equal(f.row(`SELECT status FROM workflow_steps WHERE id = 's1'`).status, 'WAITING', 'the job still waits for the renderer');
+  });
+});
