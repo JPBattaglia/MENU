@@ -9,6 +9,9 @@
   "compatibility_date": "2026-03-05",
   // Keep any plain-text variables already set in the dashboard (OWNER_EMAIL, PUBLIC_BASE_URL, BOOKING_*, ...).
   "keep_vars": true,
+  // Customer sites are served at <slug>.menu-made.com (wildcard DNS + route verified live Oct 27, 2026), so emails
+  // and pages show that address instead of menu-made.com/api/site/<slug>/.
+  "vars": { "SITE_WILDCARD": "1" },
   "d1_databases": [
     { "binding": "DB", "database_name": "menu-made-db", "database_id": "1387bcdc-e462-41ce-bc6b-5cc1b0a47ad0" }
   ],

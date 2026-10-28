@@ -1,9 +1,10 @@
 # Draws Social Posts graphics for the menu-checkout worker (the Workers free plan's 10 ms of CPU per run is too
-# little to turn 24 SVGs into PNGs). Every 5 minutes it asks the worker for a waiting job; most runs find none and
-# stop after a few seconds. Details: booking-api/src/producers/social-posts/render-jobs.js.
+# little to turn 24 SVGs into PNGs). The worker starts this workflow itself when a job is parked (GitHub API,
+# worker secret GITHUB_DISPATCH_TOKEN); the schedule below is only a backup. Each run asks the worker for waiting
+# jobs and stops after a few seconds if there are none. Details: booking-api/src/producers/social-posts/render-jobs.js.
 #
 # This repo is public, so these logs are public: nothing here prints customer data, and the worker accepts only an
-# OIDC token from this workflow on master (no secret is stored anywhere).
+# OIDC token from this workflow on master (this workflow itself holds no secret).
 name: Render social posts
 
 on:
