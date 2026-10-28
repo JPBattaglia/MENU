@@ -9,6 +9,7 @@ import { conversionOverrides } from "../producers/conversion/presenter.js";
 import { websiteCareOverrides } from "../producers/website-care/presenter.js";
 import { websiteOverrides } from "../producers/website/presenter.js";
 import { menuCareOverrides } from "../producers/menu-care/presenter.js";
+import { guestAppOverrides } from "../producers/guest-app/presenter.js";
 
 function humanize(type) {
   return String(type || "File").toLowerCase().replaceAll("_", " ").replace(/^./, (c) => c.toUpperCase());
@@ -101,6 +102,7 @@ function presenterFor(workflowKey) {
   if (workflowKey === "MENU_CARE_V1") return { ...genericPresenter, ...menuCareOverrides };
   if (workflowKey === "WEBSITE_CARE_V1") return { ...genericPresenter, ...websiteCareOverrides };
   if (workflowKey === "WEBSITE_PACKAGE_V1") return { ...genericPresenter, ...websiteOverrides };
+  if (workflowKey === "GUEST_APP_SETUP_V1") return { ...genericPresenter, ...guestAppOverrides };
   if (workflowKey === "CONVERSION_FIX_V1") return { ...genericPresenter, ...conversionOverrides };
   return genericPresenter;
 }

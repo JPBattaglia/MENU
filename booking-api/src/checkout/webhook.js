@@ -4,6 +4,7 @@ import { EXTRAS_WINDOW_MINUTES, addDaysIso } from "../lib/config.js";
 import { jsonResponse, nowIso } from "../lib/http.js";
 import { attachCheckoutMenuDocument, createMenuQrInputs } from "../onboarding/menu-inputs.js";
 import { startWebsiteIntake } from "../producers/website/intake.js";
+import { startGuestAppIntake } from "../producers/guest-app/intake.js";
 import { startConversionFix } from "../producers/conversion/intake.js";
 import { refreshOnboardingState } from "../onboarding/onboarding.js";
 import { handleExtraPagesPaid } from "../producers/menu-qr/page-billing.js";
@@ -531,6 +532,16 @@ async function handleCheckoutCompleted(event, env) {
       await startWebsiteIntake(env, { projectId: websiteProject.id });
     } catch (startError) {
       console.error("Website intake start failed:", startError instanceof Error ? startError.message : String(startError));
+    }
+  }
+  const appProjects = await env.DB.prepare(`
+      SELECT id FROM projects WHERE order_id = ? AND workflow_key = 'GUEST_APP_SETUP_V1' AND status = 'AWAITING_INPUTS'
+    `).bind(orderId).all();
+  for (const appProject of appProjects.results || []) {
+    try {
+      await startGuestAppIntake(env, { projectId: appProject.id });
+    } catch (startError) {
+      console.error("Guest App intake start failed:", startError instanceof Error ? startError.message : String(startError));
     }
   }
   const existingAudit = await env.DB.prepare(`

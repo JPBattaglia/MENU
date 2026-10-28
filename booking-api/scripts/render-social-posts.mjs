@@ -1,4 +1,4 @@
-// Draws waiting Social Posts graphics for the menu-checkout worker. Run by .github/workflows/render-social-posts.yml
+// Draws waiting Social Posts graphics and Guest App icons for the menu-checkout worker. Run by .github/workflows/render-social-posts.yml
 // (every 5 minutes); see booking-api/src/producers/social-posts/render-jobs.js for why this runs outside the Worker.
 //
 // The repo is public, so its Actions logs are too: this script prints job ids and counts only, never a business name,
@@ -31,8 +31,9 @@ function pngSize(png) {
 }
 
 function buildPack(spec, rasterize) {
+  const logo = spec.assets?.logo || ""; // Guest App icons: the owner's logo as a data URI, kept out of every SVG until now
   const files = spec.files.map((file) => {
-    const data = rasterize(file.svg, file.width);
+    const data = rasterize(logo ? file.svg.replaceAll("__LOGO_DATA_URI__", logo) : file.svg, file.width);
     const size = pngSize(data);
     if (size.width !== file.width || size.height !== file.height) throw new Error(`${file.name} came out ${size.width}x${size.height}`);
     return { name: file.name, data };
