@@ -1,6 +1,6 @@
 // Sandbox self-test for Social Posts (stage 6), run by the worker's 5-minute schedule and once a day.
-// A synthetic customer with a live menu gets this month's posts from the REAL AI step and the REAL PNG rasterizer
-// (resvg in WebAssembly). The owner approval is clicked through the approve page, then the delivered ZIP is opened:
+// A synthetic customer with a live menu gets this month's posts from the REAL AI step, with the PNGs drawn by the REAL
+// GitHub Actions renderer (resvg; see producers/social-posts/render-jobs.js). The owner approval is clicked through the approve page, then the delivered ZIP is opened:
 // it must hold 12 feed + 12 story PNGs at the right sizes plus the captions file. Only a failure emails the owner.
 // Start one by inserting a self_tests row, kind SOCIAL_POSTS_RUN, status REQUESTED.
 import { ownerEmailAddress, publicBaseUrl } from "../lib/config.js";
@@ -9,12 +9,12 @@ import { nowIso, parseJsonOrNull } from "../lib/http.js";
 import { signLinkToken } from "../lib/links.js";
 import { sha256Hex } from "../lib/util.js";
 import { buildDesignedMenuHtml } from "../producers/menu-qr/design.js";
-import { readZip } from "../producers/social-posts/zip.js";
+import { listZip as readZip } from "../producers/social-posts/render-jobs.js"; // no JS checksums: 10 ms CPU per run
 import { ensureProductionWorkflow } from "../workflows/definitions.js";
 import { updateTest } from "./menu-qr-selftest.js";
 
 const KIND = "SOCIAL_POSTS_RUN";
-const STAGE_TIMEOUT_MINUTES = 30;
+const STAGE_TIMEOUT_MINUTES = 60; // the PNGs are drawn by a scheduled GitHub workflow, which GitHub can start late
 const DAILY_HOUR_UTC = 17;
 const MENU = { sections: [{ name: "Pizza", items: [{ name: "Margherita", description: "Mozzarella and basil", price: "$15" }, { name: "Pepperoni", description: "", price: "$17.50" }] }, { name: "Drinks", items: [{ name: "Espresso", description: "", price: "$4" }] }], notes: "" };
 const state = (test) => parseJsonOrNull(test.state_json) || {};

@@ -10,6 +10,7 @@ import { siteHostAction } from "./producers/website/hosts.js";
 import { handleSiteCareRequest } from "./producers/website-care/intake.js";
 import { runSiteHealthPass } from "./producers/website-care/health.js";
 import { handleSiteIntake } from "./producers/website/intake.js";
+import { handleRenderJobs } from "./producers/social-posts/render-jobs.js";
 import { handleLiveSite, handleSitePreview } from "./producers/website/serve.js";
 import { customHostSlug, runDomainWatch } from "./producers/website/domains.js";
 import { handlePlanSettings } from "./subscriptions/settings.js";
@@ -63,6 +64,10 @@ var worker_default = {
     const siteCareMatch = url.pathname.match(/^\/api\/site-care\/([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}|[0-9a-f]{16,64})$/i);
     if (siteCareMatch && (request.method === "GET" || request.method === "POST")) {
       return handleSiteCareRequest(request, env, siteCareMatch[1]);
+    }
+    const renderJobMatch = url.pathname.match(/^\/api\/render-jobs\/(next|[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})$/i);
+    if (renderJobMatch && (request.method === "GET" || (request.method === "POST" && renderJobMatch[1] !== "next"))) {
+      return handleRenderJobs(request, env, renderJobMatch[1].toLowerCase());
     }
     const siteIntakeMatch = url.pathname.match(/^\/api\/site-intake\/([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})$/i);
     if (siteIntakeMatch && (request.method === "GET" || request.method === "POST")) {

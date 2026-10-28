@@ -14,7 +14,7 @@ import { parseMenuHtml } from "../menu-care/menu-edit.js";
 import { getSettings } from "../../subscriptions/settings.js";
 import { storeDeliverable } from "../shared/deliverables.js";
 import { POSTS_PER_MONTH, planPosts } from "./plan.js";
-import { createRasterizer } from "./rasterize.js";
+import { queueSocialRender } from "./render-jobs.js";
 import { SIZES, brandOf, esc, renderPostSvg } from "./render.js";
 import { createZip } from "./zip.js";
 
@@ -92,25 +92,38 @@ async function runSocialPostsProduceStep(targetStep, env, deps = {}) {
   if (plan.problems.length) return blocked("posts failed the quality checks", plan.problems);
 
   const brand = brandOf({ primary: live?.primary, accent: live?.accent });
-  const rasterize = deps.rasterize || env.SOCIAL_RASTERIZER || await createRasterizer(); // env.SOCIAL_RASTERIZER is a test seam
   const svgs = { square: [], story: [] };
-  const files = [];
+  const graphics = [];
   for (const [i, post] of plan.posts.entries()) {
     for (const size of ["square", "story"]) {
       const result = renderPostSvg(post, { businessName: business, brand, logoDataUri: live?.logoDataUri }, size);
       if (result.error) return blocked("a graphic could not be built", [`Post ${i + 1}: ${result.error}`]);
       svgs[size].push(result.svg);
-      files.push({ name: `post-${pad(i + 1)}-${size}.png`, data: await rasterize(result.svg, SIZES[size].width) });
+      graphics.push({ name: `post-${pad(i + 1)}-${size}.png`, svg: result.svg, width: SIZES[size].width, height: SIZES[size].height });
     }
   }
-  const textBytes = new TextEncoder().encode(captionsText(business, month, plan.posts));
-  files.push({ name: "captions-and-calendar.txt", data: textBytes });
-  const zip = createZip(files);
+  const captions = captionsText(business, month, plan.posts);
   const html = new TextEncoder().encode(calendarHtml(business, month, plan.posts, svgs.square));
   const care = { month: month.label, posts: plan.posts.length, attempts: plan.attempts };
   const calendar = await storeDeliverable(env, context, { type: "SOCIAL_CALENDAR", filename: `${business}-posting-calendar-${month.year}-${pad(month.month)}.html`.replace(/\s+/g, "-"), mime: "text/html", bytes: html, folder: "social-calendar", metadata: { social: care } });
-  const pack = await storeDeliverable(env, context, { type: "SOCIAL_PACK", filename: `${business}-social-posts-${month.year}-${pad(month.month)}.zip`.replace(/\s+/g, "-"), mime: "application/zip", bytes: zip, folder: "social-pack", metadata: { social: care } });
-  const output = { outcome: "PRODUCED", month: month.label, posts: plan.posts.length, png_files: files.length - 1, calendar_deliverable: calendar.deliverableId, pack_deliverable: pack.deliverableId, version: pack.version };
+  const packFilename = `${business}-social-posts-${month.year}-${pad(month.month)}.zip`.replace(/\s+/g, "-");
+  const base = { outcome: "PRODUCED", month: month.label, posts: plan.posts.length, calendar_deliverable: calendar.deliverableId };
+
+  // Tests inject a rasterizer and draw inline. Live, the PNGs are drawn by GitHub Actions (render-jobs.js): the free
+  // plan's 10 ms CPU per run is far too little for 24 PNGs, and Cloudflare ended the run mid-step on Oct 27, 2026.
+  const rasterize = deps.rasterize || env.SOCIAL_RASTERIZER;
+  if (!rasterize) {
+    return queueSocialRender(env, targetStep, {
+      files: graphics,
+      extra: [{ name: "captions-and-calendar.txt", text: captions }],
+      finish: { pack_filename: packFilename, care, output: base }
+    });
+  }
+  const files = [];
+  for (const g of graphics) files.push({ name: g.name, data: await rasterize(g.svg, g.width) });
+  files.push({ name: "captions-and-calendar.txt", data: new TextEncoder().encode(captions) });
+  const pack = await storeDeliverable(env, context, { type: "SOCIAL_PACK", filename: packFilename, mime: "application/zip", bytes: createZip(files), folder: "social-pack", metadata: { social: care } });
+  const output = { ...base, png_files: graphics.length, pack_deliverable: pack.deliverableId, version: pack.version };
   await completeStep(targetStep, output, env);
   return output;
 }

@@ -1,0 +1,50 @@
+# Draws Social Posts graphics for the menu-checkout worker (the Workers free plan's 10 ms of CPU per run is too
+# little to turn 24 SVGs into PNGs). Every 5 minutes it asks the worker for a waiting job; most runs find none and
+# stop after a few seconds. Details: booking-api/src/producers/social-posts/render-jobs.js.
+#
+# This repo is public, so these logs are public: nothing here prints customer data, and the worker accepts only an
+# OIDC token from this workflow on master (no secret is stored anywhere).
+name: Render social posts
+
+on:
+  schedule:
+    - cron: "*/5 * * * *"
+  workflow_dispatch:
+
+concurrency:
+  group: render-social-posts
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  render:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Check for waiting graphics
+        id: check
+        run: |
+          token=$(curl -sSf -H "Authorization: Bearer $ACTIONS_ID_TOKEN_REQUEST_TOKEN" "$ACTIONS_ID_TOKEN_REQUEST_URL&audience=menu-made-render" | jq -r .value)
+          echo "::add-mask::$token"
+          job=$(curl -sSf -H "Authorization: Bearer $token" https://menu-made.com/api/render-jobs/next | jq -r .job)
+          if [ "$job" != "null" ] && [ -n "$job" ]; then echo "work=true" >> "$GITHUB_OUTPUT"; echo "Graphics are waiting"; else echo "Nothing to draw"; fi
+
+      - uses: actions/checkout@v4
+        if: steps.check.outputs.work == 'true'
+
+      - uses: actions/setup-node@v4
+        if: steps.check.outputs.work == 'true'
+        with:
+          node-version: 22
+
+      - name: Install the renderer (resvg only, no dev tools)
+        if: steps.check.outputs.work == 'true'
+        working-directory: booking-api
+        run: npm install --omit=dev --no-audit --no-fund
+
+      - name: Draw and upload
+        if: steps.check.outputs.work == 'true'
+        run: node booking-api/scripts/render-social-posts.mjs
