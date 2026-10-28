@@ -29,6 +29,7 @@ import { advanceWebsiteCareSelfTests } from "./selftest/website-care-selftest.js
 import { advanceWebsiteSelfTests } from "./selftest/website-selftest.js";
 import { advanceGuestAppSelfTests } from "./selftest/guest-app-selftest.js";
 import { advanceGoogleSelfTests } from "./selftest/google-selftest.js";
+import { advanceReviewRepliesSelfTests } from "./selftest/review-replies-selftest.js";
 import { handleGoogleCallback, handleGoogleConnect, handleGoogleLocation } from "./google/connect.js";
 import { advanceAccessibilitySelfTests } from "./selftest/accessibility-selftest.js";
 import { advanceSocialPostsSelfTests } from "./selftest/social-posts-selftest.js";
@@ -268,6 +269,7 @@ const mmWorkerWithBooking = {
       await advanceWebsiteTrialSelfTests(env, app).catch((error) => console.error("Website trial self-test failed:", error instanceof Error ? error.message : String(error)));
       await advanceGuestAppSelfTests(env, app).catch((error) => console.error("Guest App self-test failed:", error instanceof Error ? error.message : String(error)));
       await advanceGoogleSelfTests(env).catch((error) => console.error("Google self-test failed:", error instanceof Error ? error.message : String(error)));
+      await advanceReviewRepliesSelfTests(env, app).catch((error) => console.error("Review Replies self-test failed:", error instanceof Error ? error.message : String(error)));
       await advanceDomainSetupSelfTests(env).catch((error) => console.error("Domain setup self-test failed:", error instanceof Error ? error.message : String(error)));
       await runDomainWatch(env).catch((error) => console.error("Domain watch failed:", error instanceof Error ? error.message : String(error)));
       await runSiteHealthPass(env).catch((error) => console.error("Site health pass failed:", error instanceof Error ? error.message : String(error)));

@@ -10,6 +10,7 @@ import { websiteCareOverrides } from "../producers/website-care/presenter.js";
 import { websiteOverrides } from "../producers/website/presenter.js";
 import { menuCareOverrides } from "../producers/menu-care/presenter.js";
 import { guestAppOverrides } from "../producers/guest-app/presenter.js";
+import { reviewRepliesOverrides } from "../producers/review-replies/deliver.js";
 
 function humanize(type) {
   return String(type || "File").toLowerCase().replaceAll("_", " ").replace(/^./, (c) => c.toUpperCase());
@@ -104,6 +105,7 @@ function presenterFor(workflowKey) {
   if (workflowKey === "WEBSITE_PACKAGE_V1") return { ...genericPresenter, ...websiteOverrides };
   if (workflowKey === "GUEST_APP_SETUP_V1") return { ...genericPresenter, ...guestAppOverrides };
   if (workflowKey === "CONVERSION_FIX_V1") return { ...genericPresenter, ...conversionOverrides };
+  if (workflowKey === "REVIEW_REPLIES_V1") return { ...genericPresenter, ...reviewRepliesOverrides };
   return genericPresenter;
 }
 

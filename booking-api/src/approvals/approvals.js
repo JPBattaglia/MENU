@@ -7,6 +7,7 @@ import { verifyLinkToken } from "../lib/links.js";
 import { approveApproval, requestChanges, requeueForNewApproval } from "./actions.js";
 import { describeApproval } from "./digest.js";
 import { isTestOrder, loadDeliveryContext } from "./release.js";
+import { presenterFor } from "./presenters.js";
 
 async function readForm(request) {
   if (request.method !== "POST") return new URLSearchParams(new URL(request.url).search);
@@ -51,10 +52,10 @@ async function handleApprovalRequest(request, env, ctx, approvalId) {
     const product = context?.offer_name || "order";
     const revision = Number(approval.revision_number) > 1 ? `<p><strong>Revision ${Number(approval.revision_number)}</strong> (redone after your change request)</p>` : "";
     return simplePage(200, `Approve ${business}'s ${product}`, `
-${revision}<p>Check the files. Approving sends them to the buyer right away.</p>
+${revision}<p>${escapeHtml(entry.presenter.approvalCopy?.intro || "Check the files. Approving sends them to the buyer right away.")}</p>
 <dl><dt>Business</dt><dd>${escapeHtml(business)}</dd><dt>Buyer</dt><dd>${escapeHtml(context?.customer_email || "")}</dd><dt>Order</dt><dd>${escapeHtml(context?.order_id || "")}${isTestOrder(context) ? " (test order)" : ""}</dd></dl>
 <p>${previewButtons(entry.previews)}</p>
-<form method="post" action="/api/approvals/${escapeHtml(approvalId)}"><input type="hidden" name="t" value="${escapeHtml(token)}"><input type="hidden" name="action" value="approve"><button type="submit">Approve and send to buyer</button></form>
+<form method="post" action="/api/approvals/${escapeHtml(approvalId)}"><input type="hidden" name="t" value="${escapeHtml(token)}"><input type="hidden" name="action" value="approve"><button type="submit">${escapeHtml(entry.presenter.approvalCopy?.button || "Approve and send to buyer")}</button></form>
 <hr>
 <form method="post" action="/api/approvals/${escapeHtml(approvalId)}"><input type="hidden" name="t" value="${escapeHtml(token)}"><input type="hidden" name="action" value="changes">
 <label for="note"><strong>Something wrong?</strong> Say what to change:</label><br>
@@ -74,7 +75,8 @@ ${revision}<p>Check the files. Approving sends them to the buyer right away.</p>
 
   const result = await approveApproval(env, ctx, approval, "OWNER");
   if (!result.changed) return simplePage(200, "Already handled", "<p>This approval was already answered.</p>");
-  return simplePage(200, "Approved", `<p>${escapeHtml(business)}'s files are on their way to the buyer. You'll see the delivery email in your BCC copy within a minute.</p>`);
+  const done = presenterFor(context?.workflow_key).approvalCopy?.done;
+  return simplePage(200, "Approved", done ? `<p>${escapeHtml(business)}: ${escapeHtml(done)}</p>` : `<p>${escapeHtml(business)}'s files are on their way to the buyer. You'll see the delivery email in your BCC copy within a minute.</p>`);
 }
 
 async function handleBatchApprovalRequest(request, env, ctx, digestId) {

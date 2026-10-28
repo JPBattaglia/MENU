@@ -69,9 +69,30 @@ function v4LocationPath(connection) {
   return `${connection.account_name}/locations/${location}`;
 }
 
-async function listReviews(accessToken, connection, { pageSize = 50, pageToken = "" } = {}, fetchImpl = fetch) {
-  const url = `${V4_BASE}/${v4LocationPath(connection)}/reviews?pageSize=${pageSize}${pageToken ? `&pageToken=${encodeURIComponent(pageToken)}` : ""}`;
+async function listReviews(accessToken, connection, { pageSize = 50, pageToken = "", orderBy = "" } = {}, fetchImpl = fetch) {
+  const url = `${V4_BASE}/${v4LocationPath(connection)}/reviews?pageSize=${pageSize}${orderBy ? `&orderBy=${encodeURIComponent(orderBy)}` : ""}${pageToken ? `&pageToken=${encodeURIComponent(pageToken)}` : ""}`;
   return googleGet(accessToken, url, fetchImpl);
+}
+
+// One review by its resource name (accounts/{a}/locations/{l}/reviews/{r}).
+async function getReview(accessToken, reviewName, fetchImpl = fetch) {
+  return googleGet(accessToken, `${V4_BASE}/${reviewName}`, fetchImpl);
+}
+
+// Creates or replaces the business's public reply to a review (v4 updateReply).
+async function putReviewReply(accessToken, reviewName, comment, fetchImpl = fetch) {
+  const url = `${V4_BASE}/${reviewName}/reply`;
+  const response = await fetchImpl(url, {
+    method: "PUT",
+    headers: { Authorization: `Bearer ${accessToken}`, "Content-Type": "application/json" },
+    body: JSON.stringify({ comment })
+  });
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    const reason = data?.error?.message || data?.error?.status || `HTTP ${response.status}`;
+    throw new GoogleApiError(`Google API mybusiness.googleapis.com returned ${response.status}: ${reason}`, response.status);
+  }
+  return data;
 }
 
 // A fresh access token for a stored connection. A revoked or expired grant marks the connection NEEDS_RECONNECT.
@@ -90,4 +111,4 @@ async function accessTokenFor(env, connection, fetchImpl = fetch) {
   }
 }
 
-export { GoogleApiError, listAccounts, listProfiles, getLocation, listReviews, v4LocationPath, accessTokenFor };
+export { GoogleApiError, listAccounts, listProfiles, getLocation, listReviews, getReview, putReviewReply, v4LocationPath, accessTokenFor };

@@ -11,6 +11,12 @@ const FIELDS = {
   ACCESSIBILITY_MONITORING: [
     { key: "website_url", label: "Your website address", type: "url", required: true, placeholder: "https://www.yourrestaurant.com", help: "We scan this page and the pages it links to, once a month." }
   ],
+  REVIEW_REPLIES: [
+    { key: "reply_tone", label: "How should your review replies sound?", type: "text", max: 200, placeholder: "Friendly and warm (or formal, or playful)", help: "Optional. Friendly is used if you leave it empty." },
+    { key: "reply_sign_off", label: "Sign replies as", type: "text", max: 80, placeholder: "Maria, owner", help: "Optional. Replies are signed \"The team\" if you leave it empty." },
+    { key: "reply_complaints", label: "How can an unhappy guest reach you?", type: "text", max: 200, placeholder: "Call us at (510) 555-0100 or email hello@yourcafe.com", help: "Optional. Used in replies to low ratings. Only contact details you write here are ever used." },
+    { key: "reply_avoid", label: "Anything replies should never mention?", type: "textarea", max: 500, placeholder: "Our old location, the parking lot", help: "Optional." }
+  ],
   SOCIAL_POSTS: [
     { key: "voice", label: "How should your posts sound?", type: "text", max: 300, placeholder: "Warm and playful, family-run, a little humor", help: "Optional." },
     { key: "specials", label: "Specials, events or dates to feature this month", type: "textarea", max: 800, placeholder: "Live jazz every Friday. New autumn soup, $9.", help: "Optional. Any prices you write here may appear in your posts." }
