@@ -15,6 +15,8 @@ import { jsonResponse, nowIso, parseJsonOrNull } from "../../lib/http.js";
 import { completeStep } from "../../workflows/runner.js";
 import { loadDeliveryContext } from "../../approvals/release.js";
 import { storeDeliverable } from "../shared/deliverables.js";
+import { ownerEmailAddress } from "../../lib/config.js";
+import { brandedEmailHtml, sendTransactionalEmail } from "../../lib/email.js";
 
 const OIDC_ISSUER = "https://token.actions.githubusercontent.com";
 const OIDC_AUDIENCE = "menu-made-render";
@@ -196,4 +198,46 @@ async function handleRenderJobs(request, env, jobId) {
   return jsonResponse({ ok: true, job: jobId, stored: specJson.files.length });
 }
 
-export { OIDC_AUDIENCE, RENDER_WORKFLOW, checkPack, handleRenderJobs, listZip, pngSize, queueSocialRender, verifyRenderer };
+// ---------- Stalled renders ----------
+
+// GitHub can start scheduled workflows late, and pauses them in a public repo after 60 days without commits. A job
+// still undrawn an hour after it was queued means the renderer is not running: the owner is told once per job.
+const STALE_RENDER_MINUTES = 60;
+
+async function alertStaleRenders(env, now = Date.now()) {
+  const cutoff = new Date(now - STALE_RENDER_MINUTES * 60000).toISOString();
+  const stale = (await env.DB.prepare(`
+      SELECT ws.id, wr.project_id FROM workflow_steps ws JOIN workflow_runs wr ON wr.id = ws.workflow_run_id
+      WHERE ws.status = 'WAITING' AND ws.step_key = 'PRODUCE' AND wr.workflow_key = 'SOCIAL_POSTS_V1'
+        AND json_extract(ws.output_json, '$.waiting_for') = 'RENDER'
+        AND json_extract(ws.output_json, '$.requested_at') < ?
+        AND json_extract(ws.output_json, '$.stale_alerted_at') IS NULL
+      LIMIT 5
+    `).bind(cutoff).all()).results || [];
+  for (const job of stale) {
+    const sent = await sendTransactionalEmail(env, {
+      to: ownerEmailAddress(env),
+      subject: "Social Posts graphics are waiting to be drawn",
+      html: brandedEmailHtml({
+        preheader: "The GitHub renderer has not picked up a job for over an hour.",
+        eyebrow: "AUTOMATION ALERT",
+        heading: "Graphics have waited over an hour",
+        paragraphs: [
+          "A month of social posts is planned, but GitHub has not drawn the graphics yet, so nothing has gone to you for approval.",
+          "Open the JPBattaglia/MENU repository on GitHub, go to Actions, choose \"Render social posts\" and click \"Run workflow\". If the workflow shows as disabled, enable it first."
+        ],
+        rows: [["Render job", job.id]]
+      }),
+      text: `A month of social posts has waited over an hour for its graphics.\nOpen JPBattaglia/MENU on GitHub > Actions > "Render social posts" > Run workflow (enable it first if disabled).\nRender job: ${job.id}`,
+      idempotencyKey: `render-stale/${job.id}`,
+      purpose: "AUTOMATION_ALERT",
+      templateKey: "render_stale_v1"
+    }).catch(() => ({ ok: false }));
+    if (sent?.ok === false) continue;
+    await env.DB.prepare(`UPDATE workflow_steps SET output_json = json_set(output_json, '$.stale_alerted_at', ?) WHERE id = ? AND status = 'WAITING'`)
+      .bind(nowIso(), job.id).run();
+  }
+  return stale.map((job) => job.id);
+}
+
+export { OIDC_AUDIENCE, RENDER_WORKFLOW, STALE_RENDER_MINUTES, alertStaleRenders, checkPack, handleRenderJobs, listZip, pngSize, queueSocialRender, verifyRenderer };
