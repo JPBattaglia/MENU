@@ -28,6 +28,8 @@ import { advanceConversionSelfTests } from "./selftest/conversion-selftest.js";
 import { advanceWebsiteCareSelfTests } from "./selftest/website-care-selftest.js";
 import { advanceWebsiteSelfTests } from "./selftest/website-selftest.js";
 import { advanceGuestAppSelfTests } from "./selftest/guest-app-selftest.js";
+import { advanceGoogleSelfTests } from "./selftest/google-selftest.js";
+import { handleGoogleCallback, handleGoogleConnect, handleGoogleLocation } from "./google/connect.js";
 import { advanceAccessibilitySelfTests } from "./selftest/accessibility-selftest.js";
 import { advanceSocialPostsSelfTests } from "./selftest/social-posts-selftest.js";
 import { advanceRoutingSelfTests } from "./selftest/routing-selftest.js";
@@ -54,6 +56,17 @@ var worker_default = {
     const approvalMatch = url.pathname.match(/^\/api\/approvals\/([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})$/i);
     if (approvalMatch && (request.method === "GET" || request.method === "POST")) {
       return handleApprovalRequest(request, env, ctx, approvalMatch[1].toLowerCase());
+    }
+    const googleConnectMatch = url.pathname.match(/^\/api\/google\/connect\/(owner|[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})$/i);
+    if (googleConnectMatch && (request.method === "GET" || request.method === "POST")) {
+      return handleGoogleConnect(request, env, googleConnectMatch[1].toLowerCase());
+    }
+    if (url.pathname === "/api/google/callback" && request.method === "GET") {
+      return handleGoogleCallback(request, env);
+    }
+    const googleLocationMatch = url.pathname.match(/^\/api\/google\/location\/([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})$/i);
+    if (googleLocationMatch && request.method === "POST") {
+      return handleGoogleLocation(request, env, googleLocationMatch[1].toLowerCase());
     }
     const hostedMenuMatch = url.pathname.match(/^\/api\/menu\/([a-z0-9-]{1,60})$/);
     if (hostedMenuMatch && request.method === "GET") {
@@ -254,6 +267,7 @@ const mmWorkerWithBooking = {
       await alertStaleRenders(env).catch((error) => console.error("Stale render check failed:", error instanceof Error ? error.message : String(error)));
       await advanceWebsiteTrialSelfTests(env, app).catch((error) => console.error("Website trial self-test failed:", error instanceof Error ? error.message : String(error)));
       await advanceGuestAppSelfTests(env, app).catch((error) => console.error("Guest App self-test failed:", error instanceof Error ? error.message : String(error)));
+      await advanceGoogleSelfTests(env).catch((error) => console.error("Google self-test failed:", error instanceof Error ? error.message : String(error)));
       await advanceDomainSetupSelfTests(env).catch((error) => console.error("Domain setup self-test failed:", error instanceof Error ? error.message : String(error)));
       await runDomainWatch(env).catch((error) => console.error("Domain watch failed:", error instanceof Error ? error.message : String(error)));
       await runSiteHealthPass(env).catch((error) => console.error("Site health pass failed:", error instanceof Error ? error.message : String(error)));
