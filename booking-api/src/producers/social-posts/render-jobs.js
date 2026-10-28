@@ -38,10 +38,60 @@ async function queueSocialRender(env, targetStep, { files, extra, finish }) {
     .bind(JSON.stringify(output), id).run();
   await env.DB.prepare(`UPDATE workflow_runs SET status = 'WAITING', error_code = 'RENDER_PENDING', error_message = 'Waiting for the graphics to be drawn' WHERE id = ?`)
     .bind(targetStep.workflow_run_id).run();
+  await startRenderer(env, id); // never fails the step: the schedule and nudgeWaitingRenders are the fallbacks
   return {
     waiting: true,
     response: jsonResponse({ ok: true, processed: true, status: "WAITING", waiting_for: "RENDER", workflow_run_id: targetStep.workflow_run_id, step_key: targetStep.step_key }, 202)
   };
+}
+
+// ---------- Starting the renderer ----------
+
+// GitHub's own schedule for the workflow never fired in its first hour (Oct 27, 2026), so the worker starts the
+// workflow itself through the GitHub API the moment a job is parked. GITHUB_DISPATCH_TOKEN is a fine-grained token
+// limited to Actions: read and write on JPBattaglia/MENU. Without it, or if GitHub refuses, the job still waits for
+// the schedule and the hourly owner alert below.
+const DISPATCH_URL = "https://api.github.com/repos/JPBattaglia/MENU/actions/workflows/render-social-posts.yml/dispatches";
+const NUDGE_AFTER_MINUTES = 10;
+const NUDGE_EVERY_MINUTES = 15;
+
+async function startRenderer(env, jobId) {
+  if (!env.GITHUB_DISPATCH_TOKEN) return { started: false, reason: "no token" };
+  let status = 0;
+  try {
+    const response = await (env.GITHUB_DISPATCH_FETCH || fetch)(DISPATCH_URL, { // GITHUB_DISPATCH_FETCH is a test seam
+      method: "POST",
+      headers: { Authorization: `Bearer ${env.GITHUB_DISPATCH_TOKEN}`, Accept: "application/vnd.github+json", "X-GitHub-Api-Version": "2022-11-28", "User-Agent": "menu-made-worker", "Content-Type": "application/json" },
+      body: JSON.stringify({ ref: "master" })
+    });
+    status = response.status;
+  } catch (error) {
+    console.error("Renderer start failed:", error instanceof Error ? error.message : String(error));
+  }
+  const started = status === 204;
+  if (!started) console.error(`Renderer start refused: HTTP ${status}`);
+  await env.DB.prepare(`UPDATE workflow_steps SET output_json = json_set(output_json, '$.dispatched_at', ?, '$.dispatch_status', ?) WHERE id = ? AND status = 'WAITING'`)
+    .bind(nowIso(), status, jobId).run().catch(() => null);
+  return { started, status };
+}
+
+// Called every 5-minute tick: a job still undrawn 10 minutes after it was parked gets the renderer started again,
+// at most every 15 minutes (a dispatch can be lost, or the run can fail).
+async function nudgeWaitingRenders(env, now = Date.now()) {
+  if (!env.GITHUB_DISPATCH_TOKEN) return [];
+  const waitedSince = new Date(now - NUDGE_AFTER_MINUTES * 60000).toISOString();
+  const lastNudge = new Date(now - NUDGE_EVERY_MINUTES * 60000).toISOString();
+  const jobs = (await env.DB.prepare(`
+      SELECT ws.id FROM workflow_steps ws JOIN workflow_runs wr ON wr.id = ws.workflow_run_id
+      WHERE ws.status = 'WAITING' AND ws.step_key = 'PRODUCE' AND wr.workflow_key = 'SOCIAL_POSTS_V1'
+        AND json_extract(ws.output_json, '$.waiting_for') = 'RENDER'
+        AND json_extract(ws.output_json, '$.requested_at') < ?
+        AND COALESCE(json_extract(ws.output_json, '$.dispatched_at'), '') < ?
+      LIMIT 1
+    `).bind(waitedSince, lastNudge).all()).results || [];
+  // One dispatch covers every waiting job: a run processes up to 5.
+  if (jobs.length) await startRenderer(env, jobs[0].id);
+  return jobs.map((job) => job.id);
 }
 
 // ---------- GitHub Actions OIDC ----------
@@ -240,4 +290,4 @@ async function alertStaleRenders(env, now = Date.now()) {
   return stale.map((job) => job.id);
 }
 
-export { OIDC_AUDIENCE, RENDER_WORKFLOW, STALE_RENDER_MINUTES, alertStaleRenders, checkPack, handleRenderJobs, listZip, pngSize, queueSocialRender, verifyRenderer };
+export { NUDGE_AFTER_MINUTES, nudgeWaitingRenders, startRenderer, OIDC_AUDIENCE, RENDER_WORKFLOW, STALE_RENDER_MINUTES, alertStaleRenders, checkPack, handleRenderJobs, listZip, pngSize, queueSocialRender, verifyRenderer };
