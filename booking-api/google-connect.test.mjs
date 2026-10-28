@@ -23,7 +23,7 @@ function setup({ status = 'ACTIVE' } = {}) {
     billing_interval, amount_cents, started_at, created_at, updated_at) VALUES (?, 'cus', 'biz', 'off', 'offv', 'sub_x', 'cus_x', ?, 'MONTH', 4900, ?, ?, ?)`)
     .run(SUB, status, t, t, t);
   const env = { DB, PRODUCTION_RUNNER_SECRET: 'runner-secret', GOOGLE_CLIENT_ID: 'cid.apps.googleusercontent.com', GOOGLE_CLIENT_SECRET: 'csecret',
-    ADMIN_API_TOKEN: 'admin-token', RESEND_API_KEY: 're_test' };
+    RESEND_API_KEY: 're_test' };
   const connection = (id = SUB) => { const r = DB.raw.prepare(`SELECT * FROM google_connections WHERE subscription_id = ?`).get(id); return r ? { ...r } : null; };
   return { env, DB, connection };
 }
@@ -133,16 +133,28 @@ test('a refused permission, a forged state, a cancelled consent or an inactive p
   assert.equal((await call(ended.env, google(), await googleConnectUrl(ended.env, SUB))).status, 403);
 });
 
-test('the owner connects with the admin token, and the daily Google check passes read-only', async () => {
-  const f = setup(); const g = google();
-  assert.equal((await call(f.env, g, 'https://menu-made.com/api/google/connect/owner')).status, 200);
-  const wrong = await call(f.env, g, 'https://menu-made.com/api/google/connect/owner', { method: 'POST', body: new URLSearchParams({ token: 'nope' }) });
-  assert.equal(wrong.status, 401);
-  const go = await call(f.env, g, 'https://menu-made.com/api/google/connect/owner', { method: 'POST', body: new URLSearchParams({ token: 'admin-token' }) });
+// The owner presses "Email me the link", opens the emailed link, and goes to Google. Returns the OAuth state.
+async function ownerState(f, g) {
+  const sent = await call(f.env, g, 'https://menu-made.com/api/google/connect/owner', { method: 'POST' });
+  assert.equal(sent.status, 200);
+  const email = g.emails.at(-1);
+  assert.equal(email.to?.[0] ?? email.to, 'info@menu-made.com');
+  const link = email.text.match(/https:\/\/menu-made\.com\/api\/google\/connect\/owner\?t=\S+/)[0];
+  const go = await call(f.env, g, link);
   assert.equal(go.status, 302);
-  const state = new URL(go.headers.get('Location')).searchParams.get('state');
+  return new URL(go.headers.get('Location')).searchParams.get('state');
+}
+
+test('the owner gets a one-hour emailed link instead of a token, and the daily Google check passes read-only', async () => {
+  const f = setup(); const g = google();
+  const page = await call(f.env, g, 'https://menu-made.com/api/google/connect/owner');
+  assert.equal(page.status, 200);
+  assert.match(await page.text(), /Email me the link/);
+  assert.equal((await call(f.env, g, 'https://menu-made.com/api/google/connect/owner?t=forged.token')).status, 403);
+  const state = await ownerState(f, g);
   await call(f.env, g, `https://menu-made.com/api/google/callback?code=abc&state=${encodeURIComponent(state)}`);
   assert.equal(f.connection('owner').status, 'ACTIVE');
+  const emailsBefore = g.emails.length;
 
   const t = new Date().toISOString();
   f.DB.raw.prepare(`INSERT INTO self_tests (id, kind, status, requested_by, created_at, updated_at) VALUES ('gt', 'GOOGLE_API_HEALTH', 'REQUESTED', 'test', ?, ?)`).run(t, t);
@@ -151,13 +163,12 @@ test('the owner connects with the admin token, and the daily Google check passes
   assert.equal(row.status, 'PASSED');
   assert.match(row.log_json, /grant refreshed; 1 profile\(s\) listed; profile \\"Corner Cafe\\" read; reviews endpoint answered \(12 reviews\)/);
   assert.ok(g.calls.filter((c) => !c.url.startsWith('https://oauth2.')).every((c) => c.method === 'GET'), 'nothing is written to Google');
-  assert.equal(g.emails.length, 0);
+  assert.equal(g.emails.length, emailsBefore, 'a passing check emails nobody');
 });
 
 test('a revoked grant fails the check, marks the connection for reconnecting and emails the owner', async () => {
   const f = setup(); const g = google();
-  const go = await call(f.env, g, 'https://menu-made.com/api/google/connect/owner', { method: 'POST', body: new URLSearchParams({ token: 'admin-token' }) });
-  await call(f.env, g, `https://menu-made.com/api/google/callback?code=abc&state=${encodeURIComponent(new URL(go.headers.get('Location')).searchParams.get('state'))}`);
+  await call(f.env, g, `https://menu-made.com/api/google/callback?code=abc&state=${encodeURIComponent(await ownerState(f, g))}`);
   const revoked = google({ refresh: 'revoked' });
   const t = new Date().toISOString();
   f.DB.raw.prepare(`INSERT INTO self_tests (id, kind, status, requested_by, created_at, updated_at) VALUES ('gt', 'GOOGLE_API_HEALTH', 'REQUESTED', 'test', ?, ?)`).run(t, t);
