@@ -219,7 +219,7 @@ async function applyFix(env, token, connection, fix, selfTest, fetchImpl) {
   const location = connection.location_name;
   const fake = `${connection.account_name}/${SELFTEST_LOCATION}`;
   // Only the menu link and images go to the synthetic location; profile edits are validated on the real one.
-  const probe = (error) => (selfTest && !["DESCRIPTION", "PHONE", "WEBSITE"].includes(fix.kind) && error instanceof GoogleApiError && [400, 404].includes(error.status) ? { status: "PROBED", error: `${error.status} from Google (expected)` } : null);
+  const probe = (error) => (selfTest && !["DESCRIPTION", "PHONE", "WEBSITE"].includes(fix.kind) && error instanceof GoogleApiError && [400, 403, 404].includes(error.status) ? { status: "PROBED", error: `${error.status} from Google (expected)` } : null);
   try {
     if (["DESCRIPTION", "PHONE", "WEBSITE"].includes(fix.kind)) {
       const [body, mask] = fix.kind === "DESCRIPTION" ? [{ profile: { description: fix.value } }, "profile.description"]
