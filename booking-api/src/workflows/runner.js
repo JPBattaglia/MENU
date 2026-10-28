@@ -300,11 +300,8 @@ async function runNextProductionStep(request, env, options = {}) {
           UPDATE workflow_steps
           SET
             status = 'RUNNING',
-            started_at =
-              COALESCE(
-                started_at,
-                ?
-              ),
+            -- The latest claim time (not the first): recoverStuckSteps judges this attempt, not an earlier one.
+            started_at = ?,
             attempt_count =
               attempt_count + 1,
             error_message =
@@ -562,12 +559,50 @@ async function alertOwnerOfFailure(env, body) {
   });
 }
 
+// A step still RUNNING long after it was claimed was cut off without recording an error: on the free plan Cloudflare
+// ends a run that overruns its CPU time and nothing after that line executes. Without this the step stays RUNNING
+// forever and the order sits stuck with nobody told. It is failed the same way a thrown error is, and the owner alerted.
+const STUCK_STEP_MINUTES = 20;
+
+async function recoverStuckSteps(env, now = Date.now()) {
+  const cutoff = new Date(now - STUCK_STEP_MINUTES * 60000).toISOString();
+  const stuck = (await env.DB.prepare(`
+      SELECT ws.id, ws.step_key, ws.workflow_run_id, wr.project_id
+      FROM workflow_steps ws JOIN workflow_runs wr ON wr.id = ws.workflow_run_id
+      WHERE ws.status = 'RUNNING' AND ws.started_at < ?
+      LIMIT 5
+    `).bind(cutoff).all()).results || [];
+  const recovered = [];
+  for (const step of stuck) {
+    const message = `Stopped without finishing: still running ${STUCK_STEP_MINUTES} minutes after it started (most likely Cloudflare ended the run at the free plan's CPU limit)`;
+    const t = nowIso();
+    const updated = await env.DB.prepare(`
+        UPDATE workflow_steps SET status = 'FAILED', completed_at = ?, error_message = ? WHERE id = ? AND status = 'RUNNING'
+      `).bind(t, message, step.id).run();
+    if (Number(updated.meta?.changes || 0) === 0) continue;
+    await env.DB.prepare(`
+        UPDATE workflow_runs SET status = 'FAILED', failed_at = ?, error_code = 'PRODUCTION_STEP_STUCK', error_message = ? WHERE id = ?
+      `).bind(t, message, step.workflow_run_id).run();
+    await env.DB.prepare(`
+        UPDATE projects SET status = 'FAILED', blocked_reason = ?, updated_at = ? WHERE id = ? AND status NOT IN ('DELIVERED', 'COMPLETED', 'CANCELLED')
+      `).bind(message, t, step.project_id).run();
+    await alertOwnerOfFailure(env, { workflow_run_id: step.workflow_run_id, step_key: step.step_key, error: message });
+    recovered.push(step.id);
+  }
+  return recovered;
+}
+
 async function runScheduledProduction(env) {
   if (!env.DB || !env.PRODUCTION_RUNNER_SECRET) return { skipped: true };
   try {
     await sendPageBillingReminders(env);
   } catch (error) {
     console.error("Extra pages reminders failed:", error instanceof Error ? error.message : String(error));
+  }
+  try {
+    await recoverStuckSteps(env);
+  } catch (error) {
+    console.error("Stuck step recovery failed:", error instanceof Error ? error.message : String(error));
   }
   try {
     await autoReleaseWaitingApprovals(env, null);
@@ -611,6 +646,8 @@ async function runScheduledProduction(env) {
 }
 
 export {
+  recoverStuckSteps,
+  STUCK_STEP_MINUTES,
   verifyProductionRunner,
   loadProject,
   completeStep,

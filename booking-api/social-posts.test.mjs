@@ -207,3 +207,97 @@ test('zip reader round-trips what the writer made', async () => {
   const files = [{ name: 'x.txt', data: new TextEncoder().encode('abc') }, { name: 'y.bin', data: new Uint8Array(300).fill(7) }];
   assert.deepEqual(readZip(createZip(files)).map((e) => [e.name, e.data.length]), [['x.txt', 3], ['y.bin', 300]]);
 });
+
+// ---------- drawn outside the Worker (GitHub Actions), as live ----------
+
+const renderJobs = await import('./src/producers/social-posts/render-jobs.js');
+const b64u = (bytes) => Buffer.from(bytes).toString('base64url');
+async function oidcKit(kid) {
+  const pair = await crypto.subtle.generateKey({ name: 'RSASSA-PKCS1-v1_5', modulusLength: 2048, publicExponent: new Uint8Array([1, 0, 1]), hash: 'SHA-256' }, true, ['sign', 'verify']);
+  const jwk = { ...(await crypto.subtle.exportKey('jwk', pair.publicKey)), kid, alg: 'RS256', use: 'sig' };
+  const now = Math.floor(Date.now() / 1000);
+  const good = { iss: 'https://token.actions.githubusercontent.com', aud: 'menu-made-render', exp: now + 300, nbf: now - 5, repository: 'JPBattaglia/MENU', ref: 'refs/heads/master', job_workflow_ref: renderJobs.RENDER_WORKFLOW };
+  const sign = async (claims, key = pair.privateKey) => {
+    const head = b64u(JSON.stringify({ alg: 'RS256', kid, typ: 'JWT' })); const body = b64u(JSON.stringify(claims));
+    return `${head}.${body}.${b64u(new Uint8Array(await crypto.subtle.sign('RSASSA-PKCS1-v1_5', key, new TextEncoder().encode(`${head}.${body}`))))}`;
+  };
+  return { good, sign, jwks: async () => Response.json({ keys: [jwk] }) };
+}
+const pngOf = (width, height) => { const b = new Uint8Array(4096); b.set([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]); new DataView(b.buffer).setUint32(16, width); new DataView(b.buffer).setUint32(20, height); return b; };
+
+test('only the render workflow on master of JPBattaglia/MENU may collect or return graphics', async () => {
+  const f = setup();
+  const kit = await oidcKit('kid-auth');
+  f.env.RENDER_OIDC_FETCH = kit.jwks;
+  const status = async (token) => (await call(f, 'https://menu-made.com/api/render-jobs/next', { headers: token ? { Authorization: `Bearer ${token}` } : {} })).status;
+  assert.equal(await status(await kit.sign(kit.good)), 200);
+  assert.equal(await status(null), 401);
+  for (const change of [{ repository: 'someone/MENU' }, { ref: 'refs/heads/feature' }, { job_workflow_ref: 'JPBattaglia/MENU/.github/workflows/menu-checkout.yml@refs/heads/master' },
+    { aud: 'other' }, { exp: Math.floor(Date.now() / 1000) - 10 }, { iss: 'https://evil.example' }]) {
+    assert.equal(await status(await kit.sign({ ...kit.good, ...change })), 403, JSON.stringify(change));
+  }
+  const stranger = await crypto.subtle.generateKey({ name: 'RSASSA-PKCS1-v1_5', modulusLength: 2048, publicExponent: new Uint8Array([1, 0, 1]), hash: 'SHA-256' }, true, ['sign', 'verify']);
+  assert.equal(await status(await kit.sign(kit.good, stranger.privateKey)), 403, 'a token signed by another key');
+});
+
+test('live, the posts wait for GitHub to draw them, then go to the owner and the buyer as before', async () => {
+  const f = setup();
+  delete f.env.SOCIAL_RASTERIZER;
+  const kit = await oidcKit('kid-e2e');
+  f.env.RENDER_OIDC_FETCH = kit.jwks;
+  await withFetch(f.fetch, async () => {
+    f.state.outputs.push({ posts: goodPosts() });
+    await api.runScheduledProduction(f.env);
+    assert.equal(f.row(`SELECT status FROM workflow_steps WHERE id = 's1'`).status, 'WAITING');
+    assert.equal(f.row(`SELECT status, error_code FROM workflow_runs`).error_code, 'RENDER_PENDING');
+    assert.equal(f.emails.length, 0, 'the owner hears nothing until the graphics exist');
+    await api.runScheduledProduction(f.env);
+    assert.equal(f.row(`SELECT status FROM workflow_steps WHERE id = 's1'`).status, 'WAITING', 'a tick does not disturb the waiting job');
+
+    const auth = { Authorization: `Bearer ${await kit.sign(kit.good)}` };
+    const { job } = await (await call(f, 'https://menu-made.com/api/render-jobs/next', { headers: auth })).json();
+    assert.equal(job, 's1');
+    // The job id in the route must be a UUID in production; this fixture's step id is not, so call the handler directly.
+    const spec = await (await renderJobs.handleRenderJobs(new Request('https://menu-made.com/api/render-jobs/s1', { headers: auth }), f.env, 's1')).json();
+    assert.equal(spec.files.length, 24);
+    assert.match(spec.files[0].svg, /^<\?xml|<svg/);
+
+    const wrong = createZip([{ name: 'post-01-square.png', data: pngOf(1080, 1080) }]);
+    const refused = await renderJobs.handleRenderJobs(new Request('https://menu-made.com/api/render-jobs/s1', { method: 'POST', headers: auth, body: wrong }), f.env, 's1');
+    assert.equal(refused.status, 422);
+    assert.equal(f.row(`SELECT status FROM workflow_steps WHERE id = 's1'`).status, 'WAITING', 'a bad ZIP changes nothing');
+
+    const zip = createZip([...spec.files.map((s) => ({ name: s.name, data: pngOf(s.width, s.height) })), ...spec.extra.map((e) => ({ name: e.name, data: new TextEncoder().encode(e.text) }))]);
+    const ok = await renderJobs.handleRenderJobs(new Request('https://menu-made.com/api/render-jobs/s1', { method: 'POST', headers: auth, body: zip }), f.env, 's1');
+    assert.equal(ok.status, 200, await ok.clone().text());
+    const again = await renderJobs.handleRenderJobs(new Request('https://menu-made.com/api/render-jobs/s1', { method: 'POST', headers: auth, body: zip }), f.env, 's1');
+    assert.equal(again.status, 404, 'the same job cannot be returned twice');
+    assert.equal(f.rows(`SELECT id FROM deliverables WHERE project_id = 'sp' AND deliverable_type = 'SOCIAL_PACK'`).length, 1);
+
+    await api.runScheduledProduction(f.env);
+    assert.equal(f.row(`SELECT status FROM approvals`).status, 'PENDING');
+    assert.match(f.emails[0].text, /Graphics pack/);
+    const [approve] = linksIn(f.emails[0].text, '/api/approvals/');
+    await call(f, approve.split('?')[0], { method: 'POST', body: new URLSearchParams({ t: new URL(approve).searchParams.get('t') }) });
+    await Promise.all(f.pending);
+    assert.equal(f.row(`SELECT status FROM workflow_runs`).status, 'SUCCEEDED');
+    assert.equal(f.emails.at(-1).to[0], 'owner@proofcafe.example');
+  });
+});
+
+test('a step cut off mid-run is failed after 20 minutes and the owner is told, instead of waiting forever', async () => {
+  const f = setup();
+  await withFetch(f.fetch, async () => {
+    f.sql(`UPDATE workflow_steps SET status = 'RUNNING', started_at = ? WHERE id = 's1'`, new Date(Date.now() - 5 * 60000).toISOString());
+    f.sql(`UPDATE workflow_runs SET status = 'RUNNING'`);
+    assert.deepEqual(await api.recoverStuckSteps(f.env), [], 'five minutes in, it may still be working');
+    f.sql(`UPDATE workflow_steps SET started_at = ? WHERE id = 's1'`, new Date(Date.now() - 21 * 60000).toISOString());
+    await api.runScheduledProduction(f.env);
+    assert.equal(f.row(`SELECT status FROM workflow_steps WHERE id = 's1'`).status, 'FAILED');
+    assert.equal(f.row(`SELECT status, error_code FROM workflow_runs`).error_code, 'PRODUCTION_STEP_STUCK');
+    assert.equal(f.row(`SELECT status FROM projects WHERE id = 'sp'`).status, 'FAILED');
+    const alert = f.emails.find((e) => /Automation stopped/.test(e.subject));
+    assert.ok(alert, 'the owner is emailed');
+    assert.match(alert.text, /CPU limit/);
+  });
+});

@@ -1,0 +1,199 @@
+// Social Posts PNGs are drawn outside the Worker. On the free plan a scheduled run gets 10 ms of CPU, and turning 24
+// SVGs into PNGs takes far longer, so Cloudflare ended the run mid-step (Oct 27, 2026). The PRODUCE step now parks a
+// render job (the SVGs and captions in R2, the step WAITING) and a GitHub Actions workflow in JPBattaglia/MENU
+// (.github/workflows/render-social-posts.yml) collects it every 5 minutes, draws the PNGs with resvg, zips them and
+// posts the ZIP back here. Delivery then continues exactly as before.
+//
+// Auth needs no shared secret: the workflow sends a GitHub Actions OIDC token, and only that one workflow, on master
+// of JPBattaglia/MENU, is accepted. Fork pull requests never receive such a token.
+//
+// Routes (all Bearer <GitHub OIDC token>):
+//   GET  /api/render-jobs/next   -> { job: "<id>" | null }
+//   GET  /api/render-jobs/<id>   -> the job spec (JSON)
+//   POST /api/render-jobs/<id>   -> body: the finished ZIP; stores it and resumes the workflow
+import { jsonResponse, nowIso, parseJsonOrNull } from "../../lib/http.js";
+import { completeStep } from "../../workflows/runner.js";
+import { loadDeliveryContext } from "../../approvals/release.js";
+import { storeDeliverable } from "../shared/deliverables.js";
+
+const OIDC_ISSUER = "https://token.actions.githubusercontent.com";
+const OIDC_AUDIENCE = "menu-made-render";
+const RENDER_REPOSITORY = "JPBattaglia/MENU";
+const RENDER_WORKFLOW = "JPBattaglia/MENU/.github/workflows/render-social-posts.yml@refs/heads/master";
+const MAX_ZIP_BYTES = 40 * 1024 * 1024;
+const specKey = (id) => `render-jobs/social/${id}/spec.json`;
+
+// ---------- Queue (called from the PRODUCE step) ----------
+
+// files: [{ name, svg, width, height }]; extra: [{ name, text }]; finish: what the result handler needs later.
+async function queueSocialRender(env, targetStep, { files, extra, finish }) {
+  const id = targetStep.workflow_step_id;
+  await env.ASSETS.put(specKey(id), JSON.stringify({ version: 1, id, zip_name: finish.pack_filename, files, extra }), {
+    httpMetadata: { contentType: "application/json" }
+  });
+  const output = { waiting_for: "RENDER", render_job: id, requested_at: nowIso(), finish };
+  await env.DB.prepare(`UPDATE workflow_steps SET status = 'WAITING', error_message = NULL, output_json = ? WHERE id = ?`)
+    .bind(JSON.stringify(output), id).run();
+  await env.DB.prepare(`UPDATE workflow_runs SET status = 'WAITING', error_code = 'RENDER_PENDING', error_message = 'Waiting for the graphics to be drawn' WHERE id = ?`)
+    .bind(targetStep.workflow_run_id).run();
+  return {
+    waiting: true,
+    response: jsonResponse({ ok: true, processed: true, status: "WAITING", waiting_for: "RENDER", workflow_run_id: targetStep.workflow_run_id, step_key: targetStep.step_key }, 202)
+  };
+}
+
+// ---------- GitHub Actions OIDC ----------
+
+const b64url = (text) => Uint8Array.from(atob(text.replace(/-/g, "+").replace(/_/g, "/").padEnd(Math.ceil(text.length / 4) * 4, "=")), (c) => c.charCodeAt(0));
+let jwksCache = null; // { at, keys }
+
+async function signingKey(kid, fetchImpl) {
+  const fresh = jwksCache && Date.now() - jwksCache.at < 3600000;
+  if (!fresh || !jwksCache.keys.some((k) => k.kid === kid)) {
+    const response = await fetchImpl(`${OIDC_ISSUER}/.well-known/jwks`);
+    if (!response.ok) throw new Error(`GitHub JWKS ${response.status}`);
+    jwksCache = { at: Date.now(), keys: (await response.json()).keys || [] };
+  }
+  const jwk = jwksCache.keys.find((k) => k.kid === kid);
+  if (!jwk) return null;
+  return crypto.subtle.importKey("jwk", jwk, { name: "RSASSA-PKCS1-v1_5", hash: "SHA-256" }, false, ["verify"]);
+}
+
+async function verifyRenderer(request, env) {
+  const token = (request.headers.get("Authorization") || "").replace(/^Bearer\s+/i, "").trim();
+  const parts = token.split(".");
+  if (parts.length !== 3) return { ok: false, status: 401, error: "A GitHub Actions identity token is required" };
+  try {
+    const header = JSON.parse(new TextDecoder().decode(b64url(parts[0])));
+    const claims = JSON.parse(new TextDecoder().decode(b64url(parts[1])));
+    if (header.alg !== "RS256") return { ok: false, status: 403, error: "Unsupported token" };
+    const key = await signingKey(header.kid, env.RENDER_OIDC_FETCH || fetch); // RENDER_OIDC_FETCH is a test seam
+    if (!key) return { ok: false, status: 403, error: "Unknown signing key" };
+    const valid = await crypto.subtle.verify("RSASSA-PKCS1-v1_5", key, b64url(parts[2]), new TextEncoder().encode(`${parts[0]}.${parts[1]}`));
+    const now = Math.floor(Date.now() / 1000);
+    const audience = Array.isArray(claims.aud) ? claims.aud : [claims.aud];
+    if (!valid || claims.iss !== OIDC_ISSUER || !audience.includes(OIDC_AUDIENCE) || !(claims.exp > now) || (claims.nbf && claims.nbf > now + 60)
+      || claims.repository !== RENDER_REPOSITORY || claims.ref !== "refs/heads/master" || claims.job_workflow_ref !== RENDER_WORKFLOW) {
+      return { ok: false, status: 403, error: "This token may not render" };
+    }
+    return { ok: true };
+  } catch {
+    return { ok: false, status: 403, error: "Invalid token" };
+  }
+}
+
+// ---------- Result checks (cheap: directory and PNG headers only, no checksums) ----------
+
+function listZip(bytes) {
+  const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
+  let end = bytes.length - 22;
+  while (end >= 0 && end > bytes.length - 22 - 65535 && view.getUint32(end, true) !== 0x06054b50) end--;
+  if (end < 0 || view.getUint32(end, true) !== 0x06054b50) throw new Error("Not a ZIP file");
+  const count = view.getUint16(end + 10, true);
+  let at = view.getUint32(end + 16, true);
+  const decoder = new TextDecoder();
+  const entries = [];
+  for (let i = 0; i < count; i++) {
+    if (at + 46 > bytes.length || view.getUint32(at, true) !== 0x02014b50) throw new Error("Corrupt ZIP directory");
+    const method = view.getUint16(at + 10, true);
+    const size = view.getUint32(at + 24, true);
+    const nameLength = view.getUint16(at + 28, true);
+    const local = view.getUint32(at + 42, true);
+    const name = decoder.decode(bytes.subarray(at + 46, at + 46 + nameLength));
+    if (local + 30 > bytes.length) throw new Error("Corrupt ZIP entry");
+    const dataStart = local + 30 + view.getUint16(local + 26, true) + view.getUint16(local + 28, true);
+    if (method !== 0 || dataStart + size > bytes.length) throw new Error(`Unsupported or truncated entry ${name}`);
+    entries.push({ name, data: bytes.subarray(dataStart, dataStart + size) });
+    at += 46 + nameLength + view.getUint16(at + 30, true) + view.getUint16(at + 32, true);
+  }
+  return entries;
+}
+
+function pngSize(data) {
+  if (data.length < 24) return null;
+  const v = new DataView(data.buffer, data.byteOffset, data.byteLength);
+  if (v.getUint32(0) !== 0x89504e47 || v.getUint32(4) !== 0x0d0a1a0a) return null;
+  return { width: v.getUint32(16), height: v.getUint32(20) };
+}
+
+// Every PNG the spec asked for, at its size, plus the extra text files: anything else is refused.
+function checkPack(entries, spec) {
+  const byName = new Map(entries.map((e) => [e.name, e.data]));
+  for (const file of spec.files) {
+    const data = byName.get(file.name);
+    if (!data) return `${file.name} is missing`;
+    const size = pngSize(data);
+    if (!size) return `${file.name} is not a PNG`;
+    if (size.width !== file.width || size.height !== file.height) return `${file.name} is ${size.width}x${size.height}, expected ${file.width}x${file.height}`;
+    if (data.length < 2000) return `${file.name} is suspiciously small (${data.length} bytes)`;
+  }
+  for (const file of spec.extra || []) if (!byName.has(file.name)) return `${file.name} is missing`;
+  if (entries.length !== spec.files.length + (spec.extra || []).length) return `the ZIP holds ${entries.length} files, expected ${spec.files.length + (spec.extra || []).length}`;
+  return null;
+}
+
+// ---------- Routes ----------
+
+async function waitingStep(env, id) {
+  return env.DB.prepare(`
+      SELECT ws.id, ws.workflow_run_id, ws.step_key, ws.step_order, ws.output_json, wr.project_id, wr.workflow_key, wr.workflow_version
+      FROM workflow_steps ws JOIN workflow_runs wr ON wr.id = ws.workflow_run_id
+      WHERE ws.id = ? AND ws.status = 'WAITING' AND ws.step_key = 'PRODUCE' AND wr.workflow_key = 'SOCIAL_POSTS_V1'
+    `).bind(id).first();
+}
+
+async function handleRenderJobs(request, env, jobId) {
+  const auth = await verifyRenderer(request, env);
+  if (!auth.ok) return jsonResponse({ ok: false, error: auth.error }, auth.status);
+
+  if (jobId === "next") {
+    const next = await env.DB.prepare(`
+        SELECT ws.id FROM workflow_steps ws JOIN workflow_runs wr ON wr.id = ws.workflow_run_id
+        WHERE ws.status = 'WAITING' AND ws.step_key = 'PRODUCE' AND wr.workflow_key = 'SOCIAL_POSTS_V1'
+          AND json_extract(ws.output_json, '$.waiting_for') = 'RENDER'
+        ORDER BY json_extract(ws.output_json, '$.requested_at') LIMIT 1
+      `).first();
+    return jsonResponse({ ok: true, job: next?.id || null });
+  }
+
+  const step = await waitingStep(env, jobId);
+  const waiting = parseJsonOrNull(step?.output_json);
+  if (!step || waiting?.waiting_for !== "RENDER") return jsonResponse({ ok: false, error: "No render job waiting with that id" }, 404);
+  const spec = await env.ASSETS.get(specKey(jobId));
+  if (!spec) return jsonResponse({ ok: false, error: "The render job's files are missing" }, 410);
+
+  if (request.method === "GET") {
+    return new Response(spec.body, { headers: { "Content-Type": "application/json", "Cache-Control": "no-store" } });
+  }
+
+  const declared = Number(request.headers.get("Content-Length") || 0);
+  if (declared > MAX_ZIP_BYTES) return jsonResponse({ ok: false, error: "The ZIP is too large" }, 413);
+  const bytes = new Uint8Array(await request.arrayBuffer());
+  if (bytes.length > MAX_ZIP_BYTES) return jsonResponse({ ok: false, error: "The ZIP is too large" }, 413);
+  const specJson = await spec.json();
+  let problem;
+  try { problem = checkPack(listZip(bytes), specJson); } catch (error) { problem = error.message; }
+  if (problem) return jsonResponse({ ok: false, error: `The ZIP was refused: ${problem}` }, 422);
+
+  const context = await loadDeliveryContext(step.project_id, env);
+  if (!context) return jsonResponse({ ok: false, error: "Production project could not be loaded" }, 404);
+  const { finish } = waiting;
+  // Claim the job before storing, so a second upload of the same job cannot create a second pack.
+  const claimed = await env.DB.prepare(`UPDATE workflow_steps SET status = 'RUNNING', started_at = ? WHERE id = ? AND status = 'WAITING'`)
+    .bind(nowIso(), jobId).run();
+  if (Number(claimed.meta?.changes || 0) === 0) return jsonResponse({ ok: false, error: "This render job was already finished" }, 409);
+  const pack = await storeDeliverable(env, context, {
+    type: "SOCIAL_PACK", filename: finish.pack_filename, mime: "application/zip", bytes, folder: "social-pack", metadata: { social: finish.care }
+  });
+  const output = { ...finish.output, png_files: specJson.files.length, pack_deliverable: pack.deliverableId, version: pack.version, rendered_by: "github-actions" };
+  await completeStep({
+    workflow_step_id: step.id, workflow_run_id: step.workflow_run_id, project_id: step.project_id, step_key: step.step_key,
+    workflow_key: step.workflow_key, workflow_version: step.workflow_version
+  }, output, env);
+  await env.DB.prepare(`UPDATE workflow_runs SET status = 'RUNNING', error_code = NULL, error_message = NULL WHERE id = ? AND status = 'WAITING'`)
+    .bind(step.workflow_run_id).run();
+  await env.ASSETS.delete(specKey(jobId)).catch(() => null);
+  return jsonResponse({ ok: true, job: jobId, stored: specJson.files.length });
+}
+
+export { OIDC_AUDIENCE, RENDER_WORKFLOW, checkPack, handleRenderJobs, listZip, pngSize, queueSocialRender, verifyRenderer };

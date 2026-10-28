@@ -50,6 +50,7 @@ export function createR2() {
         size: entry.data.byteLength,
         async arrayBuffer() { return entry.data.buffer.slice(entry.data.byteOffset, entry.data.byteOffset + entry.data.byteLength); },
         async text() { return new TextDecoder().decode(entry.data); },
+        async json() { return JSON.parse(new TextDecoder().decode(entry.data)); },
       };
     },
     async delete(key) { objects.delete(key); },
