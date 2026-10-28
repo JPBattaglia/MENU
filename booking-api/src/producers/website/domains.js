@@ -184,4 +184,24 @@ async function customHostSlug(env, hostname) {
   return row?.slug || null;
 }
 
-export { DomainError, customHostSlug, dnsInstructions, emailInstructions, normalizeHostname, requestCustomDomain, runDomainWatch, saasConfig };
+// Read-only check that custom domains can work: the settings exist, the token can read Custom Hostnames on the zone,
+// and the fallback origin is the expected host and active. Changes nothing at Cloudflare. Used by the
+// CUSTOM_DOMAIN_SETUP self-test, which also runs daily so an expired token or broken fallback is noticed.
+async function checkSaasSetup(env, { fetchImpl = fetch } = {}) {
+  const config = saasConfig(env);
+  if (!config) return { ok: false, problems: ["CF_ZONE_ID or CF_SAAS_TOKEN is not set on the worker"] };
+  const problems = [];
+  const fallback = await cf(config, "/custom_hostnames/fallback_origin", { fetchImpl });
+  const origin = fallback.data?.result?.origin || null;
+  const status = fallback.data?.result?.status || null;
+  if (!fallback.ok) problems.push(`Reading the fallback origin failed (HTTP ${fallback.status}): ${fallback.errors.map((e) => e.message).join("; ") || "no detail"}`);
+  else {
+    if (origin !== config.fallback) problems.push(`The fallback origin is ${origin || "not set"}, expected ${config.fallback}`);
+    if (status !== "active") problems.push(`The fallback origin is ${status || "unknown"}, not active`);
+  }
+  const list = await cf(config, "/custom_hostnames?per_page=1", { fetchImpl });
+  if (!list.ok) problems.push(`Listing custom hostnames failed (HTTP ${list.status}): ${list.errors.map((e) => e.message).join("; ") || "no detail"}`);
+  return { ok: problems.length === 0, problems, fallback: origin, fallback_status: status, hostnames: list.data?.result_info?.total_count ?? null };
+}
+
+export { DomainError, checkSaasSetup, customHostSlug, dnsInstructions, emailInstructions, normalizeHostname, requestCustomDomain, runDomainWatch, saasConfig };
