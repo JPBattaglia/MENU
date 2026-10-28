@@ -1,4 +1,4 @@
-// Review Replies runs weekly, but subscription periods create one job a month (subscriptions/periods.js): that job is
+// Review Replies and Google Profile Care run weekly, but subscription periods create one job a month (subscriptions/periods.js): that job is
 // week 1. Once a day (from the daily subscription pass) this adds weeks 2-4 inside each paid month, as their own
 // projects under the same period order, for subscriptions that are producing and have Google connected. A customer who
 // has not connected Google keeps a single waiting job instead of one per week. Ids are derived from
@@ -8,7 +8,11 @@ import { SELF_TEST_EMAIL } from "../../lib/email.js";
 import { PRODUCING, stableId } from "../../subscriptions/sync.js";
 import { loadWorkflowDefinition } from "../../workflows/definitions.js";
 
-const WORKFLOW = "REVIEW_REPLIES_V1";
+// Weekly workflows -> source label of their week projects and the stableId prefix (Review Replies keeps its original one).
+const WEEKLY = {
+  REVIEW_REPLIES_V1: { source: "REVIEW_REPLIES_WEEK", prefix: "review-week" },
+  GOOGLE_PROFILE_CARE_V1: { source: "GOOGLE_PROFILE_CARE_WEEK", prefix: "google-care-week" }
+};
 const WEEK_MS = 7 * 864e5;
 const MIN_DAYS_BEFORE_PERIOD_END = 4; // the next month's job is close: no extra week
 
@@ -26,6 +30,17 @@ function weekStartsDue(periodStart, periodEnd, now) {
 }
 
 async function createReviewWeekJobs(env, now = new Date()) {
+  let created = 0;
+  let periods = 0;
+  for (const [workflow, labels] of Object.entries(WEEKLY)) {
+    const result = await createWeekJobs(env, workflow, labels, now);
+    created += result.created;
+    periods += result.periods;
+  }
+  return { created, periods };
+}
+
+async function createWeekJobs(env, WORKFLOW, labels, now) {
   const periods = (await env.DB.prepare(`
       SELECT p.id, p.order_id, p.order_item_id, p.business_id, p.customer_id, p.project_type, p.metadata_json,
         s.status AS subscription_status, g.status AS google_status, c.email
@@ -46,10 +61,10 @@ async function createReviewWeekJobs(env, now = new Date()) {
     for (const weekStart of weekStartsDue(meta.period_start, meta.period_end, now)) {
       definition = definition || await loadWorkflowDefinition(WORKFLOW, 1, env);
       const weekKey = weekStart.slice(0, 10);
-      const projectId = await stableId("review-week-project", meta.subscription_id, weekKey);
-      const runId = await stableId("review-week-run", meta.subscription_id, weekKey);
+      const projectId = await stableId(`${labels.prefix}-project`, meta.subscription_id, weekKey);
+      const runId = await stableId(`${labels.prefix}-run`, meta.subscription_id, weekKey);
       const t = nowIso();
-      const metadata = { ...meta, source: "REVIEW_REPLIES_WEEK", week_start: weekStart, period_project_id: period.id };
+      const metadata = { ...meta, source: labels.source, week_start: weekStart, period_project_id: period.id };
       const inserted = await env.DB.prepare(`
           INSERT OR IGNORE INTO projects (id, order_id, order_item_id, business_id, customer_id, project_type, status, workflow_key, workflow_version,
             priority, manual_review_required, created_at, updated_at, metadata_json)
@@ -63,7 +78,7 @@ async function createReviewWeekJobs(env, now = new Date()) {
         await env.DB.prepare(`
             INSERT OR IGNORE INTO workflow_steps (id, workflow_run_id, step_key, step_order, status, attempt_count, input_json)
             VALUES (?, ?, ?, ?, 'QUEUED', 0, ?)
-          `).bind(await stableId("review-week-step", runId, step.key), runId, step.key, step.order,
+          `).bind(await stableId(`${labels.prefix}-step`, runId, step.key), runId, step.key, step.order,
           JSON.stringify({ project_id: projectId, order_id: period.order_id, customer_id: period.customer_id, workflow_key: WORKFLOW, workflow_version: 1, workflow_definition_id: definition.id, queued_at: t })).run();
       }
       if (Number(inserted.meta?.changes || 0) > 0) created += 1;

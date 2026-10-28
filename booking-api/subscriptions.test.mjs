@@ -36,6 +36,7 @@ function setup() {
   DB.raw.exec(readFileSync(new URL('./migrations/0007_plan_settings.sql', import.meta.url), 'utf8'));
   DB.raw.exec(readFileSync(new URL('./migrations/0013_google_connections.sql', import.meta.url), 'utf8'));
   DB.raw.exec(readFileSync(new URL('./migrations/0014_review_replies.sql', import.meta.url), 'utf8'));
+  DB.raw.exec(readFileSync(new URL('./migrations/0015_google_profile_care.sql', import.meta.url), 'utf8'));
 
   const stripe = { sessions: [], subscriptions: new Map(), customers: new Map(), portal: [], deleted: [], keys: [] };
   const emails = [];
@@ -425,14 +426,14 @@ test('period jobs wait for their producer: the runner only picks up PRODUCE step
     const { sub, row } = await growthSubscriber(h);
     const start = '2026-10-25T18:00:00.000Z';
     await h.webhook('invoice.paid', h.invoice(sub, { id: 'in_1', start, end: addMonths(start, 1), amount: 17900 }));
-    for (let i = 0; i < 3; i++) await h.call('/api/production/run-next', { method: 'POST', headers: { Authorization: 'Bearer runner-secret-placeholder', 'Content-Type': 'application/json' }, body: '{}' });
-    // Menu Care, Accessibility Monitoring and Review Replies have producers (the latter two park until the buyer gives
-    // their website / connects Google); Google Profile Care still waits for its producer.
+    for (let i = 0; i < 4; i++) await h.call('/api/production/run-next', { method: 'POST', headers: { Authorization: 'Bearer runner-secret-placeholder', 'Content-Type': 'application/json' }, body: '{}' });
+    // Every Growth plan has a producer now: Menu Care runs; Accessibility Monitoring parks until the buyer gives their
+    // website; Review Replies and Google Profile Care park until the buyer connects Google.
     const by = Object.fromEntries(h.jobs(row.id).map((j) => [j.plan, j.run_status]));
     assert.notEqual(by.MENU_CARE, 'QUEUED', JSON.stringify(by));
     assert.equal(by.ACCESSIBILITY_MONITORING, 'WAITING', JSON.stringify(by));
     assert.equal(by.REVIEW_REPLIES, 'WAITING', JSON.stringify(by));
-    assert.equal(by.GOOGLE_PROFILE_CARE, 'QUEUED', JSON.stringify(by));
+    assert.equal(by.GOOGLE_PROFILE_CARE, 'WAITING', JSON.stringify(by));
   } finally { h.restore(); }
 });
 

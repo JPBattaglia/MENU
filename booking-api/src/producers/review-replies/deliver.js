@@ -129,13 +129,10 @@ async function sendWeeklySummary(env, targetStep, context, meta, rows, totals) {
   return sent;
 }
 
-async function runReviewRepliesDeliverStep(targetStep, env, deps = {}) {
-  const fetchImpl = deps.fetch || fetch;
-  const context = await loadDeliveryContext(targetStep.project_id, env);
-  if (!context) throw new Error("Production project could not be loaded");
-  const meta = await projectMeta(env, context.id);
-  const load = async () => (await env.DB.prepare(`SELECT * FROM review_replies WHERE project_id = ? ORDER BY created_at`).bind(context.id).all()).results || [];
-  let rows = await load();
+// The review part of DELIVER, shared by Review Replies and Google Profile Care: post AUTO replies, ask the owner once
+// for the rest, post those after approval. Returns { parked } while waiting (or retrying), else { ownerRows, approval }.
+async function deliverReplies(targetStep, env, context, meta, fetchImpl) {
+  const rows = (await env.DB.prepare(`SELECT * FROM review_replies WHERE project_id = ? ORDER BY created_at`).bind(context.id).all()).results || [];
   const autoRows = rows.filter((r) => r.route === "AUTO" && r.status === "DRAFTED");
   const ownerRows = rows.filter((r) => r.route === "OWNER" && r.status === "DRAFTED");
 
@@ -147,22 +144,34 @@ async function runReviewRepliesDeliverStep(targetStep, env, deps = {}) {
   }
   const ownerApproved = ownerRows.length > 0 && approval?.status === "APPROVED";
   const toPost = [...autoRows, ...(ownerApproved ? ownerRows : [])];
-
-  let posting = { posted: 0, probed: 0, skipped: 0, failed: [] };
   if (toPost.length) {
     const auth = await tokenOrPark(env, targetStep, context, meta, fetchImpl);
-    if (auth.parked) return auth.parked;
+    if (auth.parked) return { parked: auth.parked };
+    let posting;
     try {
       posting = await postRows(env, auth.token, toPost, fetchImpl);
     } catch (error) {
-      if (error instanceof GoogleApiError) return retryStepLater(targetStep, env, error.message);
+      if (error instanceof GoogleApiError) return { parked: await retryStepLater(targetStep, env, error.message) };
       throw error;
     }
     if (posting.failed.length) await alertOwnerOfPostFailures(env, context, posting.failed, targetStep.workflow_run_id);
   }
-  if (ownerRows.length && !ownerApproved) return parkForOwnerApproval(targetStep, context, approval, env);
+  if (ownerRows.length && !ownerApproved) return { parked: await parkForOwnerApproval(targetStep, context, approval, env) };
+  return { ownerRows, approval: ownerRows.length ? approval : null };
+}
 
-  rows = await load();
+async function loadReplyRows(env, projectId) {
+  return (await env.DB.prepare(`SELECT * FROM review_replies WHERE project_id = ? ORDER BY created_at`).bind(projectId).all()).results || [];
+}
+
+async function runReviewRepliesDeliverStep(targetStep, env, deps = {}) {
+  const fetchImpl = deps.fetch || fetch;
+  const context = await loadDeliveryContext(targetStep.project_id, env);
+  if (!context) throw new Error("Production project could not be loaded");
+  const meta = await projectMeta(env, context.id);
+  const replies = await deliverReplies(targetStep, env, context, meta, fetchImpl);
+  if (replies.parked) return replies.parked;
+  const rows = await loadReplyRows(env, context.id);
   const totals = (await produceOutput(env, targetStep.workflow_run_id)).totals || {};
   const sent = await sendWeeklySummary(env, targetStep, context, meta, rows, totals);
   if (!sent.ok) return retryStepLater(targetStep, env, `Weekly summary email failed: ${sent.error}`);
@@ -170,8 +179,8 @@ async function runReviewRepliesDeliverStep(targetStep, env, deps = {}) {
   return finishDelivery(targetStep, context, {
     delivered_at: nowIso(), recipient: context.customer_email, email_id: sent.id,
     reviews: rows.length, posted: count("POSTED"), probed: count("PROBED"), skipped: count("SKIPPED"), failed: count("FAILED"),
-    approval_id: ownerRows.length ? approval.id : null
-  }, ownerRows.length ? "OWNER" : "AUTO", ownerRows.length ? approval : null, [], env);
+    approval_id: replies.approval?.id || null
+  }, replies.approval ? "OWNER" : "AUTO", replies.approval, [], env);
 }
 
 // Presenter: what the owner reads in the approval email and on the approve page.
@@ -209,4 +218,4 @@ const reviewRepliesOverrides = {
   }
 };
 
-export { SUMMARY_EVENT, postRows, runReviewRepliesDeliverStep, reviewRepliesOverrides };
+export { SUMMARY_EVENT, stars, clip, postRows, deliverReplies, loadReplyRows, produceOutput, previousAverage, runReviewRepliesDeliverStep, reviewRepliesOverrides };
