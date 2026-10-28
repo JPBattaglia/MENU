@@ -12,6 +12,9 @@ import { runSiteHealthPass } from "./producers/website-care/health.js";
 import { handleSiteIntake } from "./producers/website/intake.js";
 import { alertStaleRenders, handleRenderJobs, nudgeWaitingRenders } from "./producers/social-posts/render-jobs.js";
 import { handleLiveSite, handleSitePreview } from "./producers/website/serve.js";
+import { appOnlyRedirect, handleAppPreview, handleLiveApp } from "./producers/guest-app/serve.js";
+import { handleAppIntake } from "./producers/guest-app/intake.js";
+import { handleAppUpdate } from "./producers/guest-app/update.js";
 import { customHostSlug, runDomainWatch } from "./producers/website/domains.js";
 import { handlePlanSettings } from "./subscriptions/settings.js";
 import { handleMenuCareRequest } from "./producers/menu-care/intake.js";
@@ -24,6 +27,7 @@ import { advanceMenuCareSelfTests } from "./selftest/menu-care-selftest.js";
 import { advanceConversionSelfTests } from "./selftest/conversion-selftest.js";
 import { advanceWebsiteCareSelfTests } from "./selftest/website-care-selftest.js";
 import { advanceWebsiteSelfTests } from "./selftest/website-selftest.js";
+import { advanceGuestAppSelfTests } from "./selftest/guest-app-selftest.js";
 import { advanceAccessibilitySelfTests } from "./selftest/accessibility-selftest.js";
 import { advanceSocialPostsSelfTests } from "./selftest/social-posts-selftest.js";
 import { advanceRoutingSelfTests } from "./selftest/routing-selftest.js";
@@ -79,9 +83,21 @@ var worker_default = {
     if (sitePreviewMatch && (request.method === "GET" || request.method === "HEAD")) {
       return handleSitePreview(request, env, sitePreviewMatch[1].toLowerCase(), sitePreviewMatch[2], sitePreviewMatch[3]);
     }
+    const appIntakeMatch = url.pathname.match(/^\/api\/app-intake\/([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})$/i);
+    if (appIntakeMatch && (request.method === "GET" || request.method === "POST")) {
+      return handleAppIntake(request, env, appIntakeMatch[1].toLowerCase());
+    }
+    const appUpdateMatch = url.pathname.match(/^\/api\/app-update\/([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})$/i);
+    if (appUpdateMatch && (request.method === "GET" || request.method === "POST")) {
+      return handleAppUpdate(request, env, appUpdateMatch[1].toLowerCase());
+    }
+    const appPreviewMatch = url.pathname.match(/^\/api\/app-preview\/([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})\/([A-Za-z0-9_.-]{20,900})\/?(.*)$/i);
+    if (appPreviewMatch && (request.method === "GET" || request.method === "HEAD")) {
+      return handleAppPreview(request, env, appPreviewMatch[1].toLowerCase(), appPreviewMatch[2], appPreviewMatch[3]);
+    }
     const liveSiteMatch = url.pathname.match(/^\/api\/site\/([a-z0-9][a-z0-9-]{1,28}[a-z0-9])\/?(.*)$/);
     if (liveSiteMatch && (request.method === "GET" || request.method === "HEAD")) {
-      return handleLiveSite(request, env, liveSiteMatch[1], liveSiteMatch[2]);
+      return serveSlug(request, env, liveSiteMatch[1], liveSiteMatch[2]);
     }
     const extraPagesMatch = url.pathname.match(/^\/api\/extra-pages\/([A-Za-z0-9-]{1,64})(\/done)?$/);
     if (extraPagesMatch && request.method === "GET") {
@@ -184,6 +200,17 @@ var worker_default = {
   }
 };
 
+// One slug serves the website at / and the Guest App at /app/. A slug with only an app opens the app from its root.
+async function serveSlug(request, env, slug, path) {
+  const app = /^app(?:\/(.*))?$/.exec(path || "");
+  if (app) return handleLiveApp(request, env, slug, app[1] || "");
+  if (!path && env.DB) {
+    const redirect = await appOnlyRedirect(request, env, slug);
+    if (redirect) return redirect;
+  }
+  return handleLiveSite(request, env, slug, path);
+}
+
 const mmWorkerWithBooking = {
   async fetch(request, env, ctx) {
     // <name>.menu-made.com: reserved names pass through to the existing site, every other name is a customer website.
@@ -191,14 +218,14 @@ const mmWorkerWithBooking = {
     if (host.action === "pass") return fetch(request);
     if (host.action === "site") {
       if (request.method !== "GET" && request.method !== "HEAD") return new Response("Method not allowed", { status: 405, headers: { Allow: "GET, HEAD" } });
-      return handleLiveSite(request, env, host.slug, host.path);
+      return serveSlug(request, env, host.slug, host.path);
     }
     if (host.action === "none") {
       // A customer's own domain (via Cloudflare for SaaS). Our own hostnames never reach the database here.
       const customSlug = await customHostSlug(env, new URL(request.url).hostname).catch(() => null);
       if (customSlug) {
         if (request.method !== "GET" && request.method !== "HEAD") return new Response("Method not allowed", { status: 405, headers: { Allow: "GET, HEAD" } });
-        return handleLiveSite(request, env, customSlug, new URL(request.url).pathname.replace(/^\/+/, ""));
+        return serveSlug(request, env, customSlug, new URL(request.url).pathname.replace(/^\/+/, ""));
       }
     }
     if (['/api/booking', '/api/inquiry'].includes(new URL(request.url).pathname)) {
@@ -226,6 +253,7 @@ const mmWorkerWithBooking = {
       await nudgeWaitingRenders(env).catch((error) => console.error("Renderer nudge failed:", error instanceof Error ? error.message : String(error)));
       await alertStaleRenders(env).catch((error) => console.error("Stale render check failed:", error instanceof Error ? error.message : String(error)));
       await advanceWebsiteTrialSelfTests(env, app).catch((error) => console.error("Website trial self-test failed:", error instanceof Error ? error.message : String(error)));
+      await advanceGuestAppSelfTests(env, app).catch((error) => console.error("Guest App self-test failed:", error instanceof Error ? error.message : String(error)));
       await advanceDomainSetupSelfTests(env).catch((error) => console.error("Domain setup self-test failed:", error instanceof Error ? error.message : String(error)));
       await runDomainWatch(env).catch((error) => console.error("Domain watch failed:", error instanceof Error ? error.message : String(error)));
       await runSiteHealthPass(env).catch((error) => console.error("Site health pass failed:", error instanceof Error ? error.message : String(error)));

@@ -27,10 +27,15 @@ const specKey = (id) => `render-jobs/social/${id}/spec.json`;
 
 // ---------- Queue (called from the PRODUCE step) ----------
 
-// files: [{ name, svg, width, height }]; extra: [{ name, text }]; finish: what the result handler needs later.
-async function queueSocialRender(env, targetStep, { files, extra, finish }) {
+// Workflows whose PRODUCE step can wait for the renderer. Guest App setups use it for their home-screen icons.
+const RENDER_WORKFLOWS = ["SOCIAL_POSTS_V1", "GUEST_APP_SETUP_V1"];
+const RENDER_IN = `wr.workflow_key IN (${RENDER_WORKFLOWS.map((k) => `'${k}'`).join(", ")})`;
+
+// files: [{ name, svg, width, height, min_bytes? }]; extra: [{ name, text }]; assets: { logo: data URI } substituted
+// for __LOGO_DATA_URI__ in the SVGs by the renderer; finish: what the result handler needs later (finish.kind picks it).
+async function queueRender(env, targetStep, { kind = "SOCIAL", files, extra = [], assets = {}, finish }) {
   const id = targetStep.workflow_step_id;
-  await env.ASSETS.put(specKey(id), JSON.stringify({ version: 1, id, zip_name: finish.pack_filename, files, extra }), {
+  await env.ASSETS.put(specKey(id), JSON.stringify({ version: 1, id, kind, zip_name: finish.pack_filename, files, extra, assets }), {
     httpMetadata: { contentType: "application/json" }
   });
   const output = { waiting_for: "RENDER", render_job: id, requested_at: nowIso(), finish };
@@ -44,6 +49,7 @@ async function queueSocialRender(env, targetStep, { files, extra, finish }) {
     response: jsonResponse({ ok: true, processed: true, status: "WAITING", waiting_for: "RENDER", workflow_run_id: targetStep.workflow_run_id, step_key: targetStep.step_key }, 202)
   };
 }
+const queueSocialRender = (env, targetStep, job) => queueRender(env, targetStep, { ...job, kind: "SOCIAL" });
 
 // ---------- Starting the renderer ----------
 
@@ -83,7 +89,7 @@ async function nudgeWaitingRenders(env, now = Date.now()) {
   const lastNudge = new Date(now - NUDGE_EVERY_MINUTES * 60000).toISOString();
   const jobs = (await env.DB.prepare(`
       SELECT ws.id FROM workflow_steps ws JOIN workflow_runs wr ON wr.id = ws.workflow_run_id
-      WHERE ws.status = 'WAITING' AND ws.step_key = 'PRODUCE' AND wr.workflow_key = 'SOCIAL_POSTS_V1'
+      WHERE ws.status = 'WAITING' AND ws.step_key = 'PRODUCE' AND ${RENDER_IN}
         AND json_extract(ws.output_json, '$.waiting_for') = 'RENDER'
         AND json_extract(ws.output_json, '$.requested_at') < ?
         AND COALESCE(json_extract(ws.output_json, '$.dispatched_at'), '') < ?
@@ -177,7 +183,7 @@ function checkPack(entries, spec) {
     const size = pngSize(data);
     if (!size) return `${file.name} is not a PNG`;
     if (size.width !== file.width || size.height !== file.height) return `${file.name} is ${size.width}x${size.height}, expected ${file.width}x${file.height}`;
-    if (data.length < 2000) return `${file.name} is suspiciously small (${data.length} bytes)`;
+    if (data.length < (file.min_bytes ?? 2000)) return `${file.name} is suspiciously small (${data.length} bytes)`;
   }
   for (const file of spec.extra || []) if (!byName.has(file.name)) return `${file.name} is missing`;
   if (entries.length !== spec.files.length + (spec.extra || []).length) return `the ZIP holds ${entries.length} files, expected ${spec.files.length + (spec.extra || []).length}`;
@@ -190,7 +196,7 @@ async function waitingStep(env, id) {
   return env.DB.prepare(`
       SELECT ws.id, ws.workflow_run_id, ws.step_key, ws.step_order, ws.output_json, wr.project_id, wr.workflow_key, wr.workflow_version
       FROM workflow_steps ws JOIN workflow_runs wr ON wr.id = ws.workflow_run_id
-      WHERE ws.id = ? AND ws.status = 'WAITING' AND ws.step_key = 'PRODUCE' AND wr.workflow_key = 'SOCIAL_POSTS_V1'
+      WHERE ws.id = ? AND ws.status = 'WAITING' AND ws.step_key = 'PRODUCE' AND ${RENDER_IN}
     `).bind(id).first();
 }
 
@@ -201,7 +207,7 @@ async function handleRenderJobs(request, env, jobId) {
   if (jobId === "next") {
     const next = await env.DB.prepare(`
         SELECT ws.id FROM workflow_steps ws JOIN workflow_runs wr ON wr.id = ws.workflow_run_id
-        WHERE ws.status = 'WAITING' AND ws.step_key = 'PRODUCE' AND wr.workflow_key = 'SOCIAL_POSTS_V1'
+        WHERE ws.status = 'WAITING' AND ws.step_key = 'PRODUCE' AND ${RENDER_IN}
           AND json_extract(ws.output_json, '$.waiting_for') = 'RENDER'
         ORDER BY json_extract(ws.output_json, '$.requested_at') LIMIT 1
       `).first();
@@ -234,10 +240,23 @@ async function handleRenderJobs(request, env, jobId) {
   const claimed = await env.DB.prepare(`UPDATE workflow_steps SET status = 'RUNNING', started_at = ? WHERE id = ? AND status = 'WAITING'`)
     .bind(nowIso(), jobId).run();
   if (Number(claimed.meta?.changes || 0) === 0) return jsonResponse({ ok: false, error: "This render job was already finished" }, 409);
-  const pack = await storeDeliverable(env, context, {
-    type: "SOCIAL_PACK", filename: finish.pack_filename, mime: "application/zip", bytes, folder: "social-pack", metadata: { social: finish.care }
-  });
-  const output = { ...finish.output, png_files: specJson.files.length, pack_deliverable: pack.deliverableId, version: pack.version, rendered_by: "github-actions" };
+  let output;
+  if (finish.kind === "GUEST_APP") {
+    try {
+      const { finishGuestAppRender } = await import("../guest-app/app-step.js");
+      output = await finishGuestAppRender(env, context, listZip(bytes), finish);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      await env.DB.prepare(`UPDATE workflow_steps SET status = 'FAILED', error_message = ?, completed_at = ? WHERE id = ?`).bind(message.slice(0, 500), nowIso(), jobId).run();
+      await env.DB.prepare(`UPDATE workflow_runs SET status = 'FAILED', error_code = 'RENDER_FINISH_FAILED', error_message = ? WHERE id = ?`).bind(message.slice(0, 500), step.workflow_run_id).run();
+      return jsonResponse({ ok: false, error: "The finished files could not be used" }, 422);
+    }
+  } else {
+    const pack = await storeDeliverable(env, context, {
+      type: "SOCIAL_PACK", filename: finish.pack_filename, mime: "application/zip", bytes, folder: "social-pack", metadata: { social: finish.care }
+    });
+    output = { ...finish.output, png_files: specJson.files.length, pack_deliverable: pack.deliverableId, version: pack.version, rendered_by: "github-actions" };
+  }
   await completeStep({
     workflow_step_id: step.id, workflow_run_id: step.workflow_run_id, project_id: step.project_id, step_key: step.step_key,
     workflow_key: step.workflow_key, workflow_version: step.workflow_version
@@ -258,7 +277,7 @@ async function alertStaleRenders(env, now = Date.now()) {
   const cutoff = new Date(now - STALE_RENDER_MINUTES * 60000).toISOString();
   const stale = (await env.DB.prepare(`
       SELECT ws.id, wr.project_id FROM workflow_steps ws JOIN workflow_runs wr ON wr.id = ws.workflow_run_id
-      WHERE ws.status = 'WAITING' AND ws.step_key = 'PRODUCE' AND wr.workflow_key = 'SOCIAL_POSTS_V1'
+      WHERE ws.status = 'WAITING' AND ws.step_key = 'PRODUCE' AND ${RENDER_IN}
         AND json_extract(ws.output_json, '$.waiting_for') = 'RENDER'
         AND json_extract(ws.output_json, '$.requested_at') < ?
         AND json_extract(ws.output_json, '$.stale_alerted_at') IS NULL
@@ -273,12 +292,12 @@ async function alertStaleRenders(env, now = Date.now()) {
         eyebrow: "AUTOMATION ALERT",
         heading: "Graphics have waited over an hour",
         paragraphs: [
-          "A month of social posts is planned, but GitHub has not drawn the graphics yet, so nothing has gone to you for approval.",
+          "Social Posts graphics or Guest App icons are waiting, but GitHub has not drawn them yet, so nothing has gone to you for approval.",
           "Open the JPBattaglia/MENU repository on GitHub, go to Actions, choose \"Render social posts\" and click \"Run workflow\". If the workflow shows as disabled, enable it first."
         ],
         rows: [["Render job", job.id]]
       }),
-      text: `A month of social posts has waited over an hour for its graphics.\nOpen JPBattaglia/MENU on GitHub > Actions > "Render social posts" > Run workflow (enable it first if disabled).\nRender job: ${job.id}`,
+      text: `Graphics (Social Posts or Guest App icons) have waited over an hour to be drawn.\nOpen JPBattaglia/MENU on GitHub > Actions > "Render social posts" > Run workflow (enable it first if disabled).\nRender job: ${job.id}`,
       idempotencyKey: `render-stale/${job.id}`,
       purpose: "AUTOMATION_ALERT",
       templateKey: "render_stale_v1"
@@ -290,4 +309,4 @@ async function alertStaleRenders(env, now = Date.now()) {
   return stale.map((job) => job.id);
 }
 
-export { NUDGE_AFTER_MINUTES, nudgeWaitingRenders, startRenderer, OIDC_AUDIENCE, RENDER_WORKFLOW, STALE_RENDER_MINUTES, alertStaleRenders, checkPack, handleRenderJobs, listZip, pngSize, queueSocialRender, verifyRenderer };
+export { NUDGE_AFTER_MINUTES, nudgeWaitingRenders, startRenderer, OIDC_AUDIENCE, RENDER_WORKFLOW, STALE_RENDER_MINUTES, alertStaleRenders, checkPack, handleRenderJobs, listZip, pngSize, queueRender, queueSocialRender, RENDER_WORKFLOWS, verifyRenderer };

@@ -5,6 +5,7 @@ import { runWebsiteCareProduceStep } from "./website-care/care-step.js";
 import { runWebsiteProduceStep } from "./website/site-step.js";
 import { runMenuCareProduceStep } from "./menu-care/care-step.js";
 import { runSocialPostsProduceStep } from "./social-posts/social-step.js";
+import { runGuestAppMonthStep, runGuestAppSetupStep } from "./guest-app/app-step.js";
 
 const PRODUCERS = {
   MENU_CARE_V1: runMenuCareProduceStep,
@@ -12,7 +13,9 @@ const PRODUCERS = {
   ACCESSIBILITY_MONITORING_V1: runAccessibilityProduceStep,
   CONVERSION_FIX_V1: runConversionProduceStep,
   WEBSITE_PACKAGE_V1: runWebsiteProduceStep,
-  WEBSITE_CARE_V1: runWebsiteCareProduceStep
+  WEBSITE_CARE_V1: runWebsiteCareProduceStep,
+  GUEST_APP_SETUP_V1: runGuestAppSetupStep,
+  GUEST_APP_V1: runGuestAppMonthStep
 };
 
 async function runProduceStep(targetStep, env, deps = {}) {

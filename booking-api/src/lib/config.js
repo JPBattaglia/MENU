@@ -25,7 +25,8 @@ var DELIVERABLE_LABELS = {
   SITE_BUILD: "Website (generated pages)",
   CONVERSION_REPORT: "Conversion Fix report (web page)",
   CONVERSION_CHECKLIST: "Conversion Fix checklist (text)",
-  SOCIAL_PACK: "Graphics pack (ZIP of PNG graphics and captions)"
+  SOCIAL_PACK: "Graphics pack (ZIP of PNG graphics and captions)",
+  APP_BUILD: "Guest App (installable web app)"
 };
 
 function ownerEmailAddress(env) {
