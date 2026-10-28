@@ -265,7 +265,8 @@ test('the self-test drives a synthetic order through intake, AI, preview, approv
       const good = { tagline: 'Fresh bread and soup daily', intro: 'Website Self-Test Cafe is a small family cafe that bakes bread every morning and serves soup and sandwiches at lunch.', about: ['Website Self-Test Cafe is a small family cafe. We bake bread every morning and serve soup and sandwiches at lunch for our neighbours.'], meta_description: 'Website Self-Test Cafe bakes bread every morning and serves soup and sandwiches at lunch in Austin.', meta_about: 'About Website Self-Test Cafe, a small family cafe that bakes bread every morning.' };
       const bad = { ...good, tagline: 'The best cafe in the world!' };
       f.state.outputs.push(...(broken ? [bad, bad] : [good]));
-      f.sql(`INSERT INTO self_tests (id, kind, status, requested_by, created_at, updated_at) VALUES ('77778888-0000-4000-8000-000000000001', 'WEBSITE_PACKAGE_RUN', 'REQUESTED', 'test', '2026-10-27T00:00:00.000Z', '2026-10-27T00:00:00.000Z')`);
+      f.sql(`INSERT INTO self_tests (id, kind, status, requested_by, created_at, updated_at) VALUES (?, 'WEBSITE_PACKAGE_RUN', 'REQUESTED', 'test', '2026-10-27T00:00:00.000Z', '2026-10-27T00:00:00.000Z')`,
+        broken ? '77778888-0000-4000-8000-000000000001' : 'wpkg-st-1'); // a hand-named id, as on Oct 27
       const app = (request) => api.default.fetch(request, f.env, f.ctx);
       for (let tick = 0; tick < 5; tick++) { await advanceWebsiteSelfTests(f.env, app); await api.runScheduledProduction(f.env); await Promise.all(f.pending); }
       await advanceWebsiteSelfTests(f.env, app);

@@ -31,7 +31,8 @@ async function maybeScheduleDaily(env, now = new Date()) {
 
 async function stageStart(env, app, test) {
   const t = nowIso();
-  const short = test.id.slice(0, 8);
+  // Letters and digits only: a hand-named id like "wpkg-st-1" once made the invalid address "selftest-wpkg-st-".
+  const short = String(test.id).toLowerCase().replace(/[^a-z0-9]/g, "").slice(0, 8) || "x";
   const offer = await env.DB.prepare(`SELECT o.id AS offer_id, v.id AS version_id FROM offers o JOIN offer_versions v ON v.offer_id = o.id WHERE o.code = 'WEBSITE_PACKAGE' AND v.status = 'ACTIVE' ORDER BY v.version_number LIMIT 1`).first();
   if (!offer) throw new Error("The Website Package offer is not in the catalog");
   let customer = await env.DB.prepare(`SELECT id FROM customers WHERE email = ? LIMIT 1`).bind(SELF_TEST_EMAIL).first();
@@ -61,7 +62,12 @@ async function stageStart(env, app, test) {
   form.append("logo", new File([PNG], "logo.png", { type: "image/png" }));
   form.append("photos", new File([PNG], "bread.png", { type: "image/png" }));
   const posted = await app(new Request(`${publicBaseUrl(env)}/api/site-intake/${projectId}`, { method: "POST", body: form }));
-  if (posted.status !== 200) throw new Error(`The intake form was not accepted (HTTP ${posted.status}): ${(await posted.text()).replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").slice(0, 200)}`);
+  if (posted.status !== 200) {
+    // The form re-renders with its error in <strong>; report that, not the page's CSS.
+    const page = await posted.text();
+    const reason = /<strong>([^<]+)<\/strong>/.exec(page)?.[1] || page.replace(/<style[\s\S]*?<\/style>/gi, " ").replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim();
+    throw new Error(`The intake form was not accepted (HTTP ${posted.status}): ${reason.slice(0, 200)}`);
+  }
   return updateTest(env, test, { status: "RUNNING", stage: "AWAIT_OWNER_REQUEST", project_id: projectId, order_id: orderId, state: { projectId, slug: answers.subdomain }, log: "Synthetic Website Package order started; intake form submitted with a logo and a photo" });
 }
 
