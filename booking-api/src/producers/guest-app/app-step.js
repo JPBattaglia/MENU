@@ -83,7 +83,9 @@ async function runGuestAppSetupStep(targetStep, env) {
   const app = parseJsonOrNull(row?.data_json);
   if (!row || !app?.app_name || !app.menu || !app.phone || !app.address || !app.hours) return blocked("the app details are incomplete", ["The intake form is missing required answers."]);
 
-  const logo = await env.DB.prepare(`SELECT storage_key, mime_type FROM assets WHERE project_id = ? AND status = 'VALID' AND json_extract(metadata_json, '$.app_image') = 'logo' ORDER BY uploaded_at DESC LIMIT 1`).bind(context.id).first();
+  // The logo uploaded on the app form, else the business's website logo (PNG or JPG only: the renderer can't draw WebP).
+  const logo = await env.DB.prepare(`SELECT storage_key, mime_type FROM assets WHERE project_id = ? AND status = 'VALID' AND json_extract(metadata_json, '$.app_image') = 'logo' ORDER BY uploaded_at DESC LIMIT 1`).bind(context.id).first()
+    || await env.DB.prepare(`SELECT storage_key, mime_type FROM assets WHERE business_id = ? AND status = 'VALID' AND json_extract(metadata_json, '$.site_image') = 'logo' AND mime_type IN ('image/png', 'image/jpeg') ORDER BY uploaded_at DESC LIMIT 1`).bind(context.business_id).first();
   const logoObject = logo ? await env.ASSETS.get(logo.storage_key) : null;
   const hasLogo = Boolean(logoObject);
   const version = String(targetStep.workflow_step_id || crypto.randomUUID()).slice(0, 8);

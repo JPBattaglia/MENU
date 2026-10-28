@@ -117,7 +117,7 @@ test('intake: signed link, full validation, PNG/JPG logo only, and the address i
     assert.equal((await startGuestAppIntake(f.env, { projectId: PID })).started, true);
     const [link] = linksIn(f.emails[0].text, '/api/app-intake/');
     const form = await (await call(f, link)).text();
-    assert.ok(!/value="[^"]+"/.test(form.replace(/name="t" value="[^"]+"/, '')), 'the form always starts empty');
+    assert.match(form, /value="Joe&#0?39;s Pizza"/, 'the business name is pre-filled'); assert.match(form, /check every answer/);
     assert.equal((await call(f, link.replace(/t=.*/, 't=forged.token'))).status, 403);
     for (const [over, pattern] of [[{ phone: '12' }, /Phone number/], [{ order_url: 'http://x.test/' }, /https/], [{ menu: '' }, /required/], [{ subdomain: 'api' }, /reserved/]]) {
       const bad = await submit(f, over); assert.equal(bad.status, 400); assert.match(await bad.text(), pattern);
@@ -247,5 +247,28 @@ test('the GUEST_APP_RUN self-test drives a synthetic order through intake, the r
     assert.equal(done.status, 'PASSED', done.error || '');
     assert.match(done.log_json, /Install it on a phone from .*appselftest-gst1\/app\//);
     assert.ok(!f.emails.some((m) => /self-test failed/.test(m.subject)));
+  });
+});
+
+test('the app form is pre-filled from the business website order, and the website logo is used when none is uploaded', async () => {
+  const f = setup({ website: true });
+  const t = '2026-10-01T00:00:00.000Z';
+  f.sql(`INSERT INTO projects (id, order_id, order_item_id, business_id, customer_id, project_type, status, workflow_key, workflow_version, created_at, updated_at) VALUES ('wp', 'o1', 'i1', 'biz', 'cust', 'WEBSITE', 'DELIVERED', 'WEBSITE_PACKAGE_V1', 1, ?, ?)`, t, t);
+  for (const [k, v] of [['offerings', '# Pizza\nMarinara | Garlic | $12'], ['phone', '(512) 555-0199'], ['address', '9 Elm Street, Austin, TX'], ['hours', 'Daily: 11am-10pm'], ['brand_color', '#224466']]) {
+    f.sql(`INSERT INTO project_inputs (id, project_id, input_key, input_type, required, status, value_text, created_at, updated_at) VALUES (?, 'wp', ?, 'TEXT', 1, 'VALID', ?, ?, ?)`, `pi-${k}`, k, v, t, t);
+  }
+  f.sql(`INSERT INTO assets (id, business_id, customer_id, project_id, asset_type, storage_provider, storage_key, original_filename, mime_type, size_bytes, checksum, status, uploaded_at, metadata_json) VALUES ('site-logo', 'biz', 'cust', 'wp', 'LOGO', 'R2', 'site/logo.png', 'logo.png', 'image/png', 70, 'x', 'VALID', ?, '{"site_image":"logo"}')`, t);
+  await f.ASSETS.put('site/logo.png', PNG);
+  await withFetch(f.fetch, async () => {
+    await startGuestAppIntake(f.env, { projectId: PID });
+    const [link] = linksIn(f.emails[0].text, '/api/app-intake/');
+    const form = await (await call(f, link)).text();
+    for (const text of ['Marinara | Garlic | $12', '(512) 555-0199', '9 Elm Street, Austin, TX', 'Daily: 11am-10pm', '#224466']) assert.ok(form.includes(text.replace(/&/g, '&amp;')), text);
+    await submit(f, { menu: '# Pizza\nMarinara | Garlic | $12', phone: '(512) 555-0199', address: '9 Elm Street, Austin, TX', hours: 'Daily: 11am-10pm' }, null);
+    await api.runScheduledProduction(f.env); await Promise.all(f.pending);
+    const auth = await renderAuth(f);
+    const { job } = await (await call(f, 'https://menu-made.com/api/render-jobs/next', { headers: auth })).json();
+    const spec = await (await renderJobs.handleRenderJobs(new Request(`https://menu-made.com/api/render-jobs/${job}`, { headers: auth }), f.env, job)).json();
+    assert.match(spec.assets.logo, /^data:image\/png;base64,/, 'the website logo is drawn into the icons');
   });
 });
