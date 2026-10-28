@@ -3,7 +3,8 @@
 // description, website, menu link and photo checks are made to look empty so every kind of change is planned. Real: the
 // Google token and reads, the shared AI step writing the description, the owner approval email and approve page, and the
 // buyer's report email. Writes: the description and website go to the real profile with validateOnly (Google checks
-// them and changes nothing); the menu link and the photo go to a location id that does not exist (Google refuses).
+// them and changes nothing); the menu link and the photo go to a location id that does not exist (Google refuses:
+// 403 for the Business Information attribute call, 400 for the v4 photo call, as seen live Oct 28, 2026).
 // Start one by inserting a self_tests row, kind GOOGLE_VISIBILITY_RUN, status REQUESTED. Only a failure emails the owner.
 import { ownerEmailAddress, publicBaseUrl } from "../lib/config.js";
 import { SELF_TEST_EMAIL, brandedEmailHtml, sendTransactionalEmail } from "../lib/email.js";
