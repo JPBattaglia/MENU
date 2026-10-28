@@ -27,7 +27,9 @@ const PHOTOS_PER_MONTH = 3;
 const SELFTEST_LOCATION = "locations/menu-made-selftest";
 const e = escapeHtml;
 
-const isMonthlyRun = (meta) => meta.source === "SUBSCRIPTION_PERIOD" || isSelfTestProject(meta);
+// Week 1 of a month (the period job) adds photos and the report. A self-test project is week 1 unless it says otherwise
+// (the stage 5 exit test runs weeks 2-4 as self-test projects with selftest_week set).
+const isMonthlyRun = (meta) => meta.source === "SUBSCRIPTION_PERIOD" || (isSelfTestProject(meta) && !(Number(meta.selftest_week) > 1));
 
 async function hasReviewRepliesPlan(env, subscriptionId) {
   return Boolean(await env.DB.prepare(`SELECT 1 FROM entitlements WHERE subscription_id = ? AND entitlement_type = 'REVIEW_REPLIES' AND status = 'ACTIVE'`).bind(subscriptionId).first());
