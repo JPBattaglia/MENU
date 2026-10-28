@@ -285,9 +285,26 @@ async function diagnose(env, test) {
   return `run ${run.status}${run.error_code ? ` (${run.error_code}: ${run.error_message || ""})` : ""}; steps ${steps.map((s) => `${s.step_key}=${s.status}`).join(", ")}`;
 }
 
+// A failed test order must not keep producing (AI calls, owner approval emails) after the test gives up.
+async function cancelTestOrder(env, test) {
+  if (!test.order_id) return;
+  const t = nowIso();
+  const projects = `SELECT id FROM projects WHERE order_id = ? AND status NOT IN ('DELIVERED', 'COMPLETED')`;
+  await env.DB.batch([
+    env.DB.prepare(`UPDATE workflow_steps SET status = 'CANCELLED', completed_at = ? WHERE status IN ('QUEUED', 'WAITING')
+      AND workflow_run_id IN (SELECT id FROM workflow_runs WHERE project_id IN (${projects}))`).bind(t, test.order_id),
+    env.DB.prepare(`UPDATE workflow_runs SET status = 'CANCELLED', completed_at = ? WHERE status IN ('QUEUED', 'WAITING')
+      AND project_id IN (${projects})`).bind(t, test.order_id),
+    env.DB.prepare(`UPDATE approvals SET status = 'CANCELLED' WHERE status = 'PENDING' AND project_id IN (${projects})`).bind(test.order_id),
+    env.DB.prepare(`UPDATE projects SET status = 'CANCELLED', updated_at = ? WHERE id IN (${projects})`).bind(t, test.order_id),
+    env.DB.prepare(`UPDATE orders SET status = 'CANCELLED', updated_at = ? WHERE id = ? AND status NOT IN ('DELIVERED', 'COMPLETED')`).bind(t, test.order_id)
+  ]);
+}
+
 async function failTest(env, test, message) {
   const detail = await diagnose(env, test).catch(() => "");
   const failed = await updateTest(env, test, { status: "FAILED", error: `${message}${detail ? ` | ${detail}` : ""}`.slice(0, 1000), log: `FAILED: ${message}` });
+  await cancelTestOrder(env, failed).catch((error) => console.error("Self-test order cleanup failed:", error?.message || error));
   await sendTransactionalEmail(env, {
     to: ownerEmailAddress(env),
     subject: "Menu + QR self-test failed",

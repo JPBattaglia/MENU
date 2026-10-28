@@ -79,4 +79,7 @@ test('the Menu + QR self-test waits for the webhook to attach the menu, and fail
   const failed = f.row(`SELECT status, error FROM self_tests WHERE id = 'st'`);
   assert.equal(failed.status, 'FAILED');
   assert.match(failed.error, /menu uploaded at checkout was not attached/);
+  // The abandoned test order is cancelled so it never reaches production or the owner.
+  assert.equal(f.row(`SELECT status FROM projects WHERE id = 'proj'`).status, 'CANCELLED');
+  assert.equal(f.row(`SELECT status FROM orders WHERE id = 'order'`).status, 'CANCELLED');
 });
