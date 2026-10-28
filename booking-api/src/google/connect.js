@@ -1,12 +1,11 @@
 // Stage 5: the customer connects their Google Business Profile.
 //   GET  /api/google/connect/<subscriptionId>?t=<token>   explainer page with a "Connect Google" button
-//   GET  /api/google/connect/owner                        owner's own profile (admin token form, POST redirects)
+//   GET  /api/google/connect/owner                        owner's own profile (POST emails a one-hour link to the owner inbox)
 //   GET  /api/google/callback?code&state                   Google returns here; stores the encrypted grant
 //   POST /api/google/location/<connectionId>               the customer picks one profile when the account has several
 // The signed link (kind "gconnect") is the customer's only credential; the OAuth state is signed separately.
-import { constantTimeEqual } from "../admin/queue.js";
-import { publicBaseUrl } from "../lib/config.js";
-import { escapeHtml } from "../lib/email.js";
+import { ownerEmailAddress, publicBaseUrl } from "../lib/config.js";
+import { brandedEmailHtml, escapeHtml, sendTransactionalEmail } from "../lib/email.js";
 import { nowIso, parseJsonOrNull, simplePage } from "../lib/http.js";
 import { signLinkToken, verifyLinkToken } from "../lib/links.js";
 import { PRODUCING } from "../subscriptions/sync.js";
@@ -38,17 +37,7 @@ async function subscriptionFor(env, subscriptionId) {
 async function handleGoogleConnect(request, env, subscriptionId) {
   if (!env.DB) return simplePage(503, "Temporarily unavailable", "<p>Please try again in a minute.</p>");
   if (!googleConfig(env)) return unavailable();
-  if (subscriptionId === OWNER) {
-    if (!env.ADMIN_API_TOKEN) return simplePage(503, "Not set up", "<p>ADMIN_API_TOKEN is missing on the worker.</p>");
-    if (request.method === "GET") {
-      return simplePage(200, "Connect the Menu-Made profile", `<p>This connects your own Google Business Profile, which the daily Google check uses.</p>
-<form method="post" action="/api/google/connect/owner"><label for="token">Admin token</label><br><input id="token" name="token" type="password" autocomplete="current-password" required style="width:100%;margin:8px 0"><br><button type="submit">Continue to Google</button></form>`);
-    }
-    let supplied = "";
-    try { supplied = String((await request.formData()).get("token") || "").trim(); } catch { supplied = ""; }
-    if (!supplied || !constantTimeEqual(supplied, env.ADMIN_API_TOKEN)) return simplePage(401, "Not authorized", "<p>That admin token isn't right.</p>");
-    return redirect(await buildAuthUrl(env, OWNER));
-  }
+  if (subscriptionId === OWNER) return handleOwnerConnect(request, env);
   const token = new URL(request.url).searchParams.get("t") || "";
   const payload = await verifyLinkToken(env, token, [CONNECT_KIND], subscriptionId);
   if (!payload || payload.expired) return expired();
@@ -61,6 +50,40 @@ async function handleGoogleConnect(request, env, subscriptionId) {
 <p>We reply to your reviews and post updates on your Google profile, so we need permission to manage it. Sign in with the Google account that manages your business listing.</p>
 <p><a class="btn" href="${escapeHtml(await buildAuthUrl(env, subscriptionId))}">Connect Google</a></p>
 <p style="font-size:13px">You can remove access at any time in your Google Account under Security, Third-party connections.</p>`);
+}
+
+// The owner's own profile: no token to remember. The page emails a one-hour signed link to the owner inbox
+// (OWNER_EMAIL, else info@menu-made.com); opening that link goes straight to Google.
+const OWNER_LINK_TTL_DAYS = 1 / 24;
+
+async function handleOwnerConnect(request, env) {
+  const url = new URL(request.url);
+  const token = url.searchParams.get("t");
+  if (request.method === "GET" && token) {
+    const payload = await verifyLinkToken(env, token, [CONNECT_KIND], OWNER);
+    if (!payload || payload.expired) return simplePage(403, "This link has expired", `<p>Open <a href="/api/google/connect/owner">the connect page</a> again to get a fresh one.</p>`);
+    return redirect(await buildAuthUrl(env, OWNER));
+  }
+  const inbox = ownerEmailAddress(env);
+  if (request.method === "GET") {
+    return simplePage(200, "Connect the Menu-Made profile", `<p>This connects your own Google Business Profile, which the daily Google check uses.</p>
+<p>We'll email a sign-in link to <strong>${escapeHtml(inbox)}</strong>. It works for one hour.</p>
+<form method="post" action="/api/google/connect/owner"><button type="submit">Email me the link</button></form>`);
+  }
+  const link = `${publicBaseUrl(env)}/api/google/connect/owner?t=${encodeURIComponent(await signLinkToken(env, { kind: CONNECT_KIND, id: OWNER, ttlDays: OWNER_LINK_TTL_DAYS }))}`;
+  const bucket = Math.floor(Date.now() / 600000); // at most one email per 10 minutes, whoever presses the button
+  const sent = await sendTransactionalEmail(env, {
+    to: inbox,
+    subject: "Connect the Menu-Made Google profile",
+    html: brandedEmailHtml({ preheader: "One-hour link to connect your Google Business Profile.", eyebrow: "GOOGLE", heading: "Connect your Google profile",
+      paragraphs: ["Open this link and sign in with the Google account that manages the Menu-Made Business Profile. It works for one hour.",
+        "If you didn't ask for this, ignore it; nothing changes until someone signs in with Google."],
+      buttons: [{ label: "Connect Google", url: link, primary: true }] }),
+    text: `Connect the Menu-Made Google profile (link works for one hour):\n${link}`,
+    idempotencyKey: `google-owner-link/${bucket}`, purpose: "OWNER_ACTION", templateKey: "google_owner_link_v1"
+  }).catch((error) => ({ ok: false, error }));
+  if (!sent?.ok) return simplePage(502, "The email didn't send", "<p>Please try again in a minute.</p>");
+  return simplePage(200, "Check your email", `<p>We sent the link to <strong>${escapeHtml(inbox)}</strong>. If you pressed the button a moment ago, the earlier email is the one to use.</p>`);
 }
 
 async function saveConnection(env, subscription, fields) {
