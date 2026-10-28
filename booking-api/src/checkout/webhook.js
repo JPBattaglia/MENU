@@ -423,11 +423,10 @@ async function handleCheckoutCompleted(event, env) {
           `).bind(
         item.order_item_id
       ).first();
-      if (existingProject) {
-        continue;
-      }
-      const projectId = crypto.randomUUID();
-      await env.DB.prepare(`
+      // A retried event must finish what an earlier, interrupted attempt started (e.g. the D1 daily
+      // limit hit between the project insert and its inputs), so an existing project is not skipped.
+      const projectId = existingProject?.id || crypto.randomUUID();
+      if (!existingProject) await env.DB.prepare(`
           INSERT INTO projects (
             id,
             order_id,
@@ -470,6 +469,7 @@ async function handleCheckoutCompleted(event, env) {
         timestamp
       ).run();
       if (item.default_workflow_key === "MENU_QR_V1") {
+        // INSERT OR IGNORE per input: creates only the rows a previous attempt did not.
         await createMenuQrInputs(
           projectId,
           order,
@@ -508,7 +508,9 @@ async function handleCheckoutCompleted(event, env) {
       }
       await refreshOnboardingState(menuProject.id, orderId, order.customer_id, "MENU_QR_V1", env);
     } catch (attachError) {
+      // Fail the event so Stripe retries it; the retry is safe (see the project loop above).
       console.error("Checkout menu attachment failed:", attachError instanceof Error ? attachError.message : String(attachError));
+      throw attachError;
     }
   }
   const conversionProjects = await env.DB.prepare(`
