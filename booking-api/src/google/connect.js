@@ -152,6 +152,7 @@ async function handleGoogleCallback(request, env, deps = {}) {
     const [p] = profiles;
     const connection = await saveConnection(env, subscription, { ...base, status: "ACTIVE", account: p.account, location: p.location, title: p.title });
     await recordEvent(env, connection, "GOOGLE_CONNECTED", { subscription_id: subscription.id, location: p.location });
+    await releaseGoogleWaits(env, subscription.id).catch(() => 0);
     return connectedPage(p.title);
   }
   const connection = await saveConnection(env, subscription, { ...base, status: "PENDING_LOCATION", candidates: profiles.slice(0, 50) });
@@ -173,11 +174,29 @@ async function handleGoogleLocation(request, env, connectionId) {
   await env.DB.prepare(`UPDATE google_connections SET status = 'ACTIVE', account_name = ?, location_name = ?, location_title = ?, candidates_json = NULL, updated_at = ? WHERE id = ?`)
     .bind(pick.account, pick.location, pick.title, nowIso(), connectionId).run();
   await recordEvent(env, connection, "GOOGLE_CONNECTED", { subscription_id: connection.subscription_id, location: pick.location });
+  await releaseGoogleWaits(env, connection.subscription_id).catch(() => 0);
   return connectedPage(pick.title);
+}
+
+// A producer step parked because the customer had not connected Google (or had to reconnect) continues on the next
+// runner tick once the connection is ACTIVE again.
+async function releaseGoogleWaits(env, subscriptionId) {
+  const waiting = (await env.DB.prepare(`
+      SELECT ws.id AS step_id, wr.id AS run_id FROM workflow_steps ws
+      JOIN workflow_runs wr ON wr.id = ws.workflow_run_id
+      JOIN projects p ON p.id = wr.project_id
+      WHERE ws.status = 'WAITING' AND json_extract(ws.output_json, '$.waiting_for') = 'GOOGLE_CONNECTION'
+        AND (json_extract(p.metadata_json, '$.subscription_id') = ? OR json_extract(p.metadata_json, '$.google_subscription_id') = ?)
+    `).bind(subscriptionId, subscriptionId).all()).results || [];
+  for (const row of waiting) {
+    await env.DB.prepare(`UPDATE workflow_steps SET status = 'QUEUED', error_message = NULL WHERE id = ? AND status = 'WAITING'`).bind(row.step_id).run();
+    await env.DB.prepare(`UPDATE workflow_runs SET status = 'QUEUED', error_code = NULL, error_message = NULL WHERE id = ? AND status = 'WAITING'`).bind(row.run_id).run();
+  }
+  return waiting.length;
 }
 
 async function activeConnection(env, subscriptionId) {
   return env.DB.prepare(`SELECT * FROM google_connections WHERE subscription_id = ? AND status = 'ACTIVE'`).bind(subscriptionId).first();
 }
 
-export { OWNER, CONNECT_KIND, googleConnectUrl, handleGoogleConnect, handleGoogleCallback, handleGoogleLocation, activeConnection };
+export { OWNER, CONNECT_KIND, googleConnectUrl, handleGoogleConnect, handleGoogleCallback, handleGoogleLocation, activeConnection, releaseGoogleWaits };

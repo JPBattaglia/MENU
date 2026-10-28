@@ -5,6 +5,7 @@
 import { nowIso } from "../lib/http.js";
 import { createPeriodJobs, serviceMonthsDue } from "./periods.js";
 import { PRODUCING, subscriptionEnvironment, syncSubscription } from "./sync.js";
+import { createReviewWeekJobs } from "../producers/review-replies/weeks.js";
 
 const DAILY_MARKER = "SUBSCRIPTIONS_DAILY_PASS";
 const MIN_HOURS_BETWEEN = 20;
@@ -44,6 +45,12 @@ async function runDailySubscriptionPass(env, { now = new Date(), force = false }
     } catch (error) {
       summary.errors.push({ id: row.id, error: error instanceof Error ? error.message : String(error) });
     }
+  }
+  try {
+    // Review Replies is weekly: add this month's later weeks as their own jobs.
+    summary.review_weeks = (await createReviewWeekJobs(env, now)).created;
+  } catch (error) {
+    summary.errors.push({ id: "review-weeks", error: error instanceof Error ? error.message : String(error) });
   }
   await env.DB.prepare(`
       INSERT INTO business_events (id, created_at, event_type, entity_type, entity_id, actor_type, actor_id, correlation_id, payload_json)

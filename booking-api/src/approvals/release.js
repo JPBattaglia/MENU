@@ -248,5 +248,7 @@ export {
   loadStepContext,
   parkForOwnerApproval,
   latestOwnerApproval,
+  createOwnerApproval,
+  finishDelivery,
   runDeliverStep
 };
