@@ -6,6 +6,7 @@ import { nowIso } from "../lib/http.js";
 import { createPeriodJobs, serviceMonthsDue } from "./periods.js";
 import { PRODUCING, subscriptionEnvironment, syncSubscription } from "./sync.js";
 import { createReviewWeekJobs } from "../producers/review-replies/weeks.js";
+import { remindGoogleVisibilityConnects } from "../producers/google-visibility/intake.js";
 
 const DAILY_MARKER = "SUBSCRIPTIONS_DAILY_PASS";
 const MIN_HOURS_BETWEEN = 20;
@@ -51,6 +52,12 @@ async function runDailySubscriptionPass(env, { now = new Date(), force = false }
     summary.review_weeks = (await createReviewWeekJobs(env, now)).created;
   } catch (error) {
     summary.errors.push({ id: "review-weeks", error: error instanceof Error ? error.message : String(error) });
+  }
+  try {
+    // Google Visibility orders still waiting for the buyer to connect Google: reminders, then the owner.
+    summary.visibility_reminders = (await remindGoogleVisibilityConnects(env, now)).sent;
+  } catch (error) {
+    summary.errors.push({ id: "visibility-reminders", error: error instanceof Error ? error.message : String(error) });
   }
   await env.DB.prepare(`
       INSERT INTO business_events (id, created_at, event_type, entity_type, entity_id, actor_type, actor_id, correlation_id, payload_json)

@@ -98,10 +98,51 @@ async function createLocalPost(accessToken, locationPath, post, fetchImpl = fetc
   return googleWrite(accessToken, `${V4_BASE}/${locationPath}/localPosts`, "POST", post, fetchImpl);
 }
 
-// Adds a photo to the profile; Google downloads it from sourceUrl.
-async function createMedia(accessToken, locationPath, sourceUrl, fetchImpl = fetch) {
+// Adds a photo to the profile; Google downloads it from sourceUrl. category: ADDITIONAL, LOGO or COVER.
+async function createMedia(accessToken, locationPath, sourceUrl, fetchImpl = fetch, category = "ADDITIONAL") {
   return googleWrite(accessToken, `${V4_BASE}/${locationPath}/media`, "POST",
-    { mediaFormat: "PHOTO", locationAssociation: { category: "ADDITIONAL" }, sourceUrl }, fetchImpl);
+    { mediaFormat: "PHOTO", locationAssociation: { category }, sourceUrl }, fetchImpl);
+}
+
+// Everything Google Visibility audits on a profile (Business Information v1).
+const AUDIT_READ_MASK = "name,title,phoneNumbers,categories,storefrontAddress,websiteUri,regularHours,specialHours,serviceArea,profile,openInfo,metadata";
+async function getLocationForAudit(accessToken, locationName, fetchImpl = fetch) {
+  return googleGet(accessToken, `${INFO_BASE}/${locationName}?readMask=${AUDIT_READ_MASK}`, fetchImpl);
+}
+
+// Changes the named fields of a profile. validateOnly asks Google to check the request without changing anything.
+async function patchLocation(accessToken, locationName, location, updateMask, { validateOnly = false } = {}, fetchImpl = fetch) {
+  const url = `${INFO_BASE}/${locationName}?updateMask=${encodeURIComponent(updateMask)}${validateOnly ? "&validateOnly=true" : ""}`;
+  return googleWrite(accessToken, url, "PATCH", location, fetchImpl);
+}
+
+// The attributes set on a profile ({ attributes: [{ name: "attributes/url_menu", valueType, uriValues }] }).
+async function getAttributes(accessToken, locationName, fetchImpl = fetch) {
+  return googleGet(accessToken, `${INFO_BASE}/${locationName}/attributes`, fetchImpl);
+}
+
+// The attribute ids Google offers for this profile (its category and country), e.g. "attributes/url_menu".
+async function availableAttributes(accessToken, locationName, fetchImpl = fetch) {
+  const ids = new Set();
+  let pageToken = "";
+  for (let i = 0; i < MAX_PAGES; i += 1) {
+    const data = await googleGet(accessToken, `${INFO_BASE}/attributes?parent=${encodeURIComponent(locationName)}&pageSize=200${pageToken ? `&pageToken=${encodeURIComponent(pageToken)}` : ""}`, fetchImpl);
+    for (const meta of data.attributeMetadata || []) if (meta.parent && !meta.deprecated) ids.add(meta.parent);
+    pageToken = data.nextPageToken || "";
+    if (!pageToken) break;
+  }
+  return ids;
+}
+
+// Sets one link attribute (such as attributes/url_menu) and leaves every other attribute alone.
+async function setUriAttribute(accessToken, locationName, attribute, uri, fetchImpl = fetch) {
+  const url = `${INFO_BASE}/${locationName}/attributes?attributeMask=${encodeURIComponent(attribute)}`;
+  return googleWrite(accessToken, url, "PATCH", { name: `${locationName}/attributes`, attributes: [{ name: attribute, valueType: "URL", uriValues: [{ uri }] }] }, fetchImpl);
+}
+
+// Photos on the profile (v4): { mediaItems: [{ locationAssociation: { category } }], totalMediaItemCount }.
+async function listMedia(accessToken, locationPath, fetchImpl = fetch) {
+  return googleGet(accessToken, `${V4_BASE}/${locationPath}/media?pageSize=100`, fetchImpl);
 }
 
 const PERFORMANCE_BASE = "https://businessprofileperformance.googleapis.com/v1";
@@ -161,4 +202,5 @@ async function accessTokenFor(env, connection, fetchImpl = fetch) {
   }
 }
 
-export { GoogleApiError, listAccounts, listProfiles, getLocation, listReviews, getReview, putReviewReply, createLocalPost, createMedia, fetchDailyMetrics, formatAddress, v4LocationPath, accessTokenFor };
+export { GoogleApiError, listAccounts, listProfiles, getLocation, listReviews, getReview, putReviewReply, createLocalPost, createMedia, fetchDailyMetrics, formatAddress, v4LocationPath, accessTokenFor,
+  getLocationForAudit, patchLocation, getAttributes, availableAttributes, setUriAttribute, listMedia };

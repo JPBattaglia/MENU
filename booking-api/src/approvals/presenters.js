@@ -12,6 +12,7 @@ import { menuCareOverrides } from "../producers/menu-care/presenter.js";
 import { guestAppOverrides } from "../producers/guest-app/presenter.js";
 import { reviewRepliesOverrides } from "../producers/review-replies/deliver.js";
 import { googleCareOverrides } from "../producers/google-care/care-step.js";
+import { googleVisibilityOverrides } from "../producers/google-visibility/visibility-step.js";
 
 function humanize(type) {
   return String(type || "File").toLowerCase().replaceAll("_", " ").replace(/^./, (c) => c.toUpperCase());
@@ -108,6 +109,7 @@ function presenterFor(workflowKey) {
   if (workflowKey === "CONVERSION_FIX_V1") return { ...genericPresenter, ...conversionOverrides };
   if (workflowKey === "REVIEW_REPLIES_V1") return { ...genericPresenter, ...reviewRepliesOverrides };
   if (workflowKey === "GOOGLE_PROFILE_CARE_V1") return { ...genericPresenter, ...googleCareOverrides };
+  if (workflowKey === "GOOGLE_VISIBILITY_V1") return { ...genericPresenter, ...googleVisibilityOverrides };
   return genericPresenter;
 }
 

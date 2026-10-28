@@ -139,7 +139,12 @@ async function handlePhotoLibrary(request, env, subscriptionId) {
 async function handleGoogleMedia(request, env, assetId) {
   const payload = await verifyLinkToken(env, new URL(request.url).searchParams.get("t") || "", [MEDIA_KIND], assetId);
   if (!payload || payload.expired || !env.DB || !env.ASSETS) return new Response("Not found", { status: 404 });
-  const row = await env.DB.prepare(`SELECT storage_key, mime_type FROM assets WHERE id = ? AND asset_type = 'PHOTO' AND json_extract(metadata_json, '$.photo_library') IS NOT NULL`).bind(assetId).first();
+  // Library photos (Google Profile Care), and the logo and photos a Google Visibility order puts on the profile.
+  const row = await env.DB.prepare(`
+      SELECT storage_key, mime_type FROM assets
+      WHERE id = ? AND ((asset_type = 'PHOTO' AND json_extract(metadata_json, '$.photo_library') IS NOT NULL)
+        OR (asset_type IN ('PHOTO', 'LOGO') AND EXISTS (SELECT 1 FROM visibility_fixes v WHERE v.asset_id = assets.id)))
+    `).bind(assetId).first();
   const object = row ? await env.ASSETS.get(row.storage_key) : null;
   if (!object) return new Response("Not found", { status: 404 });
   return new Response(object.body, { status: 200, headers: { "Content-Type": row.mime_type, "Cache-Control": "private, max-age=3600", "X-Content-Type-Options": "nosniff", "X-Robots-Tag": "noindex" } });
