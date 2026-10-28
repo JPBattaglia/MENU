@@ -318,3 +318,35 @@ test('graphics still undrawn an hour after queueing alert the owner once, with h
     assert.equal(f.row(`SELECT status FROM workflow_steps WHERE id = 's1'`).status, 'WAITING', 'the job still waits for the renderer');
   });
 });
+
+test('the worker starts the GitHub renderer when graphics are parked, and nudges it if they are still waiting', async () => {
+  const f = setup();
+  delete f.env.SOCIAL_RASTERIZER;
+  const dispatches = [];
+  f.env.GITHUB_DISPATCH_TOKEN = 'github_pat_test';
+  f.env.GITHUB_DISPATCH_FETCH = async (url, init) => { dispatches.push({ url, init }); return new Response(null, { status: 204 }); };
+  await withFetch(f.fetch, async () => {
+    f.state.outputs.push({ posts: goodPosts() });
+    await api.runScheduledProduction(f.env);
+    assert.equal(dispatches.length, 1, 'started as soon as the job is parked');
+    assert.equal(dispatches[0].url, 'https://api.github.com/repos/JPBattaglia/MENU/actions/workflows/render-social-posts.yml/dispatches');
+    assert.equal(dispatches[0].init.headers.Authorization, 'Bearer github_pat_test');
+    assert.deepEqual(JSON.parse(dispatches[0].init.body), { ref: 'master' });
+    assert.equal(JSON.parse(f.row(`SELECT output_json FROM workflow_steps WHERE id = 's1'`).output_json).dispatch_status, 204);
+
+    assert.deepEqual(await renderJobs.nudgeWaitingRenders(f.env), [], 'not nudged while fresh');
+    const t11 = Date.now() + 11 * 60000;
+    assert.deepEqual(await renderJobs.nudgeWaitingRenders(f.env, t11), [], 'the first dispatch was under 15 minutes ago');
+    f.sql(`UPDATE workflow_steps SET output_json = json_set(output_json, '$.dispatched_at', ?) WHERE id = 's1'`, new Date(Date.now() - 16 * 60000).toISOString());
+    assert.deepEqual(await renderJobs.nudgeWaitingRenders(f.env, t11), ['s1']);
+    assert.equal(dispatches.length, 2);
+    assert.deepEqual(await renderJobs.nudgeWaitingRenders(f.env, t11), [], 'not again within 15 minutes');
+
+    // A refused dispatch never fails the step: it keeps waiting for the schedule and the owner alert.
+    f.env.GITHUB_DISPATCH_FETCH = async () => new Response('{"message":"Bad credentials"}', { status: 401 });
+    assert.equal((await renderJobs.startRenderer(f.env, 's1')).started, false);
+    assert.equal(f.row(`SELECT status FROM workflow_steps WHERE id = 's1'`).status, 'WAITING');
+    delete f.env.GITHUB_DISPATCH_TOKEN;
+    assert.deepEqual(await renderJobs.nudgeWaitingRenders(f.env, Date.now() + 99 * 60000), []);
+  });
+});
