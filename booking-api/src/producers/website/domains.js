@@ -190,6 +190,8 @@ async function customHostSlug(env, hostname) {
 async function checkSaasSetup(env, { fetchImpl = fetch } = {}) {
   const config = saasConfig(env);
   if (!config) return { ok: false, problems: ["CF_ZONE_ID or CF_SAAS_TOKEN is not set on the worker"] };
+  // Oct 27, 2026: the DCV delegation target (<id>.dcv.cloudflare.com) was pasted here once; the Zone ID is 32 hex characters.
+  if (!/^[0-9a-f]{32}$/i.test(config.zone)) return { ok: false, problems: [`CF_ZONE_ID is not a Zone ID (32 letters and digits, on the zone's Overview page under API); it looks like ${/\.dcv\.cloudflare\.com$/i.test(config.zone) ? "the DCV delegation target" : "something else"}`] };
   const problems = [];
   const fallback = await cf(config, "/custom_hostnames/fallback_origin", { fetchImpl });
   const origin = fallback.data?.result?.origin || null;

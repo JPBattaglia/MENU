@@ -6,7 +6,7 @@ import { createD1 } from './test-support/d1.mjs';
 
 const { advanceDomainSetupSelfTests } = await import('./src/selftest/domain-setup-selftest.js');
 
-function setup(config = { CF_ZONE_ID: 'zone_1', CF_SAAS_TOKEN: 'cf_token' }) {
+function setup(config = { CF_ZONE_ID: '0123456789abcdef0123456789abcdef', CF_SAAS_TOKEN: 'cf_token' }) {
   const DB = createD1();
   const t = new Date().toISOString();
   DB.raw.prepare(`INSERT INTO self_tests (id, kind, status, requested_by, created_at, updated_at) VALUES ('st', 'CUSTOM_DOMAIN_SETUP', 'REQUESTED', 'test', ?, ?)`).run(t, t);
@@ -23,8 +23,8 @@ function cloudflare({ origin = 'sites.menu-made.com', status = 'active', denied 
     if (u === 'https://api.resend.com/emails') { emails.push(JSON.parse(init.body)); return Response.json({ id: 'e' }); }
     calls.push({ url: u, method: init.method || 'GET', auth: init.headers?.Authorization });
     if (denied) return Response.json({ success: false, errors: [{ code: 10000, message: 'Authentication error' }] }, { status: 403 });
-    if (u.endsWith('/zones/zone_1/custom_hostnames/fallback_origin')) return Response.json({ success: true, result: { origin, status } });
-    if (u.includes('/zones/zone_1/custom_hostnames?per_page=1')) return Response.json({ success: true, result: [], result_info: { total_count: 0 } });
+    if (u.endsWith('/zones/0123456789abcdef0123456789abcdef/custom_hostnames/fallback_origin')) return Response.json({ success: true, result: { origin, status } });
+    if (u.includes('/zones/0123456789abcdef0123456789abcdef/custom_hostnames?per_page=1')) return Response.json({ success: true, result: [], result_info: { total_count: 0 } });
     return Response.json({ success: false }, { status: 404 });
   };
   return { fetch, calls, emails };
@@ -46,7 +46,8 @@ test('a working setup passes, reads only, and emails nobody', async () => {
 
 test('each way the setup can be wrong fails with its own reason and emails the owner', async () => {
   for (const [config, cfOptions, reason] of [
-    [{ CF_ZONE_ID: 'zone_1' }, {}, /CF_ZONE_ID or CF_SAAS_TOKEN is not set/],
+    [{ CF_ZONE_ID: '0123456789abcdef0123456789abcdef' }, {}, /CF_ZONE_ID or CF_SAAS_TOKEN is not set/],
+    [{ CF_ZONE_ID: '4d396fec79d55962.dcv.cloudflare.com', CF_SAAS_TOKEN: 'cf_token' }, {}, /not a Zone ID .* the DCV delegation target/],
     [undefined, { denied: true }, /HTTP 403\): Authentication error/],
     [undefined, { status: 'pending_deployment' }, /pending_deployment, not active/],
     [undefined, { origin: 'fallback.menu-made.com' }, /fallback\.menu-made\.com, expected sites\.menu-made\.com/]
