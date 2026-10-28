@@ -29,9 +29,15 @@ function redirect(location) {
 const unavailable = () => simplePage(503, "Google connection isn't ready", "<p>We're finishing setup on our side. Reply to your last email and we'll let you know when it's ready.</p>");
 const expired = () => simplePage(403, "This link has expired or isn't valid", "<p>Reply to your latest Menu-Made email and we'll send a fresh link.</p>");
 
+// Who a connection belongs to: a subscription, the owner, or (Google Visibility, a one-time order with no subscription)
+// the order's project, which counts as active until it is delivered or cancelled.
 async function subscriptionFor(env, subscriptionId) {
   if (subscriptionId === OWNER) return { id: OWNER, business_id: null, customer_id: null, status: "ACTIVE" };
-  return env.DB.prepare(`SELECT id, business_id, customer_id, status FROM subscriptions WHERE id = ?`).bind(subscriptionId).first();
+  const subscription = await env.DB.prepare(`SELECT id, business_id, customer_id, status FROM subscriptions WHERE id = ?`).bind(subscriptionId).first();
+  if (subscription) return subscription;
+  const project = await env.DB.prepare(`SELECT id, business_id, customer_id, status FROM projects WHERE id = ? AND workflow_key = 'GOOGLE_VISIBILITY_V1'`).bind(subscriptionId).first();
+  if (!project) return null;
+  return { id: project.id, business_id: project.business_id, customer_id: project.customer_id, status: ["DELIVERED", "COMPLETED", "CANCELLED"].includes(project.status) ? "ENDED" : "ACTIVE", visibility: true };
 }
 
 async function handleGoogleConnect(request, env, subscriptionId) {
@@ -46,8 +52,11 @@ async function handleGoogleConnect(request, env, subscriptionId) {
   const existing = await env.DB.prepare(`SELECT status, location_title FROM google_connections WHERE subscription_id = ?`).bind(subscriptionId).first();
   const already = existing?.status === "ACTIVE"
     ? `<p><strong>Connected:</strong> ${escapeHtml(existing.location_title || "your profile")}. Connect again only to switch profiles or after a Google password change.</p>` : "";
+  const why = subscription.visibility
+    ? "We check every detail of your Google profile and fill in what's missing, so we need permission to manage it."
+    : "We reply to your reviews and post updates on your Google profile, so we need permission to manage it.";
   return simplePage(200, "Connect your Google Business Profile", `${already}
-<p>We reply to your reviews and post updates on your Google profile, so we need permission to manage it. Sign in with the Google account that manages your business listing.</p>
+<p>${why} Sign in with the Google account that manages your business listing.</p>
 <p><a class="btn" href="${escapeHtml(await buildAuthUrl(env, subscriptionId))}">Connect Google</a></p>
 <p style="font-size:13px">You can remove access at any time in your Google Account under Security, Third-party connections.</p>`);
 }
@@ -113,7 +122,7 @@ async function choicePage(env, connection, { error = null } = {}) {
   const token = await signLinkToken(env, { kind: LOCATION_KIND, id: connection.id, ttlDays: 1 });
   const options = candidates.map((c, i) => `<p><label><input type="radio" name="choice" value="${i}" ${i === 0 ? "checked" : ""}> <strong>${escapeHtml(c.title)}</strong>${c.address ? `<br><span style="font-size:13px">${escapeHtml(c.address)}</span>` : ""}</label></p>`).join("");
   return simplePage(error ? 400 : 200, "Which business is this for?", `${error ? `<p style="color:#9b1c1c"><strong>${escapeHtml(error)}</strong></p>` : ""}
-<p>Your Google account manages more than one Business Profile. Pick the one this plan is for.</p>
+<p>Your Google account manages more than one Business Profile. Pick the one this is for.</p>
 <form method="post" action="/api/google/location/${escapeHtml(connection.id)}"><input type="hidden" name="t" value="${escapeHtml(token)}">${options}<button type="submit">Use this profile</button></form>`);
 }
 
@@ -146,7 +155,9 @@ async function handleGoogleCallback(request, env, deps = {}) {
   if (profiles.length === 0) {
     const connection = await saveConnection(env, subscription, { ...base, status: "NO_PROFILE" });
     await recordEvent(env, connection, "GOOGLE_CONNECTED_NO_PROFILE", { subscription_id: subscription.id });
-    return simplePage(200, "No Business Profile on that account", "<p>That Google account doesn't manage a Business Profile. Use the link again and sign in with the account that manages your business on Google Maps.</p>");
+    return simplePage(200, "No Business Profile on that account", subscription.visibility
+      ? `<p>That Google account doesn't manage a Business Profile yet. If you haven't made one, create it at <a href="https://business.google.com/create">business.google.com/create</a> and finish Google's verification, then use the link in our email again. If you already have one, sign in with the account that manages it.</p>`
+      : "<p>That Google account doesn't manage a Business Profile. Use the link again and sign in with the account that manages your business on Google Maps.</p>");
   }
   if (profiles.length === 1) {
     const [p] = profiles;

@@ -6,6 +6,7 @@ import { attachCheckoutMenuDocument, createMenuQrInputs } from "../onboarding/me
 import { startWebsiteIntake } from "../producers/website/intake.js";
 import { startGuestAppIntake } from "../producers/guest-app/intake.js";
 import { startConversionFix } from "../producers/conversion/intake.js";
+import { startGoogleVisibility } from "../producers/google-visibility/intake.js";
 import { refreshOnboardingState } from "../onboarding/onboarding.js";
 import { handleExtraPagesPaid } from "../producers/menu-qr/page-billing.js";
 import { SUBSCRIPTION_EVENTS, handleSubscriptionEvent, onSubscriptionCheckoutCompleted } from "../subscriptions/webhooks.js";
@@ -522,6 +523,16 @@ async function handleCheckoutCompleted(event, env) {
       await startConversionFix(env, { projectId: conversionProject.id, orderId, customerId: order.customer_id, notes: order.notes });
     } catch (startError) {
       console.error("Conversion Fix start failed:", startError instanceof Error ? startError.message : String(startError));
+    }
+  }
+  const visibilityProjects = await env.DB.prepare(`
+      SELECT id FROM projects WHERE order_id = ? AND workflow_key = 'GOOGLE_VISIBILITY_V1' AND status = 'AWAITING_INPUTS'
+    `).bind(orderId).all();
+  for (const visibilityProject of visibilityProjects.results || []) {
+    try {
+      await startGoogleVisibility(env, { projectId: visibilityProject.id, orderId, customerId: order.customer_id, notes: order.notes });
+    } catch (startError) {
+      console.error("Google Visibility start failed:", startError instanceof Error ? startError.message : String(startError));
     }
   }
   const websiteProjects = await env.DB.prepare(`

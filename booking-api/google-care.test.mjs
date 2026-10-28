@@ -33,7 +33,7 @@ function png(w, h, noise = false) {
 function setup({ plans = ['GOOGLE_PROFILE_CARE'] } = {}) {
   const DB = createD1();
   const ASSETS = createR2();
-  for (const m of ['0001_subscription_catalog.sql', '0004_ai_usage_index.sql', '0007_plan_settings.sql', '0013_google_connections.sql', '0014_review_replies.sql', '0015_google_profile_care.sql']) DB.raw.exec(read(m));
+  for (const m of ['0001_subscription_catalog.sql', '0004_ai_usage_index.sql', '0007_plan_settings.sql', '0013_google_connections.sql', '0014_review_replies.sql', '0015_google_profile_care.sql', '0016_google_visibility.sql']) DB.raw.exec(read(m));
   const sql = (q, ...a) => DB.raw.prepare(q).run(...a);
   const t = new Date(Date.now() - 2 * DAY).toISOString();
   sql(`INSERT INTO customers (id, created_at, updated_at, email, first_name, last_name) VALUES ('cust', ?, ?, 'pat@cornercafe.example', 'Pat', 'Lee')`, t, t);

@@ -8,6 +8,7 @@ import { runSocialPostsProduceStep } from "./social-posts/social-step.js";
 import { runGuestAppMonthStep, runGuestAppSetupStep } from "./guest-app/app-step.js";
 import { runReviewRepliesProduceStep } from "./review-replies/review-step.js";
 import { runGoogleCareProduceStep } from "./google-care/care-step.js";
+import { runGoogleVisibilityProduceStep } from "./google-visibility/visibility-step.js";
 
 const PRODUCERS = {
   MENU_CARE_V1: runMenuCareProduceStep,
@@ -19,7 +20,8 @@ const PRODUCERS = {
   GUEST_APP_SETUP_V1: runGuestAppSetupStep,
   GUEST_APP_V1: runGuestAppMonthStep,
   REVIEW_REPLIES_V1: runReviewRepliesProduceStep,
-  GOOGLE_PROFILE_CARE_V1: runGoogleCareProduceStep
+  GOOGLE_PROFILE_CARE_V1: runGoogleCareProduceStep,
+  GOOGLE_VISIBILITY_V1: runGoogleVisibilityProduceStep
 };
 
 async function runProduceStep(targetStep, env, deps = {}) {
