@@ -60,7 +60,7 @@ async function listProfiles(accessToken, fetchImpl = fetch) {
 }
 
 async function getLocation(accessToken, locationName, fetchImpl = fetch) {
-  return googleGet(accessToken, `${INFO_BASE}/${locationName}?readMask=name,title,storefrontAddress,regularHours,phoneNumbers,websiteUri`, fetchImpl);
+  return googleGet(accessToken, `${INFO_BASE}/${locationName}?readMask=name,title,storefrontAddress,regularHours,phoneNumbers,websiteUri,profile`, fetchImpl);
 }
 
 // v4 resource path for a connection: accounts/{a}/locations/{l}
@@ -77,6 +77,56 @@ async function listReviews(accessToken, connection, { pageSize = 50, pageToken =
 // One review by its resource name (accounts/{a}/locations/{l}/reviews/{r}).
 async function getReview(accessToken, reviewName, fetchImpl = fetch) {
   return googleGet(accessToken, `${V4_BASE}/${reviewName}`, fetchImpl);
+}
+
+async function googleWrite(accessToken, url, method, body, fetchImpl) {
+  const response = await fetchImpl(url, {
+    method,
+    headers: { Authorization: `Bearer ${accessToken}`, "Content-Type": "application/json" },
+    body: JSON.stringify(body)
+  });
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    const reason = data?.error?.message || data?.error?.status || `HTTP ${response.status}`;
+    throw new GoogleApiError(`Google API ${new URL(url).hostname} returned ${response.status}: ${reason}`, response.status);
+  }
+  return data;
+}
+
+// A Google post ("What's new") on a profile. locationPath is accounts/{a}/locations/{l} (v4LocationPath).
+async function createLocalPost(accessToken, locationPath, post, fetchImpl = fetch) {
+  return googleWrite(accessToken, `${V4_BASE}/${locationPath}/localPosts`, "POST", post, fetchImpl);
+}
+
+// Adds a photo to the profile; Google downloads it from sourceUrl.
+async function createMedia(accessToken, locationPath, sourceUrl, fetchImpl = fetch) {
+  return googleWrite(accessToken, `${V4_BASE}/${locationPath}/media`, "POST",
+    { mediaFormat: "PHOTO", locationAssociation: { category: "ADDITIONAL" }, sourceUrl }, fetchImpl);
+}
+
+const PERFORMANCE_BASE = "https://businessprofileperformance.googleapis.com/v1";
+
+// Daily counts per metric between two dates (inclusive), as { METRIC: [{ date: "YYYY-MM-DD", value }] }.
+async function fetchDailyMetrics(accessToken, locationName, metrics, start, end, fetchImpl = fetch) {
+  const params = new URLSearchParams();
+  for (const metric of metrics) params.append("dailyMetrics", metric);
+  for (const [prefix, d] of [["dailyRange.startDate", start], ["dailyRange.endDate", end]]) {
+    params.set(`${prefix}.year`, String(d.getUTCFullYear()));
+    params.set(`${prefix}.month`, String(d.getUTCMonth() + 1));
+    params.set(`${prefix}.day`, String(d.getUTCDate()));
+  }
+  const data = await googleGet(accessToken, `${PERFORMANCE_BASE}/${locationName}:fetchMultiDailyMetricsTimeSeries?${params}`, fetchImpl);
+  const out = Object.fromEntries(metrics.map((m) => [m, []]));
+  for (const group of data.multiDailyMetricTimeSeries || []) {
+    for (const series of group.dailyMetricTimeSeries || []) {
+      const list = out[series.dailyMetric] || (out[series.dailyMetric] = []);
+      for (const point of series.timeSeries?.datedValues || []) {
+        const d = point.date || {};
+        list.push({ date: `${d.year}-${String(d.month).padStart(2, "0")}-${String(d.day).padStart(2, "0")}`, value: Number(point.value || 0) });
+      }
+    }
+  }
+  return out;
 }
 
 // Creates or replaces the business's public reply to a review (v4 updateReply).
@@ -111,4 +161,4 @@ async function accessTokenFor(env, connection, fetchImpl = fetch) {
   }
 }
 
-export { GoogleApiError, listAccounts, listProfiles, getLocation, listReviews, getReview, putReviewReply, v4LocationPath, accessTokenFor };
+export { GoogleApiError, listAccounts, listProfiles, getLocation, listReviews, getReview, putReviewReply, createLocalPost, createMedia, fetchDailyMetrics, formatAddress, v4LocationPath, accessTokenFor };

@@ -22,6 +22,8 @@ const LOOKBACK_DAYS = 30;
 const MAX_PAGES = 3;
 const MAX_REVIEWS_PER_RUN = 30;
 const SELFTEST_SOURCE = "REVIEW_REPLIES_SELFTEST";
+// Any Google producer's self-test project (REVIEW_REPLIES_SELFTEST, GOOGLE_PROFILE_CARE_SELFTEST) runs on the owner's profile.
+const isSelfTestProject = (meta) => /_SELFTEST$/.test(String(meta?.source || ""));
 const SELFTEST_REVIEW_PREFIX = "menu-made-selftest-";
 const e = escapeHtml;
 
@@ -32,7 +34,7 @@ async function projectMeta(env, projectId) {
 
 // Whose Google connection this project uses: the subscription's own, or (self-test only) the owner's profile.
 function connectionKey(meta) {
-  return meta.source === SELFTEST_SOURCE && meta.google_subscription_id ? meta.google_subscription_id : meta.subscription_id;
+  return isSelfTestProject(meta) && meta.google_subscription_id ? meta.google_subscription_id : meta.subscription_id;
 }
 
 async function loadConnection(env, meta) {
@@ -55,23 +57,28 @@ function parkForGoogle(targetStep, env, reason) {
 
 // The customer's connect (or reconnect) email. One per project, so a customer who never connects hears again next month.
 async function askToConnect(env, targetStep, context, meta, { reconnect }) {
-  if (meta.source === SELFTEST_SOURCE) throw new Error("The owner's Google profile is not connected: open /api/google/connect/owner");
+  if (isSelfTestProject(meta)) throw new Error("The owner's Google profile is not connected: open /api/google/connect/owner");
   const subscriptionId = meta.subscription_id;
   const connect = await googleConnectUrl(env, subscriptionId);
   const settings = await settingsLink(env, subscriptionId);
   const business = context.business_name || "your business";
   const heading = reconnect ? "Please reconnect your Google profile" : "Connect your Google profile to start";
+  const careProduct = context.workflow_key === "GOOGLE_PROFILE_CARE_V1";
+  const product = careProduct ? "Google Profile Care" : "Review Replies";
   const lead = reconnect
-    ? `Google stopped letting us reply to ${business}'s reviews. This happens after a Google password change or when access is removed. Reconnecting takes a minute.`
-    : `Review Replies answers every new Google review for ${business}. To do that we need permission to reply on your Google Business Profile. It takes a minute.`;
+    ? `Google stopped letting us ${careProduct ? "update" : "reply to reviews on"} ${business}'s Google profile. This happens after a Google password change or when access is removed. Reconnecting takes a minute.`
+    : careProduct
+      ? `Google Profile Care posts a weekly update, adds your photos, answers your reviews and sends you a monthly report for ${business}. To do that we need permission to manage your Google Business Profile. It takes a minute.`
+      : `Review Replies answers every new Google review for ${business}. To do that we need permission to reply on your Google Business Profile. It takes a minute.`;
   const sent = await sendTransactionalEmail(env, {
     to: context.customer_email,
-    subject: reconnect ? `Reconnect Google so we can keep replying to ${business}'s reviews` : `Connect Google so we can reply to ${business}'s reviews`,
+    subject: reconnect ? `Reconnect Google so we can keep ${careProduct ? "looking after" : "replying to"} ${business}'s ${careProduct ? "profile" : "reviews"}`
+      : careProduct ? `Connect Google so we can look after ${business}'s profile` : `Connect Google so we can reply to ${business}'s reviews`,
     html: brandedEmailHtml({
       preheader: reconnect ? "Your review replies are paused until you reconnect." : "One step to start your review replies.",
-      eyebrow: "REVIEW REPLIES", heading,
+      eyebrow: product.toUpperCase(), heading,
       paragraphs: [`Hi ${e(context.first_name || "there")},`, e(lead), "Sign in with the Google account that manages your listing on Google Maps."],
-      buttons: [{ label: reconnect ? "Reconnect Google" : "Connect Google", url: connect, primary: true }, { label: "Choose how replies sound (optional)", url: settings }],
+      buttons: [{ label: reconnect ? "Reconnect Google" : "Connect Google", url: connect, primary: true }, { label: careProduct ? "Tell us your specials and voice (optional)" : "Choose how replies sound (optional)", url: settings }],
       footnote: "We reply in your name: 4 and 5 star reviews get a reply straight away, and low ratings are checked by a person first. This link works for 30 days."
     }),
     text: `${heading}\n\n${lead}\n\n${reconnect ? "Reconnect" : "Connect"} Google: ${connect}\nChoose how replies sound (optional): ${settings}`,
@@ -152,29 +159,37 @@ async function saveDraft(env, targetStep, subscriptionId, d) {
     d.review.text, d.review.time, d.reply, d.route, d.reason, JSON.stringify(d.problems), d.skip ? "SKIPPED" : "DRAFTED", t, t).run();
 }
 
-async function runReviewRepliesProduceStep(targetStep, env, deps = {}) {
+// Everything a Google producer's PRODUCE step needs, or a parked/retry result when Google isn't usable right now.
+async function prepareGoogle(targetStep, env, deps = {}) {
   const fetchImpl = deps.fetch || fetch;
-  const now = deps.now || new Date();
   const context = await loadDeliveryContext(targetStep.project_id, env);
   if (!context) throw new Error("Production project could not be loaded");
   const meta = await projectMeta(env, context.id);
   const subscriptionId = meta.subscription_id;
-  if (!subscriptionId) throw new Error("This Review Replies project has no subscription");
-
+  if (!subscriptionId) throw new Error("This Google project has no subscription");
   const auth = await tokenOrPark(env, targetStep, context, meta, fetchImpl);
-  if (auth.parked) return auth.parked;
+  if (auth.parked) return { parked: auth.parked };
   const { connection, token } = auth;
   const settings = await getSettings(env, subscriptionId);
   const location = await getLocation(token, connection.location_name, fetchImpl).catch(() => ({}));
-  const businessName = context.business_name || location.title || connection.location_title || "the business";
-  const regeneration = await loadRegenerationNote(env, context.id);
-  const scope = { entityType: "SUBSCRIPTION", entityId: subscriptionId, correlationId: targetStep.workflow_run_id };
+  return {
+    context, meta, subscriptionId, connection, token, settings, location,
+    businessName: context.business_name || location.title || connection.location_title || "the business",
+    regeneration: await loadRegenerationNote(env, context.id),
+    scope: { entityType: "SUBSCRIPTION", entityId: subscriptionId, correlationId: targetStep.workflow_run_id }
+  };
+}
 
+// The review part of PRODUCE, shared by Review Replies and Google Profile Care. Returns { retry } on a Google outage.
+async function produceReviewDrafts(env, targetStep, g, deps = {}) {
+  const fetchImpl = deps.fetch || fetch;
+  const now = deps.now || new Date();
+  const { context, meta, subscriptionId, connection, token, settings, location, businessName, regeneration, scope } = g;
   let fetched = { reviews: [], totals: { average: null, count: null } };
   try {
     fetched = await fetchRecentReviews(token, connection, now, fetchImpl);
   } catch (error) {
-    if (error instanceof GoogleApiError && (error.status >= 500 || error.status === 429)) return retryStepLater(targetStep, env, error.message);
+    if (error instanceof GoogleApiError && (error.status >= 500 || error.status === 429)) return { retry: await retryStepLater(targetStep, env, error.message) };
     throw error;
   }
 
@@ -190,7 +205,7 @@ async function runReviewRepliesProduceStep(targetStep, env, deps = {}) {
         .bind(d.reply, d.skip ? "Owner asked not to reply" : `Redrafted after your note${d.problems.length ? `; ${d.reason}` : ""}`, JSON.stringify(d.problems), d.skip ? "SKIPPED" : "DRAFTED", nowIso(), context.id, d.review.name).run();
     }
   } else {
-    const all = [...fetched.reviews, ...(meta.source === SELFTEST_SOURCE ? selfTestReviews(meta, connection, now) : [])];
+    const all = [...fetched.reviews, ...(isSelfTestProject(meta) ? selfTestReviews(meta, connection, now) : [])];
     const unanswered = all.filter((r) => r.name && !r.hasReply);
     const known = await knownReviewNames(env, subscriptionId, unanswered.map((r) => r.name));
     const fresh = unanswered.filter((r) => !known.has(r.name)).slice(0, MAX_REVIEWS_PER_RUN);
@@ -210,9 +225,7 @@ async function runReviewRepliesProduceStep(targetStep, env, deps = {}) {
     });
     deliverableId = stored.deliverableId;
   }
-  const output = {
-    outcome: regeneration ? "REDRAFTED" : "DRAFTED",
-    profile: connection.location_title || connection.location_name,
+  return {
     reviews_in_window: fetched.reviews.length,
     drafted: drafted.length,
     auto: drafted.filter((d) => d.route === "AUTO").length,
@@ -220,8 +233,16 @@ async function runReviewRepliesProduceStep(targetStep, env, deps = {}) {
     totals: fetched.totals,
     drafts_deliverable_id: deliverableId
   };
+}
+
+async function runReviewRepliesProduceStep(targetStep, env, deps = {}) {
+  const g = await prepareGoogle(targetStep, env, deps);
+  if (g.parked) return g.parked;
+  const reviews = await produceReviewDrafts(env, targetStep, g, deps);
+  if (reviews.retry) return reviews.retry;
+  const output = { outcome: g.regeneration ? "REDRAFTED" : "DRAFTED", profile: g.connection.location_title || g.connection.location_name, ...reviews };
   await completeStep(targetStep, output, env);
   return output;
 }
 
-export { LOOKBACK_DAYS, MAX_REVIEWS_PER_RUN, SELFTEST_SOURCE, SELFTEST_REVIEW_PREFIX, isSelfTestReview, connectionKey, loadConnection, projectMeta, tokenOrPark, fetchRecentReviews, runReviewRepliesProduceStep };
+export { LOOKBACK_DAYS, MAX_REVIEWS_PER_RUN, SELFTEST_SOURCE, SELFTEST_REVIEW_PREFIX, isSelfTestProject, isSelfTestReview, prepareGoogle, produceReviewDrafts, connectionKey, loadConnection, projectMeta, tokenOrPark, fetchRecentReviews, runReviewRepliesProduceStep };

@@ -22,6 +22,8 @@ const FIELDS = {
     { key: "specials", label: "Specials, events or dates to feature this month", type: "textarea", max: 800, placeholder: "Live jazz every Friday. New autumn soup, $9.", help: "Optional. Any prices you write here may appear in your posts." }
   ]
 };
+// Google Profile Care: the post voice and specials (shared with Social Posts) plus the review reply settings.
+FIELDS.GOOGLE_PROFILE_CARE = [...FIELDS.SOCIAL_POSTS, ...FIELDS.REVIEW_REPLIES];
 
 async function settingsLink(env, subscriptionId) {
   const token = await signLinkToken(env, { kind: LINK_KIND, id: subscriptionId, ttlDays: 400 });

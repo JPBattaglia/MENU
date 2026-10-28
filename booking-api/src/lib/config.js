@@ -27,7 +27,8 @@ var DELIVERABLE_LABELS = {
   CONVERSION_CHECKLIST: "Conversion Fix checklist (text)",
   SOCIAL_PACK: "Graphics pack (ZIP of PNG graphics and captions)",
   APP_BUILD: "Guest App (installable web app)",
-  REVIEW_REPLY_DRAFTS: "Review reply drafts (web page)"
+  REVIEW_REPLY_DRAFTS: "Review reply drafts (web page)",
+  GOOGLE_PROFILE_REPORT: "Google profile report (web page)"
 };
 
 function ownerEmailAddress(env) {
