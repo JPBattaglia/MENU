@@ -20,8 +20,12 @@ const state = (test) => parseJsonOrNull(test.state_json) || {};
 
 async function stageStart(env, app, test) {
   if (!env.STRIPE_SECRET_KEY_TEST) throw new Error("STRIPE_SECRET_KEY_TEST is not configured");
-  const customer = await stripeTest(env, "/v1/customers", "POST", { email: SELF_TEST_EMAIL, name: "Menu-Made Self-Test", "metadata[self_test]": "1" });
-  test = await updateTest(env, test, { status: "RUNNING", stage: "START", state: { customer_id: customer.id }, log: `Test customer ${customer.id} created` });
+  // The test checkout only accepts a self-test customer on a Stripe test clock (a safety guard in the checkout route).
+  // Deleting the clock at the end also deletes the customer and its subscription in Stripe.
+  const clock = await stripeTest(env, "/v1/test_helpers/test_clocks", "POST", { frozen_time: String(Math.floor(Date.now() / 1000)), name: `menu-made website trial ${String(test.id).slice(0, 12)}` });
+  test = await updateTest(env, test, { status: "RUNNING", stage: "START", state: { clock_id: clock.id }, log: `Test clock ${clock.id} created` });
+  const customer = await stripeTest(env, "/v1/customers", "POST", { email: SELF_TEST_EMAIL, name: "Menu-Made Self-Test", test_clock: clock.id, "metadata[self_test]": "1" });
+  test = await updateTest(env, test, { state: { customer_id: customer.id }, log: `Test customer ${customer.id} created on the clock` });
   const checkout = await json(await app(new Request(`${publicBaseUrl(env)}/api/create-checkout-test`, {
     method: "POST",
     headers: { "Content-Type": "application/json", Origin: "https://menu-made.com" },
@@ -75,11 +79,9 @@ async function cleanUp(env, test) {
     await env.DB.prepare(`UPDATE projects SET status = 'CANCELLED', updated_at = ? WHERE order_id = ? AND status NOT IN ('DELIVERED', 'COMPLETED')`).bind(t, test.order_id).run();
     await env.DB.prepare(`UPDATE orders SET status = 'CANCELLED', updated_at = ? WHERE id = ? AND status NOT IN ('DELIVERED', 'COMPLETED')`).bind(t, test.order_id).run();
   }
-  const customerId = state(test).customer_id;
-  if (customerId) {
-    const subs = await stripeTest(env, `/v1/subscriptions?customer=${customerId}&status=all&limit=5`).catch(() => ({ data: [] }));
-    for (const s of subs.data || []) if (!["canceled", "incomplete_expired"].includes(s.status)) await stripeTest(env, `/v1/subscriptions/${s.id}`, "DELETE").catch(() => null);
-  }
+  // Deleting the test clock removes its customer and any subscription still on it.
+  const clockId = state(test).clock_id;
+  if (clockId) await stripeTest(env, `/v1/test_helpers/test_clocks/${clockId}`, "DELETE").catch(() => null);
 }
 
 const STAGES = { START: stageStart, AWAIT_TRIAL: stageAwaitTrial, AWAIT_CANCELLED: stageAwaitCancelled };
