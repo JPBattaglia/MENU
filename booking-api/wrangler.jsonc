@@ -4,7 +4,7 @@
 {
   "$schema": "node_modules/wrangler/config-schema.json",
   "name": "menu-checkout",
-  "main": "src/worker.js",
+  "main": "src/main.js",
   // Matches the version live before the split (b4e65b8b).
   "compatibility_date": "2026-03-05",
   // Keep any plain-text variables already set in the dashboard (OWNER_EMAIL, PUBLIC_BASE_URL, BOOKING_*, ...).
