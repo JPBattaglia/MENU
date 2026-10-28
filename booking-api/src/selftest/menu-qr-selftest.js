@@ -12,6 +12,7 @@ import { signLinkToken } from "../lib/links.js";
 
 const KIND = "MENU_QR_EXTRA_PAGES";
 const STAGE_TIMEOUT_MINUTES = 25;
+const ATTACH_GRACE_MINUTES = 10; // a Stripe webhook retry can take minutes
 const DAILY_HOUR_UTC = 15; // 8am Pacific
 const PAID_PAGES = 3;
 const MENU_PAGES = [
@@ -183,9 +184,16 @@ async function stageAwaitOrderPaid(env, app, test) {
   const order = await env.DB.prepare(`SELECT payment_status FROM orders WHERE id = ?`).bind(test.order_id).first();
   const project = await env.DB.prepare(`SELECT id, metadata_json FROM projects WHERE order_id = ? AND workflow_key = 'MENU_QR_V1' LIMIT 1`).bind(test.order_id).first();
   if (order?.payment_status !== "PAID" || !project) return null;
+  // The webhook marks the order paid and creates the project before it attaches the menu, so a tick can
+  // land in between (self-test menuqr-fix-9492dbb failed 1 s early). Wait; fail only if it never arrives.
   const menuFile = await env.DB.prepare(`SELECT status FROM project_inputs WHERE project_id = ? AND input_key = 'menu_file'`).bind(project.id).first();
-  if (menuFile?.status !== "VALID") throw new Error("The menu uploaded at checkout was not attached to the project");
-  if (!parseJsonOrNull(project.metadata_json)?.extras_until) throw new Error("The optional extras window did not open");
+  const extrasOpen = Boolean(parseJsonOrNull(project.metadata_json)?.extras_until);
+  if (menuFile?.status !== "VALID" || !extrasOpen) {
+    const waited = Date.now() - Date.parse(test.stage_started_at || test.created_at);
+    if (waited < ATTACH_GRACE_MINUTES * 60000) return null;
+    if (menuFile?.status !== "VALID") throw new Error("The menu uploaded at checkout was not attached to the project");
+    throw new Error("The optional extras window did not open");
+  }
   const state = parseJsonOrNull(test.state_json) || {};
   const skip = await json(await app(new Request(`${publicBaseUrl(env)}/api/onboarding/start`, {
     method: "POST", headers: { "Content-Type": "application/json" },

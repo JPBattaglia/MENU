@@ -63,3 +63,20 @@ test('a retry repairs a project whose inputs an interrupted attempt never create
   assert.equal(f.row(`SELECT status FROM project_inputs WHERE project_id = 'proj' AND input_key = 'business_name'`).status, 'VALID');
   assert.ok(JSON.parse(f.row(`SELECT metadata_json FROM projects WHERE id = 'proj'`).metadata_json).extras_until);
 });
+
+test('the Menu + QR self-test waits for the webhook to attach the menu, and fails only if it never does', async () => {
+  const { advanceSelfTests } = await import('./src/selftest/menu-qr-selftest.js');
+  const f = setup();
+  f.sql(`UPDATE orders SET payment_status = 'PAID', status = 'PAID' WHERE id = 'order'`);
+  // The moment self-test menuqr-fix-9492dbb looked: project created, menu not attached yet.
+  f.sql(`INSERT INTO projects (id, order_id, order_item_id, business_id, customer_id, project_type, status, workflow_key, workflow_version, priority, manual_review_required, created_at, updated_at) VALUES ('proj', 'order', 'item', 'biz', 'cust', 'MENU', 'AWAITING_INPUTS', 'MENU_QR_V1', 1, 'NORMAL', 0, ?, ?)`, f.t, f.t);
+  f.sql(`INSERT INTO self_tests (id, kind, status, stage, stage_started_at, order_id, requested_by, created_at, updated_at) VALUES ('st', 'MENU_QR_EXTRA_PAGES', 'RUNNING', 'AWAIT_ORDER_PAID', ?, 'order', 'test', ?, ?)`, f.t, f.t, f.t);
+  await withFetch(() => advanceSelfTests(f.env, null));
+  assert.equal(f.row(`SELECT status FROM self_tests WHERE id = 'st'`).status, 'RUNNING');
+
+  f.sql(`UPDATE self_tests SET stage_started_at = ? WHERE id = 'st'`, new Date(Date.now() - 11 * 60000).toISOString());
+  await withFetch(() => advanceSelfTests(f.env, null));
+  const failed = f.row(`SELECT status, error FROM self_tests WHERE id = 'st'`);
+  assert.equal(failed.status, 'FAILED');
+  assert.match(failed.error, /menu uploaded at checkout was not attached/);
+});
