@@ -230,7 +230,10 @@ test('subdomain hosting: <name>.menu-made.com serves the site; reserved names pa
   assert.equal(act('https://www.menu-made.com/about.html').action, 'pass');
   assert.equal(act('https://www.menu-made.com/api/site/x/').action, 'none');
   assert.equal(act('https://mail.menu-made.com/').action, 'pass');
-  assert.equal(act('https://menu-made.com/').action, 'none');
+  // Under the catch-all route the main site's own pages pass through untouched; its API stays with the Worker.
+  assert.equal(act('https://menu-made.com/').action, 'pass');
+  assert.equal(act('https://menu-made.com/services.html').action, 'pass');
+  assert.equal(act('https://menu-made.com/api/offers').action, 'none');
   assert.equal(act('https://a.b.menu-made.com/').action, 'none');
   assert.equal(act('https://example.org/').action, 'none');
   assert.equal(act('https://joes-pizza.menu-made.com.evil.example/').action, 'none');

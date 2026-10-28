@@ -28,7 +28,11 @@
     { "pattern": "www.menu-made.com/api/*", "zone_name": "menu-made.com" },
     // Generated customer sites live at <slug>.menu-made.com. www is redirected
     // to the apex by a Cloudflare redirect rule before it reaches the Worker.
-    { "pattern": "*.menu-made.com/*", "zone_name": "menu-made.com" }
+    { "pattern": "*.menu-made.com/*", "zone_name": "menu-made.com" },
+    // Customers' own domains (Cloudflare for SaaS custom hostnames) enter the zone under their own names, so only a
+    // catch-all route reaches them. More specific routes above still win; menu-made.com's own pages pass through
+    // (website/hosts.js). Inert until a custom hostname exists.
+    { "pattern": "*/*", "zone_name": "menu-made.com" }
   ],
   // Fonts for Social Posts graphics are read as raw bytes.
   "rules": [{ "type": "Data", "globs": ["**/*.ttf"], "fallthrough": true }],

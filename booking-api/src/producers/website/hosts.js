@@ -11,6 +11,9 @@ function siteHostAction(request, env) {
   let root;
   try { root = new URL(publicBaseUrl(env)).hostname.toLowerCase().replace(/^www\./, ""); } catch { return { action: "none" }; }
   const host = url.hostname.toLowerCase();
+  // The catch-all route (*/*, needed so customers' own domains reach this Worker through Cloudflare for SaaS) also
+  // catches menu-made.com itself: everything but /api/ goes on to whatever serves the main site.
+  if (host === root) return url.pathname.startsWith("/api/") ? { action: "none" } : { action: "pass" };
   if (!host.endsWith(`.${root}`)) return { action: "none" };
   const label = host.slice(0, -(root.length + 1));
   if (!label || label.includes(".")) return { action: "none" };
