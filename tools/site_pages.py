@@ -240,7 +240,7 @@ ONCE = {
               "A printable QR code that opens it",
               "First year of hosting and two revisions included"],
         provide="Your current menu as a PDF or photos, uploaded at checkout. That’s all we need before payment.",
-        delivery="Checked and approved by us, then emailed to you. Up to 3 pages included; each extra page is <span data-menu-extra-page>extra</span>, and we check the page count of your file before we start. Keep it current with Menu Care.",
+        delivery="Checked and approved by us, then emailed to you. Up to 3 pages included; each extra page is <span data-menu-extra-page>extra</span>, and we check the page count of your file before we start. After the first year, hosting continues with Menu Care, which also keeps your menu up to date.",
     ),
     "WEBSITE_PACKAGE": dict(
         name="Website Package", anchor="website-package", service="website",
@@ -330,7 +330,7 @@ FAQ = [
     ("How does it work after I pay?",
      "Checkout takes a minute and asks only what we need to start. Right after payment you get an email with your next step: a link to connect Google, a short form, or your settings page. The work then runs on schedule, and anything creative is approved by a person before it reaches you or goes public."),
     ("Can I change or cancel my plan?",
-     "Yes. Every plan email has a link to your billing page, where you can update your card, see invoices and cancel. Cancelling stops the plan at the end of the period you’ve paid for. To switch plans, reply to any of our emails."),
+     "Yes. Every plan email has a link to your billing page, where you can switch to another plan, move between monthly and yearly billing, update your card, see invoices and cancel. Switching takes effect right away and is prorated; cancelling stops the plan at the end of the period you’ve paid for."),
     ("Monthly or yearly?",
      "Either. Yearly plans cost 10 times the monthly price, so you get 2 months free."),
     ("Do I need to give you my passwords?",
@@ -476,7 +476,7 @@ def page_plans():
   <div class="container">
     <span class="pill">Plans &amp; pricing</span>
     <h1>Choose how much we take off your plate</h1>
-    <p class="hero-intro">Three plans that bundle our monthly services for less, every service on its own, and one-time setups. One plan per checkout; cancel any time from your billing page.</p>
+    <p class="hero-intro">Three plans that bundle our monthly services for less, every service on its own, and one-time setups. One plan per checkout; switch or cancel any time from your billing page.</p>
   </div>
 </section>
 
@@ -671,7 +671,7 @@ def page_privacy():
 <ul>
 <li>Ask for a copy of your information, or ask us to correct or delete it, by emailing <a href="mailto:info@menu-made.com">info@menu-made.com</a>.</li>
 <li>Remove Google access at any time from your Google account.</li>
-<li>Cancel a plan from your billing page link in any plan email.</li>
+<li>Switch or cancel a plan from your billing page link in any plan email.</li>
 <li>California residents have the right to know, correct and delete personal information and not to be discriminated against for using these rights. We do not sell or share personal information for cross-context advertising.</li>
 </ul>
 
@@ -798,7 +798,7 @@ def page_start():
             <button class="btn secondary" id="clearBtn" type="button" disabled>Clear</button>
           </div>
           <div class="status" id="status" role="status" aria-live="polite"></div>
-          <details class="billing-details" id="billingDetails" hidden><summary>How billing works</summary><p class="mini">Today’s total covers your first month or year of the plan and any one-time services. Plans renew automatically until you cancel from the billing link in your plan emails; cancelling stops the plan at the end of the paid period. The Website Package includes 3 months of Website Care before its first charge. You’ll see the final total at Stripe before paying.</p></details>
+          <details class="billing-details" id="billingDetails" hidden><summary>How billing works</summary><p class="mini">Today’s total covers your first month or year of the plan and any one-time services. Plans renew automatically. You can switch plans or cancel from the billing link in your plan emails; cancelling stops the plan at the end of the paid period. The Website Package includes 3 months of Website Care before its first charge. You’ll see the final total at Stripe before paying.</p></details>
 
           <div class="intake" id="intakeStep">
             <div class="two">
