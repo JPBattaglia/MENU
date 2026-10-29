@@ -9,14 +9,15 @@ import { readFileSync } from 'node:fs';
 import { createD1, createR2 } from './test-support/d1.mjs';
 
 const { default: worker } = await import('./src/worker.js');
-const migration = readFileSync(new URL('./migrations/0003_read_cost_indexes.sql', import.meta.url), 'utf8');
+const migration = readFileSync(new URL('./migrations/0003_read_cost_indexes.sql', import.meta.url), 'utf8')
+  + readFileSync(new URL('./migrations/0018_menu_hosting_index.sql', import.meta.url), 'utf8');
 
 // Tables that grow without bound. A full SCAN of one of these inside the scheduled tick is a failure.
-const GROWING = ['workflow_steps', 'workflow_runs', 'business_events', 'approvals', 'projects', 'orders', 'communications'];
+const GROWING = ['workflow_steps', 'workflow_runs', 'business_events', 'approvals', 'projects', 'orders', 'communications', 'deliverables'];
 // Partial indexes (migration 0003) that contain only pending rows.
 const PARTIAL_INDEXES = ['idx_approvals_owner_pending', 'idx_projects_payment_required'];
 // Aliases the worker uses for those tables inside its queries.
-const ALIASES = { ws: 'workflow_steps', previous: 'workflow_steps', wr: 'workflow_runs', px: 'projects', p: 'projects' };
+const ALIASES = { ws: 'workflow_steps', previous: 'workflow_steps', wr: 'workflow_runs', px: 'projects', p: 'projects', d: 'deliverables' };
 
 // Wraps the D1 stand-in so every SELECT (with its bound values) is recorded, then runs it unchanged.
 function recordingDb(db) {

@@ -4,7 +4,10 @@ import { mmBookingEnvironment, mmBookingHandler } from "./booking/booking.js";
 import { getPublicOffers, getSiteCatalog } from "./checkout/catalog.js";
 import { recordFunnelEvent } from "./checkout/funnel.js";
 import { handleCheckoutResume, maybeFollowUpAbandonedCheckouts } from "./checkout/abandoned.js";
+import { handleMenuHostingRenewal } from "./producers/menu-qr/hosting-renewal.js";
+import { handleSample } from "./delivery/samples.js";
 import { advanceAbandonedCheckoutSelfTests } from "./selftest/abandoned-checkout-selftest.js";
+import { advanceMenuHostingSelfTests } from "./selftest/menu-hosting-selftest.js";
 import { CheckoutValidationError, quoteMenuPackage } from "./checkout/quote.js";
 import { createCheckoutSession, createCheckoutSessionTest } from "./checkout/session.js";
 import { handleStripeWebhook } from "./checkout/webhook.js";
@@ -142,6 +145,12 @@ var worker_default = {
     // Abandoned-checkout follow-up (stage 9 part 2): the emailed link reopens the same order in a new Stripe session.
     const resumeMatch = url.pathname.match(/^\/api\/checkout\/resume\/([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})$/i);
     if (resumeMatch && (request.method === "GET" || request.method === "POST")) return handleCheckoutResume(request, env, resumeMatch[1].toLowerCase());
+    // Online Menu + QR after year one: Menu Care checkout bound to the business that owns the menu.
+    const hostingMatch = url.pathname.match(/^\/api\/menu-hosting\/([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})$/i);
+    if (hostingMatch && (request.method === "GET" || request.method === "POST")) return handleMenuHostingRenewal(request, env, hostingMatch[1].toLowerCase());
+    // Product samples: the newest real self-test output of each product, renamed "Sample Cafe", private links removed.
+    const sampleMatch = url.pathname.match(/^\/api\/samples\/(menu|accessibility|conversion|social|website|app)(?:\/(.*))?$/);
+    if (sampleMatch && (request.method === "GET" || request.method === "HEAD")) return handleSample(request, env, sampleMatch[1], sampleMatch[2] || "");
     const portalMatch = url.pathname.match(/^\/api\/billing-portal\/([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})$/i);
     if (portalMatch && (request.method === "GET" || request.method === "POST")) {
       return handleBillingPortal(request, env, portalMatch[1].toLowerCase());
@@ -304,6 +313,7 @@ const mmWorkerWithBooking = {
       await advanceDomainSetupSelfTests(env).catch((error) => console.error("Domain setup self-test failed:", error instanceof Error ? error.message : String(error)));
       await advanceAccountSelfTests(env).catch((error) => console.error("Account self-test failed:", error instanceof Error ? error.message : String(error)));
       await advanceAbandonedCheckoutSelfTests(env, app).catch((error) => console.error("Abandoned checkout self-test failed:", error instanceof Error ? error.message : String(error)));
+      await advanceMenuHostingSelfTests(env).catch((error) => console.error("Menu hosting self-test failed:", error instanceof Error ? error.message : String(error)));
       // Once an hour: one reminder email to buyers who left a checkout unpaid 24-72 hours ago.
       await maybeFollowUpAbandonedCheckouts(env).catch((error) => console.error("Abandoned checkout follow-up failed:", error instanceof Error ? error.message : String(error)));
       await runDomainWatch(env).catch((error) => console.error("Domain watch failed:", error instanceof Error ? error.message : String(error)));
