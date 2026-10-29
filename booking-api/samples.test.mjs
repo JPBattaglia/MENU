@@ -46,5 +46,20 @@ test('/api/samples/menu serves the self-test buyer\'s newest menu, never a real 
   assert.match(html, /fictional business/);
   assert.doesNotMatch(html, /Joe/);
   assert.equal((await worker.fetch(new Request('https://menu-made.com/api/samples/google'), env, {})).status, 404);
+  assert.equal((await worker.fetch(new Request('https://menu-made.com/api/samples/google-care'), env, {})).status, 404, 'known sample with nothing stored yet');
   assert.equal((await worker.fetch(new Request('https://menu-made.com/api/samples/social'), env, {})).status, 404, 'missing samples answer 404, not an error');
+});
+
+test('website sample photos are fetched once from Unsplash, then read from storage; failures fall back quietly', async () => {
+  const { samplePhotos, SAMPLE_PHOTOS, SAMPLE_LOGO_PNG } = await import('./src/selftest/sample-assets.js');
+  assert.deepEqual([...SAMPLE_LOGO_PNG.slice(0, 4)], [0x89, 0x50, 0x4e, 0x47], 'the logo is a real PNG');
+  const env = { ASSETS: createR2() };
+  const jpeg = new Uint8Array([0xff, 0xd8, 0xff, 0xe0, 1, 2, 3]);
+  let calls = 0;
+  const fetchOk = async (url) => { calls += 1; assert.match(String(url), /^https:\/\/images\.unsplash\.com\/photo-/); return new Response(jpeg); };
+  assert.equal((await samplePhotos(env, fetchOk)).length, SAMPLE_PHOTOS.length);
+  assert.equal(calls, SAMPLE_PHOTOS.length);
+  assert.equal((await samplePhotos(env, async () => { throw new Error('should not fetch'); })).length, SAMPLE_PHOTOS.length, 'second run reads storage');
+  assert.deepEqual(await samplePhotos({ ASSETS: createR2() }, async () => new Response('<html>', { status: 200 })), [], 'non-JPEG answers are not used');
+  assert.deepEqual(await samplePhotos({ ASSETS: createR2() }, async () => { throw new Error('offline'); }), []);
 });
