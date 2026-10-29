@@ -178,6 +178,7 @@ test('site catalog lists every plan with monthly and annual prices, bundle conte
     assert.equal(by.WEBSITE_PACKAGE.price_cents, catalog.one_time.WEBSITE_PACKAGE.amount);
     assert.equal(by.ONLINE_MENU_QR.on_sale, true);
     assert.equal(by.ONLINE_MENU_QR.kind, 'ONE_TIME');
+    assert.deepEqual(by.ONLINE_MENU_QR.menu_package, { setup_cents: 12900, hosting_first_year_cents: 1500, included_pages: 3, additional_page_cents: 2000, max_pages: 50 });
     h.env.DB.raw.prepare(`UPDATE offers SET is_public = 1 WHERE code = 'BUNDLE_STARTER'`).run();
     const after = Object.fromEntries((await (await h.call('/api/catalog')).json()).offers.map((o) => [o.code, o]));
     assert.equal(after.BUNDLE_STARTER.on_sale, true);

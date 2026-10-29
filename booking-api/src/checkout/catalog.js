@@ -1,4 +1,5 @@
 import { jsonResponse, nowIso, parseJsonOrNull } from "../lib/http.js";
+import { MENU_PACKAGE_PRICING } from "./quote.js";
 
 async function getPublicOffers(env) {
   try {
@@ -265,6 +266,15 @@ async function getSiteCatalog(env) {
             ? { prices: {}, includes: Array.isArray(scope.includes) ? scope.includes : [row.code], requires_setup: scope.requires_setup || null }
             : { price_cents: Number(row.price_cents) })
         };
+        if (row.code === "ONLINE_MENU_QR") {
+          offer.menu_package = {
+            setup_cents: MENU_PACKAGE_PRICING.setupCents,
+            hosting_first_year_cents: MENU_PACKAGE_PRICING.hostingFirstYearCents,
+            included_pages: MENU_PACKAGE_PRICING.includedPages,
+            additional_page_cents: MENU_PACKAGE_PRICING.additionalPageCents,
+            max_pages: MENU_PACKAGE_PRICING.maxPages
+          };
+        }
         byCode.set(row.code, offer);
       }
       if (offer.prices) {
