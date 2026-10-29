@@ -276,8 +276,9 @@ ONCE = {
 
 
 # Real outputs from each product's daily self-test, served by the worker (booking-api/src/delivery/samples.js) with
-# the test business renamed "Sample Cafe". Only products whose sample shows them well are linked; the Website
-# Package and the Google products have none yet.
+# the test business renamed "Sample Cafe". Only products whose sample shows them well are linked. Google Visibility's
+# comes from Menu-Made's own Google profile (owner OK). Not linked: Google Profile Care and Review Replies (their
+# self-test writes are refused by design, so the report shows no posts or replies).
 SAMPLES = {
     "ONLINE_MENU_QR": "/api/samples/menu",
     "MENU_CARE": "/api/samples/menu",
@@ -285,6 +286,7 @@ SAMPLES = {
     "ACCESSIBILITY_MONITORING": "/api/samples/accessibility",
     "CONVERSION_FIX": "/api/samples/conversion",
     "GUEST_APP": "/api/samples/app/",
+    "GOOGLE_VISIBILITY": "/api/samples/google-visibility",
 }
 
 
