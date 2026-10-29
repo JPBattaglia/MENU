@@ -1,355 +1,247 @@
-<!-- start.html — FULL FILE (Cart UI + Pre-checkout Intake + Secure Checkout) -->
 <!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Choose a Service or Request a Quote — MENU-MADE</title>
-  <meta name="description" content="Choose a menu, website conversion, Google visibility, or accessibility service for your business. Review your order and full price before secure checkout.">
-
+  <title>Start — Choose Your Plan | MENU-MADE</title>
+  <meta name="description" content="Choose a Starter, Growth or Pro plan, a single service or a one-time setup, review the total and check out securely with Stripe.">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Philosopher:wght@400;700&family=Aldrich&display=swap" rel="stylesheet">
-
   <link rel="icon" type="image/png" href="MENU=.png">
   <link rel="shortcut icon" href="MENU=.png">
   <link rel="apple-touch-icon" href="MENU=.png">
-
-  <link rel="stylesheet" href="main.css?v=20261028-nino-lead">
-
-<script src="funnel.js?v=20261016-service-measurement" defer></script>
-<script src="site-nav.js?v=20261016-accessible-navigation" defer></script>
-<link rel="canonical" href="https://menu-made.com/contact">
-<meta property="og:type" content="website">
-<meta property="og:locale" content="en_US">
-<meta property="og:site_name" content="MENU-MADE">
-<meta property="og:title" content="Choose a Service or Request a Quote — MENU-MADE">
-<meta property="og:description" content="Choose a menu, website conversion, Google visibility, or accessibility service for your business. Review your order and full price before secure checkout.">
-<meta property="og:url" content="https://menu-made.com/contact">
-<meta property="og:image" content="https://menu-made.com/assets/social-preview.png">
-<meta property="og:image:width" content="1200">
-<meta property="og:image:height" content="630">
-<meta property="og:image:alt" content="MENU-MADE — Websites, menus, and digital presence">
-<meta name="twitter:card" content="summary_large_image">
-<meta name="twitter:title" content="Choose a Service or Request a Quote — MENU-MADE">
-<meta name="twitter:description" content="Choose a menu, website conversion, Google visibility, or accessibility service for your business. Review your order and full price before secure checkout.">
-<meta name="twitter:image" content="https://menu-made.com/assets/social-preview.png">
+  <link rel="stylesheet" href="main.css?v=20261028-stage9">
+  <script src="funnel.js?v=20261016-service-measurement" defer></script>
+  <script src="site-nav.js?v=20261016-accessible-navigation" defer></script>
+  <script src="site-catalog.js?v=20261028-stage9" defer></script>
+  <link rel="canonical" href="https://menu-made.com/contact">
+  <meta property="og:type" content="website">
+  <meta property="og:locale" content="en_US">
+  <meta property="og:site_name" content="MENU-MADE">
+  <meta property="og:title" content="Start — Choose Your Plan | MENU-MADE">
+  <meta property="og:description" content="Choose a Starter, Growth or Pro plan, a single service or a one-time setup, review the total and check out securely with Stripe.">
+  <meta property="og:url" content="https://menu-made.com/contact">
+  <meta property="og:image" content="https://menu-made.com/assets/social-preview.png">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta property="og:image:alt" content="MENU-MADE — Menus, websites and Google care for local businesses">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="Start — Choose Your Plan | MENU-MADE">
+  <meta name="twitter:description" content="Choose a Starter, Growth or Pro plan, a single service or a one-time setup, review the total and check out securely with Stripe.">
+  <meta name="twitter:image" content="https://menu-made.com/assets/social-preview.png">
 </head>
-
 <body class="start-page">
 <a class="site-skip" href="#main-content">Skip to content</a>
-
 <header class="header">
   <div class="container header-inner">
-
     <div class="brand">
       <a class="gear-link" href="index.html" aria-label="Home">
         <img src="MENU=.png" class="brand-mark" alt="Menu-Made gear">
       </a>
-
       <a class="word-link" href="about.html" aria-label="About">
         <img src="MENU1.png" class="brand-word" alt="Menu-Made">
       </a>
     </div>
-
     <button class="gear-burger" type="button" aria-expanded="false" aria-controls="primaryNav" aria-label="Open navigation menu" hidden><img src="MENU=.png" alt="" aria-hidden="true"></button>
-
     <nav class="nav" id="primaryNav" aria-label="Primary">
       <a href="index.html">Home</a>
+      <a href="plans.html">Plans</a>
       <a href="services.html">Services</a>
       <a href="portfolio.html">Our Work</a>
       <a href="about.html">About</a>
-      <a href="accessability.html">Access</a>
       <a class="nav-cta active" href="contact.html">Start</a>
     </nav>
-
   </div>
 </header>
-
 <main id="main-content" tabindex="-1">
-
 <section class="hero" aria-label="Start">
   <div class="container hero-grid">
-
     <div class="hero-copy">
-      <span class="pill">Websites · Menus · Online presence</span>
-      <h1>Start Your Project</h1>
-      <p>
-        Choose the service your business needs, review the price, and send your details.
-        For a menu project, you can paste a menu link or attach your current menu before secure checkout.
-      </p>
-
+      <span class="pill">Start</span>
+      <h1>Choose your plan</h1>
+      <p>Pick one plan and any one-time services, then check out securely with Stripe. We only ask what we need to start; your next step arrives by email right after payment.</p>
       <div class="hero-actions">
-        <a class="btn primary" href="#optionalServices" data-choose-services>Choose a Service</a>
-        <a class="btn ghost" href="#checkout" data-start-menu>Start My Menu</a>
-        <a class="btn ghost" href="#inquiry">Questions before checkout?</a>
+        <a class="btn primary" href="#optionalServices" data-choose-services>Choose a plan or service</a>
+        <a class="btn ghost" href="#inquiry">Questions first?</a>
       </div>
-
-      <p class="conversion-help"><a href="sample-menu.html">Try the sample menu</a> · <a href="#inquiry">Ask about your project</a></p>
-      <details class="package-details start-package-details">
-        <summary>Menu package details &amp; pricing</summary>
-        <p class="muted-note">
-        One checkout covers $129 setup plus $15 first-year hosting: $144 for up to 3 menu pages, a QR code, and two revisions. Additional pages cost $20 each. Hosting renews at $15/year, arranged separately, with no automatic subscription. <a href="services.html#purchase-scope">Read the included work and required materials</a>. For custom work or questions about hosting and revisions, send an inquiry before paying.
-        </p>
-      </details>
+      <p class="conversion-help"><a href="plans.html">Compare plans</a> · <a href="services.html">What each service does</a></p>
     </div>
-
     <div class="hero-visual">
       <div class="media-frame">
         <img src="hospitality-owner.webp" alt="Illustrative restaurant owner preparing a menu at a café counter" class="hero-image hospitality-photo" width="1536" height="1024">
-        <div class="media-overlay">
-          <strong>Your next step, made simple</strong>
-          <span>Choose your service and review the price before you checkout.</span>
-        </div>
       </div>
     </div>
-
   </div>
 </section>
 
-
-
 <section class="section section-image" id="checkout" aria-label="Checkout">
   <div class="container">
-
-    <header class="section-head">
-      <h2>Choose a service</h2>
-      <p>Choose a service to see its price and next steps, or request a custom website quote. Every project’s scope and price are confirmed before payment.</p>
-    </header>
-
+    <header class="section-head"><h2>Your order</h2><p>One plan per order. Add one-time services alongside it.</p></header>
     <div class="start-grid">
-
       <details class="optional-services" id="optionalServices">
         <summary class="service-picker-summary" id="serviceChoicesSummary">
           <span class="service-picker-copy">
-            <span class="service-picker-title">Choose or add a service</span>
-            <span class="service-picker-help">Tap or click to browse all services</span>
+            <span class="service-picker-title">Choose a plan or service</span>
+            <span class="service-picker-help">Tap or click to see everything</span>
           </span>
           <span class="service-picker-action" aria-hidden="true">
-            <span class="service-picker-show">View services</span>
-            <span class="service-picker-hide">Hide services</span>
+            <span class="service-picker-show">Show options</span>
+            <span class="service-picker-hide">Hide options</span>
             <span class="service-picker-chevron"></span>
           </span>
         </summary>
         <div class="optional-content">
-          <section class="service-choice-group" aria-labelledby="fixedServiceTitle">
-          <h3 id="fixedServiceTitle">Choose a focused service</h3>
-          <p class="mini">Review the fixed price, share a short brief, and continue to secure payment. Each service is selected once per project.</p>
-        <div class="product-grid">
-
-
-
-          <article class="service-card" data-sku="online_menu_qr" data-name="Online Menu + QR" data-price="12900" data-price-label="$144 first year" data-price-id="price_1T6OzbHw7f6jhUv8Epy5oYMf">
-            <h3>Online Menu + QR</h3>
-            <p>Mobile-first menu page customers open instantly. Clean layout, fast load, QR-ready delivery. Standard menu turnaround: 48 hours after all required materials are received and validated. Incomplete materials or custom work require a confirmed delivery date.</p>
-            <div class="card-actions">
-              <span class="price-tag">$144 first year</span>
-              <button class="btn primary js-add" type="button" data-select-label="Select menu" aria-pressed="false">Select menu</button>
-            </div>
-          </article>
-
-          <article class="service-card" data-sku="conversion_fix" data-name="Conversion Fix" data-price="29900" data-price-label="$299" data-price-id="price_1T6P5tHw7f6jhUv8zQ7pGEoJ">
-            <h3>Conversion Fix</h3>
-            <p>Fix what blocks action: clarity, CTAs, layout flow, mobile usability, speed issues.</p>
-            <div class="card-actions">
-              <span class="price-tag">$299</span>
-              <button class="btn primary js-add" type="button" data-select-label="Select website fixes" aria-pressed="false">Select website fixes</button>
-            </div>
-          </article>
-
-          <article class="service-card" data-sku="google_visibility" data-name="Google Visibility" data-price="14900" data-price-label="$149" data-price-id="price_1T6iC6Hw7f6jhUv8iYYYZK0T">
-            <h3>Google Visibility</h3>
-            <p>Google Business Profile creation or improvements to business details, categories, and menu/website links. Website SEO changes are scoped separately. Google placement is not guaranteed.</p>
-            <div class="card-actions">
-              <span class="price-tag">$149</span>
-              <button class="btn primary js-add" type="button" data-select-label="Select Google help" aria-pressed="false">Select Google help</button>
-            </div>
-          </article>
-
-          <article class="service-card" data-sku="accessibility_upgrade" data-name="Accessibility Upgrade (Yearly)" data-price="25000" data-price-label="$250 / year" data-price-id="price_1T6j0xHw7f6jhUv8Ci1ZQ9qS">
-            <h3>Accessibility Upgrade</h3>
-            <p>Hands-on usability fixes for keyboard navigation, contrast, labels, and forms on your site.</p>
-            <div class="card-actions">
-              <span class="price-tag">$250 / year</span>
-              <button class="btn primary js-add" type="button" data-select-label="Select accessibility" aria-pressed="false">Select accessibility</button>
-            </div>
-          </article>
-
-        </div>
-
+          <fieldset class="mm-toggle" data-billing-toggle>
+  <legend class="mm-sr">Billing</legend>
+  <label><input type="radio" name="billing-start" value="month" checked><span>Monthly</span></label>
+  <label><input type="radio" name="billing-start" value="year"><span>Yearly <em>2 months free</em></span></label>
+</fieldset>
+          <section class="service-choice-group" aria-labelledby="bundleChoiceTitle">
+            <h3 id="bundleChoiceTitle">Plans</h3>
+            <article class="service-card mm-choice" data-code="BUNDLE_STARTER" data-kind="plan" data-name="Starter plan">
+              <h3>Starter plan</h3><p>Your menu current and every review answered. Includes Menu Care, Review Replies, Accessibility Monitoring.</p>
+              <div class="service-bottom"><span class="price"><span class="mm-price" data-price-for="BUNDLE_STARTER">…</span></span><button class="btn primary js-add" type="button" data-select-label="Choose Starter" aria-pressed="false">Loading…</button></div>
+            </article>
+            <article class="service-card mm-choice" data-code="BUNDLE_GROWTH" data-kind="plan" data-name="Growth plan">
+              <h3>Growth plan</h3><p>Everything in Starter, plus a busy Google profile. Includes Menu Care, Google Profile Care (with review replies), Accessibility Monitoring.</p>
+              <div class="service-bottom"><span class="price"><span class="mm-price" data-price-for="BUNDLE_GROWTH">…</span></span><button class="btn primary js-add" type="button" data-select-label="Choose Growth" aria-pressed="false">Loading…</button></div>
+            </article>
+            <article class="service-card mm-choice" data-code="BUNDLE_PRO" data-kind="plan" data-name="Pro plan">
+              <h3>Pro plan</h3><p>Your whole online presence, handled. Includes Everything in Growth, Social Posts, Website Care.</p>
+              <div class="service-bottom"><span class="price"><span class="mm-price" data-price-for="BUNDLE_PRO">…</span></span><button class="btn primary js-add" type="button" data-select-label="Choose Pro" aria-pressed="false">Loading…</button></div>
+            </article>
           </section>
-          <section class="service-choice-group quote-choice-group" aria-labelledby="customServiceTitle">
-            <h3 id="customServiceTitle">Plan a custom project</h3>
-            <p class="mini">Tell us what you want to build. These choices open a project inquiry; they do not add a payment to your order.</p>
-            <div class="quote-choice-grid">
-              <article class="service-card">
-                <h4>Website Design &amp; Custom Builds</h4>
-                <p>A new website or broader redesign, scoped around your business, pages, and features.</p>
-                <div class="service-bottom"><span class="price">Custom quote</span><button class="btn primary" type="button" data-quote-service="website">Request a Website Quote</button></div>
-              </article>
-              <article class="service-card">
-                <h4>Mobile App · iOS + Android</h4>
-                <p>The $999 menu app scope includes offline menus, push notifications, native navigation, and publishing support. Custom requirements are quoted separately.</p>
-                <div class="service-bottom"><span class="price">Discuss scope first</span><button class="btn primary" type="button" data-quote-service="app">Discuss an App</button></div>
-              </article>
-            </div>
+          <section class="service-choice-group" aria-labelledby="singleChoiceTitle">
+            <h3 id="singleChoiceTitle">Services on their own</h3>
+            <article class="service-card mm-choice" data-code="MENU_CARE" data-kind="plan" data-name="Menu Care">
+              <h3>Menu Care</h3><p>Unlimited menu updates, same QR code.</p>
+              <div class="service-bottom"><span class="price"><span class="mm-price" data-price-for="MENU_CARE">…</span></span><button class="btn primary js-add" type="button" data-select-label="Choose" aria-pressed="false">Loading…</button></div>
+            </article>
+            <article class="service-card mm-choice" data-code="REVIEW_REPLIES" data-kind="plan" data-name="Review Replies">
+              <h3>Review Replies</h3><p>Every new Google review answered.</p>
+              <div class="service-bottom"><span class="price"><span class="mm-price" data-price-for="REVIEW_REPLIES">…</span></span><button class="btn primary js-add" type="button" data-select-label="Choose" aria-pressed="false">Loading…</button></div>
+            </article>
+            <article class="service-card mm-choice" data-code="GOOGLE_PROFILE_CARE" data-kind="plan" data-name="Google Profile Care">
+              <h3>Google Profile Care</h3><p>A busy, up-to-date Google profile.</p>
+              <div class="service-bottom"><span class="price"><span class="mm-price" data-price-for="GOOGLE_PROFILE_CARE">…</span></span><button class="btn primary js-add" type="button" data-select-label="Choose" aria-pressed="false">Loading…</button></div>
+            </article>
+            <article class="service-card mm-choice" data-code="SOCIAL_POSTS" data-kind="plan" data-name="Social Posts">
+              <h3>Social Posts</h3><p>A month of posts, ready to share.</p>
+              <div class="service-bottom"><span class="price"><span class="mm-price" data-price-for="SOCIAL_POSTS">…</span></span><button class="btn primary js-add" type="button" data-select-label="Choose" aria-pressed="false">Loading…</button></div>
+            </article>
+            <article class="service-card mm-choice" data-code="WEBSITE_CARE" data-kind="plan" data-name="Website Care">
+              <h3>Website Care</h3><p>Hosting and changes for your Menu-Made site.</p>
+              <div class="service-bottom"><span class="price"><span class="mm-price" data-price-for="WEBSITE_CARE">…</span></span><button class="btn primary js-add" type="button" data-select-label="Choose" aria-pressed="false">Loading…</button></div>
+            </article>
+            <article class="service-card mm-choice" data-code="ACCESSIBILITY_MONITORING" data-kind="plan" data-name="Accessibility Monitoring">
+              <h3>Accessibility Monitoring</h3><p>A monthly accessibility check of your site.</p>
+              <div class="service-bottom"><span class="price"><span class="mm-price" data-price-for="ACCESSIBILITY_MONITORING">…</span></span><button class="btn primary js-add" type="button" data-select-label="Choose" aria-pressed="false">Loading…</button></div>
+            </article>
+            <article class="service-card mm-choice" data-code="GUEST_APP" data-kind="plan" data-name="Guest App">
+              <h3>Guest App</h3><p>Your own app on guests’ phones. Includes the one-time app build.</p>
+              <div class="service-bottom"><span class="price"><span class="mm-price" data-price-for="GUEST_APP">…</span></span><button class="btn primary js-add" type="button" data-select-label="Choose" aria-pressed="false">Loading…</button></div>
+            </article>
           </section>
-        <div class="service-summary-spacer"></div>
-
-        <div class="service-card">
-          <h3>What happens next</h3>
-          <p>
-            Choose a service and provide your contact details. Include your website and project goals; for menu projects, share your current menu. After payment, provide the information required for your selected service. We confirm scope, missing materials, and delivery timing. Custom websites and app requirements begin with an inquiry and quote.
-          </p>
-        </div>
-
+          <section class="service-choice-group" aria-labelledby="onceChoiceTitle">
+            <h3 id="onceChoiceTitle">One-time services</h3>
+            <article class="service-card mm-choice" data-code="ONLINE_MENU_QR" data-kind="once" data-name="Online Menu + QR">
+              <h3>Online Menu + QR</h3><p>Your menu as a mobile page, plus a QR code for every table.</p>
+              <div class="service-bottom"><span class="price"><span class="mm-price" data-price-for="ONLINE_MENU_QR">…</span> <small class="mm-plus">first year</small></span><button class="btn primary js-add" type="button" data-select-label="Add" aria-pressed="false">Loading…</button></div>
+            </article>
+            <article class="service-card mm-choice" data-code="WEBSITE_PACKAGE" data-kind="once" data-name="Website Package">
+              <h3>Website Package</h3><p>A finished website, with 3 months of Website Care.</p>
+              <div class="service-bottom"><span class="price"><span class="mm-price" data-price-for="WEBSITE_PACKAGE">…</span></span><button class="btn primary js-add" type="button" data-select-label="Add" aria-pressed="false">Loading…</button></div>
+            </article>
+            <article class="service-card mm-choice" data-code="GOOGLE_VISIBILITY" data-kind="once" data-name="Google Visibility">
+              <h3>Google Visibility</h3><p>A one-time tune-up of your Google profile.</p>
+              <div class="service-bottom"><span class="price"><span class="mm-price" data-price-for="GOOGLE_VISIBILITY">…</span></span><button class="btn primary js-add" type="button" data-select-label="Add" aria-pressed="false">Loading…</button></div>
+            </article>
+            <article class="service-card mm-choice" data-code="CONVERSION_FIX" data-kind="once" data-name="Conversion Fix">
+              <h3>Conversion Fix</h3><p>A clear fix list for your current website.</p>
+              <div class="service-bottom"><span class="price"><span class="mm-price" data-price-for="CONVERSION_FIX">…</span></span><button class="btn primary js-add" type="button" data-select-label="Add" aria-pressed="false">Loading…</button></div>
+            </article>
+          </section>
         </div>
       </details>
 
-      <!-- Order summary and contact details come first for every screen size. -->
       <aside class="cart" aria-label="Your order">
         <div class="cart-panel">
-          <div class="cart-head">
-            <div>
-              <h3>Your order</h3>
-              <p class="cart-sub">Review your project and its next step below.</p>
-            </div>
-          </div>
-
+          <div class="cart-head"><div><h3>Your order</h3><p class="cart-sub">Review your choices and the total before checkout.</p></div></div>
           <ul class="cart-items" id="cartItems" aria-live="polite"></ul>
-          <p class="mini" id="emptyOrder">Ready when you are. Use View services above to choose what you need; your selection and next steps will appear here.</p>
+          <p class="mini" id="emptyOrder">Nothing chosen yet. Use “Choose a plan or service” to start.</p>
+          <p class="mm-problem" id="orderProblem" role="alert" hidden></p>
 
           <div class="menu-config" id="menuConfig" hidden>
             <div class="field">
-              <label for="menuPages">How many pages are in your current menu?</label>
+              <label for="menuPages">How many pages is your current menu?</label>
               <input id="menuPages" name="menu_pages" type="number" min="1" max="50" step="1" value="3" inputmode="numeric" aria-describedby="menuPagesHelp menuPagesError">
-              <div class="mini" id="menuPagesHelp">Count the pages in the menu you send us. Up to 3 pages are included; each additional page is $20. We check the page count of the file you upload; if it has more pages, we email you a link to pay the difference before we start. For more than 50 pages, <a href="#inquiry">request a quote</a>.</div>
-              <div class="validation-msg" id="menuPagesError" aria-live="polite">Enter a whole number from 1 to 50.</div>
+              <div class="mini" id="menuPagesHelp">Count every page of the menu you’ll upload. Up to 3 pages are included. We check the page count of your file; if it has more pages, we email you a link to pay the difference before we start.</div>
+              <div class="validation-msg" id="menuPagesError" aria-live="polite"></div>
             </div>
             <dl class="menu-breakdown" aria-label="Menu price breakdown">
-              <div><dt>Menu setup · up to 3 pages</dt><dd>$129.00</dd></div>
-              <div><dt>First-year hosting</dt><dd>$15.00</dd></div>
-              <div><dt id="extraPagesLabel">Additional pages · 0</dt><dd id="extraPagesAmount">$0.00</dd></div>
+              <div><dt>Menu setup · up to 3 pages</dt><dd id="menuSetupAmount">—</dd></div>
+              <div><dt>First-year hosting</dt><dd id="menuHostingAmount">—</dd></div>
+              <div><dt id="extraPagesLabel">Additional pages · 0</dt><dd id="extraPagesAmount">—</dd></div>
             </dl>
-            <p class="mini">Two revisions included. Future menu edits are quoted before work begins. Hosting renews at $15/year, arranged separately; no automatic subscription.</p>
           </div>
 
           <div class="cart-total" id="orderTotalRow" hidden>
-            <span id="orderTotalLabel">Total due today · USD</span>
-            <strong id="cartTotal" aria-live="polite" aria-atomic="true">$0.00</strong>
+            <span id="orderTotalLabel">Due today · USD</span>
+            <strong id="cartTotal" aria-live="polite" aria-atomic="true">—</strong>
           </div>
-
+          <p class="mm-recurring" id="recurringRow" hidden><span>Then</span> <strong id="recurringTotal"></strong></p>
 
           <div class="cart-actions" id="orderActions" hidden>
             <button class="btn primary" id="continueBtn" type="button" disabled>Continue to details</button>
             <button class="btn secondary" id="clearBtn" type="button" disabled>Clear</button>
           </div>
-
           <div class="status" id="status" role="status" aria-live="polite"></div>
-          <details class="billing-details" id="billingDetails" hidden><summary>How billing works</summary><p class="mini" id="billingSummary">One payment covers the services you select. Menu hosting for the first year and additional pages are included in the displayed total. Conversion Fix and Google Visibility are one-time purchases. Accessibility covers one year, paid upfront. Review the final total at Stripe before paying.</p></details>
+          <details class="billing-details" id="billingDetails" hidden><summary>How billing works</summary><p class="mini">Today’s total covers your first month or year of the plan and any one-time services. Plans renew automatically until you cancel from the billing link in your plan emails; cancelling stops the plan at the end of the paid period. The Website Package includes 3 months of Website Care before its first charge. You’ll see the final total at Stripe before paying.</p></details>
 
           <div class="intake" id="intakeStep">
-            <h4>Your contact details</h4>
-
-            <div class="field">
-              <label for="lead_name">Name *</label>
-              <input id="lead_name" maxlength="100" type="text" autocomplete="name" required>
-            </div>
-
-            <div class="field">
-              <label for="lead_business">Business name *</label>
-              <input id="lead_business" maxlength="150" type="text" autocomplete="organization" required>
-            </div>
-
             <div class="two">
-              <div class="field">
-                <label for="lead_email">Email *</label>
-                <input id="lead_email" maxlength="150" type="email" autocomplete="email" inputmode="email" placeholder="name@business.com" required aria-describedby="lead_email_error">
-                <div id="lead_email_error" class="validation-msg" aria-live="polite">Enter a valid email address.</div>
-              </div>
-
-              <div class="field">
-                <label for="lead_phone">Phone</label>
-                <input id="lead_phone" type="tel" autocomplete="tel" inputmode="tel" placeholder="+1 555 555 5555" aria-describedby="lead_phone_error">
-                <div id="lead_phone_error" class="validation-msg" aria-live="polite">Enter a valid phone number.</div>
-              </div>
+              <div class="field"><label for="lead_name">Your name *</label><input id="lead_name" maxlength="100" type="text" autocomplete="name" required></div>
+              <div class="field"><label for="lead_business">Business name *</label><input id="lead_business" maxlength="150" type="text" autocomplete="organization" required></div>
+            </div>
+            <div class="two">
+              <div class="field"><label for="lead_email">Email *</label><input id="lead_email" maxlength="150" type="email" autocomplete="email" inputmode="email" placeholder="name@business.com" required aria-describedby="lead_email_error"><div id="lead_email_error" class="validation-msg" aria-live="polite"></div></div>
+              <div class="field"><label for="lead_phone">Phone (optional)</label><input id="lead_phone" type="tel" autocomplete="tel" inputmode="tel" placeholder="+1 555 555 5555" aria-describedby="lead_phone_error"><div id="lead_phone_error" class="validation-msg" aria-live="polite"></div></div>
             </div>
 
             <fieldset class="service-brief" id="conversionBrief" hidden>
-              <legend>For your Website Conversion Fix</legend>
-              <p class="mini">These details help us confirm the site and the customer action you want to improve. Public links only; do not send passwords.</p>
+              <legend>Conversion Fix</legend>
               <div class="field"><label for="conversionUrl">Current website *</label><input id="conversionUrl" type="url" maxlength="180" autocomplete="url" placeholder="https://yourbusiness.com" aria-describedby="conversionUrlError"><div class="validation-msg" id="conversionUrlError" aria-live="polite"></div></div>
-              <div class="field"><label for="conversionGoal">Main customer action *</label><input id="conversionGoal" maxlength="80" placeholder="For example: calls, reservations, or messages" aria-describedby="conversionGoalError"><div class="validation-msg" id="conversionGoalError" aria-live="polite"></div></div>
+              <div class="field"><label for="conversionGoal">Main thing visitors should do *</label><input id="conversionGoal" maxlength="80" placeholder="For example: call, book or order" aria-describedby="conversionGoalError"><div class="validation-msg" id="conversionGoalError" aria-live="polite"></div></div>
             </fieldset>
             <fieldset class="service-brief" id="googleBrief" hidden>
-              <legend>For your Google Visibility service</legend>
-              <div class="field"><label for="googleMode">What do you need? *</label><select id="googleMode" aria-describedby="googleModeError"><option value="">Choose profile help</option><option value="existing">Improve an existing profile</option><option value="new">Create a new profile</option></select><div class="validation-msg" id="googleModeError" aria-live="polite"></div></div>
-              <div class="field" id="googleUrlField" hidden><label for="googleUrl">Existing profile link (optional)</label><input id="googleUrl" type="url" maxlength="180" placeholder="Paste a public Google profile link" aria-describedby="googleUrlError"><div class="validation-msg" id="googleUrlError" aria-live="polite"></div></div>
+              <legend>Google Visibility</legend>
+              <div class="field"><label for="googleMode">Do you have a Google Business Profile? *</label><select id="googleMode" aria-describedby="googleModeError"><option value="">Choose one</option><option value="existing">Yes, improve my profile</option><option value="new">No, help me create one</option></select><div class="validation-msg" id="googleModeError" aria-live="polite"></div></div>
+              <div class="field" id="googleUrlField" hidden><label for="googleUrl">Profile link (optional)</label><input id="googleUrl" type="url" maxlength="180" placeholder="Paste your Google profile link" aria-describedby="googleUrlError"><div class="validation-msg" id="googleUrlError" aria-live="polite"></div></div>
             </fieldset>
-            <fieldset class="service-brief" id="accessibilityBrief" hidden>
-              <legend>For your Accessibility Upgrade</legend>
-              <div class="field"><label for="accessibilityUrl">Website to improve *</label><input id="accessibilityUrl" type="url" maxlength="180" autocomplete="url" placeholder="https://yourbusiness.com" aria-describedby="accessibilityUrlError"><div class="validation-msg" id="accessibilityUrlError" aria-live="polite"></div></div>
-              <div class="field"><label for="accessibilityPriority">Priority or known issue (optional)</label><input id="accessibilityPriority" maxlength="80" placeholder="For example: keyboard navigation" aria-describedby="accessibilityPriorityError"><div class="validation-msg" id="accessibilityPriorityError" aria-live="polite"></div></div>
-            </fieldset>
-            <div class="field">
-              <label for="lead_notes">Other notes (optional)</label>
-              <textarea id="lead_notes" maxlength="400" placeholder="Share your website, project goals, priorities, and desired deadline. Do not send passwords."></textarea>
-              <div class="mini">For menu projects, share a menu link or attach your current menu below. Your service brief is included first; use an attachment for longer background.</div>
-            </div>
-
 
             <div class="field">
-              <label for="lead_document">Attach a project document (optional)</label>
+              <label for="lead_document">Upload your current menu <span id="menuUploadNote" hidden>(PDF or photo; needed for Online Menu + QR)</span></label>
               <input id="lead_document" type="file" accept=".pdf,.doc,.docx,.txt,.png,.jpg,.jpeg,.webp" aria-describedby="lead_document_help lead_document_status">
-              <div class="mini" id="lead_document_help">One PDF, Word document, text file, PNG, JPEG, or WebP; maximum 5 MB. Sent with your contact details when you continue to checkout. Documents are reviewed by Menu-Made; a file upload does not automatically complete production onboarding.</div>
+              <div class="mini" id="lead_document_help">One PDF, Word document, text file, PNG, JPEG or WebP, up to 5 MB.</div>
               <div class="mini" id="lead_document_status" role="status" aria-live="polite"></div>
             </div>
+            <div class="field"><label for="lead_notes">Anything we should know? (optional)</label><textarea id="lead_notes" maxlength="400" placeholder="Never send passwords."></textarea></div>
 
             <div class="checkline">
               <input id="scopeConfirm" type="checkbox" required>
-              <label for="scopeConfirm" class="mini">
-                I have reviewed the <a href="services.html#purchase-scope">included work and required materials</a>. I will request a separate quote for custom work.
-              </label>
+              <label for="scopeConfirm" class="mini">I’ve read <a href="services.html">what’s included</a> and how billing works.</label>
             </div>
-
             <div class="cart-actions checkout-actions">
               <button class="btn primary" id="checkoutBtn" type="button">Proceed to secure checkout</button>
-              <button class="btn secondary" id="backBtn" type="button">Hide contact details</button>
+              <button class="btn secondary" id="backBtn" type="button">Hide details</button>
             </div>
-
-            <div class="mini checkout-privacy-note">
-              Your contact details and any attached document are used to review and start your project. You’ll continue to secure checkout for payment.
-            </div>
+            <div class="mini checkout-privacy-note">Your details are used to start and deliver your order. <a href="privacy.html">Privacy policy</a>.</div>
           </div>
 
-          <p class="mini order-security" id="orderSecurity" hidden>Payment is handled securely by Stripe. MENU-MADE does not collect your card details on this page. After payment, we’ll guide you through the remaining project materials.</p>
-
-          <div class="order-review-links">
-            <a class="cta-pill" href="services.html">Review services</a>
-            <a class="cta-pill" href="accessability.html">Accessibility</a>
-          </div>
+          <p class="mini order-security" id="orderSecurity" hidden>Payment is handled by Stripe. MENU-MADE never sees your card details.</p>
         </div>
       </aside>
-
-
-
-
-
-    </div>
-
-  </div>
-</section>
-
-<section class="section" aria-label="Final CTA">
-  <div class="container cta">
-    <div>
-      <h2>Ready to start your project?</h2>
-      <p>Choose a service, send your details, and continue to secure payment.</p>
-    </div>
-
-    <div class="cta-actions">
-      <a class="btn primary" href="#optionalServices" data-choose-services>Choose a Service</a>
-      <a class="btn ghost" href="index.html">Home</a>
     </div>
   </div>
 </section>
@@ -359,11 +251,11 @@
     <div class="booking-card inquiry-intro">
       <span class="pill inquiry-heading-pill" id="booking">MENU-MADE · Let’s connect</span>
       <h2 id="inquiry-heading">Tell us about your project</h2>
-      <p>Have a question or need help choosing a service? Send your details and we’ll reply with the next steps. If you’d prefer a call, include a few suitable times and your timezone in your message. We’ll confirm by email.</p>
-      <div class="booking-summary"><p>Talk directly with MENU-MADE about your website, app, visibility, accessibility, or design project.</p><a href="mailto:info@menu-made.com">info@menu-made.com</a><p class="mini">Requesting a call does not reserve an appointment. We’ll agree on a time by email.</p></div>
+      <p>Have a question or need help choosing? Send your details and we’ll reply by email. If you’d prefer a call, include a few suitable times and your timezone in your message. We’ll confirm by email.</p>
+      <div class="booking-summary"><p>Ask about a plan, a service, or whether we’re the right fit for your business.</p><a href="mailto:info@menu-made.com">info@menu-made.com</a><p class="mini">Requesting a call does not reserve an appointment. We’ll agree on a time by email.</p></div>
     </div>
     <form class="booking-card booking-form" id="bookingForm" action="/api/inquiry" method="post">
-      <div class="field"><label for="inquiryService">Service of interest *</label><select id="inquiryService" name="service" required><option value="">Choose a service</option><option>Online Menu + QR</option><option>Conversion Fix</option><option>Google Visibility</option><option>Accessibility Upgrade</option><option value="website">Website Design &amp; Custom Builds</option><option value="app">Mobile app project</option><option value="Other project">Other project</option></select></div>
+      <div class="field"><label for="inquiryService">Service of interest *</label><select id="inquiryService" name="service" required><option value="">Choose a topic</option><option>Plans and bundles</option><option>Online Menu + QR</option><option>Website Package</option><option>Google Visibility</option><option>Conversion Fix</option><option>Guest App</option><option value="Other project">Something else</option></select></div>
       <div class="two">
         <div class="field"><label for="bookingName">Name *</label><input id="bookingName" name="name" autocomplete="name" maxlength="100" required></div>
         <div class="field"><label for="bookingEmail">Email *</label><input id="bookingEmail" name="email" type="email" autocomplete="email" maxlength="150" required></div>
@@ -385,15 +277,12 @@
 </div>
 
 </main>
-
 <footer class="footer">
   <div class="container footer-inner">
     <div class="footer-copy">© 2019–2026 MENU-MADE</div>
-
     <a class="footer-logo" href="index.html" aria-label="Home">
       <img src="MENU1.png" alt="MENU-MADE">
     </a>
-
     <div class="footer-social" aria-label="Social links">
       <a class="social-icon" href="https://www.facebook.com/MenuMade.OnlinePresence" target="_blank" rel="noopener" aria-label="Facebook">
         <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14 8.5V7c0-.8.5-1 1-1h2V3h-3c-2.8 0-4 1.7-4 4v1.5H8V12h2v9h4v-9h2.7l.3-3.5H14z"/></svg>
@@ -406,21 +295,11 @@
       </a>
     </div>
   </div>
-
-  <nav class="footer-links" aria-label="More from MENU-MADE"><a href="website-design.html">Website Design</a><a href="google-visibility.html">Google Visibility</a><a href="accessibility-services.html">Accessibility Services</a><a href="portfolio.html">Our Work</a><a href="about.html">Meet JP &amp; Nino</a><a href="services.html#after-launch">After Launch</a></nav>
+  <nav class="footer-links" aria-label="More from MENU-MADE"><a href="plans.html">Plans &amp; Pricing</a><a href="services.html">Services</a><a href="website-design.html">Website Package</a><a href="google-visibility.html">Google Visibility</a><a href="accessibility-services.html">Accessibility Monitoring</a><a href="portfolio.html">Our Work</a><a href="about.html">Meet JP &amp; Nino</a><a href="privacy.html">Privacy</a><a href="accessability.html">Site Accessibility</a></nav>
 </footer>
-
-<script src="document-upload.js?v=20261009" defer></script>
-<script src="start.js?v=20261025-checkout-upload" defer></script>
-
-
-
-
-
-<!-- Match the Tech background parallax used on the other pages. -->
 <script src="section-parallax.js?v=20261015-unified" defer></script>
-
+<script src="document-upload.js?v=20261028-stage9" defer></script>
+<script src="start.js?v=20261028-stage9" defer></script>
 <script src="booking.js?v=20261016-buyer-flow" defer></script>
-<script src="home-package.js?v=20261015-start-details" defer></script>
 </body>
 </html>

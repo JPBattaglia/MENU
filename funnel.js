@@ -5,14 +5,16 @@
   if (!['menu-made.com', 'www.menu-made.com'].includes(windowHost)) return;
   const query = new URLSearchParams(location.search);
   if (navigator.globalPrivacyControl || navigator.doNotTrack === '1' || query.get('mm_measurement') === 'off') return;
-  const pageNames = ['index', 'services', 'contact', 'about', 'accessability', 'portfolio', 'sample-menu', 'checkoutsuccess', 'website-design', 'google-visibility', 'accessibility-services', 'work-pinecrest', 'work-nino', 'work-marios', 'app-demo'];
+  const pageNames = ['index', 'services', 'contact', 'about', 'accessability', 'portfolio', 'sample-menu', 'checkoutsuccess', 'website-design', 'google-visibility', 'accessibility-services', 'work-pinecrest', 'work-nino', 'work-marios', 'app-demo', 'plans', 'privacy'];
   const paths = new Set(['/', ...pageNames.flatMap(name => ['/' + name, '/' + name + '.html'])]);
   const path = paths.has(location.pathname) ? location.pathname : '/other';
   const token = value => /^[a-z0-9_-]{1,64}$/i.test(value || '') ? value.toLowerCase() : null;
   const services = { online_menu_qr: 'online_menu_qr', menu: 'online_menu_qr', 'online-menu-qr': 'online_menu_qr', conversion_fix: 'conversion_fix', conversion: 'conversion_fix', google_visibility: 'google_visibility', google: 'google_visibility', accessibility_upgrade: 'accessibility_upgrade', accessibility: 'accessibility_upgrade', website: 'website', app: 'app', other: 'other' };
-  const serviceSlug = value => typeof value === 'string' && Object.hasOwn(services, value) ? services[value] : undefined;
-  const offers = { online_menu_qr: 'offer_online_menu_qr', conversion_fix: 'offer_conversion_fix', google_visibility: 'offer_google_visibility', accessibility_upgrade: 'offer_accessibility_upgrade' };
-  const pageServices = { 'website-design': 'website', 'google-visibility': 'google_visibility', 'accessibility-services': 'accessibility_upgrade' };
+  // Catalog codes (BUNDLE_GROWTH, MENU_CARE…) from the Stage 9 pages are tracked as lower-case codes with their offer id.
+  const serviceSlug = value => typeof value === 'string' && Object.hasOwn(services, value) ? services[value] : (typeof value === 'string' && /^[A-Z][A-Z_]{2,40}$/.test(value) ? value.toLowerCase() : undefined);
+  const offers = { online_menu_qr: 'offer_online_menu_qr', conversion_fix: 'offer_conversion_fix', google_visibility: 'offer_google_visibility', accessibility_upgrade: 'offer_accessibility_upgrade', website_package: 'offer_website_package', accessibility_monitoring: 'offer_accessibility_monitoring' };
+  services.website_package = 'website_package'; services.accessibility_monitoring = 'accessibility_monitoring';
+  const pageServices = { 'website-design': 'website_package', 'google-visibility': 'google_visibility', 'accessibility-services': 'accessibility_monitoring' };
   const caseServices = { 'work-pinecrest': 'online_menu_qr', 'work-nino': 'website', 'work-marios': 'website' };
   let referrer = null;
   try { const u = new URL(document.referrer); if (!['menu-made.com', 'www.menu-made.com'].includes(u.hostname)) referrer = u.hostname.slice(0, 100); } catch {}
@@ -41,6 +43,7 @@
       metadata: { instrumentation: 'mm_funnel_v1', stage, page: path, is_test: session.test,
         ...(selectedService ? { service: selectedService } : {}) } };
     if (selectedService && Object.hasOwn(offers, selectedService)) payload.offer_id = offers[selectedService];
+    else if (selectedService && /^[a-z][a-z_]{2,40}$/.test(selectedService) && selectedService.includes('_') && !Object.hasOwn(services, selectedService)) payload.offer_id = 'offer_' + selectedService;
     // Best-effort measurement must never block a form, upload, or navigation.
     try { Promise.resolve(fetch('/api/funnel-event', { method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload), keepalive: true })).catch(() => {}); } catch {}
@@ -62,7 +65,7 @@
       const u = new URL(a.href, location.href);
       if (u.hostname === 'www.everyexpert.com' || u.hostname === 'everyexpert.com') api.track('booking_link_clicked');
       else if (u.origin === location.origin && /^\/contact(?:\.html)?$/.test(u.pathname)) {
-        const rawService = u.searchParams.get('service');
+        const rawService = u.searchParams.get('service') || u.searchParams.get('plan');
         const service = serviceSlug(rawService);
         if (service) api.track('service_link_clicked', service);
         if (service === 'website' || service === 'app') api.track('quote_started', service);
@@ -81,7 +84,7 @@
     const observer = new IntersectionObserver(entries => {
       for (const entry of entries) if (entry.isIntersecting) {
         const card = entry.target;
-        const service = serviceSlug(card.dataset.sku || (() => { try { return new URL(card.querySelector('a[href]')?.href).searchParams.get('service'); } catch { return null; } })());
+        const service = serviceSlug(card.dataset.code || card.dataset.sku || (() => { try { return new URL(card.querySelector('a[href]')?.href).searchParams.get('service'); } catch { return null; } })());
         if (service) send('OFFER_VIEW', 'offer_view', service);
         observer.unobserve(card);
       }
