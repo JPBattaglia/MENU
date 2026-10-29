@@ -2685,3 +2685,5 @@ a.is-soon{opacity:.85;background:transparent!important;color:var(--gold)!importa
 @media (max-width:900px){.mm-bundles{grid-template-columns:1fr;gap:26px}.mm-product-body{grid-template-columns:1fr;gap:6px}}
 @media (max-width:520px){.mm-toggle span{padding:8px 12px}.mm-product,.mm-bundle{padding:22px 18px}.mm-bundle-price{font-size:26px}}
 @media (prefers-reduced-motion:reduce){.mm-toggle span{transition:none}}
+:where(body.start-page) .service-choice-group{display:grid;gap:18px}
+:where(body.start-page) .service-choice-group>h3{margin-bottom:0}
