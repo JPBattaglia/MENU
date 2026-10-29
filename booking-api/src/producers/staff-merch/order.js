@@ -88,7 +88,7 @@ async function handleMerchLogoUpload(request, env) {
 // daily copy, so a page load costs at most one small database read there).
 async function handleMerchProducts(request, env, ctx) {
   const cache = globalThis.caches?.default;
-  const key = new Request("https://menu-made.com/api/merch/products?v=1");
+  const key = new Request("https://menu-made.com/api/merch/products?v=2");
   const hit = cache && await cache.match(key).catch(() => null);
   if (hit) return hit;
   const result = await merchService(env, "products", {});
