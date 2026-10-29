@@ -18,6 +18,7 @@ import { storeDeliverable } from "../shared/deliverables.js";
 import { queueRender } from "../social-posts/render-jobs.js";
 import { ICONS, buildApp, iconSpecs } from "./build.js";
 import { checkApp } from "./check.js";
+import { counterLink, pushLink } from "./engage.js";
 
 const UPDATE_LINK_KIND = "appupdate";
 const UPDATE_LINK_TTL_DAYS = 400;
@@ -148,6 +149,8 @@ async function runGuestAppMonthStep(targetStep, env) {
     return { outcome: "NO_APP_YET" };
   }
   const link = await updateLink(env, live.id);
+  const push = await pushLink(env, live.id);
+  const counter = await counterLink(env, live.id);
   const url = appUrl(env, live.slug);
   const business = context.business_name || "your business";
   const sent = await sendTransactionalEmail(env, {
@@ -159,12 +162,13 @@ async function runGuestAppMonthStep(targetStep, env) {
       heading: "Keep your app up to date",
       paragraphs: [
         `Hi ${escapeHtml(context.first_name || "there")}, your Guest App is live at <strong>${escapeHtml(url)}</strong>.`,
-        "New specials, a price change or holiday hours? Use the button below. Your changes go live in the app within a few minutes, and guests who installed it see them next time they open it."
+        "New specials, a price change or holiday hours? Use the button below. Your changes go live in the app within a few minutes, and guests who installed it see them next time they open it.",
+        "Your app can also send notifications to guests who turn them on (up to 2 a day), and run a rewards card: guests collect a visit by typing the code on your counter screen. Set the reward on the update form."
       ],
-      buttons: [{ label: "Update my app", url: link, primary: true }, { label: "Open my app", url }],
+      buttons: [{ label: "Update my app", url: link, primary: true }, { label: "Send a notification", url: push }, { label: "Rewards counter screen", url: counter }, { label: "Open my app", url }],
       footnote: "Keep this email: the update button works every month while your Guest App plan is active."
     }),
-    text: `Your Guest App is live at ${url}.\n\nNew specials, a price change or holiday hours? Update your app here (changes go live within minutes): ${link}`,
+    text: `Your Guest App is live at ${url}.\n\nNew specials, a price change or holiday hours? Update your app here (changes go live within minutes): ${link}\nSend a notification to your guests: ${push}\nRewards counter screen: ${counter}`,
     idempotencyKey: `guest-app-month/${metadata.subscription_id || context.id}/${metadata.period_start || ""}`,
     purpose: "GUEST_APP_MONTH", templateKey: "guest_app_month_v1",
     context: { customerId: context.customer_id, businessId: context.business_id, orderId: context.order_id, projectId: context.id }

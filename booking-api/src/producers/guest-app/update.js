@@ -12,6 +12,7 @@ import { UPDATE_LINK_KIND, appUrl, loadLiveApp } from "./app-step.js";
 import { buildApp } from "./build.js";
 import { checkApp } from "./check.js";
 import { FIELDS, formPage, readValues, validate } from "./intake.js";
+import { engagementSettings, queuePush } from "./engage.js";
 
 const UPDATE_FIELDS = FIELDS.filter((f) => !["subdomain", "brand_color"].includes(f.key));
 
@@ -37,7 +38,13 @@ async function publishUpdate(env, live, values) {
   const t = nowIso();
   await env.DB.prepare(`UPDATE deliverables SET status = 'FINAL', customer_visible = 1, delivered_at = ? WHERE id = ?`).bind(t, stored.deliverableId).run();
   await env.DB.prepare(`UPDATE guest_apps SET data_json = ?, updated_at = ? WHERE id = ?`).bind(JSON.stringify(app), t, live.id).run();
-  return { problems: [], deliverableId: stored.deliverableId };
+  // A new special goes out as a notification when the owner chose that (the daily limit still applies).
+  let notified = null;
+  const special = String(values.specials || "").trim();
+  if (special && special !== String(live.data.specials || "").trim() && engagementSettings(app).pushSpecials) {
+    notified = await queuePush(env, live.id, { title: app.app_name, body: special, source: "SPECIAL" }).catch(() => null);
+  }
+  return { problems: [], deliverableId: stored.deliverableId, notified };
 }
 
 async function handleAppUpdate(request, env, appId) {
@@ -64,7 +71,9 @@ async function handleAppUpdate(request, env, appId) {
   if (problem) return page(values, problem);
   const result = await publishUpdate(env, live, values);
   if (result.problems.length) return page(values, `We couldn't publish this update: ${result.problems[0]}`);
-  return simplePage(200, "Your app is updated", `<p>Thank you - your changes are live at <a href="${escapeHtml(appUrl(env, live.slug))}">${escapeHtml(appUrl(env, live.slug))}</a>. Guests who installed the app see them next time they open it.</p>`);
+  const pushNote = result.notified?.ok ? " Guests who turned on notifications are being told about your new special."
+    : result.notified?.reason === "limit" ? " Your new special was not sent as a notification because you've already sent 2 today." : "";
+  return simplePage(200, "Your app is updated", `<p>Thank you - your changes are live at <a href="${escapeHtml(appUrl(env, live.slug))}">${escapeHtml(appUrl(env, live.slug))}</a>. Guests who installed the app see them next time they open it.${pushNote}</p>`);
 }
 
 export { UPDATE_FIELDS, handleAppUpdate, publishUpdate };

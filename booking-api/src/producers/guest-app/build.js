@@ -7,6 +7,7 @@
 //   icons/*.png           drawn by the GitHub renderer from iconSpecs() (see social-posts/render-jobs.js)
 import { parseHours, parseOfferings } from "../website/build.js";
 import { hexOk, readableOn } from "../website/styles.js";
+import { CLIENT_JS, CLIENT_VERSION, PUSH_SW } from "./client.js";
 
 const DEFAULT_BRAND = "#1f4e5f";
 const LOGO_PLACEHOLDER = "__LOGO_DATA_URI__"; // replaced by the renderer with the logo's data URI
@@ -73,9 +74,8 @@ function manifest(app) {
   }, null, 2);
 }
 
-const APP_JS = `// Registers the offline worker. Kept as a file because the page allows no inline script.
-if ("serviceWorker" in navigator) navigator.serviceWorker.register("sw.js", { scope: "./" }).catch(function () {});
-`;
+// app.js: the offline worker registration plus notifications and rewards (client.js).
+const APP_JS = CLIENT_JS;
 
 function serviceWorker(version) {
   return `// Guest App offline worker (build ${version}). The page is fetched fresh when online and served from cache when not;
@@ -101,8 +101,12 @@ self.addEventListener("fetch", (event) => {
   }
   event.respondWith(caches.match(request).then((hit) => hit || fetch(request)));
 });
-`;
+${PUSH_SW}`;
 }
+
+// The worker version an installed app sees: the build's own version plus the client code version, so a change to
+// notifications or rewards reaches apps that were built earlier.
+const workerVersion = (buildVersion) => `${buildVersion}-${CLIENT_VERSION}`;
 
 function css(brand) {
   const on = readableOn(brand);
@@ -149,9 +153,9 @@ function buildApp(app, { version, hasLogo }) {
 <p><a href="${esc(map)}" rel="noopener">${esc(app.address)}</a><br><a href="tel:${esc(digits(app.phone))}">${esc(app.phone)}</a></p></section></main>
 <footer>Add this app to your home screen to keep it one tap away.</footer></body></html>`;
   return {
-    files: { "index.html": html, "manifest.webmanifest": manifest(app), "app.js": APP_JS, "sw.js": serviceWorker(version) },
+    files: { "index.html": html, "manifest.webmanifest": manifest(app), "app.js": APP_JS, "sw.js": serviceWorker(workerVersion(version)) },
     icons: ICONS.map((i) => i.path)
   };
 }
 
-export { DEFAULT_BRAND, ICONS, LOGO_PLACEHOLDER, brandOf, buildApp, iconSpecs, initials, shortNameOf };
+export { APP_JS, DEFAULT_BRAND, ICONS, LOGO_PLACEHOLDER, brandOf, buildApp, iconSpecs, initials, serviceWorker, shortNameOf, workerVersion };

@@ -29,6 +29,9 @@ const FIELDS = [
   { key: "hours", label: "Opening hours", type: "textarea", required: true, max: 400, help: "One line per day or range. Example: Mon-Fri: 11am-9pm" },
   { key: "order_url", label: "Online ordering link (optional)", type: "text", required: false, max: 300, help: "Starts with https://" },
   { key: "reserve_url", label: "Reservations link (optional)", type: "text", required: false, max: 300, help: "Starts with https://" },
+  { key: "loyalty_reward", label: "Rewards: what a regular gets (optional)", type: "text", required: false, max: 80, help: "For example: a free coffee. Guests collect a visit in the app by typing the code on your counter screen. Leave blank to keep rewards off." },
+  { key: "loyalty_visits", label: "Visits needed for the reward (3 to 30)", type: "text", required: false, max: 2, help: "Leave blank for 10." },
+  { key: "push_specials", label: "Notify guests when you change your specials?", type: "select", options: [["yes", "Yes, send a notification to guests who turned them on"], ["no", "No"]], required: false, max: 3 },
   { key: "brand_color", label: "Brand colour (optional, like #b3261e)", type: "text", required: false, max: 7 },
   { key: "subdomain", label: "App address (optional)", type: "text", required: false, max: 30, help: "Letters, numbers and dashes: yourname.menu-made.com/app. If we built your website, the app goes on the same address." }
 ];
@@ -71,7 +74,9 @@ async function startGuestAppIntake(env, { projectId }) {
 const control = (f, v) => {
   const val = escapeHtml(v || "");
   const style = 'style="width:100%;box-sizing:border-box;font:inherit;padding:10px"';
-  const box = f.type === "textarea"
+  const box = f.type === "select"
+    ? `<select id="${f.key}" name="${f.key}" ${style}>${f.options.map(([value, text]) => `<option value="${value}"${(v || f.options[0][0]) === value ? " selected" : ""}>${escapeHtml(text)}</option>`).join("")}</select>`
+    : f.type === "textarea"
     ? `<textarea id="${f.key}" name="${f.key}" rows="5" maxlength="${f.max}" ${f.required ? "required" : ""} ${style}>${val}</textarea>`
     : `<input id="${f.key}" name="${f.key}" type="text" value="${val}" maxlength="${f.max}" ${f.required ? "required" : ""} ${style}>`;
   return `<p><label for="${f.key}"><strong>${escapeHtml(f.label)}</strong></label><br>${box}${f.help ? `<br><small>${escapeHtml(f.help)}</small>` : ""}</p>`;
@@ -98,6 +103,8 @@ function validate(values, fields = FIELDS) {
   for (const [k, label] of [["order_url", "Online ordering link"], ["reserve_url", "Reservations link"]]) {
     if (values[k] && !/^https:\/\/[^\s/]+\.[^\s]+$/i.test(values[k])) return `${label} must start with https://`;
   }
+  if (values.loyalty_visits && !(/^\d{1,2}$/.test(values.loyalty_visits) && Number(values.loyalty_visits) >= 3 && Number(values.loyalty_visits) <= 30)) return "Visits needed for the reward must be a number from 3 to 30, or left blank.";
+  if (values.push_specials && !["yes", "no"].includes(values.push_specials)) return "Please choose whether to notify guests about new specials.";
   if (!/\d{7}/.test(String(values.phone || "").replace(/\D/g, ""))) return "Phone number needs at least 7 digits.";
   if (!/\d{3,}/.test(String(values.hours || "").replace(/\D/g, "")) && !/closed|daily|open/i.test(values.hours || "")) return "Please write your opening hours, for example Mon-Fri: 11am-9pm.";
   return null;

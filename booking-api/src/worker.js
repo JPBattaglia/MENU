@@ -20,6 +20,8 @@ import { handleLiveSite, handleSitePreview } from "./producers/website/serve.js"
 import { appOnlyRedirect, handleAppPreview, handleLiveApp } from "./producers/guest-app/serve.js";
 import { handleAppIntake } from "./producers/guest-app/intake.js";
 import { handleAppUpdate } from "./producers/guest-app/update.js";
+import { handleAppCounter, handleAppPush, sendQueuedPushes } from "./producers/guest-app/engage.js";
+import { advanceGuestAppPushSelfTests } from "./selftest/guest-app-push-selftest.js";
 import { customHostSlug, runDomainWatch } from "./producers/website/domains.js";
 import { handlePlanSettings } from "./subscriptions/settings.js";
 import { handleMenuCareRequest } from "./producers/menu-care/intake.js";
@@ -128,12 +130,20 @@ var worker_default = {
     if (appUpdateMatch && (request.method === "GET" || request.method === "POST")) {
       return handleAppUpdate(request, env, appUpdateMatch[1].toLowerCase());
     }
+    const appPushMatch = url.pathname.match(/^\/api\/app-push\/([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})$/i);
+    if (appPushMatch && (request.method === "GET" || request.method === "POST")) {
+      return handleAppPush(request, env, appPushMatch[1].toLowerCase());
+    }
+    const appCounterMatch = url.pathname.match(/^\/api\/app-counter\/([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})$/i);
+    if (appCounterMatch && request.method === "GET") {
+      return handleAppCounter(request, env, appCounterMatch[1].toLowerCase());
+    }
     const appPreviewMatch = url.pathname.match(/^\/api\/app-preview\/([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})\/([A-Za-z0-9_.-]{20,900})\/?(.*)$/i);
     if (appPreviewMatch && (request.method === "GET" || request.method === "HEAD")) {
       return handleAppPreview(request, env, appPreviewMatch[1].toLowerCase(), appPreviewMatch[2], appPreviewMatch[3]);
     }
     const liveSiteMatch = url.pathname.match(/^\/api\/site\/([a-z0-9][a-z0-9-]{1,28}[a-z0-9])\/?(.*)$/);
-    if (liveSiteMatch && (request.method === "GET" || request.method === "HEAD")) {
+    if (liveSiteMatch && (request.method === "GET" || request.method === "HEAD" || (request.method === "POST" && APP_API_PATH.test(liveSiteMatch[2])))) {
       return serveSlug(request, env, liveSiteMatch[1], liveSiteMatch[2]);
     }
     const extraPagesMatch = url.pathname.match(/^\/api\/extra-pages\/([A-Za-z0-9-]{1,64})(\/done)?$/);
@@ -266,6 +276,10 @@ var worker_default = {
   }
 };
 
+// The Guest App's own API (notifications and rewards) is the only place on a customer address that takes a POST.
+const APP_API_PATH = /^app\/api\//;
+const methodAllowed = (request, path) => request.method === "GET" || request.method === "HEAD" || (request.method === "POST" && APP_API_PATH.test(path || ""));
+
 // One slug serves the website at / and the Guest App at /app/. A slug with only an app opens the app from its root.
 async function serveSlug(request, env, slug, path) {
   const app = /^app(?:\/(.*))?$/.exec(path || "");
@@ -283,14 +297,14 @@ const mmWorkerWithBooking = {
     const host = siteHostAction(request, env);
     if (host.action === "pass") return fetch(request);
     if (host.action === "site") {
-      if (request.method !== "GET" && request.method !== "HEAD") return new Response("Method not allowed", { status: 405, headers: { Allow: "GET, HEAD" } });
+      if (!methodAllowed(request, host.path)) return new Response("Method not allowed", { status: 405, headers: { Allow: "GET, HEAD" } });
       return serveSlug(request, env, host.slug, host.path);
     }
     if (host.action === "none") {
       // A customer's own domain (via Cloudflare for SaaS). Our own hostnames never reach the database here.
       const customSlug = await customHostSlug(env, new URL(request.url).hostname).catch(() => null);
       if (customSlug) {
-        if (request.method !== "GET" && request.method !== "HEAD") return new Response("Method not allowed", { status: 405, headers: { Allow: "GET, HEAD" } });
+        if (!methodAllowed(request, new URL(request.url).pathname.replace(/^\/+/, ""))) return new Response("Method not allowed", { status: 405, headers: { Allow: "GET, HEAD" } });
         return serveSlug(request, env, customSlug, new URL(request.url).pathname.replace(/^\/+/, ""));
       }
     }
@@ -319,6 +333,8 @@ const mmWorkerWithBooking = {
       await nudgeWaitingRenders(env).catch((error) => console.error("Renderer nudge failed:", error instanceof Error ? error.message : String(error)));
       await alertStaleRenders(env).catch((error) => console.error("Stale render check failed:", error instanceof Error ? error.message : String(error)));
       await advanceWebsiteTrialSelfTests(env, app).catch((error) => console.error("Website trial self-test failed:", error instanceof Error ? error.message : String(error)));
+      await sendQueuedPushes(env).catch((error) => console.error("Guest App notifications failed:", error instanceof Error ? error.message : String(error)));
+      await advanceGuestAppPushSelfTests(env, app).catch((error) => console.error("Guest App push self-test failed:", error instanceof Error ? error.message : String(error)));
       await advanceGuestAppSelfTests(env, app).catch((error) => console.error("Guest App self-test failed:", error instanceof Error ? error.message : String(error)));
       await advanceGoogleSelfTests(env).catch((error) => console.error("Google self-test failed:", error instanceof Error ? error.message : String(error)));
       await advanceReviewRepliesSelfTests(env, app).catch((error) => console.error("Review Replies self-test failed:", error instanceof Error ? error.message : String(error)));

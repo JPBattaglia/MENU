@@ -7,6 +7,8 @@
 import { simplePage } from "../../lib/http.js";
 import { verifyLinkToken } from "../../lib/links.js";
 import { loadLiveApp } from "./app-step.js";
+import { APP_JS, serviceWorker, workerVersion } from "./build.js";
+import { handleAppApi } from "./engage.js";
 
 const CSP = "default-src 'none'; img-src 'self' data:; style-src 'unsafe-inline'; script-src 'self'; worker-src 'self'; manifest-src 'self'; connect-src 'self'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'";
 const TYPES = { "index.html": "text/html; charset=utf-8", "manifest.webmanifest": "application/manifest+json", "app.js": "text/javascript; charset=utf-8", "sw.js": "text/javascript; charset=utf-8", "qr.svg": "image/svg+xml" };
@@ -18,7 +20,7 @@ async function respond(env, build, rawPath, { cache, preview = false }) {
   if (preview) headers["X-Robots-Tag"] = "noindex, nofollow";
   if (build.files[path] !== undefined && TYPES[path]) {
     // The service worker and manifest are always revalidated so a new build reaches installed apps quickly.
-    const fresh = path === "sw.js" || path === "manifest.webmanifest" || path === "index.html" ? "no-cache" : cache;
+    const fresh = path === "sw.js" || path === "app.js" || path === "manifest.webmanifest" || path === "index.html" ? "no-cache" : cache;
     const body = preview && path === "app.js" ? PREVIEW_APP_JS : build.files[path];
     return new Response(body, { status: 200, headers: { ...headers, "Cache-Control": preview ? cache : fresh, "Content-Type": TYPES[path] } });
   }
@@ -31,8 +33,17 @@ async function respond(env, build, rawPath, { cache, preview = false }) {
     { status: 404, headers: { ...headers, "Content-Type": "text/html; charset=utf-8" } });
 }
 
-// path is what follows "app/" ("" for the app itself).
+// A live app always runs the current app.js and offline worker (notifications and rewards, stage 11), whatever build
+// it was approved with; the build keeps its own page, manifest and icons.
+function withCurrentClient(build) {
+  const version = /guest-app-([A-Za-z0-9]+)/.exec(build.files?.["sw.js"] || "")?.[1] || String(build.built_at || "v").replace(/\W/g, "").slice(-8);
+  return { ...build, files: { ...build.files, "app.js": APP_JS, "sw.js": serviceWorker(workerVersion(version)) } };
+}
+
+// path is what follows "app/" ("" for the app itself). "api/..." is the app's own API (engage.js).
 async function handleLiveApp(request, env, slug, path) {
+  if (/^api\//.test(path || "")) return handleAppApi(request, env, slug, path.slice(4));
+  if (request.method !== "GET" && request.method !== "HEAD") return new Response("Method not allowed", { status: 405, headers: { Allow: "GET, HEAD" } });
   if (!env.DB || !env.ASSETS) return simplePage(503, "Temporarily unavailable", "<p>Please try again in a minute.</p>");
   let live;
   try { live = await loadLiveApp(env, { slug }); } catch (error) {
@@ -43,7 +54,7 @@ async function handleLiveApp(request, env, slug, path) {
   if (!live.build) return simplePage(200, "App coming soon", "<p>This app is being prepared. Please check back shortly.</p>");
   const pathname = new URL(request.url).pathname;
   if (!path && !pathname.endsWith("/")) return Response.redirect(new URL(`${pathname}/`, request.url).toString(), 301);
-  return respond(env, live.build, path, { cache: "public, max-age=300" });
+  return respond(env, withCurrentClient(live.build), path, { cache: "public, max-age=300" });
 }
 
 // A slug that has an app but no website: its root opens the app.
