@@ -287,6 +287,8 @@ SAMPLES = {
     "CONVERSION_FIX": "/api/samples/conversion",
     "GUEST_APP": "/api/samples/app/",
     "GOOGLE_VISIBILITY": "/api/samples/google-visibility",
+    "WEBSITE_PACKAGE": "/api/samples/website/",
+    "WEBSITE_CARE": "/api/samples/website/",
 }
 
 
