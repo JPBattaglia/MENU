@@ -87,7 +87,7 @@ test('both keys: checked live with Apple, team id read from the App ID, stored s
   const asc = await verifyJwt(f.calls.find((c) => c.url.includes('appstoreconnect')).init.headers.Authorization.slice(7), api.publicKey);
   assert.ok(asc.ok);
   assert.deepEqual([asc.header.alg, asc.header.kid, asc.payload.iss, asc.payload.aud], ['ES256', 'APIKEY1234', ISSUER, 'appstoreconnect-v1']);
-  assert.ok(asc.payload.exp - asc.payload.iat <= 1200, 'Apple allows at most 20 minutes');
+  assert.equal(asc.payload.exp - asc.payload.iat, 900, '15 minutes: under Apple\'s 20-minute limit even if its clock lags');
   const apnsCall = f.calls.find((c) => c.url.includes('push.apple.com'));
   const apns = await verifyJwt(apnsCall.init.headers.authorization.slice(7), push.publicKey);
   assert.ok(apns.ok);
@@ -135,8 +135,28 @@ test('a renamed file works with the typed key id; a push key alone waits for the
   const f = setup();
   const push = await p8();
   const html = await (await upload(f, { t: await token(f), push_key_id: 'pushkey123' }, { push_file: ['key (1).p8', push.text] })).text();
-  assert.match(html, /checked once the API key is in/);
+  assert.match(html, /checked once the API key works/);
   const row = f.row(`SELECT key_id, check_status FROM store_credentials`);
   assert.deepEqual([row.key_id, row.check_status], ['PUSHKEY123', 'UNVERIFIED']);
   assert.equal(keys.keyIdOf({ name: 'AuthKey_AB12CD34EF.p8' }, ''), 'AB12CD34EF');
+});
+
+test('saved keys are checked again without uploading anything, with a corrected Issuer ID; the push key follows once the API key works', async () => {
+  const f = setup({ ascStatus: 401 });
+  const api = await p8(); const push = await p8();
+  const t = await token(f);
+  await upload(f, { t, issuer_id: ISSUER }, { api_file: ['AuthKey_APIKEY1234.p8', api.text], push_file: ['AuthKey_PUSHKEY123.p8', push.text] });
+  assert.equal(f.row(`SELECT check_status FROM store_credentials WHERE kind = 'APPLE_API_KEY'`).check_status, 'FAILED');
+  const failedPage = await (await upload(f, { t }, {})).text();
+  assert.match(failedPage, /Check saved keys again/);
+  // Apple now accepts (the fixed token, or a corrected Issuer ID).
+  const ok = setup();
+  f.fetchImpl = ok.fetchImpl; f.calls = ok.calls;
+  const fixed = 'aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee';
+  const html = await (await upload(f, { t, issuer_id: fixed }, {})).text();
+  assert.match(html, /Keys saved and working/);
+  const apiRow = f.row(`SELECT issuer_id, team_id, check_status FROM store_credentials WHERE kind = 'APPLE_API_KEY'`);
+  assert.deepEqual([apiRow.issuer_id, apiRow.team_id, apiRow.check_status], [fixed, TEAM, 'VERIFIED']);
+  assert.equal(f.row(`SELECT check_status FROM store_credentials WHERE kind = 'APPLE_PUSH_KEY'`).check_status, 'VERIFIED');
+  assert.equal((await keys.loadCredential(f.env, 'owner', 'APPLE_PUSH_KEY')).p8, push.text, 'the saved file was reused');
 });

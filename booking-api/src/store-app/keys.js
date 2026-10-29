@@ -71,6 +71,7 @@ const mark = (ok) => (ok === true ? "✅" : ok === false ? "❌" : "⚠️");
 
 function formPage(token, error) {
   return simplePage(error ? 400 : 200, "Apple keys for Store App builds", `${error ? `<p style="color:#a11"><strong>${escapeHtml(error)}</strong></p>` : ""}
+<p>Already uploaded? Leave both file boxes empty and press <strong>Check and save</strong> to check the saved keys again.</p>
 <p>These let Menu-made upload test builds to TestFlight and send push notifications for your test app (<strong>${OWNER_BUNDLE_ID}</strong>). Both files are in your Downloads folder, named <code>AuthKey_…p8</code>. You can send one now and the other later.</p>
 <form method="post" action="/api/store-keys/owner" enctype="multipart/form-data">
 <input type="hidden" name="t" value="${escapeHtml(token)}">
@@ -126,7 +127,6 @@ async function handleStoreKeys(request, env, { fetchImpl = fetch } = {}) {
 
   const apiFile = form.get("api_file"); const pushFile = form.get("push_file");
   const api = await readKeyFile(apiFile); const push = await readKeyFile(pushFile);
-  if (!api && !push) return formPage(token, "Choose at least one key file.");
   if (api?.error) return formPage(token, `The API key file is ${api.error}.`);
   if (push?.error) return formPage(token, `The push key file is ${push.error}.`);
   const apiKeyId = api ? keyIdOf(apiFile, form.get("api_key_id")) : null;
@@ -134,27 +134,37 @@ async function handleStoreKeys(request, env, { fetchImpl = fetch } = {}) {
   if (api && !apiKeyId) return formPage(token, "The API key file was renamed: type its Key ID (10 letters and digits) under \"The file was renamed?\".");
   if (push && !pushKeyId) return formPage(token, "The push key file was renamed: type its Key ID under \"The file was renamed?\".");
   if (api && apiKeyId === pushKeyId) return formPage(token, "Both boxes have the same key. The API key and the push key are two different files.");
-  const issuerId = String(form.get("issuer_id") || "").trim().toLowerCase();
-  if (api && !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/.test(issuerId)) return formPage(token, "The Issuer ID should look like 69a6de70-03db-47e3-e053-5b8c7c11a4d1.");
+  const typedIssuer = String(form.get("issuer_id") || "").trim().toLowerCase();
+  if (typedIssuer && !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/.test(typedIssuer)) return formPage(token, "The Issuer ID should look like 69a6de70-03db-47e3-e053-5b8c7c11a4d1.");
+  if (api && !typedIssuer) return formPage(token, "Paste the Issuer ID too (App Store Connect, Users and Access, Integrations, above the Team Keys list).");
+
+  // No new file: check the keys already saved again (and take a corrected Issuer ID), so nothing is uploaded twice.
+  const savedApi = api ? null : await loadCredential(env, OWNER, "APPLE_API_KEY");
+  const savedPush = push ? null : await loadCredential(env, OWNER, "APPLE_PUSH_KEY");
+  const apiCreds = api ? { p8: api.text, keyId: apiKeyId, issuerId: typedIssuer } : savedApi ? { ...savedApi, issuerId: typedIssuer || savedApi.issuerId } : null;
+  const pushCreds = push ? { p8: push.text, keyId: pushKeyId } : savedPush;
+  if (!apiCreds && !pushCreds) return formPage(token, "Choose at least one key file.");
 
   const lines = [];
   let teamId = null;
-  if (api) {
-    const check = await checkApiKey({ p8: api.text, keyId: apiKeyId, issuerId }, OWNER_BUNDLE_ID, { fetchImpl });
+  if (apiCreds) {
+    const check = await checkApiKey(apiCreds, OWNER_BUNDLE_ID, { fetchImpl });
     teamId = check.teamId || null;
-    await saveCredential(env, OWNER, "APPLE_API_KEY", { keyId: apiKeyId, issuerId, teamId, p8: api.text, status: status(check.unreachable ? null : check.ok), note: check.note });
-    lines.push(`${mark(check.unreachable ? null : check.ok)} <strong>API key ${escapeHtml(apiKeyId)}</strong>: ${escapeHtml(check.note)}`);
+    await saveCredential(env, OWNER, "APPLE_API_KEY", { keyId: apiCreds.keyId, issuerId: apiCreds.issuerId, teamId, p8: apiCreds.p8, status: status(check.unreachable ? null : check.ok), note: check.note });
+    lines.push(`${mark(check.unreachable ? null : check.ok)} <strong>API key ${escapeHtml(apiCreds.keyId)}</strong>: ${escapeHtml(check.note)}`);
   }
-  if (push) {
+  if (pushCreds) {
     if (!teamId) teamId = (await env.DB.prepare(`SELECT team_id FROM store_credentials WHERE scope = ? AND kind = 'APPLE_API_KEY'`).bind(OWNER).first())?.team_id || null;
-    const check = teamId ? await checkPushKey({ p8: push.text, keyId: pushKeyId, teamId }, OWNER_BUNDLE_ID, { fetchImpl })
-      : { ok: null, note: "Saved. It is checked once the API key is in, because that tells us your Team ID." };
-    await saveCredential(env, OWNER, "APPLE_PUSH_KEY", { keyId: pushKeyId, teamId, p8: push.text, status: status(check.ok), note: check.note });
-    lines.push(`${mark(check.ok)} <strong>Push key ${escapeHtml(pushKeyId)}</strong>: ${escapeHtml(check.note)}`);
+    const check = teamId ? await checkPushKey({ p8: pushCreds.p8, keyId: pushCreds.keyId, teamId }, OWNER_BUNDLE_ID, { fetchImpl })
+      : { ok: null, note: "Saved. It is checked once the API key works, because that tells us your Team ID." };
+    await saveCredential(env, OWNER, "APPLE_PUSH_KEY", { keyId: pushCreds.keyId, teamId, p8: pushCreds.p8, status: status(check.ok), note: check.note });
+    lines.push(`${mark(check.ok)} <strong>Push key ${escapeHtml(pushCreds.keyId)}</strong>: ${escapeHtml(check.note)}`);
   }
   const allGood = !lines.some((l) => !l.startsWith("✅"));
   return simplePage(200, allGood ? "Keys saved and working" : "Keys saved", `<p>${lines.join("</p><p>")}</p>
-<p>${allGood ? "Nothing else is needed from Apple. You can delete the two files from Downloads." : "Keep the files in Downloads until both show ✅."}</p>`);
+<p>${allGood ? "Nothing else is needed from Apple. You can delete the key files from Downloads." : `To try again without uploading anything, use the button below. To correct the Issuer ID, type it first.`}</p>
+${allGood ? "" : `<form method="post" action="/api/store-keys/owner" enctype="multipart/form-data"><input type="hidden" name="t" value="${escapeHtml(token)}">
+<p><label>Issuer ID (only if it changed)<br><input name="issuer_id" size="40" autocomplete="off"></label></p><p><button type="submit">Check saved keys again</button></p></form>`}`);
 }
 
 export { LINK_KIND, OWNER, OWNER_BUNDLE_ID, handleStoreKeys, keyIdOf, loadCredential, unseal };
