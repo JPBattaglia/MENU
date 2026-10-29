@@ -29,7 +29,9 @@ async function ascToken({ p8, keyId, issuerId }, now = Date.now()) {
   const key = await importP8(p8);
   if (!key) throw new Error("not an App Store Connect API key");
   const iat = Math.floor(now / 1000);
-  return signJwt(key, { alg: "ES256", kid: keyId, typ: "JWT" }, { iss: issuerId, iat, exp: iat + 1200, aud: "appstoreconnect-v1" });
+  // 15 minutes, not Apple's 20-minute maximum: if Apple's clock is a second behind ours, a 20-minute token reads as too
+  // long and Apple answers 401 (first live upload, Oct 29, 2026).
+  return signJwt(key, { alg: "ES256", kid: keyId, typ: "JWT" }, { iss: issuerId, iat, exp: iat + 900, aud: "appstoreconnect-v1" });
 }
 
 async function apnsToken({ p8, keyId, teamId }, now = Date.now()) {
@@ -47,7 +49,7 @@ async function checkApiKey(creds, bundleId, { fetchImpl = fetch } = {}) {
   try {
     res = await fetchImpl(`${ASC_API}/bundleIds?filter[identifier]=${encodeURIComponent(bundleId)}&fields[bundleIds]=identifier,seedId&limit=5`, { headers: { Authorization: `Bearer ${token}` } });
   } catch (error) { return { ok: false, unreachable: true, note: `Apple couldn't be reached (${String(error?.message || error).slice(0, 80)})` }; }
-  if (res.status === 401) return { ok: false, note: "Apple refused the key: check that the Issuer ID belongs to this key and the key wasn't revoked." };
+  if (res.status === 401) return { ok: false, note: "Apple refused the key. Check that the Issuer ID is the one shown above the Team Keys list, that this is a Team key (not an Individual key), and that it wasn't revoked." };
   if (res.status === 403) return { ok: false, note: "Apple accepted the key but it can't read apps: give it Admin access, and accept any pending agreement in App Store Connect." };
   if (!res.ok) return { ok: false, note: `Apple answered ${res.status}.` };
   const data = await res.json().catch(() => ({}));
