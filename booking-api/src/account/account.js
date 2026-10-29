@@ -15,6 +15,7 @@ import { menuHostingState, renewalLink } from "../producers/menu-qr/hosting-rene
 import { siteCareLink } from "../producers/website-care/care-step.js";
 import { appUrl, loadLiveApp, updateLink } from "../producers/guest-app/app-step.js";
 import { intakeLink as appIntakeLink } from "../producers/guest-app/intake.js";
+import { counterLink as appCounterLink, pushLink as appPushLink } from "../producers/guest-app/engage.js";
 import { intakeLink as siteIntakeLink } from "../producers/website/intake.js";
 import { photoLibraryLink } from "../producers/google-care/library.js";
 import { hostedMenu, liveWebsite } from "../producers/google-visibility/sources.js";
@@ -186,7 +187,11 @@ async function planSummary(env, sub) {
     if (codes.includes("GOOGLE_PROFILE_CARE")) links.push(link("Add photos to your library", await photoLibraryLink(env, sub.id)));
     if (codes.includes("GUEST_APP") && sub.business_id) {
       const app = await loadLiveApp(env, { businessId: sub.business_id }).catch(() => null);
-      if (app?.id) links.push(link("Update your Guest App", await updateLink(env, app.id)));
+      if (app?.id) {
+        links.push(link("Update your Guest App", await updateLink(env, app.id)));
+        links.push(link("Send a notification to your guests", await appPushLink(env, app.id)));
+        links.push(link("Rewards counter screen", await appCounterLink(env, app.id)));
+      }
     }
     if (codes.some((code) => GOOGLE_CODES.has(code))) {
       const connection = await activeConnection(env, sub.id);

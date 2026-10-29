@@ -5,6 +5,7 @@ import { parseJsonOrNull } from "../../lib/http.js";
 import { signLinkToken } from "../../lib/links.js";
 import { isTestOrder } from "../../approvals/release.js";
 import { appUrl, updateLink } from "./app-step.js";
+import { counterLink, pushLink } from "./engage.js";
 
 const infoOf = (files) => parseJsonOrNull(files?.find((f) => f.deliverable_type === "APP_BUILD")?.metadata_json)?.app || {};
 
@@ -49,6 +50,8 @@ const guestAppOverrides = {
     const info = infoOf(files);
     const url = appUrl(env, info.slug);
     const update = info.app_id ? await updateLink(env, info.app_id) : null;
+    const push = info.app_id ? await pushLink(env, info.app_id) : null;
+    const counter = info.app_id ? await counterLink(env, info.app_id) : null;
     const steps = `<ul>${INSTALL_STEPS.map(([who, how]) => `<li><strong>${who}:</strong> ${escapeHtml(how)}</li>`).join("")}</ul>`;
     return {
       recipient: context.customer_email,
@@ -61,12 +64,13 @@ const guestAppOverrides = {
         paragraphs: [
           `Hi ${escapeHtml(context.first_name || "there")}, your Guest App is live at <strong>${escapeHtml(url)}</strong>. Share the link, or print the QR code for your tables and window.`,
           `Guests add it to their home screen like this:${steps}`,
-          "Need to change specials, the menu or hours? Use the update button below anytime while your plan is active. Changes go live within minutes."
+          "Need to change specials, the menu or hours? Use the update button below anytime while your plan is active. Changes go live within minutes.",
+          "Included in your plan: notifications to guests who turn them on (up to 2 a day, and automatically when you post a new special if you chose that), and a rewards card. To start rewards, write the reward on the update form, then keep the counter screen open by the till: guests type its code in the app to collect a visit."
         ],
-        buttons: [{ label: "Open my app", url, primary: true }, { label: "Download the QR code", url: `${url}qr.svg` }, ...(update ? [{ label: "Update my app", url: update }] : [])],
+        buttons: [{ label: "Open my app", url, primary: true }, { label: "Download the QR code", url: `${url}qr.svg` }, ...(update ? [{ label: "Update my app", url: update }] : []), ...(push ? [{ label: "Send a notification", url: push }] : []), ...(counter ? [{ label: "Rewards counter screen", url: counter }] : [])],
         footnote: "Questions? Reply to this email."
       }),
-      text: [`Hi ${context.first_name || "there"},`, "", `Your Guest App is live: ${url}`, `QR code to print: ${url}qr.svg`, "", ...INSTALL_STEPS.map(([who, how]) => `${who}: ${how}`), "", ...(update ? [`Update your app anytime: ${update}`] : [])].join("\n")
+      text: [`Hi ${context.first_name || "there"},`, "", `Your Guest App is live: ${url}`, `QR code to print: ${url}qr.svg`, "", ...INSTALL_STEPS.map(([who, how]) => `${who}: ${how}`), "", ...(update ? [`Update your app anytime: ${update}`] : []), ...(push ? [`Send a notification: ${push}`] : []), ...(counter ? [`Rewards counter screen: ${counter}`] : [])].join("\n")
     };
   }
 };

@@ -218,9 +218,11 @@ PLANS = {
         name="Guest App", anchor="guest-app", short="Your own app on guests’ phones",
         gets=["An app guests add to their home screen from your link or QR code: menu, specials, hours, location, call button and your ordering or reservation link",
               "Works offline once opened, on iPhone and Android",
+              "Notifications: guests who turn them on get your news and specials on their phone (up to 2 a day; on iPhone once the app is on the Home Screen)",
+              "A rewards card: guests collect a visit by typing the code on your counter screen, and get the reward you choose after the visits you set",
               "Its own QR code for table tents and windows",
               "Update specials and your menu any time from your update link"],
-        provide="Your logo and details. If Menu-Made built your website, the form arrives pre-filled.",
+        provide="Your logo and details, and the reward if you want a rewards card. If Menu-Made built your website, the form arrives pre-filled.",
         delivery="Setup builds the app and we approve it before it goes live; the monthly plan keeps it hosted and updatable. This is an app installed from the browser, not an App Store download.",
     ),
 }
@@ -779,6 +781,7 @@ def page_privacy():
 <li><strong>Google Business Profile data</strong>: if you connect your Google account, see the next section.</li>
 <li><strong>Site usage</strong>: a random identifier kept only for your browsing session (not a cookie), the pages and services you view, and where you came from (for example a campaign link), so we can see which pages help people choose a service. We skip this entirely if your browser sends Global Privacy Control or Do Not Track. We don’t use advertising cookies.</li>
 <li><strong>Email records</strong>: which service emails we sent you and whether they were delivered.</li>
+<li><strong>Guest Apps we run for businesses</strong>: when a guest turns on notifications in a business’s Guest App, we keep the address their phone’s push service gives us (from Google, Apple or Mozilla) so we can send that business’s notifications; turning notifications off removes it from sending. A rewards card is a random number kept on the guest’s phone, with the visits and rewards collected on it. We don’t ask guests for a name, email or phone number.</li>
 </ul>
 
 <h2>Google user data</h2>
