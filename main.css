@@ -164,6 +164,18 @@ body:not(.sample-menu-page) {
   }
 }
 
+/* 800-935px: there is room for the full-size nav text again (owner, Oct 28, 2026). 701-799px keeps 14px. */
+@media (max-width: 935px) and (min-width: 800px) {
+  :where(body:not(.sample-menu-page)) .nav a {
+    margin-left: 16px;
+    font-size: 16px
+  }
+
+  :where(body:not(.sample-menu-page)) .nav-cta {
+    margin-left: 16px
+  }
+}
+
 :where(body:not(.sample-menu-page)) .nav-social {
   display: flex;
   align-items: center;
