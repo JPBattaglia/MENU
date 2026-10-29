@@ -2781,3 +2781,4 @@ details.merch-panel summary{cursor:pointer;list-style:none}details.merch-panel s
 details.merch-panel summary::before{content:"▸ ";font-size:1.3em}details.merch-panel[open] summary::before{content:"▾ "}
 /* The logo preview stays hidden until a logo is chosen (site-wide img rules would otherwise show an empty box). */
 .merch-drop img[hidden]{display:none}
+.merch-status.merch-paid{color:#c9f7d4;background:rgba(0,0,0,.2);border-radius:10px;padding:14px}
