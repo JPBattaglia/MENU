@@ -25,6 +25,8 @@ import { sniffImage } from "../website/intake.js";
 import { priceMerch } from "./pricing.js";
 
 const WORKFLOW = "STAFF_MERCH_V1";
+// Stripe tax code for clothing (the Nino shirt shop uses the same one).
+const CLOTHING_TAX_CODE = "txcd_30011000";
 const QUOTE_TTL_MINUTES = 30;
 const MAX_LOGO_BYTES = 5_000_000;
 const LOGO_LINK_KIND = "merchlogo";
@@ -106,11 +108,34 @@ async function handleMerchCheckout(request, env) {
   const claimed = await env.DB.prepare(`UPDATE merch_quotes SET order_id = ? WHERE id = ? AND order_id IS NULL`).bind(pending.orderId, quote.id).run();
   if (!Number(claimed.meta?.changes)) return fail(409, "That quote was already used. Please review your order again.");
 
+  // Sales tax (owner decision Oct 28, 2026): staff shirts are physical goods, so Stripe Tax adds sales tax on top
+  // (menu-made account, California registration). Stripe Tax uses the delivery address on the Stripe customer; it
+  // refuses automatic tax together with payment_intent_data[shipping] (same as the Nino shop, Oct 28).
+  let customer;
+  try {
+    const c = new URLSearchParams();
+    c.append("email", pending.email);
+    if (pending.name) c.append("name", pending.name);
+    c.append("shipping[name]", recipient.name);
+    c.append("shipping[address][line1]", recipient.address1);
+    if (recipient.address2) c.append("shipping[address][line2]", recipient.address2);
+    c.append("shipping[address][city]", recipient.city);
+    if (recipient.state_code) c.append("shipping[address][state]", recipient.state_code);
+    c.append("shipping[address][postal_code]", recipient.zip);
+    c.append("shipping[address][country]", recipient.country_code);
+    c.append("metadata[order_id]", pending.orderId);
+    customer = await stripeRequest(env, environment, "/v1/customers", { method: "POST", params: c, idempotencyKey: `merch-customer/${pending.orderId}` });
+  } catch (error) {
+    await env.DB.prepare(`UPDATE orders SET status = 'FAILED', payment_status = 'FAILED', updated_at = ? WHERE id = ?`).bind(nowIso(), pending.orderId).run();
+    return jsonResponse({ ok: false, order_id: pending.orderId, error: "Payment could not be started. Please try again.", stripe_error: error?.body || error?.message }, error?.status || 502);
+  }
+
   const params = new URLSearchParams();
   params.append("mode", "payment");
   params.append("success_url", `https://menu-made.com/checkoutsuccess.html?session_id={CHECKOUT_SESSION_ID}&order_id=${encodeURIComponent(pending.orderId)}`);
   params.append("cancel_url", "https://menu-made.com/staff-merch.html");
-  params.append("customer_email", pending.email);
+  params.append("customer", customer.id);
+  params.append("automatic_tax[enabled]", "true");
   params.append("metadata[order_id]", pending.orderId);
   params.append("metadata[environment]", environment);
   params.append("metadata[business]", pending.businessName);
@@ -119,6 +144,8 @@ async function handleMerchCheckout(request, env) {
   params.append("payment_intent_data[metadata][order_id]", pending.orderId);
   lines.forEach((line, i) => {
     params.append(`line_items[${i}][price_data][currency]`, "usd");
+    params.append(`line_items[${i}][price_data][tax_behavior]`, "exclusive");
+    params.append(`line_items[${i}][price_data][product_data][tax_code]`, CLOTHING_TAX_CODE);
     params.append(`line_items[${i}][price_data][unit_amount]`, String(line.unit_cents));
     params.append(`line_items[${i}][price_data][product_data][name]`, `Staff shirt: ${line.title} (${[line.color, line.size].filter(Boolean).join(", ")})`.slice(0, 250));
     params.append(`line_items[${i}][price_data][product_data][description]`, `Nino Battaglia design${quote.logo_key ? ", your logo on the back" : ""}${pricing.discount_percent ? `, ${pricing.discount_percent}% team discount` : ""}. Printed and shipped by Printful.`);
@@ -126,6 +153,7 @@ async function handleMerchCheckout(request, env) {
   });
   params.append("shipping_options[0][shipping_rate_data][display_name]", rate.name.slice(0, 100));
   params.append("shipping_options[0][shipping_rate_data][type]", "fixed_amount");
+  params.append("shipping_options[0][shipping_rate_data][tax_behavior]", "exclusive");
   params.append("shipping_options[0][shipping_rate_data][fixed_amount][amount]", String(rate.amount_cents));
   params.append("shipping_options[0][shipping_rate_data][fixed_amount][currency]", "usd");
   params.append("custom_text[submit][message]", "Shirts ship to the address you entered on menu-made.com.");
@@ -136,7 +164,8 @@ async function handleMerchCheckout(request, env) {
     await env.DB.prepare(`UPDATE orders SET status = 'FAILED', payment_status = 'FAILED', updated_at = ? WHERE id = ?`).bind(nowIso(), pending.orderId).run();
     return jsonResponse({ ok: false, order_id: pending.orderId, error: "Payment could not be started. Please try again.", stripe_error: error?.body || error?.message }, error?.status || 502);
   }
-  if (Number(session.amount_total) !== total) {
+  // Stripe adds the tax; what we priced (shirts and delivery) must match exactly.
+  if (Number(session.amount_subtotal) !== pricing.subtotal_cents || Number(session.total_details?.amount_shipping ?? rate.amount_cents) !== rate.amount_cents || session.automatic_tax?.enabled !== true) {
     await stripeRequest(env, environment, `/v1/checkout/sessions/${session.id}/expire`, { method: "POST" }).catch(() => null);
     await env.DB.prepare(`UPDATE orders SET status = 'FAILED', payment_status = 'FAILED', updated_at = ? WHERE id = ?`).bind(nowIso(), pending.orderId).run();
     return fail(500, "The total did not match. Please try again.");
@@ -168,8 +197,14 @@ async function startStaffMerch(env, { projectId }) {
     }).catch(() => null);
     return { started: false };
   }
-  const order = await env.DB.prepare(`SELECT total_cents FROM orders WHERE id = ?`).bind(context.order_id).first();
-  const record = { ...merch, environment: meta.environment || "live", external_id: externalIdFor(context.order_id), paid_total_cents: Number(order?.total_cents || 0) };
+  // The order holds shirts + delivery; the sales tax Stripe charged on top is recorded from the payment.
+  const order = await env.DB.prepare(`SELECT subtotal_cents FROM orders WHERE id = ?`).bind(context.order_id).first();
+  const payment = await env.DB.prepare(`SELECT amount_cents FROM payments WHERE order_id = ? AND status = 'SUCCEEDED' ORDER BY created_at DESC LIMIT 1`).bind(context.order_id).first();
+  const preTax = Number(order?.subtotal_cents || 0);
+  const taxCents = payment ? Math.max(0, Number(payment.amount_cents) - preTax) : 0;
+  if (payment) await env.DB.prepare(`UPDATE orders SET tax_cents = ?, total_cents = ?, updated_at = ? WHERE id = ?`).bind(taxCents, preTax + taxCents, nowIso(), context.order_id).run();
+  // Printful may cost at most what the buyer paid for shirts and delivery (the tax is owed to the state, not spendable).
+  const record = { ...merch, environment: meta.environment || "live", external_id: externalIdFor(context.order_id), paid_total_cents: preTax, tax_cents: taxCents };
   await env.DB.prepare(`UPDATE projects SET metadata_json = json_set(COALESCE(metadata_json, '{}'), '$.merch', json(?)), updated_at = ? WHERE id = ?`)
     .bind(JSON.stringify(record), nowIso(), projectId).run();
   await refreshOnboardingState(projectId, context.order_id, context.customer_id, WORKFLOW, env);
