@@ -1,9 +1,10 @@
 // Sandbox self-test for staff merch (stage 10), run by the worker's 5-minute schedule and once a day.
 // Real path end to end, in Stripe test mode: the Nino shop's live catalog gives two sizes of one shirt; the logo is
-// uploaded on /api/merch/logo; /api/merch/products gives the logo products with their mockup templates; a mug and an
-// embroidered cap are added; /api/merch/quote has the Nino shop re-check everything against Printful and quote real
-// delivery (7 + 3 Nino shirts + mug + cap = 12 items, so the 10% team discount, the $5 logo fee on the Nino shirts,
-// Printful x 2 rounded to .99 on the logo items and the embroidery set-up apply); /api/merch/checkout opens a test
+// uploaded on /api/merch/logo; /api/merch/products gives the logo products with their mockup templates; one of every
+// logo product is added (so Printful checks every product's file, placement and embroidery threads);
+// /api/merch/quote has the Nino shop re-check everything against Printful and quote real delivery (2 Nino shirts +
+// 10 logo items = 12, so the 10% team discount, the $5 logo fee on the Nino shirts, Printful x 2 rounded to .99 on
+// the logo items and the embroidery set-up apply); /api/merch/checkout opens a test
 // session that is paid with a test card; the webhook starts production; the logo proof waits for owner approval and
 // is approved through the approve page; delivery places the order in Printful as a DRAFT ONLY (sandbox orders are
 // never confirmed, so nothing prints or ships); the draft is checked and then deleted.
@@ -17,6 +18,7 @@ import { SAMPLE_LOGO_PNG } from "./sample-assets.js";
 import { payTestCheckout, updateTest } from "./menu-qr-selftest.js";
 
 const KIND = "STAFF_MERCH_RUN";
+const LOGO_KEYS = ["tee", "hoodie", "polo", "apron", "cap", "beanie", "mug", "coaster", "tote", "stickers"];
 const STAGE_TIMEOUT_MINUTES = 30;
 const DAILY_HOUR_UTC = 19; // 12pm Pacific
 const ADDRESS = { name: "Menu-Made Self-Test", address1: "1 Ferry Building", city: "San Francisco", state_code: "CA", country_code: "US", zip: "94111" };
@@ -49,13 +51,13 @@ async function stageStart(env, app, test) {
   const products = await json(await app(new Request(`${base}/api/merch/products`)));
   if (!products.body?.ok) throw new Error(`Merch products failed (HTTP ${products.status}): ${products.body?.error}`);
   const pick = (key) => products.body.products.find((x) => x.key === key);
-  const mug = pick("mug"); const cap = pick("cap");
-  if (!mug?.variants?.length || !cap?.variants?.length) throw new Error("The mug or cap is missing from the merch products");
-  if (!mug.templates?.length) throw new Error("The mug has no mockup template");
-  const logoItems = [{ key: "mug", variant_id: mug.variants[0].id, quantity: 1 }, { key: "cap", variant_id: cap.variants[0].id, quantity: 1 }];
+  const mug = pick("mug");
+  const missing = LOGO_KEYS.filter((key) => !pick(key)?.variants?.length || !pick(key)?.templates?.length);
+  if (missing.length) throw new Error(`Merch products without stock or a mockup template: ${missing.join(", ")}`);
+  const logoItems = LOGO_KEYS.map((key) => ({ key, variant_id: pick(key).variants[0].id, quantity: 1 }));
   const quote = await json(await app(new Request(`${base}/api/merch/quote`, {
     method: "POST", headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ environment: "sandbox", logo_id: logo.body.logo_id, recipient: ADDRESS, logo_items: logoItems, items: [{ ...a, quantity: 7 }, { ...b, quantity: 3 }].map(({ product_id, variant_id, quantity }) => ({ product_id, variant_id, quantity })) })
+    body: JSON.stringify({ environment: "sandbox", logo_id: logo.body.logo_id, recipient: ADDRESS, logo_items: logoItems, items: [{ ...a, quantity: 1 }, { ...b, quantity: 1 }].map(({ product_id, variant_id, quantity }) => ({ product_id, variant_id, quantity })) })
   })));
   if (!quote.body?.ok) throw new Error(`Quote failed (HTTP ${quote.status}): ${quote.body?.error}`);
   const p = quote.body.pricing;
@@ -77,7 +79,7 @@ async function stageStart(env, app, test) {
   if (order.total_cents !== p.subtotal_cents + rate.amount_cents) throw new Error(`Order total ${order.total_cents} != items ${p.subtotal_cents} + delivery ${rate.amount_cents}`);
   const paid = await payTestCheckout(env, order.stripe_checkout_session_id);
   return updateTest(env, test, { status: "RUNNING", stage: "AWAIT_APPROVAL", order_id: checkout.body.order_id, state: { orderId: checkout.body.order_id },
-    log: `12 items (Nino shirts ${a.color} ${a.size} x7 + ${b.size} x3, logo mug, embroidered cap${p.setup_cents ? ` + set-up $${(p.setup_cents / 100).toFixed(2)}` : ""}) quoted with logo and 10% discount; $${(order.total_cents / 100).toFixed(2)} incl. ${rate.name}; paid with a test card (${paid.amount}); used quote refused` });
+    log: `12 items (Nino shirts ${a.color} ${a.size} + ${b.size}, one of each logo product${p.setup_cents ? ` + set-up $${(p.setup_cents / 100).toFixed(2)}` : ""}) quoted with logo and 10% discount; $${(order.total_cents / 100).toFixed(2)} incl. ${rate.name}; paid with a test card (${paid.amount}); used quote refused` });
 }
 
 async function stageAwaitApproval(env, app, test) {
