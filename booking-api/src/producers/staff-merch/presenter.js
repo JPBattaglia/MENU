@@ -18,18 +18,18 @@ const staffMerchOverrides = {
     const test = isTestOrder(context);
     const business = context.business_name || "A customer";
     return {
-      subject: `${test ? "[TEST] " : ""}Approve ${business}'s staff shirts (logo proof)`,
+      subject: `${test ? "[TEST] " : ""}Approve ${business}'s staff merch (logo proof)`,
       templateKey: "owner_approval_merch_v1",
       html: brandedEmailHtml({
-        preheader: `${merch?.pricing?.shirts || ""} shirts with ${business}'s logo are waiting for your OK.`,
+        preheader: `${(merch?.pricing?.items ?? merch?.pricing?.shirts) || ""} items with ${business}'s logo are waiting for your OK.`,
         eyebrow: test ? "TEST · STAFF MERCH" : "STAFF MERCH",
-        heading: `${business}'s logo shirts need your OK`,
+        heading: `${business}'s logo merch needs your OK`,
         paragraphs: ["Check the logo looks right on the back and that the business can use it (it's their own logo, not someone else's brand). Approving places the Printful order; nothing is printed before that."],
-        rows: [["Shirts", String(merch?.pricing?.shirts || "")], ["Paid", money((merch?.pricing?.subtotal_cents || 0) + (merch?.rate?.amount_cents || 0))], ["Link expires", `${APPROVAL_TTL_DAYS} days`]],
+        rows: [["Items", String((merch?.pricing?.items ?? merch?.pricing?.shirts) || "")], ["Paid", money((merch?.pricing?.subtotal_cents || 0) + (merch?.rate?.amount_cents || 0))], ["Link expires", `${APPROVAL_TTL_DAYS} days`]],
         buttons: [...previews, { label: "Review and approve", url: approveUrl, primary: true }],
         footnote: "If the logo can't be printed, request changes with a note: the order is held for you to sort out with the buyer."
       }),
-      text: [`${business}'s staff shirts with their logo are waiting for your OK.`, ...previews.map((p) => `${p.label}: ${p.url}`), `Review and approve: ${approveUrl}`].join("\n")
+      text: [`${business}'s staff merch with their logo are waiting for your OK.`, ...previews.map((p) => `${p.label}: ${p.url}`), `Review and approve: ${approveUrl}`].join("\n")
     };
   },
   async buyerEmail({ context, files, linkFor, env }) {
@@ -39,18 +39,18 @@ const staffMerchOverrides = {
     const link = proof ? await linkFor(proof, { download: false }) : null;
     return {
       recipient: context.customer_email,
-      subject: `${isTestOrder(context) ? "[TEST] " : ""}Your staff shirts are being printed`,
+      subject: `${isTestOrder(context) ? "[TEST] " : ""}Your staff merch is being made`,
       templateKey: "delivery_merch_v1",
       html: brandedEmailHtml({
-        preheader: `${ordered.pricing.shirts} shirts for ${business} are in production.`,
+        preheader: `${(ordered.pricing.items ?? ordered.pricing.shirts)} items for ${business} are in production.`,
         eyebrow: "STAFF MERCH",
-        heading: "Your shirts are being printed",
-        paragraphs: [`Hi ${escapeHtml(context.first_name || "there")}, ${ordered.pricing.shirts} shirt${ordered.pricing.shirts === 1 ? "" : "s"} for ${escapeHtml(business)} are now in production with Printful. We'll email the tracking link as soon as they ship (usually 3-7 days for printing, then ${escapeHtml(ordered.rate.name)}).`,
+        heading: "Your staff merch is being made",
+        paragraphs: [`Hi ${escapeHtml(context.first_name || "there")}, ${(ordered.pricing.items ?? ordered.pricing.shirts)} item${(ordered.pricing.items ?? ordered.pricing.shirts) === 1 ? "" : "s"} for ${escapeHtml(business)} are now in production with Printful. We'll email the tracking link as soon as they ship (usually 3-7 days for printing, then ${escapeHtml(ordered.rate.name)}).`,
           "Want the rest of your look to match? Nino's design studio does logos, flyers, menus and social graphics: https://ninobattaglia.com/services.html"],
         buttons: link ? [{ label: "See your order proof", url: link, primary: true }] : [],
-        footnote: `This link works for ${DELIVERY_LINK_TTL_DAYS} days. Questions or a size swap? Reply to this email today, before the shirts ship.`
+        footnote: `This link works for ${DELIVERY_LINK_TTL_DAYS} days. Questions or a size swap? Reply to this email today, before it ships.`
       }),
-      text: [`Hi ${context.first_name || "there"},`, "", `${ordered.pricing.shirts} shirts for ${business} are in production with Printful. We'll email tracking when they ship.`, link ? `Order proof: ${link}` : "", "", "Nino's design studio: https://ninobattaglia.com/services.html"].join("\n")
+      text: [`Hi ${context.first_name || "there"},`, "", `${(ordered.pricing.items ?? ordered.pricing.shirts)} items for ${business} are in production with Printful. We'll email tracking when they ship.`, link ? `Order proof: ${link}` : "", "", "Nino's design studio: https://ninobattaglia.com/services.html"].join("\n")
     };
   }
 };

@@ -9,9 +9,10 @@ import { createD1, createR2 } from './test-support/d1.mjs';
 const api = { ...(await import('./src/worker.js')), ...(await import('./src/workflows/runner.js')) };
 const { priceMerch } = await import('./src/producers/staff-merch/pricing.js');
 const { handleCheckoutCompleted } = await import('./src/checkout/webhook.js');
-const { emailMerchTracking, externalIdFor } = await import('./src/producers/staff-merch/order.js');
+const { emailMerchTracking, externalIdFor, imageSize } = await import('./src/producers/staff-merch/order.js');
 const read = (name) => readFileSync(new URL(`./migrations/${name}`, import.meta.url), 'utf8');
-const PNG = Uint8Array.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0, 0, 0, 13, 73, 72, 68, 82, 0, 0, 0, 1, 0, 0, 0, 1]);
+const PNG = Uint8Array.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0, 0, 0, 13, 73, 72, 68, 82, 0, 0, 2, 0x58, 0, 0, 1, 0x90]); // 600 x 400
+const TINY_PNG = Uint8Array.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0, 0, 0, 13, 73, 72, 68, 82, 0, 0, 0, 1, 0, 0, 0, 1]);
 
 test('pricing: shop price, +$5 with a logo, 10% from 12 shirts and 15% from 24', () => {
   const lines = (n) => [{ unit_price_cents: 2600, quantity: n }];
@@ -23,13 +24,36 @@ test('pricing: shop price, +$5 with a logo, 10% from 12 shirts and 15% from 24',
   assert.equal(priceMerch([{ unit_price_cents: 2600, quantity: 20 }, { unit_price_cents: 2600, quantity: 4 }]).discount_percent, 15);
 });
 
+test('pricing: logo items are Printful x 2 ending in .99; the discount counts every item; embroidery set-up x 2', () => {
+  const p = priceMerch([{ unit_price_cents: 2600, quantity: 10 }], { logo: true, logoLines: [{ base_cents: 1247, quantity: 1 }, { base_cents: 1500, quantity: 1 }], costs: { digitization_cents: 650 } });
+  assert.equal(p.logo_lines[0].list_unit_cents, 2499, '$12.47 x 2 = $24.94 -> $24.99');
+  assert.equal(p.logo_lines[1].list_unit_cents, 3099, '$30.00 -> $30.99');
+  assert.equal(p.items, 12); assert.equal(p.discount_percent, 10);
+  assert.equal(p.logo_lines[0].unit_cents, Math.round(2499 * 0.9));
+  assert.equal(p.setup_cents, 1300);
+  assert.equal(p.subtotal_cents, p.lines[0].line_cents + p.logo_lines[0].line_cents + p.logo_lines[1].line_cents + 1300);
+  assert.equal(priceMerch([], { logo: true, logoLines: [{ base_cents: 900, quantity: 2 }] }).logo_fee_cents, 0, 'no $5 fee without Nino shirts');
+});
+
+test('logo size is read from PNG and JPG headers', () => {
+  assert.deepEqual(imageSize(PNG), { width: 600, height: 400 });
+  const jpg = Uint8Array.from([0xff, 0xd8, 0xff, 0xe0, 0, 4, 0, 0, 0xff, 0xc0, 0, 17, 8, 1, 0x2c, 3, 0x20, 3]);
+  assert.deepEqual(imageSize(jpg), { width: 800, height: 300 });
+});
+
 function setup() {
   const DB = createD1(); const ASSETS = createR2();
-  ASSETS.head = async (key) => (ASSETS.objects.has(key) ? {} : null);
+  ASSETS.head = async (key) => (ASSETS.objects.has(key) ? { customMetadata: ASSETS.objects.get(key).customMetadata } : null);
   DB.raw.exec(read('0019_stage10_nino_link.sql'));
   const emails = []; const stripe = []; const merchCalls = [];
   const MERCH = {
-    async quote(args) { merchCalls.push(['quote', args]); return { ok: true, recipient: args.recipient, lines: args.items.map((i) => ({ ...i, title: 'Skull Wave', color: 'Black', size: i.variant_id === '501' ? 'M' : 'L', image: 'https://nino.example/m.jpg', unit_price_cents: 2600, catalog_variant_id: 4011, fingerprint: 'fp' })), rates: [{ id: 'STANDARD', name: 'Flat Rate', amount_cents: 1299, currency: 'usd' }] }; },
+    async quote(args) {
+      merchCalls.push(['quote', args]);
+      const logoLines = (args.logo_items || []).map((i) => ({ ...i, title: i.key === 'cap' ? 'Cap (embroidered)' : 'Mug', color: i.key === 'cap' ? 'Navy' : 'White', size: 'One size', image: `https://files.example/${i.key}.png`, base_cents: i.key === 'cap' ? 1500 : 1247 }));
+      return { ok: true, recipient: args.recipient, lines: args.items.map((i) => ({ ...i, title: 'Skull Wave', color: 'Black', size: i.variant_id === '501' ? 'M' : 'L', image: 'https://nino.example/m.jpg', unit_price_cents: 2600, catalog_variant_id: 4011, fingerprint: 'fp' })),
+        logo_lines: logoLines, costs: { digitization_cents: logoLines.some((l) => l.key === 'cap') ? 650 : 0 }, rates: [{ id: 'STANDARD', name: 'Flat Rate', amount_cents: 1299, currency: 'usd' }] };
+    },
+    async products() { merchCalls.push(['products']); return { ok: true, built_at: 1, products: [{ key: 'mug', title: 'Mug', templates: [], variants: [{ id: 1320, base_cents: 1247 }] }] }; },
     async placeOrder(args) { merchCalls.push(['placeOrder', args]); return { ok: true, printful_order_id: '777', status: args.confirm ? 'pending' : 'draft', cost_cents: 20000 }; },
     async orderStatus(args) { merchCalls.push(['orderStatus', args]); return { ok: true, found: true, status: 'fulfilled', shipments: [{ carrier: 'USPS', tracking_number: '9400', tracking_url: 'https://track.example/9400' }] }; }
   };
@@ -57,14 +81,14 @@ const post = (f, path, body) => call(f, path, { method: 'POST', headers: { 'Cont
 const linksIn = (text, path) => [...text.matchAll(new RegExp(`https://menu-made\\.com${path}[^\\s"<]+`, 'g'))].map((m) => m[0].replaceAll('&amp;', '&'));
 const ADDRESS = { name: 'Proof Cafe', address1: '1 Main St', city: 'Oakland', state_code: 'CA', country_code: 'US', zip: '94612' };
 
-async function buy(f, { logo }) {
+async function buy(f, { logo, logoItems = [], items = [{ product_id: '101', variant_id: '501', quantity: 8 }, { product_id: '101', variant_id: '502', quantity: 4 }] }) {
   let logoId = null;
   if (logo) {
     const form = new FormData(); form.append('logo', new File([PNG], 'logo.png', { type: 'image/png' }));
     const up = await call(f, '/api/merch/logo', { method: 'POST', body: form });
     assert.equal(up.status, 200); logoId = up.body.logo_id;
   }
-  const quote = await post(f, '/api/merch/quote', { environment: 'sandbox', logo_id: logoId, recipient: ADDRESS, items: [{ product_id: '101', variant_id: '501', quantity: 8 }, { product_id: '101', variant_id: '502', quantity: 4 }] });
+  const quote = await post(f, '/api/merch/quote', { environment: 'sandbox', logo_id: logoId, recipient: ADDRESS, items, logo_items: logoItems });
   assert.equal(quote.status, 200, JSON.stringify(quote.body));
   assert.equal(quote.body.pricing.discount_percent, 10);
   assert.equal(quote.body.lines[0].fingerprint, undefined, 'internal fields stay server-side');
@@ -111,7 +135,41 @@ test('logo order: quote, checkout, paid, proof waits for the owner, approval pla
     const logo = await api.default.fetch(new Request(placed.logo_url), f.env, f.ctx);
     assert.equal(logo.status, 200, 'Printful can download the logo');
     assert.equal(f.row(`SELECT status FROM projects`).status, 'DELIVERED');
-    assert.ok(f.emails.some((e) => /being printed/.test(e.subject)));
+    assert.ok(f.emails.some((e) => /being made/.test(e.subject)));
+  });
+});
+
+test('logo-first order: mug and embroidered cap with set-up, per-item tax codes, logo size sent to Printful', async () => {
+  const f = setup();
+  await withFetch(f.fetch, async () => {
+    const products = await call(f, '/api/merch/products');
+    assert.equal(products.status, 200); assert.equal(products.body.products[0].key, 'mug');
+    const tiny = new FormData(); tiny.append('logo', new File([TINY_PNG], 'logo.png', { type: 'image/png' }));
+    assert.equal((await call(f, '/api/merch/logo', { method: 'POST', body: tiny })).status, 400, 'too small to print');
+    const orderId = await buy(f, { logo: true, items: [{ product_id: '101', variant_id: '501', quantity: 10 }], logoItems: [{ key: 'mug', variant_id: 1320, quantity: 1 }, { key: 'cap', variant_id: 7854, quantity: 1 }] });
+    const quoteArgs = f.merchCalls.find(([m]) => m === 'quote')[1];
+    assert.deepEqual([quoteArgs.logo.width, quoteArgs.logo.height], [600, 400]);
+    assert.match(quoteArgs.logo.url, /^https:\/\/menu-made\.com\/api\/merch-upload\//);
+    assert.equal((await api.default.fetch(new Request(quoteArgs.logo.url), f.env, f.ctx)).status, 200, 'Printful can read the logo at quote time');
+    assert.equal((await api.default.fetch(new Request(quoteArgs.logo.url.split('?')[0] + '?t=bad'), f.env, f.ctx)).status, 404);
+    const session = f.stripe.find((p) => p.get('mode'));
+    const names = []; for (let i = 0; session.get(`line_items[${i}][quantity]`); i++) names.push([session.get(`line_items[${i}][price_data][product_data][name]`), session.get(`line_items[${i}][price_data][product_data][tax_code]`), session.get(`line_items[${i}][price_data][unit_amount]`)]);
+    assert.equal(names.length, 4);
+    assert.match(names[1][0], /^Mug with your logo/); assert.equal(names[1][1], 'txcd_99999999'); assert.equal(names[1][2], String(Math.round(2499 * 0.9)));
+    assert.match(names[2][0], /^Cap \(embroidered\) with your logo/); assert.equal(names[2][1], 'txcd_30011000');
+    assert.deepEqual(names[3], ['Embroidery set-up (one-time)', 'txcd_99999999', '1300']);
+    const proof = [...f.ASSETS.objects.entries()].find(([k]) => k.includes('merch-proof'))[1];
+    assert.match(new TextDecoder().decode(proof.data), /Mug <small>White/);
+    const owner = f.emails.find((e) => /logo proof/.test(e.subject));
+    const [approveUrl] = linksIn(owner.text, '/api/approvals/');
+    const form = new FormData(); form.append('t', new URL(approveUrl).searchParams.get('t'));
+    assert.equal((await api.default.fetch(new Request(approveUrl.split('?')[0], { method: 'POST', body: form }), f.env, f.ctx)).status, 200);
+    await api.runScheduledProduction(f.env); await Promise.all(f.pending);
+    const placed = f.merchCalls.find(([m]) => m === 'placeOrder')[1];
+    assert.deepEqual(placed.logo_lines.map((l) => [l.key, l.quantity, l.retail_cents]), [['mug', 1, Math.round(2499 * 0.9)], ['cap', 1, Math.round(3099 * 0.9)]]);
+    assert.deepEqual([placed.logo.width, placed.logo.height], [600, 400]);
+    assert.match(placed.logo.url, /\/api\/merch-logo\//);
+    assert.equal(f.row(`SELECT status FROM projects WHERE order_id = ?`, orderId).status, 'DELIVERED');
   });
 });
 

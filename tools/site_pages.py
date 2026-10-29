@@ -12,7 +12,7 @@ from pathlib import Path
 import re
 
 ROOT = Path(__file__).resolve().parent.parent
-CSS_VERSION = "20261028-stage10"
+CSS_VERSION = "20261028-stage10c"
 CATALOG_JS = '<script src="site-catalog.js?v=20261028-stage9" defer></script>'
 
 NAV = [
@@ -574,51 +574,68 @@ def team_and_design_block():
 
 
 def page_staff_merch():
-    title = "Staff Merch with Nino Battaglia Designs — MENU-MADE"
-    desc = "Staff shirts for restaurants and local businesses in Nino Battaglia's designs, with your logo on the back if you like. Team discounts from 12 shirts; printed and shipped for you."
+    title = "Staff Merch With Your Logo — MENU-MADE"
+    desc = "Upload your logo and see it on staff shirts, aprons, hats, mugs, coasters and more. Team discounts from 12 items; printed and shipped for you, with Nino Battaglia shirt designs as an option."
     body = """<section class="hero mm-page-hero">
   <div class="container">
     <span class="pill">Staff merch</span>
-    <h1>Staff shirts in Nino Battaglia's designs</h1>
-    <p class="hero-intro">Pick designs from Nino's collection, choose colours and sizes for your team, and add your logo on the back if you like. Each shirt costs what it does in Nino's shop, plus $5 with your logo. Order 12 or more for 10% off, 24 or more for 15% off. Sales tax is added at checkout. Printed by Printful and shipped to you.</p>
+    <h1>Your logo on your team's merch</h1>
+    <p class="hero-intro">Upload your logo and see it right away on shirts, aprons, hats, mugs, coasters and more. Pick colours, sizes and quantities; order 12 or more items for 10% off, 24 or more for 15% off. Sales tax is added at checkout. Printed by Printful and shipped to you. Nino checks every logo order before anything is printed.</p>
   </div>
 </section>
 
-<section class="section" aria-labelledby="pick-title">
+<section class="section" aria-labelledby="logo-title">
   <div class="container">
-    <header class="section-head"><h2 id="pick-title">1. Choose a design</h2><p id="designCount">Loading designs…</p></header>
-    <label for="designSearch" class="merch-visually-hidden">Search designs</label>
-    <input id="designSearch" class="merch-search" type="search" placeholder="Search designs">
-    <div id="designGrid" class="merch-grid" aria-live="polite"></div>
+    <div class="merch-panel">
+      <h2 id="logo-title">1. Upload your logo</h2>
+      <label id="logoDrop" class="merch-drop" for="logoFile">
+        <img id="logoThumb" alt="Your logo" hidden>
+        <span id="logoDropText">Choose your logo, or drop it here. PNG or JPG, under 5 MB, at least 300 pixels wide. A transparent PNG looks best.</span>
+        <input id="logoFile" type="file" accept="image/png,image/jpeg">
+      </label>
+      <p id="logoStatus" class="merch-status" role="alert" hidden></p>
+      <p><small>Only upload a logo your business owns. <button type="button" id="skipLogo" class="link-btn">No logo? Shop shirts in Nino Battaglia's designs</button></small></p>
+    </div>
 
-    <div id="pickerStep" class="merch-panel" hidden>
-      <h2>2. Colour, sizes and how many</h2>
-      <div class="merch-picker">
-        <img id="pickerImage" src="" alt="" width="280" height="280">
+    <div id="mockStep" class="merch-panel" hidden>
+      <h2>2. See it on your merch</h2>
+      <p>Tap a product to choose colours, sizes and how many. Logo placement follows each product's print area.</p>
+      <div id="mockGrid" class="merch-grid merch-mock-grid" aria-live="polite"></div>
+      <div id="pickerStep" class="merch-picker merch-subpanel" hidden>
+        <div id="pickerMock"></div>
         <div>
           <h3 id="pickerTitle"></h3>
+          <p id="pickerNote" class="merch-note"></p>
           <div id="colorList" class="merch-swatches" aria-label="Colours"></div>
           <div id="sizeList" class="merch-sizes"></div>
-          <p><small>You can mix designs and colours: pick another design above and add more sizes.</small></p>
         </div>
       </div>
     </div>
 
+    <details id="ninoDesigns" class="merch-panel">
+      <summary><h2 id="pick-title">Shirts in Nino Battaglia's designs <small>(optional)</small></h2></summary>
+      <p>Shop price for each shirt; with your logo uploaded it goes on the back for $5 more. <span id="designCount">Loading designs…</span></p>
+      <label for="designSearch" class="merch-visually-hidden">Search designs</label>
+      <input id="designSearch" class="merch-search" type="search" placeholder="Search designs">
+      <div id="designGrid" class="merch-grid" aria-live="polite"></div>
+      <div id="designPicker" class="merch-picker merch-subpanel" hidden>
+        <img id="designImage" src="" alt="" width="280" height="280">
+        <div>
+          <h3 id="designTitle"></h3>
+          <div id="designColors" class="merch-swatches" aria-label="Colours"></div>
+          <div id="designSizes" class="merch-sizes"></div>
+        </div>
+      </div>
+    </details>
+
     <div class="merch-panel">
-      <h2>Your team's shirts</h2>
+      <h2>Your order</h2>
       <ul id="cartLines" class="merch-cart"></ul>
       <p id="cartSummary"></p>
     </div>
 
     <form id="detailsForm" class="merch-panel" hidden novalidate>
-      <h2>3. Your logo and where to ship</h2>
-      <p><label><input type="checkbox" id="wantLogo"> Add our logo on the back (+$5 a shirt)</label></p>
-      <div id="logoField" hidden>
-        <label for="logoFile">Logo (PNG or JPG, under 5 MB; a transparent PNG prints best)</label><br>
-        <input id="logoFile" type="file" accept="image/png,image/jpeg">
-        <img id="logoPreview" alt="Your logo" hidden>
-        <p><small>Nino checks every logo order before anything is printed. Only upload a logo your business owns.</small></p>
-      </div>
+      <h2>3. Where to ship</h2>
       <div class="merch-form">
         <label class="full">Name for delivery<input id="shipName" required autocomplete="name"></label>
         <label class="full">Street address<input id="shipAddress1" required autocomplete="address-line1"></label>
@@ -634,7 +651,7 @@ def page_staff_merch():
 
     <div id="quoteBox" class="merch-panel" hidden>
       <h2>4. Review and pay</h2>
-      <table class="merch-table"><thead><tr><th>Shirt</th><th>Qty</th><th>Each</th><th>Total</th></tr></thead><tbody id="quoteLines"></tbody></table>
+      <table class="merch-table"><thead><tr><th>Item</th><th>Qty</th><th>Each</th><th>Total</th></tr></thead><tbody id="quoteLines"></tbody></table>
       <fieldset class="merch-fieldset"><legend>Delivery</legend><div id="quoteRates"></div></fieldset>
       <p id="quoteTotal"></p>
       <div class="merch-form">
@@ -645,13 +662,13 @@ def page_staff_merch():
       </div>
       <p id="quoteStatus" class="merch-status" role="alert" hidden></p>
       <button id="payBtn" class="btn primary" type="button">Pay securely</button>
-      <p><small>Payment by Stripe. Prices are checked again with Nino's shop and Printful before you pay. Shirts usually print in 3-7 days, then ship; we email the tracking link.</small></p>
+      <p><small>Payment by Stripe. Prices are checked again with Printful before you pay. Items usually take 3-7 days to make, then ship; we email the tracking link.</small></p>
     </div>
     <p id="merchStatus" class="merch-status" hidden></p>
   </div>
 </section>
 """
-    scripts = '<script src="staff-merch.js?v=20261028-stage10b" defer></script>\n'
+    scripts = '<script src="staff-merch.js?v=20261028-stage10c" defer></script>\n'
     return head(title, desc, "staff-merch.html", "merch-page") + body + foot(scripts)
 
 
