@@ -1,7 +1,7 @@
 // Stage 9 part 2: sample outputs for the product pages. Each sample is the newest REAL output of a product's daily
 // self-test (sandbox orders by the self-test buyer), so the samples always match what the producers make today.
 // Served with the fictional test business renamed "Sample Cafe", every signed private link removed, no scripts on
-// report pages, noindex. Google samples are not served: those self-tests run on Menu-Made's own Google profile.
+// report pages, noindex. The Google samples come from self-tests on Menu-Made's own Google profile (owner OK).
 //   /api/samples/<menu|accessibility|conversion|social>   one stored page
 //   /api/samples/website/...  /api/samples/app/...       the newest self-test website or Guest App, proxied
 import { SELF_TEST_EMAIL } from "../lib/email.js";
@@ -14,7 +14,10 @@ const PAGES = {
   menu: { workflow: "MENU_QR_V1", type: "MENU_DRAFT", label: "Online Menu + QR" },
   accessibility: { workflow: "ACCESSIBILITY_MONITORING_V1", type: "ACCESSIBILITY_REPORT", label: "Accessibility Monitoring" },
   conversion: { workflow: "CONVERSION_FIX_V1", type: "CONVERSION_REPORT", label: "Conversion Fix" },
-  social: { workflow: "SOCIAL_POSTS_V1", type: "SOCIAL_CALENDAR", label: "Social Posts" }
+  social: { workflow: "SOCIAL_POSTS_V1", type: "SOCIAL_CALENDAR", label: "Social Posts" },
+  // These two self-tests run on Menu-Made's own Google profile, so the numbers are Menu-Made's (owner OK, Oct 28).
+  "google-visibility": { workflow: "GOOGLE_VISIBILITY_V1", type: "GOOGLE_VISIBILITY_REPORT", label: "Google Visibility" },
+  "google-care": { workflow: "GOOGLE_PROFILE_CARE_V1", type: "GOOGLE_PROFILE_REPORT", label: "Google Profile Care" }
 };
 
 // Test businesses are named "<Something> Self-Test Cafe"; show them as one neutral sample business.
@@ -23,6 +26,7 @@ function scrub(text, names = []) {
   for (const name of names.filter(Boolean).sort((a, b) => b.length - a.length)) out = out.split(name).join(SAMPLE_NAME);
   out = out.replace(/(?:[A-Z][A-Za-z0-9]*\s+){0,3}Self-Test\s+(?:Cafe|Trattoria|Bistro|Restaurant)/g, SAMPLE_NAME)
     .replace(/Menu-Made Self-Test/g, "Sam Sample")
+    .replace(/Stage 5 Exit Test (?:Cafe|Trattoria)/g, SAMPLE_NAME)
     .replace(/\bSelf-Test\b/g, "Sample")
     .replace(/[A-Za-z]*SelfTest(?:Cafe|Trattoria|Bistro)?/g, "SampleCafe");
   // Signed private links (change forms, approvals, settings, deliveries) never leave a sample.

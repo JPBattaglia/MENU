@@ -2,6 +2,7 @@
 // A synthetic paid order fills in the REAL intake form (a real multipart POST with a real PNG), the REAL AI writes the copy,
 // the owner approval is clicked through the approve page, then the live site is fetched. Only a failure emails the owner.
 // Start one by inserting a self_tests row, kind WEBSITE_PACKAGE_RUN, status REQUESTED.
+import { SAMPLE_LOGO_PNG, samplePhotos } from "./sample-assets.js";
 import { ownerEmailAddress, publicBaseUrl } from "../lib/config.js";
 import { SELF_TEST_EMAIL, brandedEmailHtml, sendTransactionalEmail } from "../lib/email.js";
 import { nowIso, parseJsonOrNull } from "../lib/http.js";
@@ -59,8 +60,15 @@ async function stageStart(env, app, test) {
     phone: "(512) 555-0147", address: "123 Main Street, Austin, TX", hours: "Mon-Fri: 7am-3pm\nSat: 8am-2pm", style: "modern", subdomain: `selftest-${short}`, photo_captions: "Our morning bread"
   };
   for (const [k, v] of Object.entries(answers)) form.append(k, v);
-  form.append("logo", new File([PNG], "logo.png", { type: "image/png" }));
-  form.append("photos", new File([PNG], "bread.png", { type: "image/png" }));
+  // Real-looking logo and photos (owner decision Oct 28, 2026): this site is also the public website sample.
+  form.append("logo", new File([SAMPLE_LOGO_PNG], "logo.png", { type: "image/png" }));
+  const photos = await samplePhotos(env);
+  if (photos.length) {
+    for (const photo of photos) form.append("photos", new File([photo.bytes], photo.name, { type: "image/jpeg" }));
+    form.set("photo_captions", photos.map((photo) => photo.caption).join("\n"));
+  } else {
+    form.append("photos", new File([PNG], "bread.png", { type: "image/png" }));
+  }
   const posted = await app(new Request(`${publicBaseUrl(env)}/api/site-intake/${projectId}`, { method: "POST", body: form }));
   if (posted.status !== 200) {
     // The form re-renders with its error in <strong>; report that, not the page's CSS.
@@ -68,7 +76,7 @@ async function stageStart(env, app, test) {
     const reason = /<strong>([^<]+)<\/strong>/.exec(page)?.[1] || page.replace(/<style[\s\S]*?<\/style>/gi, " ").replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim();
     throw new Error(`The intake form was not accepted (HTTP ${posted.status}): ${reason.slice(0, 200)}`);
   }
-  return updateTest(env, test, { status: "RUNNING", stage: "AWAIT_OWNER_REQUEST", project_id: projectId, order_id: orderId, state: { projectId, slug: answers.subdomain }, log: "Synthetic Website Package order started; intake form submitted with a logo and a photo" });
+  return updateTest(env, test, { status: "RUNNING", stage: "AWAIT_OWNER_REQUEST", project_id: projectId, order_id: orderId, state: { projectId, slug: answers.subdomain, photo_ext: photos.length ? "jpg" : "png" }, log: `Synthetic Website Package order started; intake form submitted with a logo and ${photos.length || 1} photo(s)` });
 }
 
 async function stageAwaitOwnerRequest(env, app, test) {
@@ -85,7 +93,7 @@ async function stageAwaitOwnerRequest(env, app, test) {
   if (!build) throw new Error("The site build is missing");
   const live = await app(new Request(`${publicBaseUrl(env)}/api/site/${s.slug}/`));
   if ((await live.text()).includes("Website Self-Test Cafe")) throw new Error("The site is live before the owner approved it");
-  for (const page of ["", "menu.html", "about.html", "contact.html", "img/logo.png", "img/photo-1.png"]) {
+  for (const page of ["", "menu.html", "about.html", "contact.html", "img/logo.png", `img/photo-1.${s.photo_ext || "png"}`]) {
     const res = await app(new Request(`${await previewUrl(env, build.id, 1)}${page}`));
     if (res.status !== 200) throw new Error(`The preview of ${page || "the home page"} returned HTTP ${res.status}`);
     if (!page) {

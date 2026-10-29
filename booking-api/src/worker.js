@@ -149,7 +149,7 @@ var worker_default = {
     const hostingMatch = url.pathname.match(/^\/api\/menu-hosting\/([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})$/i);
     if (hostingMatch && (request.method === "GET" || request.method === "POST")) return handleMenuHostingRenewal(request, env, hostingMatch[1].toLowerCase());
     // Product samples: the newest real self-test output of each product, renamed "Sample Cafe", private links removed.
-    const sampleMatch = url.pathname.match(/^\/api\/samples\/(menu|accessibility|conversion|social|website|app)(?:\/(.*))?$/);
+    const sampleMatch = url.pathname.match(/^\/api\/samples\/(menu|accessibility|conversion|social|google-visibility|google-care|website|app)(?:\/(.*))?$/);
     if (sampleMatch && (request.method === "GET" || request.method === "HEAD")) return handleSample(request, env, sampleMatch[1], sampleMatch[2] || "");
     const portalMatch = url.pathname.match(/^\/api\/billing-portal\/([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})$/i);
     if (portalMatch && (request.method === "GET" || request.method === "POST")) {
