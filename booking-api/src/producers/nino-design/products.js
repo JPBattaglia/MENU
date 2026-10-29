@@ -22,6 +22,8 @@ const NINO_PRODUCTS = {
   },
   NINO_FLYER: {
     code: "NINO_FLYER", workflow: "NINO_FLYER_V1", name: "Flyer", priceCents: 7900,
+    // Owner decision Oct 28, 2026: the flyer is taxed (Stripe Tax, digital finished artwork); the other design services are not.
+    taxCode: "txcd_10505001",
     short: "A print-ready letter-size flyer", deliverable: "a print-ready flyer (letter size, 300 dpi PNG) and a square version for social media",
     fields: [
       { key: "business_name", label: "Business name as it should appear", type: "text", required: true, max: 60 },

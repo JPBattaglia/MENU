@@ -61,6 +61,12 @@ test('checkout: design services carry inline prices on live, Menu Redesign is pr
   appendCheckoutLineItem(params, items[1], 0, 'live');
   assert.equal(params.get('line_items[0][price_data][unit_amount]'), '24900');
   assert.match(params.get('line_items[0][price_data][product_data][name]'), /Nino Battaglia design: Logo/);
+  assert.equal(params.get('line_items[0][price_data][product_data][tax_code]'), null, 'the logo is not taxed');
+  const [flyer] = await normalizeCheckoutItems([{ key: 'NINO_FLYER' }], env, {}, { requirePublic: true });
+  const fp = new URLSearchParams(); appendCheckoutLineItem(fp, flyer, 0, 'live');
+  assert.equal(fp.get('line_items[0][price_data][product_data][tax_code]'), 'txcd_10505001', 'the flyer is taxed');
+  assert.equal(fp.get('line_items[0][price_data][tax_behavior]'), 'exclusive');
+  for (const key of ['NINO_SOCIAL_PACK', 'NINO_MENU_DESIGN']) assert.equal((await normalizeCheckoutItems([{ key }], env, {}, { requirePublic: true }))[0].taxCode, null, `${key} is not taxed`);
   await assert.rejects(normalizeCheckoutItems([{ key: 'NINO_MENU_DESIGN' }], env, { design_pages: 40 }), /page count from 1 to 12/);
   const cart = cartInputFromItems([{ offer_code: 'NINO_MENU_DESIGN', quantity: 1, metadata_json: JSON.stringify({ design_pages: 6, return_to: 'nino' }) }]);
   assert.equal(cart.design_pages, 6); assert.equal(cart.return_to, 'nino');
