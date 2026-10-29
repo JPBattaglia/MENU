@@ -139,6 +139,31 @@ body:not(.sample-menu-page) {
   color: rgb(0, 27, 34) !important
 }
 
+/* 701-935px (Oct 28, 2026): the full nav is still shown here, so the logo was squeezed and "Our Work" wrapped.
+   Pull the logo left, keep it full size, and tighten the nav text. */
+@media (max-width: 935px) and (min-width: 701px) {
+  :where(body:not(.sample-menu-page)) .header .container {
+    padding-left: 18px;
+    padding-right: 18px
+  }
+
+  :where(body:not(.sample-menu-page)) .brand {
+    flex-shrink: 0;
+    gap: 10px
+  }
+
+  :where(body:not(.sample-menu-page)) .nav a {
+    margin-left: 14px;
+    font-size: 14px;
+    white-space: nowrap
+  }
+
+  :where(body:not(.sample-menu-page)) .nav-cta {
+    margin-left: 14px;
+    padding: 8px 14px
+  }
+}
+
 :where(body:not(.sample-menu-page)) .nav-social {
   display: flex;
   align-items: center;
