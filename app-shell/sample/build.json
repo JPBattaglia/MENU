@@ -1,0 +1,8 @@
+{
+  "app_id": "com.menumade.samplecafe",
+  "app_name": "Sample Cafe",
+  "brand_color": "#1f4e5f",
+  "api_base": "https://menu-made.com/api/samples/app",
+  "version": "1.0.0",
+  "build_number": 1
+}
