@@ -4,11 +4,13 @@
 // sandbox Menu Care subscription checkout whose order belongs to that same business. Everything it creates is
 // closed at the end (session expired, order cancelled, project and delivery hidden). Daily at 9:40am Pacific; start
 // one by inserting a self_tests row with kind MENU_HOSTING_RENEWAL. Only a failure emails the owner.
+// Then the 30-day grace (owner decision Oct 28, 2026): the same menu aged to 400 days is offline, gets its one
+// "your menu is offline" email, and comes back online as soon as the business has Menu Care.
 import { ownerEmailAddress, publicBaseUrl } from "../lib/config.js";
 import { brandedEmailHtml, sendTransactionalEmail, SELF_TEST_EMAIL } from "../lib/email.js";
 import { nowIso } from "../lib/http.js";
 import { stripeRequest } from "../lib/stripe.js";
-import { handleMenuHostingRenewal, remindMenuHostingRenewals } from "../producers/menu-qr/hosting-renewal.js";
+import { handleMenuHostingRenewal, menuHostingState, remindMenuHostingRenewals } from "../producers/menu-qr/hosting-renewal.js";
 import { updateTest } from "./menu-qr-selftest.js";
 
 const KIND = "MENU_HOSTING_RENEWAL";
@@ -50,8 +52,9 @@ async function scaffold(env, testId) {
   return ids;
 }
 
-async function cleanUp(env, ids, renewalOrderId) {
+async function cleanUp(env, ids, renewalOrderId, entitlementId) {
   const t = nowIso();
+  if (entitlementId) await env.DB.prepare(`UPDATE entitlements SET status = 'EXPIRED', ends_at = ?, updated_at = ? WHERE id = ?`).bind(t, t, entitlementId).run();
   if (renewalOrderId) {
     const order = await env.DB.prepare(`SELECT stripe_checkout_session_id FROM orders WHERE id = ?`).bind(renewalOrderId).first();
     if (order?.stripe_checkout_session_id) await stripeRequest(env, "sandbox", `/v1/checkout/sessions/${order.stripe_checkout_session_id}/expire`, { method: "POST" }).catch(() => null);
@@ -92,7 +95,23 @@ async function runHostingCheck(env, test, holder) {
   if (session.mode !== "subscription" || session.metadata?.order_id !== order.id || session.amount_total !== 2900) {
     throw new Error(`Menu Care checkout is wrong: mode ${session.mode}, order ${session.metadata?.order_id}, total ${session.amount_total}`);
   }
-  return `30-day reminder sent once; GET opened nothing; POST opened ${session.id} (Menu Care, $29/month) for the menu's own business`;
+  // Grace period: 380 days = in the 30 days after the year ends, still online; 400 days = offline.
+  const age = (days) => env.DB.prepare(`UPDATE deliverables SET delivered_at = ? WHERE id = ?`).bind(new Date(Date.now() - days * 86400000).toISOString(), ids.deliverable).run();
+  await age(380);
+  const grace = await menuHostingState(env, ids.business);
+  if (!grace.live || grace.reason !== "grace") throw new Error(`10 days after the first year the menu should still be online, got ${JSON.stringify(grace)}`);
+  await age(400);
+  const off = await menuHostingState(env, ids.business);
+  if (off.live) throw new Error("35 days after the first year without Menu Care the menu is still online");
+  const notice = await remindMenuHostingRenewals(env, { projectIds: [ids.project] });
+  if (notice.sent !== 1 || notice.results[0]?.reminder !== "offline") throw new Error(`Offline email not sent: ${JSON.stringify(notice).slice(0, 300)}`);
+  const t = nowIso();
+  holder.entitlement = crypto.randomUUID();
+  await env.DB.prepare(`INSERT INTO entitlements (id, customer_id, business_id, order_item_id, entitlement_type, status, starts_at, created_at, updated_at) VALUES (?, (SELECT customer_id FROM projects WHERE id = ?), ?, ?, 'MENU_CARE', 'ACTIVE', ?, ?, ?)`)
+    .bind(holder.entitlement, ids.project, ids.business, ids.item, t, t, t).run();
+  const back = await menuHostingState(env, ids.business);
+  if (!back.live) throw new Error("With Menu Care the menu did not come back online");
+  return `30-day reminder sent once; GET opened nothing; POST opened ${session.id} (Menu Care, $29/month) for the menu's own business; online during the grace period, offline after it with one offline email, back online with Menu Care`;
 }
 
 async function advanceMenuHostingSelfTests(env, deps = {}) {
@@ -104,12 +123,12 @@ async function advanceMenuHostingSelfTests(env, deps = {}) {
     const holder = {};
     try {
       const summary = await runHostingCheck(env, test, holder);
-      await cleanUp(env, holder.ids, holder.renewalOrderId);
+      await cleanUp(env, holder.ids, holder.renewalOrderId, holder.entitlement);
       await updateTest(env, test, { status: "PASSED", stage: "DONE", order_id: holder.renewalOrderId, project_id: holder.ids.project, log: `PASSED: ${summary}` });
       results.push({ id: test.id, status: "PASSED" });
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
-      await cleanUp(env, holder.ids, holder.renewalOrderId).catch(() => null);
+      await cleanUp(env, holder.ids, holder.renewalOrderId, holder.entitlement).catch(() => null);
       await updateTest(env, test, { status: "FAILED", stage: "CHECK", error: message, log: `FAILED: ${message}` });
       results.push({ id: test.id, status: "FAILED", error: message });
       await sendTransactionalEmail(env, {

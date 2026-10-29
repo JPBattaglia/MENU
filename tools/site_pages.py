@@ -242,7 +242,7 @@ ONCE = {
               "A printable QR code that opens it",
               "First year of hosting and two revisions included"],
         provide="Your current menu as a PDF or photos, uploaded at checkout. That’s all we need before payment.",
-        delivery="Checked and approved by us, then emailed to you. Up to 3 pages included; each extra page is <span data-menu-extra-page>extra</span>, and we check the page count of your file before we start. After the first year, hosting continues with Menu Care, which also keeps your menu up to date.",
+        delivery="Checked and approved by us, then emailed to you. Up to 3 pages included; each extra page is <span data-menu-extra-page>extra</span>, and we check the page count of your file before we start. After the first year, hosting continues with Menu Care, which also keeps your menu up to date; without Menu Care the menu goes offline 30 days after the first year (we remind you before).",
     ),
     "WEBSITE_PACKAGE": dict(
         name="Website Package", anchor="website-package", service="website",

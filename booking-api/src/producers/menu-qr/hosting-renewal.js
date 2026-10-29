@@ -4,6 +4,10 @@
 // has Menu Care (alone or in a bundle). The email's button opens a signed page that starts a Menu Care checkout
 // bound to the SAME business record, so the subscription edits and serves the same menu at the same address and
 // QR (Menu Care reads and publishes "the newest approved menu of this business").
+// Without Menu Care the menu goes offline 30 days after the first year ends (owner decision Oct 28, 2026, 7:29 pm):
+// the hosted menu address shows a "not available" page (nothing is deleted) and the buyer gets one "your menu is
+// offline" email with the same Menu Care link. Adding Menu Care brings it back at once, same address and QR.
+// A business whose Menu Care ended (cancelled) gets the same 30 days from the end of its last Menu Care.
 import { createCheckout } from "../../checkout/session.js";
 import { publicBaseUrl } from "../../lib/config.js";
 import { brandedEmailHtml, escapeHtml, isCustomerEmail, sendTransactionalEmail } from "../../lib/email.js";
@@ -16,7 +20,10 @@ const LINK_TTL_DAYS = 60;
 const PURPOSE = "MENU_HOSTING_RENEWAL";
 const DAY = 86400000;
 const YEAR_DAYS = 365;
+const GRACE_DAYS = 30;
 const REMINDERS = [{ key: "d30", daysBefore: 30 }, { key: "d7", daysBefore: 7 }];
+// The "offline" notice goes out once, within this many days of the menu going offline (a missed one isn't sent months late).
+const OFFLINE_NOTICE_DAYS = 14;
 
 const formatDate = (iso) => new Date(iso).toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric", timeZone: "America/Los_Angeles" });
 
@@ -33,6 +40,33 @@ async function menuCarePrices(env) {
     `).all()).results || [];
   const price = (interval) => rows.find((r) => r.billing_interval === interval)?.price_cents;
   return { month: price("MONTH") ?? 2900, year: price("YEAR") ?? 29000 };
+}
+
+// Is this business's hosted menu still online? Covered while Menu Care is active, during the first year of its
+// newest Online Menu + QR, and for 30 days after whichever of those ended last. A business with neither is left
+// online (nothing to measure against).
+async function menuHostingState(env, businessId, now = new Date()) {
+  if (await hasMenuCare(env, businessId)) return { live: true, reason: "menu_care" };
+  const qr = await env.DB.prepare(`
+      SELECT p.id, MIN(d.delivered_at) AS first_delivered_at FROM projects p JOIN deliverables d ON d.project_id = p.id
+      WHERE p.business_id = ? AND p.workflow_key = 'MENU_QR_V1' AND d.deliverable_type = 'MENU_DRAFT' AND d.status = 'FINAL' AND d.customer_visible = 1
+      GROUP BY p.id ORDER BY first_delivered_at DESC LIMIT 1
+    `).bind(businessId).first();
+  const care = await env.DB.prepare(`
+      SELECT MAX(COALESCE(ends_at, updated_at)) AS ended_at FROM entitlements WHERE business_id = ? AND entitlement_type = 'MENU_CARE'
+    `).bind(businessId).first();
+  const ends = [qr?.first_delivered_at ? Date.parse(qr.first_delivered_at) + YEAR_DAYS * DAY : null, care?.ended_at ? Date.parse(care.ended_at) : null]
+    .filter((t) => Number.isFinite(t));
+  if (!ends.length) return { live: true, reason: "unknown" };
+  const coveredUntil = Math.max(...ends);
+  const offlineAt = coveredUntil + GRACE_DAYS * DAY;
+  return {
+    live: now.getTime() < offlineAt,
+    reason: now.getTime() < coveredUntil ? "covered" : now.getTime() < offlineAt ? "grace" : "offline",
+    coveredUntil: new Date(coveredUntil).toISOString(),
+    offlineAt: new Date(offlineAt).toISOString(),
+    menuQrProjectId: qr?.id || null
+  };
 }
 
 const dollars = (cents) => `$${(cents / 100).toFixed(cents % 100 ? 2 : 0)}`;
@@ -62,21 +96,27 @@ async function renewalLink(env, projectId) {
 
 async function sendReminder(env, project, reminder) {
   const ends = yearEnd(project);
+  const offline = new Date(Date.parse(ends) + GRACE_DAYS * DAY).toISOString();
   const link = await renewalLink(env, project.id);
   const prices = await menuCarePrices(env);
   const menuUrl = hostedMenuUrl(project.id, project.business_name);
   const greeting = project.first_name ? `Hi ${project.first_name},` : "Hi,";
-  const lead = `The first year of hosting for ${project.business_name}'s online menu ends on ${formatDate(ends)}.`;
-  const offer = `Menu Care keeps it online at the same address and QR code, so nothing you've printed changes, and adds unlimited menu updates: ${dollars(prices.month)}/month or ${dollars(prices.year)}/year.`;
+  const isOffline = reminder.key === "offline";
+  const lead = isOffline
+    ? `${project.business_name}'s online menu is offline: its first year of hosting ended on ${formatDate(ends)}, and without Menu Care it went offline 30 days later. Guests who scan your QR code now see that the menu isn't available.`
+    : `The first year of hosting for ${project.business_name}'s online menu ends on ${formatDate(ends)}. Without Menu Care, the menu goes offline 30 days later, on ${formatDate(offline)}.`;
+  const offer = isOffline
+    ? `Add Menu Care and it comes back right away at the same address and QR code, nothing to reprint, with unlimited menu updates: ${dollars(prices.month)}/month or ${dollars(prices.year)}/year.`
+    : `Menu Care keeps it online at the same address and QR code, so nothing you've printed changes, and adds unlimited menu updates: ${dollars(prices.month)}/month or ${dollars(prices.year)}/year.`;
   return sendTransactionalEmail(env, {
     to: project.email,
-    subject: reminder.key === "d7" ? `Your online menu's first year ends ${formatDate(ends)}` : `Keep ${project.business_name}'s online menu going`,
+    subject: isOffline ? `${project.business_name}'s online menu is offline` : reminder.key === "d7" ? `Your online menu's first year ends ${formatDate(ends)}` : `Keep ${project.business_name}'s online menu going`,
     html: brandedEmailHtml({
-      preheader: "Same address, same QR code, unlimited updates.",
+      preheader: isOffline ? "Add Menu Care to bring it back at the same address and QR code." : "Same address, same QR code, unlimited updates.",
       eyebrow: "Your online menu",
-      heading: "Keep your menu online",
+      heading: isOffline ? "Bring your menu back online" : "Keep your menu online",
       paragraphs: [escapeHtml(greeting), escapeHtml(lead), escapeHtml(offer)],
-      rows: [["Your menu", menuUrl], ["First year ends", formatDate(ends)]],
+      rows: isOffline ? [["Your menu", menuUrl], ["Offline since", formatDate(offline)]] : [["Your menu", menuUrl], ["First year ends", formatDate(ends)], ["Goes offline", formatDate(offline)]],
       buttons: [{ label: "Add Menu Care", url: link, primary: true }],
       footnote: "Cancel any time from your account. Questions? Reply to this email."
     }),
@@ -97,14 +137,15 @@ async function alreadySent(env, projectId, key) {
 // Daily. projectIds: the self-test names its own sandbox project; everyone else is live only.
 async function remindMenuHostingRenewals(env, { now = new Date(), projectIds = null } = {}) {
   if (!env.DB) return { sent: 0 };
-  // Projects with an approved menu page delivered 335-365 days ago (partial index, migration 0018). A project whose
+  // Projects with an approved menu page delivered 335-409 days ago (partial index, migration 0018): reminders before
+  // the year ends, and the offline notice 30-44 days after it. A project whose
   // FIRST delivery is in that window always has a row here; later revisions are filtered by loadMenuProject below.
   const ids = projectIds || [...new Set(((await env.DB.prepare(`
       SELECT d.project_id FROM deliverables d JOIN projects p ON p.id = d.project_id
       WHERE d.deliverable_type = 'MENU_DRAFT' AND d.status = 'FINAL' AND d.customer_visible = 1
         AND d.delivered_at <= ? AND d.delivered_at >= ? AND p.workflow_key = 'MENU_QR_V1'
       LIMIT 200
-    `).bind(new Date(now.getTime() - (YEAR_DAYS - 30) * DAY).toISOString(), new Date(now.getTime() - YEAR_DAYS * DAY).toISOString()).all()).results || []).map((r) => r.project_id))];
+    `).bind(new Date(now.getTime() - (YEAR_DAYS - 30) * DAY).toISOString(), new Date(now.getTime() - (YEAR_DAYS + GRACE_DAYS + OFFLINE_NOTICE_DAYS) * DAY).toISOString()).all()).results || []).map((r) => r.project_id))];
   const summary = { checked: 0, sent: 0, skipped: [], results: [] };
   for (const id of ids) {
     summary.checked += 1;
@@ -116,9 +157,19 @@ async function remindMenuHostingRenewals(env, { now = new Date(), projectIds = n
       if (!isCustomerEmail(project.email, PURPOSE, env)) { skip("owner address"); continue; }
       if (await hasMenuCare(env, project.business_id)) { skip("has Menu Care"); continue; }
       const daysLeft = (Date.parse(yearEnd(project)) - now.getTime()) / DAY;
-      if (daysLeft <= 0) { skip("first year over"); continue; }
-      // The latest reminder that is due and not yet sent (a missed 30-day one is not sent late next to the 7-day one).
-      const due = REMINDERS.filter((r) => daysLeft <= r.daysBefore).at(-1);
+      let due;
+      if (daysLeft <= -GRACE_DAYS) {
+        // Offline notice: only if the menu really is offline now (a later Menu Care that ended recently keeps it up).
+        const state = await menuHostingState(env, project.business_id, now);
+        if (state.live || state.menuQrProjectId !== project.id) { skip("still online"); continue; }
+        if ((now.getTime() - Date.parse(state.offlineAt)) / DAY > OFFLINE_NOTICE_DAYS) { skip("offline too long ago"); continue; }
+        due = { key: "offline" };
+      } else if (daysLeft <= 0) {
+        skip("in the 30-day grace period"); continue;
+      } else {
+        // The latest reminder that is due and not yet sent (a missed 30-day one is not sent late next to the 7-day one).
+        due = REMINDERS.filter((r) => daysLeft <= r.daysBefore).at(-1);
+      }
       if (!due) { skip("not yet due"); continue; }
       if (await alreadySent(env, id, due.key)) { skip(`${due.key} already sent`); continue; }
       const result = await sendReminder(env, project, due);
@@ -154,7 +205,7 @@ async function handleMenuHostingRenewal(request, env, projectId) {
     const button = (interval, label) => `<form method="post" style="display:inline"><input type="hidden" name="t" value="${escapeHtml(token)}"><input type="hidden" name="interval" value="${interval}"><button type="submit">${escapeHtml(label)}</button></form>`;
     return page(200, "Keep your menu online",
       `<p>Menu Care keeps <strong>${escapeHtml(project.business_name)}</strong>'s menu online at the same address and QR code, with unlimited updates. Cancel any time.</p>
-<dl><dt>Your menu</dt><dd>${escapeHtml(hostedMenuUrl(project.id, project.business_name))}</dd>${project.first_delivered_at ? `<dt>First year ends</dt><dd>${escapeHtml(formatDate(yearEnd(project)))}</dd>` : ""}</dl>
+<dl><dt>Your menu</dt><dd>${escapeHtml(hostedMenuUrl(project.id, project.business_name))}</dd>${project.first_delivered_at ? `<dt>First year ends</dt><dd>${escapeHtml(formatDate(yearEnd(project)))}</dd><dt>Without Menu Care, offline from</dt><dd>${escapeHtml(formatDate(new Date(Date.parse(yearEnd(project)) + GRACE_DAYS * DAY).toISOString()))}</dd>` : ""}</dl>
 ${button("month", `${dollars(prices.month)} a month`)}${button("year", `${dollars(prices.year)} a year (2 months free)`)}
 <p>Payment is handled by Stripe.</p>`);
   }
@@ -186,4 +237,4 @@ ${button("month", `${dollars(prices.month)} a month`)}${button("year", `${dollar
   return new Response(null, { status: 303, headers: { Location: result.url, "Cache-Control": "no-store" } });
 }
 
-export { PURPOSE as MENU_HOSTING_PURPOSE, remindMenuHostingRenewals, handleMenuHostingRenewal, renewalLink };
+export { GRACE_DAYS, PURPOSE as MENU_HOSTING_PURPOSE, menuHostingState, remindMenuHostingRenewals, handleMenuHostingRenewal, renewalLink };

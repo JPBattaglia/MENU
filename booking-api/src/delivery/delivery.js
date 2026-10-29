@@ -1,6 +1,7 @@
 import { publicBaseUrl } from "../lib/config.js";
 import { simplePage } from "../lib/http.js";
 import { verifyLinkToken } from "../lib/links.js";
+import { menuHostingState } from "../producers/menu-qr/hosting-renewal.js";
 
 async function handleDeliveryDownload(request, env, deliverableId) {
   const url = new URL(request.url);
@@ -40,7 +41,7 @@ async function handleHostedMenu(request, env, slug) {
   if (!env.DB || !env.ASSETS) return simplePage(503, "Temporarily unavailable", "<p>Please try again in a minute.</p>");
   const hostedUrl = `${publicBaseUrl(env)}/api/menu/${slug}`;
   const row = await env.DB.prepare(`
-      SELECT a.storage_key
+      SELECT a.storage_key, p0.business_id
       FROM project_inputs pi
       JOIN projects p0 ON p0.id = pi.project_id
       JOIN projects p ON p.business_id = p0.business_id AND p.workflow_key IN ('MENU_QR_V1', 'MENU_CARE_V1')
@@ -51,6 +52,15 @@ async function handleHostedMenu(request, env, slug) {
       ORDER BY d.delivered_at DESC, d.version DESC
       LIMIT 1
     `).bind(hostedUrl).first();
+  // Without Menu Care the menu goes offline 30 days after its first year (owner decision Oct 28, 2026). Nothing is
+  // deleted: adding Menu Care brings it back at this same address.
+  if (row?.business_id) {
+    const state = await menuHostingState(env, row.business_id).catch(() => ({ live: true }));
+    if (!state.live) {
+      return simplePage(200, "This menu isn't available right now",
+        `<p>This online menu is currently offline. Please ask a member of staff for a menu.</p><p style="font-size:14px">Is this your business? Reply to any email from Menu-Made, or sign in to <a href="${publicBaseUrl(env)}/account.html">your account</a>, to bring your menu back with Menu Care at this same address and QR code.</p>`);
+    }
+  }
   const object = row ? await env.ASSETS.get(row.storage_key) : null;
   if (!object) {
     const known = await env.DB.prepare(`SELECT 1 AS found FROM project_inputs WHERE input_key = 'qr_destination' AND value_text = ? LIMIT 1`).bind(hostedUrl).first();

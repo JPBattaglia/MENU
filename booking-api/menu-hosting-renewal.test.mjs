@@ -174,3 +174,48 @@ test('the MENU_HOSTING_RENEWAL self-test passes against the real schema and clea
     assert.ok([...sessions.values()].every((s) => s.status === 'expired'));
   } finally { globalThis.fetch = realFetch; h.restore(); }
 });
+
+test('without Menu Care the menu stays up for 30 days after the first year, then goes offline with one email; Menu Care brings it back', async () => {
+  const h = setup({ deliveredDaysAgo: 380 });
+  try {
+    const hosted = 'https://menu-made.com/api/menu/proof-cafe-11111111';
+    h.sql(`INSERT INTO project_inputs (id, project_id, input_key, input_type, value_text, required, status, created_at, updated_at) VALUES ('in-qr', ?, 'qr_destination', 'URL', ?, 1, 'VALID', '2025-09-01', '2025-09-01')`, PROJECT, hosted);
+    await h.env.ASSETS.put('k/menu.html', '<html><body><h1>Proof Cafe</h1><p>Margherita $15</p></body></html>');
+    h.sql(`DELETE FROM deliverables WHERE id = 'd2'`);
+    const menu = async () => (await h.call('/api/menu/proof-cafe-11111111')).text();
+    assert.match(await menu(), /Margherita/, 'grace period: still online');
+    assert.equal((await remindMenuHostingRenewals(h.env)).sent, 0, 'no email during the grace period');
+
+    h.sql(`UPDATE deliverables SET delivered_at = ? WHERE id = 'd1'`, new Date(Date.now() - 400 * DAY).toISOString());
+    const offline = await menu();
+    assert.match(offline, /currently offline/);
+    assert.doesNotMatch(offline, /Margherita/);
+    const sent = await remindMenuHostingRenewals(h.env);
+    assert.equal(sent.sent, 1, JSON.stringify(sent));
+    assert.equal(sent.results[0].reminder, 'offline');
+    const email = h.emails.at(-1);
+    assert.match(email.subject, /is offline/);
+    assert.match(email.text, /comes back right away at the same address and QR code/);
+    assert.match(email.text, /\/api\/menu-hosting\//);
+    assert.equal((await remindMenuHostingRenewals(h.env)).sent, 0, 'one offline email only');
+
+    h.sql(`INSERT INTO entitlements (id, customer_id, business_id, order_item_id, entitlement_type, status, starts_at, created_at, updated_at) VALUES ('e', 'cust', 'biz', 'item', 'MENU_CARE', 'ACTIVE', ?, ?, ?)`, '2026-01-01', '2026-01-01', '2026-01-01');
+    assert.match(await menu(), /Margherita/, 'back online with Menu Care, same address');
+
+    // Menu Care cancelled: 30 more days, then offline again.
+    h.sql(`UPDATE entitlements SET status = 'EXPIRED', ends_at = ? WHERE id = 'e'`, new Date(Date.now() - 10 * DAY).toISOString());
+    assert.match(await menu(), /Margherita/);
+    h.sql(`UPDATE entitlements SET ends_at = ? WHERE id = 'e'`, new Date(Date.now() - 31 * DAY).toISOString());
+    assert.match(await menu(), /currently offline/);
+  } finally { h.restore(); }
+});
+
+test('reminder emails say when the menu goes offline', async () => {
+  const h = setup({ deliveredDaysAgo: 340 });
+  try {
+    await remindMenuHostingRenewals(h.env);
+    assert.match(h.emails[0].text, /Without Menu Care, the menu goes offline 30 days later, on /);
+    const path = h.linkIn(h.emails[0]);
+    assert.match(await (await h.call(path)).text(), /Without Menu Care, offline from/);
+  } finally { h.restore(); }
+});

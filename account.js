@@ -46,8 +46,10 @@
     const biz = $('accountBusinesses');
     biz.replaceChildren();
     for (const b of me.businesses || []) {
-      const links = [b.menu && { label: 'Your online menu', url: b.menu }, b.website && { label: 'Your website', url: b.website }, b.app && { label: 'Your Guest App', url: b.app }].filter(Boolean);
-      if (links.length) biz.append(card(b.name, [], links));
+      const hosting = b.menu_hosting;
+      const links = [b.menu && { label: 'Your online menu', url: b.menu }, hosting && { label: hosting.status === 'OFFLINE' ? 'Bring your menu back with Menu Care' : 'Keep your menu online with Menu Care', url: hosting.renew_url }, b.website && { label: 'Your website', url: b.website }, b.app && { label: 'Your Guest App', url: b.app }].filter(Boolean);
+      const lines = hosting ? [hosting.status === 'OFFLINE' ? `Your online menu is offline (since ${day(hosting.offline_at)}).` : `Your online menu goes offline on ${day(hosting.offline_at)} unless you add Menu Care.`] : [];
+      if (links.length) biz.append(card(b.name, lines, links));
     }
 
     const plans = $('accountPlans');
