@@ -81,7 +81,18 @@ const svgOpen = (w, h) => `<svg xmlns="http://www.w3.org/2000/svg" width="${w}" 
 
 // ---------- Flyer ----------
 // size: "print" (letter at 300 dpi) or "square" (1080, for social media).
-function flyerSvg(brief, { size = "print", hasLogo = false, variant = 0 } = {}) {
+// Tries the full-size layout first, then shrinks the logo, headline and gaps step by step until everything fits
+// (the square version with a logo is the tight one).
+function flyerSvg(brief, options = {}) {
+  let result;
+  for (const squeeze of [1, 0.9, 0.8, 0.7, 0.6, 0.5]) {
+    result = flyerLayout(brief, options, squeeze);
+    if (!result.error || !/does not fit the page/.test(result.error)) return result;
+  }
+  return result;
+}
+
+function flyerLayout(brief, { size = "print", hasLogo = false, variant = 0 } = {}, squeeze = 1) {
   const [W, H] = size === "print" ? [2550, 3300] : [1080, 1080];
   const k = W / 2550;
   const f = face(brief.style);
@@ -93,47 +104,53 @@ function flyerSvg(brief, { size = "print", hasLogo = false, variant = 0 } = {}) 
   const frame = variant % 3;
   parts.push(`<rect width="${W}" height="${H}" fill="${p.bg}"/>`);
   if (frame === 0) parts.push(`<rect x="${pad / 2}" y="${pad / 2}" width="${W - pad}" height="${H - pad}" fill="none" stroke="${p.accent}" stroke-width="${Math.round(14 * k)}"/>`);
-  if (frame === 1) parts.push(`<rect width="${W}" height="${Math.round(H * 0.42)}" fill="${p.accent}"/>`);
+  // Frame 1's colour band runs down to the end of the headline (its ink is chosen for the band); sized below.
+  const bandIndex = frame === 1 ? parts.push("") - 1 : -1;
   if (frame === 2) parts.push(`<rect x="0" y="0" width="${Math.round(40 * k)}" height="${H}" fill="${p.accent}"/><rect x="${W - Math.round(40 * k)}" y="0" width="${Math.round(40 * k)}" height="${H}" fill="${p.accent}"/>`);
   const headInk = frame === 1 ? p.accentInk : p.accent;
   let y = Math.round((size === "print" ? 260 : 120) * k);
   if (hasLogo) {
-    const lh = Math.round((size === "print" ? 330 : 360) * k);
+    const lh = Math.round((size === "print" ? 330 : 360) * k * squeeze);
     parts.push(logoImage(W / 2 - lh, y, lh * 2, lh));
-    y += lh + Math.round(60 * k);
+    y += lh + Math.round(60 * k * squeeze);
   }
   const nameFit = fit(brief.business_name, { maxWidth: inner, maxHeight: 200 * k * (size === "print" ? 1 : 1.6), start: Math.round(110 * k * (size === "print" ? 1 : 1.5)), min: Math.round(48 * k), em: 0.6 });
   if (!nameFit) return { error: "The business name is too long for the flyer" };
   parts.push(textLines(nameFit.lines, { x: W / 2, y, size: nameFit.size, fill: frame === 1 ? p.accentInk : p.ink, family: BODY, weight: 700, extra: ` letter-spacing="${Math.round(4 * k)}"` }));
-  y += nameFit.height + Math.round(70 * k);
-  const headFit = fit(brief.headline, { maxWidth: inner, maxHeight: (size === "print" ? 900 : 1300) * k, start: Math.round((size === "print" ? 300 : 420) * k), min: Math.round(90 * k), em: f.em });
+  y += nameFit.height + Math.round(70 * k * squeeze);
+  const headFit = fit(brief.headline, { maxWidth: inner, maxHeight: (size === "print" ? 900 : 1300) * k * squeeze, start: Math.round((size === "print" ? 300 : 420) * k * squeeze), min: Math.round(90 * k * Math.min(1, squeeze + 0.2)), em: f.em });
   if (!headFit) return { error: "The headline does not fit the flyer" };
   parts.push(textLines(headFit.lines, { x: W / 2, y, size: headFit.size, fill: headInk, family: fam(f), weight: f.weight, lineHeight: 1.1 }));
-  y += headFit.size * 1.1 * headFit.lines.length + Math.round(110 * k);
+  y += headFit.size * 1.1 * headFit.lines.length + Math.round(110 * k * squeeze);
+  if (bandIndex >= 0) parts[bandIndex] = `<rect width="${W}" height="${Math.round(Math.max(H * 0.42, y - 50 * k * squeeze))}" fill="${p.accent}"/>`;
   const details = String(brief.details || "").split("\n").map((l) => l.trim()).filter(Boolean);
   if (size === "print" || details.length <= 3) {
     for (const line of details) {
       const lf = fit(line, { maxWidth: inner, maxHeight: 130 * k, start: Math.round(92 * k * (size === "print" ? 1 : 1.4)), min: Math.round(44 * k), em: 0.56 });
       if (!lf) return { error: `A details line does not fit: ${line.slice(0, 40)}` };
       parts.push(textLines(lf.lines, { x: W / 2, y, size: lf.size, fill: p.ink, family: BODY, weight: 400 }));
-      y += lf.height + Math.round(36 * k);
+      y += lf.height + Math.round(36 * k * squeeze);
     }
+  }
+  // The contact line sits at the bottom; the call to action goes above it, never over it.
+  let contactTop = H - Math.round(80 * k);
+  if (brief.contact) {
+    const cf = fit(brief.contact, { maxWidth: inner, maxHeight: 120 * k * (size === "print" ? 1 : 1.5), start: Math.round(64 * k * (size === "print" ? 1 : 1.5)), min: Math.round(30 * k), em: 0.56 });
+    if (!cf) return { error: "The contact line is too long" };
+    contactTop = H - Math.round((size === "print" ? 300 : 90) * k) - cf.height;
+    parts.push(textLines(cf.lines, { x: W / 2, y: contactTop, size: cf.size, fill: frame === 1 && contactTop < H * 0.42 ? p.accentInk : p.ink, family: BODY, weight: 400 }));
   }
   if (brief.call_to_action) {
     const cta = fit(brief.call_to_action, { maxWidth: inner - 200 * k, maxHeight: 120 * k * (size === "print" ? 1 : 1.5), start: Math.round(84 * k * (size === "print" ? 1 : 1.5)), min: Math.round(40 * k), em: 0.62 });
     if (!cta) return { error: "The call to action is too long" };
     const bh = Math.round(cta.height + 70 * k);
-    const by = Math.max(y + 40 * k, H - Math.round((size === "print" ? 620 : 300) * k));
+    const gap = Math.round(40 * k);
+    const by = Math.max(y + gap, Math.min(H - Math.round((size === "print" ? 620 : 300) * k), contactTop - gap - bh));
     parts.push(`<rect x="${pad + 100 * k}" y="${by}" width="${inner - 200 * k}" height="${bh}" rx="${bh / 2}" fill="${p.accent}"/>`);
     parts.push(textLines(cta.lines, { x: W / 2, y: by + 35 * k, size: cta.size, fill: p.accentInk, family: BODY, weight: 700 }));
-    y = by + bh;
+    y = by + bh + gap;
   }
-  if (brief.contact) {
-    const cf = fit(brief.contact, { maxWidth: inner, maxHeight: 120 * k * (size === "print" ? 1 : 1.5), start: Math.round(64 * k * (size === "print" ? 1 : 1.5)), min: Math.round(30 * k), em: 0.56 });
-    if (!cf) return { error: "The contact line is too long" };
-    parts.push(textLines(cf.lines, { x: W / 2, y: H - Math.round((size === "print" ? 300 : 120) * k) - cf.height, size: cf.size, fill: p.ink, family: BODY, weight: 400 }));
-  }
-  if (y > H - 80 * k) return { error: "The flyer text does not fit the page; shorten the details" };
+  if (y > contactTop) return { error: "The flyer text does not fit the page; shorten the details" };
   return { svg: `${svgOpen(W, H)}${parts.join("")}</svg>`, width: W, height: H };
 }
 
