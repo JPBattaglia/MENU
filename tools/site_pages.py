@@ -668,7 +668,7 @@ def page_staff_merch():
   </div>
 </section>
 """
-    scripts = '<script src="staff-merch.js?v=20261028-stage10c" defer></script>\n'
+    scripts = '<script src="staff-merch.js?v=20261028-stage10d" defer></script>\n'
     return head(title, desc, "staff-merch.html", "merch-page") + body + foot(scripts)
 
 

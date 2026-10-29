@@ -15,7 +15,9 @@
   // Same rule as booking-api/src/producers/staff-merch/pricing.js: Printful's price x 2, ending in .99.
   const listPrice = (base) => Math.floor(Math.round(base * 2) / 100) * 100 + 99;
   const discount = (n) => (n >= 24 ? 15 : n >= 12 ? 10 : 0);
-  const state = { logoId: null, logoUrl: null, logoW: 1, logoH: 1, skipped: false, merch: [], designs: [], cart: new Map(), item: null, color: null, design: null, designColor: null, quote: null };
+  // Printful's embroidery threads; the logo's main colours are matched to these for embroidered items.
+  const THREADS = { '#FFFFFF': 'White', '#000000': 'Black', '#96A1A8': 'Grey', '#A67843': 'Old Gold', '#FFCC00': 'Gold', '#E25C27': 'Orange', '#CC3366': 'Flamingo', '#CC3333': 'Red', '#660000': 'Maroon', '#333366': 'Navy', '#005397': 'Royal', '#3399FF': 'Aqua', '#6B5294': 'Purple', '#01784E': 'Kelly Green', '#7BA35A': 'Kiwi Green' };
+  const state = { threads: [], logoId: null, logoUrl: null, logoW: 1, logoH: 1, skipped: false, merch: [], designs: [], cart: new Map(), item: null, color: null, design: null, designColor: null, quote: null };
 
   if (TEST) {
     const note = document.createElement('div');
@@ -40,11 +42,30 @@
       if (state.logoUrl) URL.revokeObjectURL(state.logoUrl);
       Object.assign(state, { logoId: data.logo_id, logoUrl: URL.createObjectURL(file), logoW: data.width || 1, logoH: data.height || 1, skipped: false, quote: null });
       $('logoThumb').src = state.logoUrl; $('logoThumb').hidden = false;
+      state.threads = await logoThreads(state.logoUrl).catch(() => []);
       $('logoDropText').textContent = 'Logo uploaded. Choose a different file to change it.';
       $('mockStep').hidden = false;
       renderMockups(); renderPicker(); renderCart();
       $('mockStep').scrollIntoView({ behavior: 'smooth', block: 'start' });
     } finally { $('logoDrop').classList.remove('is-busy'); }
+  }
+
+  // The logo's main colours (opaque pixels, at least 4% of them), matched to the nearest thread; at most six.
+  async function logoThreads(url) {
+    const img = new Image(); img.src = url; await img.decode();
+    const size = 80; const c = document.createElement('canvas'); c.width = size; c.height = size;
+    const g = c.getContext('2d'); g.drawImage(img, 0, 0, size, size);
+    const px = g.getImageData(0, 0, size, size).data;
+    const keys = Object.keys(THREADS).map((h) => [h, parseInt(h.slice(1, 3), 16), parseInt(h.slice(3, 5), 16), parseInt(h.slice(5, 7), 16)]);
+    const counts = new Map(); let total = 0;
+    for (let i = 0; i < px.length; i += 4) {
+      if (px[i + 3] < 128) continue;
+      total++;
+      let best = null; let bestD = Infinity;
+      for (const [h, r, gg, b] of keys) { const d = (px[i] - r) ** 2 + (px[i + 1] - gg) ** 2 + (px[i + 2] - b) ** 2; if (d < bestD) { bestD = d; best = h; } }
+      counts.set(best, (counts.get(best) || 0) + 1);
+    }
+    return [...counts.entries()].filter(([, n]) => n >= total * 0.04).sort((a, b) => b[1] - a[1]).slice(0, 6).map(([h]) => h);
   }
 
   // ---- 2. Mockups ----
@@ -117,7 +138,7 @@
     const current = p.variants.find((v) => v.color === state.color);
     $('pickerTitle').textContent = p.title;
     $('pickerMock').innerHTML = mockup(p, current);
-    $('pickerNote').textContent = p.technique === 'embroidery' ? 'Embroidered. A one-time set-up charge for digitizing your logo is added with the delivery price.' : (p.key === 'tee' ? 'Your logo on the front. Prefer one of Nino\'s designs? See "Shirts in Nino\'s designs" below.' : '');
+    $('pickerNote').textContent = p.technique === 'embroidery' ? `Embroidered${state.threads.length ? ` in ${state.threads.map((h) => THREADS[h]).join(', ')} thread` : ''}. A one-time set-up charge for digitizing your logo is added with the delivery price.` : (p.key === 'tee' ? 'Your logo on the front. Prefer one of Nino\'s designs? See "Shirts in Nino\'s designs" below.' : '');
     $('colorList').innerHTML = colors.length > 1 ? colors.map((v) => `<button type="button" class="merch-swatch" data-color="${esc(v.color)}" aria-pressed="${v.color === state.color}" title="${esc(v.color)}"><span style="background:${esc(v.color_code || '#ccc')}"></span>${esc(v.color || 'Standard')}</button>`).join('') : '';
     const sizes = p.variants.filter((v) => v.color === state.color);
     $('sizeList').innerHTML = sizes.map((v) => {
@@ -206,7 +227,7 @@
     $('quoteBtn').disabled = true; $('quoteBtn').textContent = 'Checking…';
     try {
       const res = await fetch(API + '/api/merch/quote', { method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ environment: TEST ? 'sandbox' : 'live', logo_id: state.logoId, recipient,
+        body: JSON.stringify({ environment: TEST ? 'sandbox' : 'live', logo_id: state.logoId, thread_colors: state.threads, recipient,
           items: lines.filter((l) => l.kind === 'nino').map(({ product_id, variant_id, quantity }) => ({ product_id, variant_id, quantity })),
           logo_items: lines.filter((l) => l.kind === 'logo').map(({ key, variant_id, quantity }) => ({ key, variant_id, quantity })) }) });
       const data = await res.json().catch(() => ({}));
