@@ -49,6 +49,10 @@ function appendCheckoutLineItem(params, item, index, environment) {
       ? `${item.offerName} — ${item.menuPackage.menu_pages} menu pages + first-year hosting`
       : item.ninoDesign ? `Nino Battaglia design: ${item.offerName}${item.extraMetadata?.design_pages ? ` (${item.extraMetadata.design_pages} pages)` : ""}`
       : item.offerName);
+    if (item.taxCode) {
+      params.append(`${prefix}[price_data][tax_behavior]`, "exclusive");
+      params.append(`${prefix}[price_data][product_data][tax_code]`, item.taxCode);
+    }
     if (item.ninoDesign) {
       params.append(`${prefix}[price_data][product_data][description]`, "Designed by Nino Battaglia's studio. After payment you'll get a short brief form; you see the result before it's final.");
     }
@@ -127,7 +131,7 @@ async function normalizeCheckoutItems(itemsInput, env, checkoutOptions = {}, { r
       stripePriceId: catalogRow.stripe_price_id || null,
       stripeProductId: catalogRow.stripe_product_id || null,
       ...(menuPackage ? { menuPackage } : {}),
-      ...(ninoDesign ? { inlinePrice: true, ninoDesign: true, extraMetadata: { nino_design: true, ...(ninoMetadata || {}) } } : {})
+      ...(ninoDesign ? { inlinePrice: true, ninoDesign: true, taxCode: ninoDesign.taxCode || null, extraMetadata: { nino_design: true, ...(ninoMetadata || {}) } } : {})
     });
   }
   if (!menuSelected && checkoutOptions.menu_pages !== undefined) {

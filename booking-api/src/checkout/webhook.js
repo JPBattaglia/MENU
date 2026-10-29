@@ -307,6 +307,11 @@ async function handleCheckoutCompleted(event, env) {
     timestamp,
     orderId
   ).run();
+  // Sales tax Stripe added (taxed items only) is recorded on the order.
+  const taxCents = Number(session.total_details?.amount_tax || 0);
+  if (taxCents > 0) {
+    await env.DB.prepare(`UPDATE orders SET tax_cents = ?, total_cents = subtotal_cents - discount_cents + ?, updated_at = ? WHERE id = ?`).bind(taxCents, taxCents, timestamp, orderId).run();
+  }
   const providerPaymentId = session.payment_intent || session.id;
   if (providerPaymentId) {
     await env.DB.prepare(`
