@@ -24,7 +24,7 @@
       headers = { 'Content-Type': 'application/json' };
       body = JSON.stringify(payload);
     }
-    const response = await fetch('/api/inquiry', { method: 'POST', headers, body, signal });
+    const response = await fetch((window.MenuMadeCatalog?.API || '') + '/api/inquiry', { method: 'POST', headers, body, signal });
     const result = await response.json().catch(() => null);
     if (!response.ok || result?.ok !== true || result.requestId !== payload.requestId) {
       const messages = {

@@ -141,9 +141,9 @@ test('service metadata accepts only known slugs and preserves the four existing 
 });
 test('focused service and case/demo routes keep approved paths and send the right interest signal', () => {
   const routes = [
-    ['website-design', 'OFFER_VIEW', 'offer_view', 'website'],
+    ['website-design', 'OFFER_VIEW', 'offer_view', 'website_package'],
     ['google-visibility', 'OFFER_VIEW', 'offer_view', 'google_visibility'],
-    ['accessibility-services', 'OFFER_VIEW', 'offer_view', 'accessibility_upgrade'],
+    ['accessibility-services', 'OFFER_VIEW', 'offer_view', 'accessibility_monitoring'],
     ['work-marios', 'CTA_CLICK', 'case_study_view', 'website'],
     ['work-nino', 'CTA_CLICK', 'case_study_view', 'website'],
     ['work-pinecrest', 'CTA_CLICK', 'case_study_view', 'online_menu_qr'],

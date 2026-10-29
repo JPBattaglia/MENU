@@ -1,34 +1,227 @@
+// Start page (contact.html + start.js): one plan or bundle plus one-time services, priced from the catalog.
+// Runs start.js in a small fake DOM with a stubbed site catalog. Run: node --no-warnings --test menu-order.test.mjs
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import vm from 'node:vm';
-import {readFile} from 'node:fs/promises';
-import {webcrypto} from 'node:crypto';
-const script=await readFile(new URL('./start.js',import.meta.url),'utf8');
-const markup=await readFile(new URL('./contact.html',import.meta.url),'utf8');
-function element(){const classes=new Set(),listeners=new Map();return {value:'',textContent:'',innerHTML:'',hidden:false,disabled:false,checked:false,style:{},dataset:{},files:[],children:[],attrs:{},classList:{add:name=>classes.add(name),remove:name=>classes.delete(name),contains:name=>classes.has(name),toggle(name,on=!classes.has(name)){on?classes.add(name):classes.delete(name);}},setAttribute(name,value){this.attrs[name]=value;},getAttribute(name){return this.attrs[name]??null;},addEventListener(name,fn){if(!listeners.has(name))listeners.set(name,[]);listeners.get(name).push(fn);},dispatchEvent(event){for(const fn of listeners.get(event.type)||[])fn(event);return !event.defaultPrevented;},async fire(name,event={}){for(const fn of listeners.get(name)||[])await fn({preventDefault(){},target:this,...event});},appendChild(child){this.children.push(child);},focus(){this.focused=true;},scrollIntoView(){this.scrolled=true;}};}
-function page(route=''){
- const els=new Map(),get=id=>{if(!els.has(id))els.set(id,{...element(),id});return els.get(id);};get('menuPages').value='3';get('optionalServices').open=false;
- const cards=new Map();for(const match of markup.matchAll(/<article class="service-card" ([^>]*data-sku[^>]*)>/g)){const card=element();for(const attr of match[1].matchAll(/data-([\w-]+)="([^"]*)"/g))card.dataset[attr[1].replace(/-([a-z])/g,(_,c)=>c.toUpperCase())]=attr[2];cards.set(card.dataset.sku,card);}
- const addButtons=[...cards.values()].map(card=>({...element(),closest:()=>card}));const startButtons=[element()],chooseButtons=[element()],quoteButtons=['website','app'].map(kind=>({...element(),dataset:{quoteService:kind}}));
- const sent=[],documents=[],tracking=[],cartSection=element();let failing=false,pause=null;const[query='',hash='']=route.split('#');const location={search:query,hash:hash?'#'+hash:'',href:'https://menu-made.com/contact.html'+route};
- const context={location,URL,URLSearchParams,CustomEvent,AbortController,setTimeout,clearTimeout,Map,crypto:webcrypto,window:{location,matchMedia:()=>({matches:true}),MenuMadeFunnel:{track:(...args)=>tracking.push(args),tracking:()=>({session_id:'test-session'})},MenuMadeDocuments:{validate(){},fingerprint:async()=>pause?await pause:'fingerprint',send:async(payload,file)=>{documents.push({payload,file});}}},document:{getElementById:get,createElement:element,querySelectorAll(selector){if(selector.includes('#menuPages'))return [...quoteButtons,...addButtons,...['clearBtn','continueBtn','backBtn','menuPages','lead_name','lead_business','lead_email','lead_phone','lead_notes','lead_document','scopeConfirm','conversionUrl','conversionGoal','googleMode','googleUrl','accessibilityUrl','accessibilityPriority'].map(get)];return selector==='.js-add'?addButtons:selector==='[data-start-menu]'?startButtons:selector==='[data-choose-services]'?chooseButtons:selector==='[data-quote-service]'?quoteButtons:[];},querySelector(selector){return selector==='.cart'?cartSection:cards.get(/data-sku="([^"]+)"/.exec(selector)?.[1])||null;}},fetch:async(url,options)=>{sent.push({url,body:JSON.parse(options.body)});return {ok:!failing,json:async()=>failing?{error:'Retry checkout'}:{url:'https://checkout.stripe.com/test'}};}};
- vm.runInNewContext(script,context);const cart=()=>JSON.parse(vm.runInNewContext('JSON.stringify(cart)',context));
- const fill=()=>{for(const[id,value]of Object.entries({lead_name:'Test Buyer',lead_business:'Test Cafe',lead_email:'test@example.com',conversionUrl:'https://example.com',conversionGoal:'More reservations',googleMode:'existing',accessibilityUrl:'https://example.org'}))get(id).value=value;get('scopeConfirm').checked=true;};
- return{get,cart,fill,sent,documents,tracking,addButtons,startButtons,chooseButtons,quoteButtons,cartSection,pauseFingerprint(){let release;pause=new Promise(resolve=>{release=resolve;});return()=>release('fingerprint');},fail(){failing=true;},recover(){failing=false;}};
+import { readFile } from 'node:fs/promises';
+import { webcrypto } from 'node:crypto';
+
+const script = await readFile(new URL('./start.js', import.meta.url), 'utf8');
+const markup = await readFile(new URL('./contact.html', import.meta.url), 'utf8');
+
+const OFFERS = [
+  { code: 'BUNDLE_STARTER', name: 'Starter Plan', kind: 'BUNDLE', on_sale: true, prices: { month: 7900, year: 79000 }, includes: ['MENU_CARE', 'REVIEW_REPLIES', 'ACCESSIBILITY_MONITORING'], requires_setup: null },
+  { code: 'BUNDLE_GROWTH', name: 'Growth Plan', kind: 'BUNDLE', on_sale: true, prices: { month: 17900, year: 179000 }, includes: ['MENU_CARE', 'REVIEW_REPLIES', 'ACCESSIBILITY_MONITORING', 'GOOGLE_PROFILE_CARE'], requires_setup: null },
+  { code: 'BUNDLE_PRO', name: 'Pro Plan', kind: 'BUNDLE', on_sale: false, prices: { month: 29900, year: 299000 }, includes: ['MENU_CARE', 'REVIEW_REPLIES', 'ACCESSIBILITY_MONITORING', 'GOOGLE_PROFILE_CARE', 'SOCIAL_POSTS', 'WEBSITE_CARE'], requires_setup: null },
+  { code: 'MENU_CARE', name: 'Menu Care', kind: 'PLAN', on_sale: true, prices: { month: 2900, year: 29000 }, includes: ['MENU_CARE'], requires_setup: null },
+  { code: 'REVIEW_REPLIES', name: 'Review Replies', kind: 'PLAN', on_sale: true, prices: { month: 4900, year: 49000 }, includes: ['REVIEW_REPLIES'], requires_setup: null },
+  { code: 'GOOGLE_PROFILE_CARE', name: 'Google Profile Care', kind: 'PLAN', on_sale: true, prices: { month: 14900, year: 149000 }, includes: ['GOOGLE_PROFILE_CARE'], requires_setup: null },
+  { code: 'SOCIAL_POSTS', name: 'Social Posts', kind: 'PLAN', on_sale: true, prices: { month: 12900, year: 129000 }, includes: ['SOCIAL_POSTS'], requires_setup: null },
+  { code: 'WEBSITE_CARE', name: 'Website Care', kind: 'PLAN', on_sale: true, prices: { month: 4900, year: 49000 }, includes: ['WEBSITE_CARE'], requires_setup: null },
+  { code: 'ACCESSIBILITY_MONITORING', name: 'Accessibility Monitoring', kind: 'PLAN', on_sale: true, prices: { month: 3900, year: 39000 }, includes: ['ACCESSIBILITY_MONITORING'], requires_setup: null },
+  { code: 'GUEST_APP', name: 'Guest App', kind: 'PLAN', on_sale: true, prices: { month: 2900, year: 29000 }, includes: ['GUEST_APP'], requires_setup: 'GUEST_APP_SETUP' },
+  { code: 'GUEST_APP_SETUP', name: 'Guest App Setup', kind: 'ONE_TIME', on_sale: true, price_cents: 29900 },
+  { code: 'ONLINE_MENU_QR', name: 'Online Menu + QR', kind: 'ONE_TIME', on_sale: true, price_cents: 12900, menu_package: { setup_cents: 12900, hosting_first_year_cents: 1500, included_pages: 3, additional_page_cents: 2000, max_pages: 50 } },
+  { code: 'WEBSITE_PACKAGE', name: 'Website Package', kind: 'ONE_TIME', on_sale: true, price_cents: 49900 },
+  { code: 'GOOGLE_VISIBILITY', name: 'Google Visibility', kind: 'ONE_TIME', on_sale: true, price_cents: 14900 },
+  { code: 'CONVERSION_FIX', name: 'Conversion Fix', kind: 'ONE_TIME', on_sale: true, price_cents: 29900 }
+];
+
+function element() {
+  const classes = new Set(), listeners = new Map();
+  return {
+    value: '', textContent: '', innerHTML: '', hidden: false, disabled: false, checked: false, dataset: {}, files: [], children: [], attrs: {},
+    classList: { add: n => classes.add(n), remove: n => classes.delete(n), contains: n => classes.has(n), toggle(n, on = !classes.has(n)) { on ? classes.add(n) : classes.delete(n); } },
+    setAttribute(n, v) { this.attrs[n] = v; }, getAttribute(n) { return this.attrs[n] ?? null; },
+    addEventListener(n, fn) { if (!listeners.has(n)) listeners.set(n, []); listeners.get(n).push(fn); },
+    async fire(n, event = {}) { for (const fn of listeners.get(n) || []) await fn({ preventDefault() {}, target: this, ...event }); },
+    append(...kids) { this.children.push(...kids); }, appendChild(kid) { this.children.push(kid); },
+    focus() { this.focused = true; }, scrollIntoView() { this.scrolled = true; }
+  };
 }
 
-test('generic/unknown Start is empty with chooser closed, no amount row, no request or forced scroll',async()=>{for(const route of['','?service=unknown','?service=__proto__','?service=constructor']){const p=page(route);assert.deepEqual(p.cart(),{});assert.equal(p.get('optionalServices').open,false);assert.equal(p.get('orderTotalRow').hidden,true);assert.equal(p.get('intakeStep').classList.contains('show'),false);assert.equal(p.get('checkoutBtn').disabled,true);assert.equal(p.cartSection.scrolled,undefined);await p.chooseButtons[0].fire('click');assert.equal(p.get('optionalServices').open,true);assert.deepEqual(p.cart(),{});await p.get('checkoutBtn').fire('click');assert.equal(p.sent.length,0);assert.equal(p.documents.length,0);}});
-test('picker precedes order in DOM and native summary contains no nested controls',()=>{assert(markup.indexOf('id="optionalServices"')<markup.indexOf('<aside class="cart"'));const summary=markup.match(/<summary class="service-picker-summary"[\s\S]*?<\/summary>/)[0];assert(!/<button|<a\b/.test(summary));});
-test('explicit service links select only the chosen offer and menu aliases retain $144/3 pages',()=>{for(const[service,key,total]of[['menu','online_menu_qr','$144.00'],['online_menu_qr','online_menu_qr','$144.00'],['online-menu-qr','online_menu_qr','$144.00'],['conversion','conversion_fix','$299.00'],['google','google_visibility','$149.00'],['accessibility','accessibility_upgrade','$250.00']]){const p=page('?service='+service);assert.deepEqual(Object.keys(p.cart()),[key]);assert.equal(p.get('cartTotal').textContent,total);assert.equal(p.get('optionalServices').open,false);assert.equal(p.get('intakeStep').classList.contains('show'),true);}});
-test('all paid choices are singleton selections, including forced repeated Add and legacy quantity events',async()=>{for(let i=0;i<4;i++){const p=page();await p.addButtons[i].fire('click');await p.addButtons[i].fire('click');await p.addButtons[i].fire('click');const key=Object.keys(p.cart())[0];assert.equal(p.cart()[key].qty,1);assert.equal(p.addButtons[i].disabled,true);assert.equal(p.addButtons[i].attrs['aria-pressed'],'true');assert.equal(p.addButtons[i].textContent,'Selected');await p.get('cartItems').fire('click',{target:{dataset:{inc:key}}});await p.get('cartItems').fire('click',{target:{dataset:{dec:key}}});assert.equal(p.cart()[key].qty,1);await p.get('cartItems').fire('click',{target:{dataset:{remove:key}}});assert.deepEqual(p.cart(),{});assert.equal(p.addButtons[i].disabled,false);assert.equal(p.get('optionalServices').open,true);}});
-test('menu page count gives full first-year totals and rejects invalid values before payment',async()=>{const p=page('?service=menu');for(const[pages,total]of[['1','$144.00'],['3','$144.00'],['4','$164.00'],['5','$184.00'],['50','$1084.00']]){p.get('menuPages').value=pages;await p.get('menuPages').fire('input');assert.equal(p.get('cartTotal').textContent,total);}for(const value of['','0','51','2.5']){p.get('menuPages').value=value;await p.get('menuPages').fire('input');assert.equal(p.get('checkoutBtn').disabled,true);await p.get('checkoutBtn').fire('click');assert.equal(p.sent.length,0);}});
-test('website and app quote controls go directly to a distinct inquiry, without a cart or payment',async()=>{for(const[kind,index]of[['website',0],['app',1]]){for(const route of['?service='+kind,'']){const p=page(route);if(!route)await p.quoteButtons[index].fire('click');assert.deepEqual(p.cart(),{});assert.equal(p.get('inquiryService').value,kind);assert.equal(p.get('bookingName').focused,true);assert.equal(p.get('intakeStep').classList.contains('show'),false);assert.equal(p.get('orderTotalRow').hidden,true);await p.get('checkoutBtn').fire('click');assert.equal(p.sent.length,0);assert(p.tracking.some(event=>event[0]==='quote_started'&&event[1]===kind));}}});
-test('quote mode preserves edited inquiry text, while priced selection clears only generated text',async()=>{const p=page('?service=website');await p.addButtons[0].fire('click');assert.equal(p.get('bookingNotes').value,'');assert.equal(p.get('inquiryService').value,'');const q=page('?service=website');q.get('bookingNotes').value='Keep my own project details.';await q.quoteButtons[1].fire('click');assert.equal(q.get('bookingNotes').value,'Keep my own project details.');assert.equal(q.get('inquiryService').value,'app');await q.addButtons[0].fire('click');assert.equal(q.get('bookingNotes').value,'Keep my own project details.');});
-test('service brief fields appear only for selected offers and retain typed values after remove/reselect',async()=>{const p=page('?service=conversion');assert.equal(p.get('conversionBrief').hidden,false);assert.equal(p.get('googleBrief').hidden,true);p.get('conversionGoal').value='Phone calls';await p.get('cartItems').fire('click',{target:{dataset:{remove:'conversion_fix'}}});assert.equal(p.get('conversionBrief').hidden,true);await p.addButtons[1].fire('click');assert.equal(p.get('conversionGoal').value,'Phone calls');const g=page('?service=google');g.get('googleMode').value='new';await g.get('googleMode').fire('change');assert.equal(g.get('googleUrlField').hidden,true);g.get('googleMode').value='existing';await g.get('googleMode').fire('change');assert.equal(g.get('googleUrlField').hidden,false);});
-test('conversion brief requires a public URL and desired action; credentials and unsafe schemes fail',async()=>{const p=page('?service=conversion');p.fill();for(const url of['','javascript:alert(1)','https://user:password@example.com']){p.get('conversionUrl').value=url;await p.get('checkoutBtn').fire('click');assert.equal(p.sent.length,0);assert.equal(p.get('conversionUrl').attrs['aria-invalid'],'true');}p.get('conversionUrl').value='example.com';p.get('conversionGoal').value='';await p.get('checkoutBtn').fire('click');assert.equal(p.sent.length,0);p.get('conversionGoal').value='Reservations';p.get('lead_notes').value='Background '.repeat(40);await p.get('checkoutBtn').fire('click');assert.match(p.sent[0].body.customer.notes,/^Website fix: https:\/\/example.com\/\nGoal: Reservations/);assert(p.sent[0].body.customer.notes.length<=500);});
-test('Google needs existing/new choice; optional profile URL is validated only when relevant',async()=>{const p=page('?service=google');p.fill();p.get('googleMode').value='';await p.get('checkoutBtn').fire('click');assert.equal(p.sent.length,0);p.get('googleMode').value='existing';p.get('googleUrl').value='javascript:bad';await p.get('checkoutBtn').fire('click');assert.equal(p.sent.length,0);p.get('googleMode').value='new';await p.get('checkoutBtn').fire('click');assert.match(p.sent[0].body.customer.notes,/Google: new profile/);assert(!p.sent[0].body.customer.notes.includes('javascript'));});
-test('accessibility requires its site URL, includes optional priority, and does not include unrelated briefs',async()=>{const p=page('?service=accessibility');p.fill();p.get('accessibilityUrl').value='';await p.get('checkoutBtn').fire('click');assert.equal(p.sent.length,0);p.get('accessibilityUrl').value='example.org';p.get('accessibilityPriority').value='Keyboard navigation';await p.get('checkoutBtn').fire('click');assert.match(p.sent[0].body.customer.notes,/Accessibility: https:\/\/example.org\/\nPriority: Keyboard navigation/);assert(!p.sent[0].body.customer.notes.includes('Website fix:'));});
-test('combined scope cannot be silently truncated by freeform notes or exceed the checkout budget',async()=>{const p=page('?service=conversion');p.fill();await p.addButtons[2].fire('click');await p.addButtons[3].fire('click');p.get('lead_notes').value='Extra '.repeat(80);await p.get('checkoutBtn').fire('click');assert.equal(p.sent[0].body.items.length,3);assert(p.sent[0].body.customer.notes.length<=500);for(const text of['Website fix:','Goal:','Google:','Accessibility:'])assert(p.sent[0].body.customer.notes.includes(text));const q=page('?service=conversion');q.fill();await q.addButtons[2].fire('click');await q.addButtons[3].fire('click');for(const id of['conversionUrl','googleUrl','accessibilityUrl'])q.get(id).value='https://example.com/'+ 'x'.repeat(140);q.get('conversionGoal').value='g'.repeat(80);await q.get('checkoutBtn').fire('click');assert.equal(q.sent.length,0);assert.match(q.get('status').textContent,/combined service brief is too long/);});
-test('document retry reuses its receipt and preserves service scope plus reference within API limits',async()=>{const p=page('?service=menu');p.fill();p.fail();p.get('menuPages').value='4';p.get('lead_document').files=[{name:'menu.pdf'}];p.get('lead_notes').value='Context '.repeat(50);await p.get('checkoutBtn').fire('click');p.recover();await p.get('checkoutBtn').fire('click');assert.equal(p.documents.length,1);assert(p.documents[0].payload.notes.startsWith('Menu: 4 pages;'));assert(p.documents[0].payload.notes.length<=1200);assert.equal(p.sent[1].body.menu_pages,4);assert.match(p.sent[1].body.customer.notes,/^Menu: 4 pages;/);assert.match(p.sent[1].body.customer.notes,/Document ref:/);assert(p.sent[1].body.customer.notes.length<=500);});
-test('paused checkout locks order, brief, and file controls against quote switches and forced mutations',async()=>{const p=page('?service=conversion');p.fill();const release=p.pauseFingerprint(),pending=p.get('checkoutBtn').fire('click');assert.equal(p.quoteButtons[0].disabled,true);assert.equal(p.get('lead_document').disabled,true);await p.quoteButtons[0].fire('click');await p.addButtons[0].fire('click');await p.get('clearBtn').fire('click');p.get('conversionGoal').value='Changed';await p.get('conversionGoal').fire('input');assert.equal(p.get('conversionGoal').value,'More reservations');assert.deepEqual(Object.keys(p.cart()),['conversion_fix']);release();await pending;assert.deepEqual(p.sent[0].body.items,[{key:'conversion_fix',qty:1}]);assert.match(p.sent[0].body.customer.notes,/More reservations/);assert.equal(p.quoteButtons[0].disabled,false);await p.quoteButtons[0].fire('click');assert.deepEqual(p.cart(),{});assert.equal(p.get('bookingName').focused,true);});
-test('generic and explicit picker destinations preserve closed-by-default and intentional open behavior',async()=>{for(const route of['','?service=menu','?service=conversion','?service=website','?service=app'])assert.equal(page(route).get('optionalServices').open,false);assert.equal(page('#optionalServices').get('optionalServices').open,true);const p=page('?service=menu');await p.get('clearBtn').fire('click');assert.deepEqual(p.cart(),{});assert.equal(p.get('optionalServices').open,true);assert.equal(p.get('orderTotalRow').hidden,true);});
+async function page(route = '', { catalogFails = false } = {}) {
+  const els = new Map(), get = id => { if (!els.has(id)) els.set(id, { ...element(), id }); return els.get(id); };
+  get('menuPages').value = '3'; get('optionalServices').open = false;
+  const cards = new Map();
+  for (const m of markup.matchAll(/<article class="service-card mm-choice" ([^>]*)>/g)) {
+    const card = element();
+    for (const a of m[1].matchAll(/data-([\w-]+)="([^"]*)"/g)) card.dataset[a[1]] = a[2];
+    cards.set(card.dataset.code, card);
+  }
+  const buttons = new Map([...cards].map(([code, card]) => [code, { ...element(), dataset: { selectLabel: 'Add' }, closest: () => card }]));
+  const sent = [], documents = [], tracking = [], cartSection = element();
+  let failing = false;
+  const [query = '', hash = ''] = route.split('#');
+  const location = { search: query, hash: hash ? '#' + hash : '', href: 'https://menu-made.com/contact.html' + route, hostname: 'menu-made.com' };
+  let interval = 'month'; const renders = [];
+  const offers = new Map(OFFERS.map(o => [o.code, o]));
+  const money = c => '$' + (c / 100).toLocaleString('en-US', { minimumFractionDigits: c % 100 ? 2 : 0 });
+  const Catalog = {
+    API: '', ready: catalogFails ? Promise.reject(new Error('down')) : Promise.resolve(offers),
+    get interval() { return interval; },
+    setInterval(v) { interval = v === 'year' ? 'year' : 'month'; renders.forEach(fn => fn()); },
+    priceOf: (o, i) => o ? (o.prices ? o.prices[i] : o.price_cents) : null,
+    label: (o, i) => o ? money(o.prices ? o.prices[i] : o.price_cents) + (o.prices ? (i === 'year' ? '/yr' : '/mo') : '') : '',
+    onRender(fn) { renders.push(fn); }
+  };
+  Catalog.ready.catch(() => {});
+  const context = {
+    location, URL, URLSearchParams, AbortController, setTimeout, clearTimeout, Map, Set, Promise, crypto: webcrypto,
+    window: { location, matchMedia: () => ({ matches: true }), MenuMadeCatalog: Catalog,
+      MenuMadeFunnel: { track: (...a) => tracking.push(a), tracking: () => ({ session_id: 'test-session' }) },
+      MenuMadeDocuments: { validate() {}, fingerprint: async () => 'fingerprint', send: async (payload, file) => { documents.push({ payload, file }); } } },
+    document: {
+      getElementById: get, createElement: element, addEventListener() {}, body: { prepend() {} },
+      querySelectorAll(sel) {
+        if (sel === '.js-add') return [...buttons.values()];
+        if (sel === '[data-choose-services]') return [];
+        if (sel.includes('#cartItems button')) return [...buttons.values(), ...['clearBtn', 'continueBtn', 'backBtn', 'menuPages', 'lead_document', 'scopeConfirm'].map(get)];
+        return [];
+      },
+      querySelector(sel) { return sel === '.cart' ? cartSection : cards.get(/data-code="([^"]+)"/.exec(sel)?.[1]) || null; }
+    },
+    fetch: async (url, options) => { sent.push({ url, body: JSON.parse(options.body) }); return { ok: !failing, json: async () => failing ? { error: 'Retry checkout' } : { url: 'https://checkout.stripe.com/test' } }; }
+  };
+  vm.runInNewContext(script, context);
+  await new Promise(r => setTimeout(r, 0));
+  const state = () => JSON.parse(vm.runInNewContext('JSON.stringify({ plan: order.plan, once: [...order.once] })', context));
+  const fill = () => { for (const [id, v] of Object.entries({ lead_name: 'Test Buyer', lead_business: 'Test Cafe', lead_email: 'test@example.com', conversionUrl: 'https://example.com', conversionGoal: 'More reservations', googleMode: 'existing' })) get(id).value = v; get('scopeConfirm').checked = true; };
+  return { get, state, fill, sent, documents, tracking, buttons, cards, setInterval: Catalog.setInterval, fail() { failing = true; }, recover() { failing = false; } };
+}
+
+test('an empty Start page charges nothing and sends nothing', async () => {
+  const p = await page();
+  assert.deepEqual(p.state(), { plan: null, once: [] });
+  assert.equal(p.get('orderTotalRow').hidden, true);
+  assert.equal(p.get('checkoutBtn').disabled, true);
+  await p.get('checkoutBtn').fire('click');
+  assert.equal(p.sent.length, 0);
+});
+
+test('every card on the page is a catalog offer, and no price is typed into the markup', () => {
+  const codes = new Set(OFFERS.map(o => o.code));
+  for (const m of markup.matchAll(/data-code="([A-Z_]+)"/g)) assert(codes.has(m[1]), m[1]);
+  const visible = markup.replace(/<script[\s\S]*?<\/script>/g, '');
+  assert.doesNotMatch(visible, /\$\d/, 'prices come from the catalog');
+});
+
+test('a plan link selects that plan with its interval and shows today and the renewal', async () => {
+  const p = await page('?plan=BUNDLE_GROWTH&interval=year');
+  assert.deepEqual(p.state(), { plan: 'BUNDLE_GROWTH', once: [] });
+  assert.equal(p.get('cartTotal').textContent, '$1790.00');
+  assert.equal(p.get('recurringRow').hidden, false);
+  assert.match(p.get('recurringTotal').textContent, /\$1,790\/yr, renews yearly/);
+  assert.equal(p.get('intakeStep').classList.contains('show'), true);
+  p.setInterval('month');
+  assert.equal(p.get('cartTotal').textContent, '$179.00');
+});
+
+test('one plan per order: choosing another plan replaces it and says so', async () => {
+  const p = await page('?plan=BUNDLE_STARTER');
+  await p.buttons.get('MENU_CARE').fire('click');
+  assert.deepEqual(p.state(), { plan: 'MENU_CARE', once: [] });
+  assert.match(p.get('status').textContent, /one plan at a time/);
+});
+
+test('Guest App brings its setup, and removing the plan removes the setup', async () => {
+  const p = await page();
+  await p.buttons.get('GUEST_APP').fire('click');
+  assert.deepEqual(p.state(), { plan: 'GUEST_APP', once: ['GUEST_APP_SETUP'] });
+  assert.equal(p.get('cartTotal').textContent, '$328.00');
+  await p.get('cartItems').fire('click', { target: { dataset: { remove: 'GUEST_APP' } } });
+  assert.deepEqual(p.state(), { plan: null, once: [] });
+});
+
+test('Website Package alone starts Website Care on a trial; with a plan lacking Website Care it is refused', async () => {
+  const p = await page('?service=website');
+  assert.equal(p.get('cartTotal').textContent, '$499.00');
+  assert.match(p.get('recurringTotal').textContent, /Website Care free for 3 months, then \$49\/mo/);
+  await p.buttons.get('BUNDLE_STARTER').fire('click');
+  assert.equal(p.get('orderProblem').hidden, false);
+  assert.equal(p.get('checkoutBtn').disabled, true);
+  const q = await page('?plan=WEBSITE_CARE');
+  await q.buttons.get('WEBSITE_PACKAGE').fire('click');
+  assert.deepEqual(q.state(), { plan: null, once: ['WEBSITE_PACKAGE'] });
+  await q.buttons.get('WEBSITE_CARE').fire('click');
+  assert.deepEqual(q.state(), { plan: null, once: ['WEBSITE_PACKAGE'] });
+});
+
+test('an offer that is not on sale cannot be bought live, but can in test mode', async () => {
+  const p = await page('?plan=BUNDLE_PRO');
+  assert.deepEqual(p.state(), { plan: null, once: [] });
+  assert.equal(p.buttons.get('BUNDLE_PRO').textContent, 'Opening soon');
+  assert.equal(p.buttons.get('BUNDLE_PRO').disabled, true);
+  const t = await page('?plan=BUNDLE_PRO&checkout=test');
+  assert.deepEqual(t.state(), { plan: 'BUNDLE_PRO', once: [] });
+  t.fill();
+  await t.get('checkoutBtn').fire('click');
+  assert.equal(t.sent[0].url, '/api/create-checkout-test');
+});
+
+test('menu page count is priced from the catalog package and invalid counts block checkout', async () => {
+  const p = await page('?service=menu');
+  for (const [pages, total] of [['1', '$144.00'], ['3', '$144.00'], ['4', '$164.00'], ['50', '$1084.00']]) {
+    p.get('menuPages').value = pages; await p.get('menuPages').fire('input');
+    assert.equal(p.get('cartTotal').textContent, total);
+  }
+  for (const value of ['', '0', '51', '2.5']) {
+    p.get('menuPages').value = value; await p.get('menuPages').fire('input');
+    assert.equal(p.get('checkoutBtn').disabled, true);
+  }
+});
+
+test('checkout sends the plan with its interval, one-time items, and the short briefs', async () => {
+  const p = await page('?plan=BUNDLE_STARTER&interval=year');
+  await p.buttons.get('CONVERSION_FIX').fire('click');
+  await p.buttons.get('GOOGLE_VISIBILITY').fire('click');
+  p.fill();
+  await p.get('checkoutBtn').fire('click');
+  assert.equal(p.sent.length, 1);
+  assert.equal(p.sent[0].url, '/api/create-checkout');
+  assert.deepEqual(p.sent[0].body.items, [{ key: 'BUNDLE_STARTER', qty: 1, interval: 'year' }, { key: 'CONVERSION_FIX', qty: 1 }, { key: 'GOOGLE_VISIBILITY', qty: 1 }]);
+  assert.equal(p.sent[0].body.interval, 'year');
+  assert.match(p.sent[0].body.customer.notes, /^Website fix: https:\/\/example.com\/\nGoal: More reservations\nGoogle: existing profile/);
+});
+
+test('briefs are validated before payment', async () => {
+  const p = await page('?service=conversion');
+  p.fill();
+  for (const url of ['', 'javascript:alert(1)', 'https://user:password@example.com']) {
+    p.get('conversionUrl').value = url;
+    await p.get('checkoutBtn').fire('click');
+    assert.equal(p.sent.length, 0);
+  }
+  const g = await page('?service=google');
+  g.fill(); g.get('googleMode').value = '';
+  await g.get('checkoutBtn').fire('click');
+  assert.equal(g.sent.length, 0);
+});
+
+test('old service links still work', async () => {
+  for (const [service, code] of [['menu', 'ONLINE_MENU_QR'], ['conversion', 'CONVERSION_FIX'], ['google', 'GOOGLE_VISIBILITY'], ['accessibility', 'ACCESSIBILITY_MONITORING'], ['app', 'GUEST_APP'], ['__proto__', null]]) {
+    const p = await page('?service=' + service);
+    const s = p.state();
+    assert.equal(s.plan === code || s.once.includes(code) || (code === null && !s.plan && !s.once.length), true, service);
+  }
+});
+
+test('a menu upload is sent once even when checkout is retried', async () => {
+  const p = await page('?service=menu');
+  p.fill(); p.fail();
+  p.get('lead_document').files = [{ name: 'menu.pdf' }];
+  await p.get('checkoutBtn').fire('click');
+  p.recover();
+  await p.get('checkoutBtn').fire('click');
+  assert.equal(p.documents.length, 1);
+  assert.equal(p.sent[1].body.menu_pages, 3);
+  assert.match(p.sent[1].body.customer.notes, /^Menu: 3 pages;/);
+  assert.match(p.sent[1].body.customer.notes, /Document ref:/);
+});
+
+test('if prices cannot load, nothing can be bought and the buyer is told', async () => {
+  const p = await page('?plan=BUNDLE_STARTER', { catalogFails: true });
+  assert.deepEqual(p.state(), { plan: null, once: [] });
+  assert.match(p.get('status').textContent, /Prices could not be loaded/);
+  assert.equal(p.buttons.get('BUNDLE_STARTER').disabled, true);
+});
