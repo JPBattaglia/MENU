@@ -3,15 +3,15 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Staff Merch with Nino Battaglia Designs — MENU-MADE</title>
-  <meta name="description" content="Staff shirts for restaurants and local businesses in Nino Battaglia's designs, with your logo on the back if you like. Team discounts from 12 shirts; printed and shipped for you.">
+  <title>Staff Merch With Your Logo — MENU-MADE</title>
+  <meta name="description" content="Upload your logo and see it on staff shirts, aprons, hats, mugs, coasters and more. Team discounts from 12 items; printed and shipped for you, with Nino Battaglia shirt designs as an option.">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Philosopher:wght@400;700&family=Aldrich&display=swap" rel="stylesheet">
   <link rel="icon" type="image/png" href="MENU=.png">
   <link rel="shortcut icon" href="MENU=.png">
   <link rel="apple-touch-icon" href="MENU=.png">
-  <link rel="stylesheet" href="main.css?v=20261028-stage10">
+  <link rel="stylesheet" href="main.css?v=20261028-stage10c">
   <script src="funnel.js?v=20261016-service-measurement" defer></script>
   <script src="site-nav.js?v=20261016-accessible-navigation" defer></script>
   <script src="site-catalog.js?v=20261028-stage9" defer></script>
@@ -19,16 +19,16 @@
   <meta property="og:type" content="website">
   <meta property="og:locale" content="en_US">
   <meta property="og:site_name" content="MENU-MADE">
-  <meta property="og:title" content="Staff Merch with Nino Battaglia Designs — MENU-MADE">
-  <meta property="og:description" content="Staff shirts for restaurants and local businesses in Nino Battaglia's designs, with your logo on the back if you like. Team discounts from 12 shirts; printed and shipped for you.">
+  <meta property="og:title" content="Staff Merch With Your Logo — MENU-MADE">
+  <meta property="og:description" content="Upload your logo and see it on staff shirts, aprons, hats, mugs, coasters and more. Team discounts from 12 items; printed and shipped for you, with Nino Battaglia shirt designs as an option.">
   <meta property="og:url" content="https://menu-made.com/staff-merch">
   <meta property="og:image" content="https://menu-made.com/assets/social-preview.png">
   <meta property="og:image:width" content="1200">
   <meta property="og:image:height" content="630">
   <meta property="og:image:alt" content="MENU-MADE — Menus, websites and Google care for local businesses">
   <meta name="twitter:card" content="summary_large_image">
-  <meta name="twitter:title" content="Staff Merch with Nino Battaglia Designs — MENU-MADE">
-  <meta name="twitter:description" content="Staff shirts for restaurants and local businesses in Nino Battaglia's designs, with your logo on the back if you like. Team discounts from 12 shirts; printed and shipped for you.">
+  <meta name="twitter:title" content="Staff Merch With Your Logo — MENU-MADE">
+  <meta name="twitter:description" content="Upload your logo and see it on staff shirts, aprons, hats, mugs, coasters and more. Team discounts from 12 items; printed and shipped for you, with Nino Battaglia shirt designs as an option.">
   <meta name="twitter:image" content="https://menu-made.com/assets/social-preview.png">
 </head>
 <body class="merch-page">
@@ -60,46 +60,63 @@
 <section class="hero mm-page-hero">
   <div class="container">
     <span class="pill">Staff merch</span>
-    <h1>Staff shirts in Nino Battaglia's designs</h1>
-    <p class="hero-intro">Pick designs from Nino's collection, choose colours and sizes for your team, and add your logo on the back if you like. Each shirt costs what it does in Nino's shop, plus $5 with your logo. Order 12 or more for 10% off, 24 or more for 15% off. Sales tax is added at checkout. Printed by Printful and shipped to you.</p>
+    <h1>Your logo on your team's merch</h1>
+    <p class="hero-intro">Upload your logo and see it right away on shirts, aprons, hats, mugs, coasters and more. Pick colours, sizes and quantities; order 12 or more items for 10% off, 24 or more for 15% off. Sales tax is added at checkout. Printed by Printful and shipped to you. Nino checks every logo order before anything is printed.</p>
   </div>
 </section>
 
-<section class="section" aria-labelledby="pick-title">
+<section class="section" aria-labelledby="logo-title">
   <div class="container">
-    <header class="section-head"><h2 id="pick-title">1. Choose a design</h2><p id="designCount">Loading designs…</p></header>
-    <label for="designSearch" class="merch-visually-hidden">Search designs</label>
-    <input id="designSearch" class="merch-search" type="search" placeholder="Search designs">
-    <div id="designGrid" class="merch-grid" aria-live="polite"></div>
+    <div class="merch-panel">
+      <h2 id="logo-title">1. Upload your logo</h2>
+      <label id="logoDrop" class="merch-drop" for="logoFile">
+        <img id="logoThumb" alt="Your logo" hidden>
+        <span id="logoDropText">Choose your logo, or drop it here. PNG or JPG, under 5 MB, at least 300 pixels wide. A transparent PNG looks best.</span>
+        <input id="logoFile" type="file" accept="image/png,image/jpeg">
+      </label>
+      <p id="logoStatus" class="merch-status" role="alert" hidden></p>
+      <p><small>Only upload a logo your business owns. <button type="button" id="skipLogo" class="link-btn">No logo? Shop shirts in Nino Battaglia's designs</button></small></p>
+    </div>
 
-    <div id="pickerStep" class="merch-panel" hidden>
-      <h2>2. Colour, sizes and how many</h2>
-      <div class="merch-picker">
-        <img id="pickerImage" src="" alt="" width="280" height="280">
+    <div id="mockStep" class="merch-panel" hidden>
+      <h2>2. See it on your merch</h2>
+      <p>Tap a product to choose colours, sizes and how many. Logo placement follows each product's print area.</p>
+      <div id="mockGrid" class="merch-grid merch-mock-grid" aria-live="polite"></div>
+      <div id="pickerStep" class="merch-picker merch-subpanel" hidden>
+        <div id="pickerMock"></div>
         <div>
           <h3 id="pickerTitle"></h3>
+          <p id="pickerNote" class="merch-note"></p>
           <div id="colorList" class="merch-swatches" aria-label="Colours"></div>
           <div id="sizeList" class="merch-sizes"></div>
-          <p><small>You can mix designs and colours: pick another design above and add more sizes.</small></p>
         </div>
       </div>
     </div>
 
+    <details id="ninoDesigns" class="merch-panel">
+      <summary><h2 id="pick-title">Shirts in Nino Battaglia's designs <small>(optional)</small></h2></summary>
+      <p>Shop price for each shirt; with your logo uploaded it goes on the back for $5 more. <span id="designCount">Loading designs…</span></p>
+      <label for="designSearch" class="merch-visually-hidden">Search designs</label>
+      <input id="designSearch" class="merch-search" type="search" placeholder="Search designs">
+      <div id="designGrid" class="merch-grid" aria-live="polite"></div>
+      <div id="designPicker" class="merch-picker merch-subpanel" hidden>
+        <img id="designImage" src="" alt="" width="280" height="280">
+        <div>
+          <h3 id="designTitle"></h3>
+          <div id="designColors" class="merch-swatches" aria-label="Colours"></div>
+          <div id="designSizes" class="merch-sizes"></div>
+        </div>
+      </div>
+    </details>
+
     <div class="merch-panel">
-      <h2>Your team's shirts</h2>
+      <h2>Your order</h2>
       <ul id="cartLines" class="merch-cart"></ul>
       <p id="cartSummary"></p>
     </div>
 
     <form id="detailsForm" class="merch-panel" hidden novalidate>
-      <h2>3. Your logo and where to ship</h2>
-      <p><label><input type="checkbox" id="wantLogo"> Add our logo on the back (+$5 a shirt)</label></p>
-      <div id="logoField" hidden>
-        <label for="logoFile">Logo (PNG or JPG, under 5 MB; a transparent PNG prints best)</label><br>
-        <input id="logoFile" type="file" accept="image/png,image/jpeg">
-        <img id="logoPreview" alt="Your logo" hidden>
-        <p><small>Nino checks every logo order before anything is printed. Only upload a logo your business owns.</small></p>
-      </div>
+      <h2>3. Where to ship</h2>
       <div class="merch-form">
         <label class="full">Name for delivery<input id="shipName" required autocomplete="name"></label>
         <label class="full">Street address<input id="shipAddress1" required autocomplete="address-line1"></label>
@@ -115,7 +132,7 @@
 
     <div id="quoteBox" class="merch-panel" hidden>
       <h2>4. Review and pay</h2>
-      <table class="merch-table"><thead><tr><th>Shirt</th><th>Qty</th><th>Each</th><th>Total</th></tr></thead><tbody id="quoteLines"></tbody></table>
+      <table class="merch-table"><thead><tr><th>Item</th><th>Qty</th><th>Each</th><th>Total</th></tr></thead><tbody id="quoteLines"></tbody></table>
       <fieldset class="merch-fieldset"><legend>Delivery</legend><div id="quoteRates"></div></fieldset>
       <p id="quoteTotal"></p>
       <div class="merch-form">
@@ -126,7 +143,7 @@
       </div>
       <p id="quoteStatus" class="merch-status" role="alert" hidden></p>
       <button id="payBtn" class="btn primary" type="button">Pay securely</button>
-      <p><small>Payment by Stripe. Prices are checked again with Nino's shop and Printful before you pay. Shirts usually print in 3-7 days, then ship; we email the tracking link.</small></p>
+      <p><small>Payment by Stripe. Prices are checked again with Printful before you pay. Items usually take 3-7 days to make, then ship; we email the tracking link.</small></p>
     </div>
     <p id="merchStatus" class="merch-status" hidden></p>
   </div>
@@ -153,6 +170,6 @@
   <nav class="footer-links" aria-label="More from MENU-MADE"><a href="plans.html">Plans &amp; Pricing</a><a href="services.html">Services</a><a href="website-design.html">Website Package</a><a href="google-visibility.html">Google Visibility</a><a href="accessibility-services.html">Accessibility Monitoring</a><a href="staff-merch.html">Staff Merch</a><a href="https://ninobattaglia.com/services.html#design-services">Design by Nino &#8599;</a><a href="portfolio.html">Our Work</a><a href="about.html">Meet JP &amp; Nino</a><a href="account.html">Your account</a><a href="privacy.html">Privacy</a><a href="accessability.html">Site Accessibility</a></nav>
 </footer>
 <script src="section-parallax.js?v=20261015-unified" defer></script>
-<script src="staff-merch.js?v=20261028-stage10b" defer></script>
+<script src="staff-merch.js?v=20261028-stage10c" defer></script>
 </body>
 </html>

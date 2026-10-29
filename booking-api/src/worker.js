@@ -55,7 +55,7 @@ import { uploadOnboardingAsset } from "./onboarding/uploads.js";
 import { runNextProductionStep, runScheduledProduction } from "./workflows/runner.js";
 import { handleMe, handleOpen, handleSignIn, handleSignOut } from "./account/account.js";
 import { handleDesignBrief, remindDesignBriefs } from "./producers/nino-design/brief.js";
-import { emailMerchTracking, handleMerchCheckout, handleMerchLogo, handleMerchLogoUpload, handleMerchQuote } from "./producers/staff-merch/order.js";
+import { emailMerchTracking, handleMerchCheckout, handleMerchLogo, handleMerchLogoUpload, handleMerchProducts, handleMerchQuote, handleMerchUpload } from "./producers/staff-merch/order.js";
 import { advanceNinoDesignSelfTests } from "./selftest/nino-design-selftest.js";
 import { advanceStaffMerchSelfTests } from "./selftest/staff-merch-selftest.js";
 
@@ -164,6 +164,9 @@ var worker_default = {
     if (designBriefMatch && (request.method === "GET" || request.method === "POST")) return handleDesignBrief(request, env, designBriefMatch[1].toLowerCase());
     const merchLogoMatch = url.pathname.match(/^\/api\/merch-logo\/([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})$/i);
     if (merchLogoMatch && (request.method === "GET" || request.method === "HEAD")) return handleMerchLogo(request, env, merchLogoMatch[1].toLowerCase());
+    const merchUploadMatch = url.pathname.match(/^\/api\/merch-upload\/([0-9a-f-]{36}\.(?:png|jpg))$/);
+    if (merchUploadMatch && (request.method === "GET" || request.method === "HEAD")) return handleMerchUpload(request, env, merchUploadMatch[1]);
+    if (request.method === "GET" && url.pathname === "/api/merch/products") return handleMerchProducts(request, env, ctx);
     if (request.method === "POST" && url.pathname === "/api/merch/logo") return handleMerchLogoUpload(request, env);
     if (request.method === "POST" && url.pathname === "/api/merch/quote") return handleMerchQuote(request, env);
     if (request.method === "POST" && url.pathname === "/api/merch/checkout") return handleMerchCheckout(request, env);

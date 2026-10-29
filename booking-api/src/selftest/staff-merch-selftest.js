@@ -1,7 +1,9 @@
 // Sandbox self-test for staff merch (stage 10), run by the worker's 5-minute schedule and once a day.
 // Real path end to end, in Stripe test mode: the Nino shop's live catalog gives two sizes of one shirt; the logo is
-// uploaded on /api/merch/logo; /api/merch/quote has the Nino shop re-check the shirts against Printful and quote real
-// delivery (7 + 5 = 12 shirts, so the 10% team discount and the $5 logo fee apply); /api/merch/checkout opens a test
+// uploaded on /api/merch/logo; /api/merch/products gives the logo products with their mockup templates; a mug and an
+// embroidered cap are added; /api/merch/quote has the Nino shop re-check everything against Printful and quote real
+// delivery (7 + 3 Nino shirts + mug + cap = 12 items, so the 10% team discount, the $5 logo fee on the Nino shirts,
+// Printful x 2 rounded to .99 on the logo items and the embroidery set-up apply); /api/merch/checkout opens a test
 // session that is paid with a test card; the webhook starts production; the logo proof waits for owner approval and
 // is approved through the approve page; delivery places the order in Printful as a DRAFT ONLY (sandbox orders are
 // never confirmed, so nothing prints or ships); the draft is checked and then deleted.
@@ -43,15 +45,26 @@ async function stageStart(env, app, test) {
   upload.append("logo", new File([SAMPLE_LOGO_PNG], "logo.png", { type: "image/png" }));
   const logo = await json(await app(new Request(`${base}/api/merch/logo`, { method: "POST", body: upload })));
   if (!logo.body?.ok) throw new Error(`Logo upload failed (HTTP ${logo.status})`);
+  if (!logo.body.width || !logo.body.height) throw new Error("The logo upload did not report the image size");
+  const products = await json(await app(new Request(`${base}/api/merch/products`)));
+  if (!products.body?.ok) throw new Error(`Merch products failed (HTTP ${products.status}): ${products.body?.error}`);
+  const pick = (key) => products.body.products.find((x) => x.key === key);
+  const mug = pick("mug"); const cap = pick("cap");
+  if (!mug?.variants?.length || !cap?.variants?.length) throw new Error("The mug or cap is missing from the merch products");
+  if (!mug.templates?.length) throw new Error("The mug has no mockup template");
+  const logoItems = [{ key: "mug", variant_id: mug.variants[0].id, quantity: 1 }, { key: "cap", variant_id: cap.variants[0].id, quantity: 1 }];
   const quote = await json(await app(new Request(`${base}/api/merch/quote`, {
     method: "POST", headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ environment: "sandbox", logo_id: logo.body.logo_id, recipient: ADDRESS, items: [{ ...a, quantity: 7 }, { ...b, quantity: 5 }].map(({ product_id, variant_id, quantity }) => ({ product_id, variant_id, quantity })) })
+    body: JSON.stringify({ environment: "sandbox", logo_id: logo.body.logo_id, recipient: ADDRESS, logo_items: logoItems, items: [{ ...a, quantity: 7 }, { ...b, quantity: 3 }].map(({ product_id, variant_id, quantity }) => ({ product_id, variant_id, quantity })) })
   })));
   if (!quote.body?.ok) throw new Error(`Quote failed (HTTP ${quote.status}): ${quote.body?.error}`);
   const p = quote.body.pricing;
-  if (p.shirts !== 12 || p.discount_percent !== 10 || p.logo_fee_cents !== 500) throw new Error(`Wrong pricing: ${JSON.stringify(p)}`);
+  if (p.items !== 12 || p.discount_percent !== 10 || p.logo_fee_cents !== 500) throw new Error(`Wrong pricing: ${JSON.stringify(p)}`);
   const expectedUnit = Math.round((quote.body.lines[0].unit_price_cents + 500) * 0.9);
   if (quote.body.lines[0].unit_cents !== expectedUnit) throw new Error(`Wrong unit price ${quote.body.lines[0].unit_cents}, expected ${expectedUnit}`);
+  const mugLine = quote.body.lines.find((l) => l.key === "mug");
+  const mugList = Math.floor(Math.round(mug.variants[0].base_cents * 2) / 100) * 100 + 99;
+  if (!mugLine || mugLine.unit_cents !== Math.round(mugList * 0.9)) throw new Error(`Wrong mug price ${mugLine?.unit_cents}, expected ${Math.round(mugList * 0.9)}`);
   const rate = quote.body.rates[0];
   const checkout = await json(await app(new Request(`${base}/api/merch/checkout`, {
     method: "POST", headers: { "Content-Type": "application/json" },
@@ -61,10 +74,10 @@ async function stageStart(env, app, test) {
   const reuse = await json(await app(new Request(`${base}/api/merch/checkout`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ quote_id: quote.body.quote_id, rate_id: rate.id, customer: { email: SELF_TEST_EMAIL, business: "x" } }) })));
   if (reuse.status !== 409) throw new Error("A used quote could be checked out twice");
   const order = await env.DB.prepare(`SELECT stripe_checkout_session_id, total_cents FROM orders WHERE id = ?`).bind(checkout.body.order_id).first();
-  if (order.total_cents !== p.subtotal_cents + rate.amount_cents) throw new Error(`Order total ${order.total_cents} != shirts ${p.subtotal_cents} + delivery ${rate.amount_cents}`);
+  if (order.total_cents !== p.subtotal_cents + rate.amount_cents) throw new Error(`Order total ${order.total_cents} != items ${p.subtotal_cents} + delivery ${rate.amount_cents}`);
   const paid = await payTestCheckout(env, order.stripe_checkout_session_id);
   return updateTest(env, test, { status: "RUNNING", stage: "AWAIT_APPROVAL", order_id: checkout.body.order_id, state: { orderId: checkout.body.order_id },
-    log: `12 shirts (${a.color}, ${a.size} x7 + ${b.size} x5) quoted by the Nino shop with logo and 10% discount; $${(order.total_cents / 100).toFixed(2)} incl. ${rate.name}; paid with a test card (${paid.amount}); used quote refused` });
+    log: `12 items (Nino shirts ${a.color} ${a.size} x7 + ${b.size} x3, logo mug, embroidered cap${p.setup_cents ? ` + set-up $${(p.setup_cents / 100).toFixed(2)}` : ""}) quoted with logo and 10% discount; $${(order.total_cents / 100).toFixed(2)} incl. ${rate.name}; paid with a test card (${paid.amount}); used quote refused` });
 }
 
 async function stageAwaitApproval(env, app, test) {

@@ -25,8 +25,31 @@ import { sniffImage } from "../website/intake.js";
 import { priceMerch } from "./pricing.js";
 
 const WORKFLOW = "STAFF_MERCH_V1";
-// Stripe tax code for clothing (the Nino shirt shop uses the same one).
+// Stripe tax codes: clothing (the Nino shirt shop uses the same one) and general tangible goods (mugs, coasters,
+// totes, stickers).
 const CLOTHING_TAX_CODE = "txcd_30011000";
+const GOODS_TAX_CODE = "txcd_99999999";
+const CLOTHING_KEYS = new Set(["tee", "hoodie", "polo", "apron", "cap", "beanie"]);
+const UPLOAD_LINK_KIND = "merchupload";
+
+// Pixel size of a PNG or JPG (the logo's shape decides where it sits on each product).
+function imageSize(bytes) {
+  if (bytes[0] === 0x89 && bytes[1] === 0x50) {
+    const v = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
+    return { width: v.getUint32(16), height: v.getUint32(20) };
+  }
+  let i = 2;
+  while (i + 9 < bytes.length) {
+    if (bytes[i] !== 0xff) { i++; continue; }
+    const marker = bytes[i + 1];
+    const length = (bytes[i + 2] << 8) | bytes[i + 3];
+    if (marker >= 0xc0 && marker <= 0xcf && ![0xc4, 0xc8, 0xcc].includes(marker)) {
+      return { height: (bytes[i + 5] << 8) | bytes[i + 6], width: (bytes[i + 7] << 8) | bytes[i + 8] };
+    }
+    i += 2 + length;
+  }
+  return null;
+}
 const QUOTE_TTL_MINUTES = 30;
 const MAX_LOGO_BYTES = 5_000_000;
 const LOGO_LINK_KIND = "merchlogo";
@@ -53,9 +76,40 @@ async function handleMerchLogoUpload(request, env) {
   if (bytes.length === 0 || bytes.length > MAX_LOGO_BYTES) return fail(400, "The logo must be under 5 MB.");
   const type = sniffImage(bytes);
   if (!type || type.mime === "image/webp") return fail(400, "The logo must be a PNG or JPG image.");
+  const size = imageSize(bytes);
+  if (!size?.width || !size?.height) return fail(400, "That image could not be read. Please upload a PNG or JPG.");
+  if (Math.max(size.width, size.height) < 300) return fail(400, "The logo is too small to print well. Please upload one at least 300 pixels wide.");
   const id = crypto.randomUUID();
-  await env.ASSETS.put(`merch-uploads/${id}.${type.ext}`, bytes, { httpMetadata: { contentType: type.mime }, customMetadata: { uploaded_at: nowIso() } });
-  return jsonResponse({ ok: true, logo_id: `${id}.${type.ext}` });
+  await env.ASSETS.put(`merch-uploads/${id}.${type.ext}`, bytes, { httpMetadata: { contentType: type.mime }, customMetadata: { uploaded_at: nowIso(), width: String(size.width), height: String(size.height) } });
+  return jsonResponse({ ok: true, logo_id: `${id}.${type.ext}`, width: size.width, height: size.height });
+}
+
+// The products and their mockup templates, for the page (cached at the edge for an hour; the Nino shop keeps a
+// daily copy, so a page load costs at most one small database read there).
+async function handleMerchProducts(request, env, ctx) {
+  const cache = globalThis.caches?.default;
+  const key = new Request("https://menu-made.com/api/merch/products?v=1");
+  const hit = cache && await cache.match(key).catch(() => null);
+  if (hit) return hit;
+  const result = await merchService(env, "products", {});
+  if (!result.ok) return fail(result.status || 503, result.message || "Merch products are not available right now.");
+  const response = jsonResponse({ ok: true, products: result.products });
+  response.headers.set("Cache-Control", "public, max-age=3600");
+  if (cache) ctx?.waitUntil?.(cache.put(key, response.clone()).catch(() => null));
+  return response;
+}
+
+// A signed address for an uploaded logo, so Printful can read it for the cost estimate before payment.
+async function uploadUrlFor(env, logoId) {
+  const token = await signLinkToken(env, { kind: UPLOAD_LINK_KIND, id: logoId, ttlDays: 2 });
+  return `${publicBaseUrl(env)}/api/merch-upload/${logoId}?t=${token}`;
+}
+async function handleMerchUpload(request, env, logoId) {
+  const payload = await verifyLinkToken(env, new URL(request.url).searchParams.get("t") || "", [UPLOAD_LINK_KIND], logoId);
+  if (!payload || payload.expired) return new Response("Not found", { status: 404 });
+  const object = await env.ASSETS.get(`merch-uploads/${logoId}`);
+  if (!object) return new Response("Not found", { status: 404 });
+  return new Response(request.method === "HEAD" ? null : object.body, { headers: { "Content-Type": object.httpMetadata?.contentType || "image/png", "Cache-Control": "private, max-age=3600", "X-Content-Type-Options": "nosniff" } });
 }
 
 // ---------- Quote ----------
@@ -65,16 +119,22 @@ async function handleMerchQuote(request, env) {
   try { data = await request.json(); } catch { return fail(400, "Invalid JSON body"); }
   const environment = environmentOf(data?.environment);
   const logoId = data?.logo_id ? String(data.logo_id) : null;
-  if (logoId && (!/^[0-9a-f-]{36}\.(png|jpg)$/.test(logoId) || !(await env.ASSETS.head(`merch-uploads/${logoId}`)))) return fail(400, "Upload the logo again.");
-  const quote = await merchService(env, "quote", { items: data?.items, recipient: data?.recipient });
+  const head = logoId && /^[0-9a-f-]{36}\.(png|jpg)$/.test(logoId) ? await env.ASSETS.head(`merch-uploads/${logoId}`) : null;
+  if (logoId && !head) return fail(400, "Upload the logo again.");
+  const logo = head ? { url: await uploadUrlFor(env, logoId), width: Number(head.customMetadata?.width) || 1000, height: Number(head.customMetadata?.height) || 1000 } : null;
+  const ninoItems = Array.isArray(data?.items) ? data.items : [];
+  const logoItems = Array.isArray(data?.logo_items) ? data.logo_items : [];
+  const quote = await merchService(env, "quote", { items: ninoItems, logo_items: logoItems, logo, recipient: data?.recipient });
   if (!quote.ok) return fail(quote.status || 502, quote.message || quote.error);
-  const pricing = priceMerch(quote.lines, { logo: Boolean(logoId) });
+  const pricing = priceMerch(quote.lines || [], { logo: Boolean(logoId), logoLines: quote.logo_lines || [], costs: quote.costs });
   const id = crypto.randomUUID();
   const t = nowIso();
   const expires = new Date(Date.now() + QUOTE_TTL_MINUTES * 60000).toISOString();
   await env.DB.prepare(`INSERT INTO merch_quotes (id, created_at, expires_at, environment, recipient_json, lines_json, rates_json, pricing_json, logo_key) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`)
-    .bind(id, t, expires, environment, JSON.stringify(quote.recipient), JSON.stringify(pricing.lines), JSON.stringify(quote.rates), JSON.stringify({ ...pricing, lines: undefined }), logoId ? `merch-uploads/${logoId}` : null).run();
-  return jsonResponse({ ok: true, quote_id: id, expires_at: expires, environment, lines: pricing.lines.map(({ fingerprint, catalog_variant_id, ...l }) => l), rates: quote.rates, pricing: { ...pricing, lines: undefined } });
+    .bind(id, t, expires, environment, JSON.stringify(quote.recipient), JSON.stringify(pricing.lines), JSON.stringify(quote.rates),
+      JSON.stringify({ ...pricing, lines: undefined, logo: logo ? { width: logo.width, height: logo.height } : null }), logoId ? `merch-uploads/${logoId}` : null).run();
+  const strip = ({ fingerprint, catalog_variant_id, ...l }) => l;
+  return jsonResponse({ ok: true, quote_id: id, expires_at: expires, environment, lines: [...pricing.lines, ...pricing.logo_lines].map(strip), rates: quote.rates, pricing: { ...pricing, lines: undefined, logo_lines: undefined } });
 }
 
 // ---------- Checkout ----------
@@ -98,7 +158,8 @@ async function handleMerchCheckout(request, env) {
   const pricing = parseJsonOrNull(quote.pricing_json) || {};
   const total = pricing.subtotal_cents + rate.amount_cents;
   const recipient = parseJsonOrNull(quote.recipient_json);
-  const merch = { lines, rate, recipient, logo_key: quote.logo_key, pricing, quote_id: quote.id };
+  const logoLines = pricing.logo_lines || [];
+  const merch = { lines, logo_lines: logoLines, logo: pricing.logo || null, rate, recipient, logo_key: quote.logo_key, pricing: { ...pricing, logo_lines: undefined }, quote_id: quote.id };
   const orderItem = {
     offerId: offer.offer_id, offerVersionId: offer.offer_version_id, offerCode: "STAFF_MERCH", offerName: offer.offer_name,
     quantity: 1, priceCents: total, currency: "USD", extraMetadata: { staff_merch: merch }
@@ -142,13 +203,18 @@ async function handleMerchCheckout(request, env) {
   params.append("metadata[email]", pending.email);
   params.append("metadata[services]", "Staff merch");
   params.append("payment_intent_data[metadata][order_id]", pending.orderId);
-  lines.forEach((line, i) => {
+  const stripeLines = [
+    ...lines.map((line) => ({ name: `Staff shirt: ${line.title} (${[line.color, line.size].filter(Boolean).join(", ")})`, description: `Nino Battaglia design${quote.logo_key ? ", your logo on the back" : ""}${pricing.discount_percent ? `, ${pricing.discount_percent}% team discount` : ""}. Printed and shipped by Printful.`, unit: line.unit_cents, quantity: line.quantity, taxCode: CLOTHING_TAX_CODE })),
+    ...logoLines.map((line) => ({ name: `${line.title} with your logo (${[line.color, line.size].filter((x) => x && x !== "One size").join(", ") || "one size"})`, description: `Made to order${pricing.discount_percent ? `, ${pricing.discount_percent}% team discount` : ""}. Printed and shipped by Printful.`, unit: line.unit_cents, quantity: line.quantity, taxCode: CLOTHING_KEYS.has(line.key) ? CLOTHING_TAX_CODE : GOODS_TAX_CODE })),
+    ...(pricing.setup_cents ? [{ name: "Embroidery set-up (one-time)", description: "Digitizing your logo for embroidery.", unit: pricing.setup_cents, quantity: 1, taxCode: GOODS_TAX_CODE }] : [])
+  ];
+  stripeLines.forEach((line, i) => {
     params.append(`line_items[${i}][price_data][currency]`, "usd");
     params.append(`line_items[${i}][price_data][tax_behavior]`, "exclusive");
-    params.append(`line_items[${i}][price_data][product_data][tax_code]`, CLOTHING_TAX_CODE);
-    params.append(`line_items[${i}][price_data][unit_amount]`, String(line.unit_cents));
-    params.append(`line_items[${i}][price_data][product_data][name]`, `Staff shirt: ${line.title} (${[line.color, line.size].filter(Boolean).join(", ")})`.slice(0, 250));
-    params.append(`line_items[${i}][price_data][product_data][description]`, `Nino Battaglia design${quote.logo_key ? ", your logo on the back" : ""}${pricing.discount_percent ? `, ${pricing.discount_percent}% team discount` : ""}. Printed and shipped by Printful.`);
+    params.append(`line_items[${i}][price_data][product_data][tax_code]`, line.taxCode);
+    params.append(`line_items[${i}][price_data][unit_amount]`, String(line.unit));
+    params.append(`line_items[${i}][price_data][product_data][name]`, line.name.slice(0, 250));
+    params.append(`line_items[${i}][price_data][product_data][description]`, line.description);
     params.append(`line_items[${i}][quantity]`, String(line.quantity));
   });
   params.append("shipping_options[0][shipping_rate_data][display_name]", rate.name.slice(0, 100));
@@ -237,6 +303,8 @@ async function placePrintfulOrder(env, context) {
   const result = await merchService(env, "placeOrder", {
     external_id: merch.external_id,
     lines: merch.lines.map((l) => ({ product_id: l.product_id, variant_id: l.variant_id, quantity: l.quantity, title: l.title, retail_cents: l.unit_cents, fingerprint: l.fingerprint })),
+    logo_lines: (merch.logo_lines || []).map((l) => ({ key: l.key, variant_id: l.variant_id, quantity: l.quantity, retail_cents: l.unit_cents })),
+    logo: merch.logo_key && merch.logo ? { url: await logoUrlFor(env, context.id), width: merch.logo.width, height: merch.logo.height } : null,
     recipient: merch.recipient, email: context.customer_email, shipping_method: merch.rate.id,
     logo_url: merch.logo_key ? await logoUrlFor(env, context.id) : null,
     // Printful may never cost more than the buyer paid for the shirts and delivery.
@@ -296,4 +364,4 @@ async function emailMerchTracking(env, now = new Date()) {
   return { sent };
 }
 
-export { LOGO_LINK_KIND, STATUS_KIND, WORKFLOW as STAFF_MERCH_WORKFLOW, emailMerchTracking, externalIdFor, handleMerchCheckout, handleMerchLogo, handleMerchLogoUpload, handleMerchQuote, logoUrlFor, merchOf, merchService, placePrintfulOrder, startStaffMerch };
+export { handleMerchProducts, handleMerchUpload, imageSize, LOGO_LINK_KIND, STATUS_KIND, WORKFLOW as STAFF_MERCH_WORKFLOW, emailMerchTracking, externalIdFor, handleMerchCheckout, handleMerchLogo, handleMerchLogoUpload, handleMerchQuote, logoUrlFor, merchOf, merchService, placePrintfulOrder, startStaffMerch };
