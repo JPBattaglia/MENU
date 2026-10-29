@@ -44,6 +44,10 @@ jobs:
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
+      # On iPhone the app's own files load from capacitor://localhost, which "https:" does not cover: connect-src must
+      # include 'self' or the app can't read its own config.json (first TestFlight build, Oct 29, 2026).
+      - name: App page allows reading its own files
+        run: grep -q "connect-src 'self'" app-shell/www/index.html
       - name: Live content endpoint
         run: |
           base=$(jq -r .api_base "$CONFIG")
