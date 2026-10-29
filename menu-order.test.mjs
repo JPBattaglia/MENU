@@ -109,7 +109,7 @@ test('every card on the page is a catalog offer, and no price is typed into the 
 test('a plan link selects that plan with its interval and shows today and the renewal', async () => {
   const p = await page('?plan=BUNDLE_GROWTH&interval=year');
   assert.deepEqual(p.state(), { plan: 'BUNDLE_GROWTH', once: [] });
-  assert.equal(p.get('cartTotal').textContent, '$1790.00');
+  assert.equal(p.get('cartTotal').textContent, '$1,790.00');
   assert.equal(p.get('recurringRow').hidden, false);
   assert.match(p.get('recurringTotal').textContent, /\$1,790\/yr, renews yearly/);
   assert.equal(p.get('intakeStep').classList.contains('show'), true);
@@ -161,7 +161,7 @@ test('an offer that is not on sale cannot be bought live, but can in test mode',
 
 test('menu page count is priced from the catalog package and invalid counts block checkout', async () => {
   const p = await page('?service=menu');
-  for (const [pages, total] of [['1', '$144.00'], ['3', '$144.00'], ['4', '$164.00'], ['50', '$1084.00']]) {
+  for (const [pages, total] of [['1', '$144.00'], ['3', '$144.00'], ['4', '$164.00'], ['50', '$1,084.00']]) {
     p.get('menuPages').value = pages; await p.get('menuPages').fire('input');
     assert.equal(p.get('cartTotal').textContent, total);
   }

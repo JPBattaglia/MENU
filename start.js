@@ -42,7 +42,7 @@ const els = {
 };
 
 const interval = () => Catalog?.interval || 'month';
-const money = cents => '$' + (cents / 100).toFixed(2);
+const money = cents => '$' + (cents / 100).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 const offer = code => offers?.get(code) || null;
 const cardFor = code => document.querySelector(`.service-card[data-code="${code}"]`);
 const nameOf = code => offer(code)?.name || cardFor(code)?.dataset.name || code;
