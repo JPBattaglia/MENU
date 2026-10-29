@@ -8,8 +8,6 @@
   const NINO_API = 'https://nino-printful-commerce-api.ijpbattaglia.workers.dev';
   const API = location.hostname.endsWith('menu-made.com') ? '' : 'https://menu-made.com';
   const TEST = new URLSearchParams(location.search).get('checkout') === 'test';
-  // The same script runs on menu-made.com and ninobattaglia.com (copied there; menu-made's MENU repo is the source).
-  const NINO = location.hostname.endsWith('ninobattaglia.com');
   const $ = (id) => document.getElementById(id);
   const money = (c) => '$' + (c / 100).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
   const decode = (t) => { const d = document.createElement('textarea'); d.innerHTML = String(t ?? ''); return d.value; };
@@ -258,7 +256,7 @@
     if (!customer.business || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(customer.email)) { status('Enter your business name and a valid email.', 'quoteStatus'); return; }
     $('payBtn').disabled = true; $('payBtn').textContent = 'Opening secure checkout…';
     const res = await fetch(API + '/api/merch/checkout', { method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ quote_id: state.quote.quote_id, rate_id: document.querySelector('input[name="rate"]:checked')?.value, customer, ...(NINO ? { return_to: 'nino' } : {}) }) });
+      body: JSON.stringify({ quote_id: state.quote.quote_id, rate_id: document.querySelector('input[name="rate"]:checked')?.value, customer }) });
     const data = await res.json().catch(() => ({}));
     if (data.ok && data.url) { location.href = data.url; return; }
     $('payBtn').disabled = false; $('payBtn').textContent = 'Pay securely';
