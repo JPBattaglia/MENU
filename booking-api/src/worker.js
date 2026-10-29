@@ -1,7 +1,7 @@
 import { handleAdminQueue } from "./admin/queue.js";
 import { handleApprovalRequest, handleBatchApprovalRequest } from "./approvals/approvals.js";
 import { mmBookingEnvironment, mmBookingHandler } from "./booking/booking.js";
-import { getPublicOffers } from "./checkout/catalog.js";
+import { getPublicOffers, getSiteCatalog } from "./checkout/catalog.js";
 import { recordFunnelEvent } from "./checkout/funnel.js";
 import { CheckoutValidationError, quoteMenuPackage } from "./checkout/quote.js";
 import { createCheckoutSession, createCheckoutSessionTest } from "./checkout/session.js";
@@ -149,6 +149,9 @@ var worker_default = {
       return databaseHealthCheck(
         env
       );
+    }
+    if (request.method === "GET" && url.pathname === "/api/catalog") {
+      return getSiteCatalog(env);
     }
     if (request.method === "GET" && url.pathname === "/api/offers") {
       return getPublicOffers(
