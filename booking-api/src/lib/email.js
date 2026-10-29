@@ -84,7 +84,30 @@ ${footnote ? `<p style="margin:16px 0 0;font-size:13px;line-height:1.6;color:#5b
 </table></td></tr></table></body></html>`;
 }
 
+// Every email to a customer carries a "Your account" button (stage 9 part 2), so a buyer can always find their
+// orders, deliveries and plan links again. Owner alerts, approval requests and the sign-in email itself don't.
+const ACCOUNT_URL = "https://menu-made.com/account";
+function isCustomerEmail(to, purpose, env) {
+  const recipient = String(to || "").trim().toLowerCase();
+  const owner = String(env?.OWNER_EMAIL || REPLY_TO_ADDRESS).trim().toLowerCase();
+  if (!recipient || recipient === owner || recipient === String(REPLY_TO_ADDRESS).toLowerCase() || recipient === String(INTERNAL_BCC).toLowerCase()) return false;
+  const kind = String(purpose || "");
+  return !(kind === "AUTOMATION_ALERT" || kind === "ACCOUNT_SIGN_IN" || kind.startsWith("OWNER") || kind.endsWith("_OWNER"));
+}
+function withAccountLink(html, text) {
+  const block = `<tr><td style="padding:20px 32px;border-top:1px solid #dce8ec;"><p style="margin:0 0 10px;font-size:14px;line-height:1.6;color:#26434f;">Your orders, deliveries and plan links are always in your account. Sign in with this email address; no password needed.</p><a href="${ACCOUNT_URL}" style="display:inline-block;background-color:#071f2c;color:#ffffff;text-decoration:none;font-size:14px;font-weight:bold;padding:10px 18px;border-radius:6px;">Your account</a></td></tr>`;
+  const marker = '<tr><td style="padding:24px 32px;background-color:#071f2c;">';
+  const outHtml = typeof html !== "string" || html.includes(ACCOUNT_URL) ? html
+    : html.includes(marker) ? html.replace(marker, block + marker)
+    : html.includes("</body>") ? html.replace("</body>", `<p style="font-family:Arial,Helvetica,sans-serif;font-size:14px;"><a href="${ACCOUNT_URL}">Your Menu-Made account</a>: orders, deliveries and plan links (sign in with this email).</p></body>`)
+    : html + `<p><a href="${ACCOUNT_URL}">Your Menu-Made account</a></p>`;
+  const outText = typeof text !== "string" || text.includes(ACCOUNT_URL) ? text
+    : `${text}\n\nYour account (orders, deliveries and plan links; sign in with this email): ${ACCOUNT_URL}`;
+  return { html: outHtml, text: outText };
+}
+
 async function sendTransactionalEmail(env, { to, subject, html, text, idempotencyKey, purpose, templateKey, context = {}, bccInternal = false }) {
+  if (isCustomerEmail(to, purpose, env)) ({ html, text } = withAccountLink(html, text));
   let ok = false;
   let providerId = null;
   let error = null;
@@ -158,6 +181,8 @@ async function sendTransactionalEmail(env, { to, subject, html, text, idempotenc
 }
 
 export {
+  isCustomerEmail,
+  withAccountLink,
   SELF_TEST_EMAIL,
   RESEND_ENDPOINT,
   FROM_ADDRESS,
