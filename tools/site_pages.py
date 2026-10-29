@@ -12,7 +12,7 @@ from pathlib import Path
 import re
 
 ROOT = Path(__file__).resolve().parent.parent
-CSS_VERSION = "20261028-stage9b"
+CSS_VERSION = "20261028-accounts"
 CATALOG_JS = '<script src="site-catalog.js?v=20261028-stage9" defer></script>'
 
 NAV = [
@@ -21,6 +21,7 @@ NAV = [
     ("services.html", "Services"),
     ("portfolio.html", "Our Work"),
     ("about.html", "About"),
+    ("account.html", "Account"),
 ]
 
 FOOTER_LINKS = (
@@ -32,6 +33,7 @@ FOOTER_LINKS = (
     '<a href="accessibility-services.html">Accessibility Monitoring</a>'
     '<a href="portfolio.html">Our Work</a>'
     '<a href="about.html">Meet JP &amp; Nino</a>'
+    '<a href="account.html">Your account</a>'
     '<a href="privacy.html">Privacy</a>'
     '<a href="accessability.html">Site Accessibility</a>'
     '</nav>'
@@ -688,6 +690,38 @@ def page_privacy():
     return head(title, desc, "privacy.html", "legal-page") + body + foot()
 
 
+def page_account():
+    title = "Your Account — MENU-MADE"
+    desc = "Sign in with your email to see your plans, orders, deliveries and the links to make changes. No password needed."
+    body = """<section class="hero mm-page-hero"><div class="container">
+<span class="pill">Your account</span>
+<h1 id="accountTitle">Your Menu-Made account</h1>
+<p class="hero-intro" id="accountIntro">Your plans, orders, deliveries and the links to make changes, in one place. No password: we email you a sign-in link.</p>
+</div></section>
+
+<section class="section" id="signIn" aria-labelledby="signInTitle"><div class="container mm-account-narrow">
+  <form class="mm-card" id="signInForm" novalidate>
+    <h2 id="signInTitle">Sign in</h2>
+    <p>Enter the email you used at checkout. We’ll send a link that signs you in; it works once, for 20 minutes.</p>
+    <div class="field"><label for="signInEmail">Email</label><input id="signInEmail" type="email" autocomplete="email" inputmode="email" maxlength="150" required></div>
+    <button class="btn primary" id="signInBtn" type="submit">Email me a sign-in link</button>
+    <p class="mini" id="signInStatus" role="status" aria-live="polite"></p>
+  </form>
+  <p class="mini">Only need your card, invoices or plan? <a id="billingLogin" href="https://billing.stripe.com/p/login/bJe28rgRl2FGaL22yd9IQ00" rel="noopener">Sign in to billing</a> with the same email.</p>
+</div></section>
+
+<section class="section" id="dashboard" hidden aria-labelledby="dashTitle"><div class="container">
+  <div class="mm-account-head"><h2 id="dashTitle">Signed in as <span id="accountEmail"></span></h2><button class="btn secondary" id="signOutBtn" type="button">Sign out</button></div>
+  <div id="accountBusinesses"></div>
+  <h2>Plans</h2><div class="mm-account-list" id="accountPlans"></div>
+  <h2>Orders</h2><div class="mm-account-list" id="accountOrders"></div>
+  <h2>Deliveries</h2><div class="mm-account-list" id="accountDeliveries"></div>
+  <p class="mini">Something missing or wrong? Reply to any of our emails or write to <a href="mailto:info@menu-made.com">info@menu-made.com</a>.</p>
+</div></section>
+"""
+    return head(title, desc, "account.html", "account-page") + body + foot('<script src="account.js?v=20261028-accounts" defer></script>\n')
+
+
 def page_start():
     src = (ROOT / "contact.html").read_text()
     inquiry = src[src.index('<section class="section section-image" id="inquiry"'):src.index("</main>")]
@@ -873,6 +907,7 @@ def main():
         "services.html": page_services(),
         "contact.html": page_start(),
         "privacy.html": page_privacy(),
+        "account.html": page_account(),
         "website-design.html": page_website(),
         "google-visibility.html": page_google(),
         "accessibility-services.html": page_accessibility(),

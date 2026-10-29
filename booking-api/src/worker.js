@@ -23,6 +23,7 @@ import { handleExtraPagesDone, handleExtraPagesPay } from "./producers/menu-qr/p
 import { advanceSelfTests } from "./selftest/menu-qr-selftest.js";
 import { advanceWebsiteTrialSelfTests } from "./selftest/website-trial-selftest.js";
 import { advanceDomainSetupSelfTests } from "./selftest/domain-setup-selftest.js";
+import { advanceAccountSelfTests } from "./selftest/account-selftest.js";
 import { advanceMenuCareSelfTests } from "./selftest/menu-care-selftest.js";
 import { advanceConversionSelfTests } from "./selftest/conversion-selftest.js";
 import { advanceWebsiteCareSelfTests } from "./selftest/website-care-selftest.js";
@@ -47,6 +48,7 @@ import { startProductionNow } from "./onboarding/extras.js";
 import { getOnboarding, saveOnboarding } from "./onboarding/onboarding.js";
 import { uploadOnboardingAsset } from "./onboarding/uploads.js";
 import { runNextProductionStep, runScheduledProduction } from "./workflows/runner.js";
+import { handleMe, handleOpen, handleSignIn, handleSignOut } from "./account/account.js";
 
 var worker_default = {
   async fetch(request, env, ctx) {
@@ -129,6 +131,12 @@ var worker_default = {
     if (extraPagesMatch && request.method === "GET") {
       return extraPagesMatch[2] ? handleExtraPagesDone(request) : handleExtraPagesPay(request, env, extraPagesMatch[1]);
     }
+    // Customer accounts (stage 9 part 2): emailed sign-in link, session cookie, account summary.
+    if (request.method === "POST" && url.pathname === "/api/account/sign-in") return handleSignIn(request, env);
+    if (request.method === "POST" && url.pathname === "/api/account/sign-out") return handleSignOut(request, env);
+    if (request.method === "GET" && url.pathname === "/api/account/me") return handleMe(request, env);
+    const accountOpen = url.pathname.match(/^\/api\/account\/open\/([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})$/i);
+    if (accountOpen && (request.method === "GET" || request.method === "POST")) return handleOpen(request, env, accountOpen[1].toLowerCase());
     const portalMatch = url.pathname.match(/^\/api\/billing-portal\/([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})$/i);
     if (portalMatch && (request.method === "GET" || request.method === "POST")) {
       return handleBillingPortal(request, env, portalMatch[1].toLowerCase());
@@ -289,6 +297,7 @@ const mmWorkerWithBooking = {
       await advanceGoogleVisibilitySelfTests(env, app).catch((error) => console.error("Google Visibility self-test failed:", error instanceof Error ? error.message : String(error)));
       await advanceStage5ExitTests(env, app).catch((error) => console.error("Stage 5 exit test failed:", error instanceof Error ? error.message : String(error)));
       await advanceDomainSetupSelfTests(env).catch((error) => console.error("Domain setup self-test failed:", error instanceof Error ? error.message : String(error)));
+      await advanceAccountSelfTests(env).catch((error) => console.error("Account self-test failed:", error instanceof Error ? error.message : String(error)));
       await runDomainWatch(env).catch((error) => console.error("Domain watch failed:", error instanceof Error ? error.message : String(error)));
       await runSiteHealthPass(env).catch((error) => console.error("Site health pass failed:", error instanceof Error ? error.message : String(error)));
       // Once a day: reconcile subscriptions with Stripe and create annual plans' monthly jobs.

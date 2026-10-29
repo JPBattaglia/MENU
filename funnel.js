@@ -5,7 +5,7 @@
   if (!['menu-made.com', 'www.menu-made.com'].includes(windowHost)) return;
   const query = new URLSearchParams(location.search);
   if (navigator.globalPrivacyControl || navigator.doNotTrack === '1' || query.get('mm_measurement') === 'off') return;
-  const pageNames = ['index', 'services', 'contact', 'about', 'accessability', 'portfolio', 'sample-menu', 'checkoutsuccess', 'website-design', 'google-visibility', 'accessibility-services', 'work-pinecrest', 'work-nino', 'work-marios', 'app-demo', 'plans', 'privacy'];
+  const pageNames = ['index', 'services', 'contact', 'about', 'accessability', 'portfolio', 'sample-menu', 'checkoutsuccess', 'website-design', 'google-visibility', 'accessibility-services', 'work-pinecrest', 'work-nino', 'work-marios', 'app-demo', 'plans', 'privacy', 'account'];
   const paths = new Set(['/', ...pageNames.flatMap(name => ['/' + name, '/' + name + '.html'])]);
   const path = paths.has(location.pathname) ? location.pathname : '/other';
   const token = value => /^[a-z0-9_-]{1,64}$/i.test(value || '') ? value.toLowerCase() : null;
