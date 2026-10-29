@@ -275,6 +275,24 @@ ONCE = {
 }
 
 
+# Real outputs from each product's daily self-test, served by the worker (booking-api/src/delivery/samples.js) with
+# the test business renamed "Sample Cafe". Only products whose sample shows them well are linked; the Website
+# Package and the Google products have none yet.
+SAMPLES = {
+    "ONLINE_MENU_QR": "/api/samples/menu",
+    "MENU_CARE": "/api/samples/menu",
+    "SOCIAL_POSTS": "/api/samples/social",
+    "ACCESSIBILITY_MONITORING": "/api/samples/accessibility",
+    "CONVERSION_FIX": "/api/samples/conversion",
+    "GUEST_APP": "/api/samples/app/",
+}
+
+
+def sample_link(code):
+    url = SAMPLES.get(code)
+    return f'<a class="btn ghost mm-sample-link" href="{url}" target="_blank" rel="noopener">See a real sample<span class="mm-sr"> (opens in a new tab)</span></a>' if url else ""
+
+
 def product_section(code, p, kind):
     gets = "".join(f"<li>{g}</li>" for g in p["gets"])
     if kind == "plan":
@@ -297,7 +315,7 @@ def product_section(code, p, kind):
     <div><h4>You get</h4><ul class="mm-checks">{gets}</ul></div>
     <div><h4>You provide</h4><p>{p['provide']}</p><h4>How it’s delivered</h4><p>{p['delivery']}</p></div>
   </div>
-  <div class="mm-product-actions">{cta}</div>
+  <div class="mm-product-actions">{cta}{sample_link(code)}</div>
 </article>
 """
 
