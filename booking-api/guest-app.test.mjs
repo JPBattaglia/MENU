@@ -272,3 +272,22 @@ test('the app form is pre-filled from the business website order, and the websit
     assert.match(spec.assets.logo, /^data:image\/png;base64,/, 'the website logo is drawn into the icons');
   });
 });
+
+test('with no app-form or website logo, the logo uploaded with the Online Menu + QR is drawn into the icons; a WebP one is skipped', async () => {
+  for (const [mime, expectLogo] of [['image/jpeg', true], ['image/webp', false]]) {
+    const f = setup();
+    const t = '2026-10-01T00:00:00.000Z';
+    f.sql(`INSERT INTO projects (id, order_id, order_item_id, business_id, customer_id, project_type, status, workflow_key, workflow_version, created_at, updated_at) VALUES ('mq', 'o1', 'i1', 'biz', 'cust', 'MENU', 'DELIVERED', 'MENU_QR_V1', 1, ?, ?)`, t, t);
+    f.sql(`INSERT INTO assets (id, business_id, customer_id, project_id, asset_type, storage_provider, storage_key, original_filename, mime_type, size_bytes, checksum, status, uploaded_at, metadata_json) VALUES ('menu-logo', 'biz', 'cust', 'mq', 'LOGO', 'R2', 'menu/logo', 'logo', ?, 70, 'x', 'VALID', ?, '{"input_key":"logo","environment":"live"}')`, mime, t);
+    await f.ASSETS.put('menu/logo', mime === 'image/jpeg' ? new Uint8Array([0xff, 0xd8, 0xff, 0xe0, 1, 2]) : new Uint8Array([0x52, 0x49, 0x46, 0x46]));
+    await withFetch(f.fetch, async () => {
+      await submit(f, {}, null);
+      await api.runScheduledProduction(f.env); await Promise.all(f.pending);
+      const auth = await renderAuth(f);
+      const { job } = await (await call(f, 'https://menu-made.com/api/render-jobs/next', { headers: auth })).json();
+      const spec = await (await renderJobs.handleRenderJobs(new Request(`https://menu-made.com/api/render-jobs/${job}`, { headers: auth }), f.env, job)).json();
+      if (expectLogo) assert.match(spec.assets.logo, /^data:image\/jpeg;base64,/, 'the menu logo is drawn into the icons');
+      else assert.equal(spec.assets?.logo, undefined, 'WebP cannot be drawn: initials instead');
+    });
+  }
+});
