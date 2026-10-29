@@ -3,6 +3,8 @@ import { handleApprovalRequest, handleBatchApprovalRequest } from "./approvals/a
 import { mmBookingEnvironment, mmBookingHandler } from "./booking/booking.js";
 import { getPublicOffers, getSiteCatalog } from "./checkout/catalog.js";
 import { recordFunnelEvent } from "./checkout/funnel.js";
+import { handleCheckoutResume, maybeFollowUpAbandonedCheckouts } from "./checkout/abandoned.js";
+import { advanceAbandonedCheckoutSelfTests } from "./selftest/abandoned-checkout-selftest.js";
 import { CheckoutValidationError, quoteMenuPackage } from "./checkout/quote.js";
 import { createCheckoutSession, createCheckoutSessionTest } from "./checkout/session.js";
 import { handleStripeWebhook } from "./checkout/webhook.js";
@@ -137,6 +139,9 @@ var worker_default = {
     if (request.method === "GET" && url.pathname === "/api/account/me") return handleMe(request, env);
     const accountOpen = url.pathname.match(/^\/api\/account\/open\/([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})$/i);
     if (accountOpen && (request.method === "GET" || request.method === "POST")) return handleOpen(request, env, accountOpen[1].toLowerCase());
+    // Abandoned-checkout follow-up (stage 9 part 2): the emailed link reopens the same order in a new Stripe session.
+    const resumeMatch = url.pathname.match(/^\/api\/checkout\/resume\/([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})$/i);
+    if (resumeMatch && (request.method === "GET" || request.method === "POST")) return handleCheckoutResume(request, env, resumeMatch[1].toLowerCase());
     const portalMatch = url.pathname.match(/^\/api\/billing-portal\/([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})$/i);
     if (portalMatch && (request.method === "GET" || request.method === "POST")) {
       return handleBillingPortal(request, env, portalMatch[1].toLowerCase());
@@ -298,6 +303,9 @@ const mmWorkerWithBooking = {
       await advanceStage5ExitTests(env, app).catch((error) => console.error("Stage 5 exit test failed:", error instanceof Error ? error.message : String(error)));
       await advanceDomainSetupSelfTests(env).catch((error) => console.error("Domain setup self-test failed:", error instanceof Error ? error.message : String(error)));
       await advanceAccountSelfTests(env).catch((error) => console.error("Account self-test failed:", error instanceof Error ? error.message : String(error)));
+      await advanceAbandonedCheckoutSelfTests(env, app).catch((error) => console.error("Abandoned checkout self-test failed:", error instanceof Error ? error.message : String(error)));
+      // Once an hour: one reminder email to buyers who left a checkout unpaid 24-72 hours ago.
+      await maybeFollowUpAbandonedCheckouts(env).catch((error) => console.error("Abandoned checkout follow-up failed:", error instanceof Error ? error.message : String(error)));
       await runDomainWatch(env).catch((error) => console.error("Domain watch failed:", error instanceof Error ? error.message : String(error)));
       await runSiteHealthPass(env).catch((error) => console.error("Site health pass failed:", error instanceof Error ? error.message : String(error)));
       // Once a day: reconcile subscriptions with Stripe and create annual plans' monthly jobs.

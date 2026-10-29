@@ -46,7 +46,28 @@ async function createCheckout(request, env, environment) {
     if (!pending.ok) {
       return jsonResponse({ ok: false, error: pending.error }, pending.status);
     }
-    const tracking = data?.tracking || {};
+    const opened = await openStripeSession(env, environment, { cart, normalizedItems, orderItems, pending, tracking: data?.tracking || {} });
+    if (!opened.ok) {
+      return jsonResponse({ ok: false, order_id: pending.orderId, stripe_error: opened.stripeError }, opened.status);
+    }
+    return jsonResponse({
+      ok: true,
+      environment,
+      order_id: pending.orderId,
+      url: opened.url,
+      ...(cart.plan ? { mode: "subscription", plan: cart.plan.offerCode, interval: cart.plan.interval } : {})
+    });
+  } catch (error) {
+    return jsonResponse(
+      { ok: false, error: error instanceof Error ? error.message : String(error) },
+      error instanceof CheckoutValidationError ? error.status : 500
+    );
+  }
+}
+
+// Builds the Stripe Checkout Session for an order that already exists (new checkouts, and the abandoned-checkout
+// "Finish checkout" link, which reopens the same order so its uploaded menu and notes carry over).
+async function openStripeSession(env, environment, { cart, normalizedItems, orderItems, pending, tracking = {}, resumed = false }) {
     const params = new URLSearchParams();
     params.append("mode", cart.plan ? "subscription" : "payment");
     params.append("success_url", `https://menu-made.com/checkoutsuccess.html?session_id={CHECKOUT_SESSION_ID}&order_id=${encodeURIComponent(pending.orderId)}`);
@@ -73,20 +94,26 @@ async function createCheckout(request, env, environment) {
     if (cart.plan) {
       appendSubscriptionParams(params, cart, normalizedItems.length, environment, pending);
     }
+    if (resumed) params.append("metadata[resumed]", "1");
     let stripeData;
     try {
       stripeData = await stripeRequest(env, environment, "/v1/checkout/sessions", { method: "POST", params });
     } catch (stripeError) {
-      await env.DB.prepare(`
-          UPDATE orders SET status = 'FAILED', payment_status = 'FAILED', updated_at = ? WHERE id = ?
-        `).bind(nowIso(), pending.orderId).run();
-      return jsonResponse({ ok: false, order_id: pending.orderId, stripe_error: stripeError.body || stripeError.message }, stripeError.status || 500);
+      // A failed reopen leaves the order as it was (still payable from a later click); a failed first open closes it.
+      if (!resumed) {
+        await env.DB.prepare(`
+            UPDATE orders SET status = 'FAILED', payment_status = 'FAILED', updated_at = ? WHERE id = ?
+          `).bind(nowIso(), pending.orderId).run();
+      }
+      return { ok: false, status: stripeError.status || 500, stripeError: stripeError.body || stripeError.message };
     }
     if (!stripeData?.url) {
-      await env.DB.prepare(`
-          UPDATE orders SET status = 'FAILED', payment_status = 'FAILED', updated_at = ? WHERE id = ?
-        `).bind(nowIso(), pending.orderId).run();
-      return jsonResponse({ ok: false, order_id: pending.orderId, stripe_error: stripeData }, 500);
+      if (!resumed) {
+        await env.DB.prepare(`
+            UPDATE orders SET status = 'FAILED', payment_status = 'FAILED', updated_at = ? WHERE id = ?
+          `).bind(nowIso(), pending.orderId).run();
+      }
+      return { ok: false, status: 500, stripeError: stripeData };
     }
     await env.DB.prepare(`
         UPDATE orders SET stripe_checkout_session_id = ?, updated_at = ? WHERE id = ?
@@ -104,22 +131,10 @@ async function createCheckout(request, env, environment) {
         campaign: normalizeNullableText(tracking.campaign),
         referrer: normalizeNullableText(tracking.referrer),
         landing_path: normalizeNullableText(tracking.landing_path),
-        metadata: { environment, stripe_checkout_session_id: stripeData.id }
+        metadata: { environment, stripe_checkout_session_id: stripeData.id, ...(resumed ? { resumed: true } : {}) }
       });
     }
-    return jsonResponse({
-      ok: true,
-      environment,
-      order_id: pending.orderId,
-      url: stripeData.url,
-      ...(cart.plan ? { mode: "subscription", plan: cart.plan.offerCode, interval: cart.plan.interval } : {})
-    });
-  } catch (error) {
-    return jsonResponse(
-      { ok: false, error: error instanceof Error ? error.message : String(error) },
-      error instanceof CheckoutValidationError ? error.status : 500
-    );
-  }
+    return { ok: true, url: stripeData.url, sessionId: stripeData.id };
 }
 
 function createCheckoutSessionTest(request, env) {
@@ -131,6 +146,7 @@ function createCheckoutSession(request, env) {
 }
 
 export {
+  openStripeSession,
   createCheckout,
   createCheckoutSessionTest,
   createCheckoutSession
