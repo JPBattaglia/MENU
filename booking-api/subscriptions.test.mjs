@@ -165,7 +165,7 @@ test('site catalog lists every plan with monthly and annual prices, bundle conte
   try {
     const res = await h.call('/api/catalog');
     assert.equal(res.status, 200);
-    assert.match(res.headers.get('Cache-Control'), /max-age=300/);
+    assert.match(res.headers.get('Cache-Control'), /max-age=60/);
     const body = await res.json();
     const by = Object.fromEntries(body.offers.map((o) => [o.code, o]));
     for (const [code, entry] of Object.entries({ ...catalog.subscriptions, ...catalog.bundles })) {
