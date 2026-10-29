@@ -156,3 +156,18 @@ test('the ACCOUNT_SIGNIN self-test signs the self-test buyer in and out and pass
     assert.equal(h.row(`SELECT COUNT(*) AS n FROM account_sessions WHERE revoked_at IS NULL`).n, 0);
   } finally { h.restore(); }
 });
+
+test('customer emails carry the Your account button; owner alerts and the sign-in email do not', async () => {
+  const { isCustomerEmail, withAccountLink, brandedEmailHtml } = await import('./src/lib/email.js');
+  const env = { OWNER_EMAIL: 'owner@example.com' };
+  assert.equal(isCustomerEmail('joe@joespizza.example', 'ORDER_DELIVERY', env), true);
+  assert.equal(isCustomerEmail('owner@example.com', 'ORDER_DELIVERY', env), false);
+  assert.equal(isCustomerEmail('joe@joespizza.example', 'AUTOMATION_ALERT', env), false);
+  assert.equal(isCustomerEmail('joe@joespizza.example', 'MENU_CARE_BLOCKED_OWNER', env), false);
+  assert.equal(isCustomerEmail('joe@joespizza.example', 'ACCOUNT_SIGN_IN', env), false);
+  const out = withAccountLink(brandedEmailHtml({ preheader: 'p', eyebrow: 'e', heading: 'h', paragraphs: ['x'] }), 'Hello');
+  assert.equal((out.html.match(/https:\/\/menu-made\.com\/account/g) || []).length, 1);
+  assert.match(out.html, /Your account<\/a><\/td><\/tr><tr><td style="padding:24px 32px;background-color:#071f2c;">/);
+  assert.match(out.text, /Your account .*https:\/\/menu-made\.com\/account$/);
+  assert.deepEqual(withAccountLink(out.html, out.text), out, 'never added twice');
+});
