@@ -195,8 +195,14 @@ async function handleMerchCheckout(request, env) {
 
   const params = new URLSearchParams();
   params.append("mode", "payment");
-  params.append("success_url", `https://menu-made.com/checkoutsuccess.html?session_id={CHECKOUT_SESSION_ID}&order_id=${encodeURIComponent(pending.orderId)}`);
-  params.append("cancel_url", "https://menu-made.com/staff-merch.html");
+  // Each site keeps its own staff merch page: an order started on ninobattaglia.com returns there.
+  if (data?.return_to === "nino") {
+    params.append("success_url", `https://ninobattaglia.com/staff-merch.html?paid=${encodeURIComponent(pending.orderId)}`);
+    params.append("cancel_url", "https://ninobattaglia.com/staff-merch.html");
+  } else {
+    params.append("success_url", `https://menu-made.com/checkoutsuccess.html?session_id={CHECKOUT_SESSION_ID}&order_id=${encodeURIComponent(pending.orderId)}`);
+    params.append("cancel_url", "https://menu-made.com/staff-merch.html");
+  }
   params.append("customer", customer.id);
   params.append("automatic_tax[enabled]", "true");
   params.append("metadata[order_id]", pending.orderId);

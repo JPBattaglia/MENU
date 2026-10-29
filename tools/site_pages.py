@@ -585,6 +585,7 @@ def page_staff_merch():
 
 <section class="section" aria-labelledby="logo-title">
   <div class="container">
+    <p id="merchStatus" class="merch-status" role="status" hidden></p>
     <div class="merch-panel">
       <h2 id="logo-title">1. Upload your logo</h2>
       <label id="logoDrop" class="merch-drop" for="logoFile">
@@ -663,11 +664,10 @@ def page_staff_merch():
       <button id="payBtn" class="btn primary" type="button">Pay securely</button>
       <p><small>Payment by Stripe. Prices are checked again with Printful before you pay. Items usually take 3-7 days to make, then ship; we email the tracking link.</small></p>
     </div>
-    <p id="merchStatus" class="merch-status" hidden></p>
   </div>
 </section>
 """
-    scripts = '<script src="staff-merch.js?v=20261028-stage10d" defer></script>\n'
+    scripts = '<script src="staff-merch.js?v=20261028-stage10e" defer></script>\n'
     return head(title, desc, "staff-merch.html", "merch-page") + body + foot(scripts)
 
 
