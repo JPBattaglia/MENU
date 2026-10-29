@@ -21,6 +21,7 @@ import { base64UrlEncode, signLinkToken } from "../lib/links.js";
 import { decryptPushPayload, verifyVapidHeader } from "../lib/webpush.js";
 import { COUNTER_LINK_KIND, PUSH_LINK_KIND, counterCode, sendPushMessage, windowAt } from "../producers/guest-app/engage.js";
 import { updateTest } from "./menu-qr-selftest.js";
+import { dailyClock } from "./daily-clock.js";
 
 const KIND = "GUEST_APP_PUSH_RUN";
 const DAILY_HOUR_UTC = 16;
@@ -28,7 +29,8 @@ const DAILY_MINUTE_FROM = 50;
 const NAME = "Push Self-Test Cafe";
 const REWARD = "a free self-test coffee";
 
-async function maybeScheduleDaily(env, now = new Date()) {
+async function maybeScheduleDaily(env, now = dailyClock(env)) {
+  if (!now) return;
   if (now.getUTCHours() !== DAILY_HOUR_UTC || now.getUTCMinutes() < DAILY_MINUTE_FROM) return;
   const recent = await env.DB.prepare(`SELECT 1 FROM self_tests WHERE kind = ? AND created_at > ? LIMIT 1`).bind(KIND, new Date(now.getTime() - 20 * 3600000).toISOString()).first();
   if (recent) return;

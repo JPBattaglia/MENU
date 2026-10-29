@@ -18,6 +18,7 @@ import { SELFTEST_SOURCE } from "../producers/google-visibility/visibility-step.
 import { ensureProductionWorkflow } from "../workflows/definitions.js";
 import { PHOTO_PNG } from "./google-care-selftest.js";
 import { updateTest } from "./menu-qr-selftest.js";
+import { dailyClock } from "./daily-clock.js";
 
 const KIND = "GOOGLE_VISIBILITY_RUN";
 const STAGE_TIMEOUT_MINUTES = 25;
@@ -25,7 +26,8 @@ const DAILY_HOUR_UTC = 18; // 11am Pacific (PDT)
 const ABOUT = "Family-run trattoria in North Beach since the owners moved from Bologna. Fresh pasta rolled every morning, slow-cooked ragù and a small natural wine list. Big tables for families and groups.";
 const state = (test) => parseJsonOrNull(test.state_json) || {};
 
-async function maybeScheduleDaily(env, now = new Date()) {
+async function maybeScheduleDaily(env, now = dailyClock(env)) {
+  if (!now) return;
   if (now.getUTCHours() !== DAILY_HOUR_UTC || now.getUTCMinutes() > 10 || !googleConfig(env)) return;
   const owner = await env.DB.prepare(`SELECT 1 FROM google_connections WHERE subscription_id = ? AND status = 'ACTIVE'`).bind(OWNER).first();
   if (!owner) return;

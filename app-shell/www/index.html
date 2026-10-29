@@ -3,18 +3,42 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; img-src 'self' https: data:; style-src 'self' 'unsafe-inline'; script-src 'self'; connect-src https:">
 <title>App</title>
-<style>
-  :root { --brand: #1f4e5f; }
-  body { margin: 0; font: 16px/1.5 -apple-system, system-ui, sans-serif; background: #fff; color: #1a1a1a; }
-  header { background: var(--brand); color: #fff; padding: calc(env(safe-area-inset-top) + 16px) 16px 16px; }
-  h1 { margin: 0; font-size: 22px; }
-  main { padding: 16px; }
-</style>
+<link rel="stylesheet" href="app.css">
 </head>
 <body>
-<header><h1 id="name">Loading…</h1></header>
-<main id="content"><p>Menu, specials and rewards load here.</p></main>
+<header id="top">
+  <img id="logo" alt="" hidden>
+  <div><h1 id="name">Loading…</h1><p id="address"></p></div>
+</header>
+<p id="status" class="status" role="status" aria-live="polite" hidden></p>
+<main>
+  <section id="tab-home" class="tab" aria-labelledby="t-home">
+    <ul id="actions" class="actions" aria-label="Quick actions"></ul>
+    <div id="specials-box" class="card" hidden><h2>Today's specials</h2><p id="specials"></p></div>
+    <div class="card"><h2>Hours</h2><dl id="hours"></dl></div>
+  </section>
+  <section id="tab-menu" class="tab" aria-labelledby="t-menu" hidden><div id="menu"></div></section>
+  <section id="tab-rewards" class="tab" aria-labelledby="t-rewards" hidden>
+    <div class="card" id="rewards-off"><h2>Rewards</h2><p>Rewards aren't available here yet.</p></div>
+    <div class="card" id="rewards-on" hidden>
+      <h2>Your rewards card</h2>
+      <p id="reward-text"></p>
+      <div class="bar" aria-hidden="true"><span id="reward-bar"></span></div>
+      <p id="reward-count" class="big"></p>
+      <label for="code">Code shown at the counter</label>
+      <input id="code" class="code" inputmode="numeric" autocomplete="one-time-code" maxlength="6" pattern="[0-9]{6}">
+      <div class="row"><button id="earn" type="button">Collect a visit</button><button id="redeem" type="button" hidden>Use my reward</button></div>
+      <p id="reward-msg" class="note" aria-live="polite"></p>
+    </div>
+  </section>
+</main>
+<nav class="tabs" aria-label="Sections">
+  <button id="t-home" data-tab="home" aria-current="page">Home</button>
+  <button id="t-menu" data-tab="menu">Menu</button>
+  <button id="t-rewards" data-tab="rewards">Rewards</button>
+</nav>
 <script src="app.js"></script>
 </body>
 </html>

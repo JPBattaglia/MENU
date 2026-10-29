@@ -9,6 +9,7 @@ import { verifyLinkToken } from "../../lib/links.js";
 import { loadLiveApp } from "./app-step.js";
 import { APP_JS, serviceWorker, workerVersion } from "./build.js";
 import { handleAppApi } from "./engage.js";
+import { handleAppContent, handleNativePreflight } from "./native.js";
 
 const CSP = "default-src 'none'; img-src 'self' data:; style-src 'unsafe-inline'; script-src 'self'; worker-src 'self'; manifest-src 'self'; connect-src 'self'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'";
 const TYPES = { "index.html": "text/html; charset=utf-8", "manifest.webmanifest": "application/manifest+json", "app.js": "text/javascript; charset=utf-8", "sw.js": "text/javascript; charset=utf-8", "qr.svg": "image/svg+xml" };
@@ -42,7 +43,11 @@ function withCurrentClient(build) {
 
 // path is what follows "app/" ("" for the app itself). "api/..." is the app's own API (engage.js).
 async function handleLiveApp(request, env, slug, path) {
-  if (/^api\//.test(path || "")) return handleAppApi(request, env, slug, path.slice(4));
+  if (/^api\//.test(path || "")) {
+    if (request.method === "OPTIONS") return handleNativePreflight(request);
+    if (path === "api/content" && (request.method === "GET" || request.method === "HEAD")) return handleAppContent(request, env, slug);
+    return handleAppApi(request, env, slug, path.slice(4));
+  }
   if (request.method !== "GET" && request.method !== "HEAD") return new Response("Method not allowed", { status: 405, headers: { Allow: "GET, HEAD" } });
   if (!env.DB || !env.ASSETS) return simplePage(503, "Temporarily unavailable", "<p>Please try again in a minute.</p>");
   let live;

@@ -11,11 +11,13 @@ import { accessTokenFor, getLocation, listProfiles, listReviews } from "../googl
 import { OWNER } from "../google/connect.js";
 import { googleConfig } from "../google/oauth.js";
 import { updateTest } from "./menu-qr-selftest.js";
+import { dailyClock } from "./daily-clock.js";
 
 const KIND = "GOOGLE_API_HEALTH";
 const DAILY_HOUR_UTC = 17; // 10am Pacific (PDT)
 
-async function maybeScheduleDaily(env, now = new Date()) {
+async function maybeScheduleDaily(env, now = dailyClock(env)) {
+  if (!now) return;
   if (now.getUTCHours() !== DAILY_HOUR_UTC || !googleConfig(env)) return;
   const owner = await env.DB.prepare(`SELECT 1 FROM google_connections WHERE subscription_id = ? AND status = 'ACTIVE'`).bind(OWNER).first();
   if (!owner) return;

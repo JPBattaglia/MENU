@@ -191,3 +191,12 @@ test('a daily self-test is scheduled at 8am Pacific, at most once a day', async 
   const created = f.rows(`SELECT requested_by, status FROM self_tests`);
   assert.deepEqual(created, [{ requested_by: 'daily', status: 'REQUESTED' }]);
 });
+
+test('the deployed worker keeps the daily self-test schedule on (SELFTEST_SCHEDULE), and nothing else schedules them', async () => {
+  const { readFileSync } = await import('node:fs');
+  const config = readFileSync(new URL('./wrangler.jsonc', import.meta.url), 'utf8');
+  assert.match(config, /"SELFTEST_SCHEDULE":\s*"on"/, 'without it every daily self-test silently stops in production');
+  const { dailyClock } = await import('./src/selftest/daily-clock.js');
+  assert.equal(dailyClock({}), null);
+  assert.ok(dailyClock({ SELFTEST_SCHEDULE: 'on' }) instanceof Date);
+});
