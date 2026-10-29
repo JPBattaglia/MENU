@@ -106,7 +106,19 @@ function withAccountLink(html, text) {
   return { html: outHtml, text: outText };
 }
 
+// Stage 10 cross-sell: every Menu-made delivery email offers staff merch and Nino's design services (except the
+// merch and Nino design deliveries themselves, which already do).
+const MERCH_URL = "https://menu-made.com/staff-merch.html";
+function withCrossSell(html, text) {
+  const block = `<tr><td style="padding:16px 32px;border-top:1px solid #dce8ec;"><p style="margin:0;font-size:14px;line-height:1.6;color:#26434f;">Shirts for your team in Nino Battaglia's designs, with your logo if you like: <a href="${MERCH_URL}" style="color:#00727c;">staff merch</a>. Need a logo, flyer or printed menu? <a href="https://ninobattaglia.com/services.html#design-services" style="color:#00727c;">Design by Nino</a>.</p></td></tr>`;
+  const marker = '<tr><td style="padding:24px 32px;background-color:#071f2c;">';
+  const outHtml = typeof html === "string" && !html.includes(MERCH_URL) && html.includes(marker) ? html.replace(marker, block + marker) : html;
+  const outText = typeof text === "string" && !text.includes(MERCH_URL) ? `${text}\n\nStaff shirts in Nino Battaglia's designs: ${MERCH_URL}\nDesign by Nino (logos, flyers, menus): https://ninobattaglia.com/services.html` : text;
+  return { html: outHtml, text: outText };
+}
+
 async function sendTransactionalEmail(env, { to, subject, html, text, idempotencyKey, purpose, templateKey, context = {}, bccInternal = false }) {
+  if (purpose === "ORDER_DELIVERY" && isCustomerEmail(to, purpose, env) && !/^delivery_(merch|nino_design)_/.test(String(templateKey || ""))) ({ html, text } = withCrossSell(html, text));
   if (isCustomerEmail(to, purpose, env)) ({ html, text } = withAccountLink(html, text));
   let ok = false;
   let providerId = null;

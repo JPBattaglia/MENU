@@ -28,7 +28,10 @@ var DELIVERABLE_LABELS = {
   SOCIAL_PACK: "Graphics pack (ZIP of PNG graphics and captions)",
   APP_BUILD: "Guest App (installable web app)",
   REVIEW_REPLY_DRAFTS: "Review reply drafts (web page)",
-  GOOGLE_PROFILE_REPORT: "Google profile report (web page)"
+  GOOGLE_PROFILE_REPORT: "Google profile report (web page)",
+  NINO_DESIGN_PREVIEW: "Your designs (web page)",
+  NINO_DESIGN_PACK: "All design files (ZIP)",
+  MERCH_PROOF: "Staff merch order proof (web page)"
 };
 
 function ownerEmailAddress(env) {

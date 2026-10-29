@@ -1,4 +1,5 @@
 import { resolveActiveOffer } from "./catalog.js";
+import { productForCode, quoteMenuDesign } from "../producers/nino-design/products.js";
 
 // Keep the quoted menu scope with its existing offer/order item, so prepaid
 // hosting and extra pages do not create unrelated fulfillment projects.
@@ -41,12 +42,16 @@ function quoteMenuPackage(menuPages) {
 
 function appendCheckoutLineItem(params, item, index, environment) {
   const prefix = `line_items[${index}]`;
-  if (item.menuPackage || environment === "sandbox") {
+  if (item.menuPackage || item.inlinePrice || environment === "sandbox") {
     params.append(`${prefix}[price_data][currency]`, item.currency.toLowerCase());
     params.append(`${prefix}[price_data][unit_amount]`, String(item.priceCents));
     params.append(`${prefix}[price_data][product_data][name]`, item.menuPackage
       ? `${item.offerName} — ${item.menuPackage.menu_pages} menu pages + first-year hosting`
+      : item.ninoDesign ? `Nino Battaglia design: ${item.offerName}${item.extraMetadata?.design_pages ? ` (${item.extraMetadata.design_pages} pages)` : ""}`
       : item.offerName);
+    if (item.ninoDesign) {
+      params.append(`${prefix}[price_data][product_data][description]`, "Designed by Nino Battaglia's studio. After payment you'll get a short brief form; you see the result before it's final.");
+    }
     if (item.menuPackage) {
       params.append(`${prefix}[price_data][product_data][description]`, "$129 setup includes up to 3 pages and two revisions; $20 per additional page; $15 first-year hosting. After the first year, hosting continues with Menu Care; without it the menu goes offline 30 days later.");
     }
@@ -77,6 +82,22 @@ async function normalizeCheckoutItems(itemsInput, env, checkoutOptions = {}, { r
     ) : 1;
     const isMenu = String(catalogRow.offer_code).toUpperCase() === "ONLINE_MENU_QR";
     let menuPackage;
+    // Nino design services (stage 10) are charged with inline prices on the menu-made account (no Stripe price IDs).
+    const ninoDesign = productForCode(catalogRow.offer_code);
+    let ninoPrice = null;
+    let ninoMetadata = null;
+    if (ninoDesign) {
+      if (item.qty !== undefined && item.qty !== 1) throw new CheckoutValidationError("One of each design service per order.");
+      quantity = 1;
+      ninoPrice = Number(catalogRow.price_cents);
+      if (ninoDesign.code === "NINO_MENU_DESIGN") {
+        const quote = quoteMenuDesign(Number(checkoutOptions.design_pages ?? ninoDesign.includedPages));
+        if (!quote) throw new CheckoutValidationError(`Choose a page count from 1 to ${ninoDesign.maxPages}.`);
+        if (ninoPrice !== ninoDesign.priceCents) throw new CheckoutValidationError("Menu Redesign pricing is being updated. Please try again later.", 503);
+        ninoPrice = quote.total_cents;
+        ninoMetadata = { design_pages: quote.pages };
+      }
+    }
     if (isMenu) {
       if (menuSelected || (item.qty !== undefined && item.qty !== 1)) {
         throw new CheckoutValidationError("One menu package per order. Use the page count for additional menu pages.");
@@ -97,7 +118,7 @@ async function normalizeCheckoutItems(itemsInput, env, checkoutOptions = {}, { r
       offerCode: catalogRow.offer_code,
       offerName: catalogRow.offer_name,
       offerVersionId: catalogRow.offer_version_id,
-      priceCents: menuPackage ? menuPackage.total_cents : Number(
+      priceCents: menuPackage ? menuPackage.total_cents : ninoPrice ?? Number(
         catalogRow.price_cents
       ),
       currency: String(
@@ -105,7 +126,8 @@ async function normalizeCheckoutItems(itemsInput, env, checkoutOptions = {}, { r
       ).toUpperCase(),
       stripePriceId: catalogRow.stripe_price_id || null,
       stripeProductId: catalogRow.stripe_product_id || null,
-      ...(menuPackage ? { menuPackage } : {})
+      ...(menuPackage ? { menuPackage } : {}),
+      ...(ninoDesign ? { inlinePrice: true, ninoDesign: true, extraMetadata: { nino_design: true, ...(ninoMetadata || {}) } } : {})
     });
   }
   if (!menuSelected && checkoutOptions.menu_pages !== undefined) {

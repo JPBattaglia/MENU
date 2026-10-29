@@ -9,6 +9,8 @@ import { runGuestAppMonthStep, runGuestAppSetupStep } from "./guest-app/app-step
 import { runReviewRepliesProduceStep } from "./review-replies/review-step.js";
 import { runGoogleCareProduceStep } from "./google-care/care-step.js";
 import { runGoogleVisibilityProduceStep } from "./google-visibility/visibility-step.js";
+import { runNinoDesignProduceStep } from "./nino-design/produce.js";
+import { runStaffMerchProduceStep } from "./staff-merch/produce.js";
 
 const PRODUCERS = {
   MENU_CARE_V1: runMenuCareProduceStep,
@@ -21,7 +23,12 @@ const PRODUCERS = {
   GUEST_APP_V1: runGuestAppMonthStep,
   REVIEW_REPLIES_V1: runReviewRepliesProduceStep,
   GOOGLE_PROFILE_CARE_V1: runGoogleCareProduceStep,
-  GOOGLE_VISIBILITY_V1: runGoogleVisibilityProduceStep
+  GOOGLE_VISIBILITY_V1: runGoogleVisibilityProduceStep,
+  NINO_SOCIAL_PACK_V1: runNinoDesignProduceStep,
+  NINO_FLYER_V1: runNinoDesignProduceStep,
+  NINO_MENU_DESIGN_V1: runNinoDesignProduceStep,
+  NINO_LOGO_V1: runNinoDesignProduceStep,
+  STAFF_MERCH_V1: runStaffMerchProduceStep
 };
 
 async function runProduceStep(targetStep, env, deps = {}) {

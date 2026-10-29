@@ -54,6 +54,10 @@ import { getOnboarding, saveOnboarding } from "./onboarding/onboarding.js";
 import { uploadOnboardingAsset } from "./onboarding/uploads.js";
 import { runNextProductionStep, runScheduledProduction } from "./workflows/runner.js";
 import { handleMe, handleOpen, handleSignIn, handleSignOut } from "./account/account.js";
+import { handleDesignBrief, remindDesignBriefs } from "./producers/nino-design/brief.js";
+import { emailMerchTracking, handleMerchCheckout, handleMerchLogo, handleMerchLogoUpload, handleMerchQuote } from "./producers/staff-merch/order.js";
+import { advanceNinoDesignSelfTests } from "./selftest/nino-design-selftest.js";
+import { advanceStaffMerchSelfTests } from "./selftest/staff-merch-selftest.js";
 
 var worker_default = {
   async fetch(request, env, ctx) {
@@ -155,6 +159,14 @@ var worker_default = {
     if (portalMatch && (request.method === "GET" || request.method === "POST")) {
       return handleBillingPortal(request, env, portalMatch[1].toLowerCase());
     }
+    // Stage 10: Nino design services brief (after payment) and staff merch.
+    const designBriefMatch = url.pathname.match(/^\/api\/design-brief\/([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})$/i);
+    if (designBriefMatch && (request.method === "GET" || request.method === "POST")) return handleDesignBrief(request, env, designBriefMatch[1].toLowerCase());
+    const merchLogoMatch = url.pathname.match(/^\/api\/merch-logo\/([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})$/i);
+    if (merchLogoMatch && (request.method === "GET" || request.method === "HEAD")) return handleMerchLogo(request, env, merchLogoMatch[1].toLowerCase());
+    if (request.method === "POST" && url.pathname === "/api/merch/logo") return handleMerchLogoUpload(request, env);
+    if (request.method === "POST" && url.pathname === "/api/merch/quote") return handleMerchQuote(request, env);
+    if (request.method === "POST" && url.pathname === "/api/merch/checkout") return handleMerchCheckout(request, env);
     const deliveryMatch = url.pathname.match(/^\/api\/delivery\/([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})$/i);
     if (deliveryMatch && request.method === "GET") {
       return handleDeliveryDownload(request, env, deliveryMatch[1].toLowerCase());
@@ -314,6 +326,11 @@ const mmWorkerWithBooking = {
       await advanceAccountSelfTests(env).catch((error) => console.error("Account self-test failed:", error instanceof Error ? error.message : String(error)));
       await advanceAbandonedCheckoutSelfTests(env, app).catch((error) => console.error("Abandoned checkout self-test failed:", error instanceof Error ? error.message : String(error)));
       await advanceMenuHostingSelfTests(env).catch((error) => console.error("Menu hosting self-test failed:", error instanceof Error ? error.message : String(error)));
+      await advanceNinoDesignSelfTests(env, app).catch((error) => console.error("Nino design self-test failed:", error instanceof Error ? error.message : String(error)));
+      await advanceStaffMerchSelfTests(env, app).catch((error) => console.error("Staff merch self-test failed:", error instanceof Error ? error.message : String(error)));
+      // Once an hour: design-brief reminders and staff merch tracking emails.
+      await remindDesignBriefs(env).catch((error) => console.error("Design brief reminders failed:", error instanceof Error ? error.message : String(error)));
+      await emailMerchTracking(env).catch((error) => console.error("Merch tracking failed:", error instanceof Error ? error.message : String(error)));
       // Once an hour: one reminder email to buyers who left a checkout unpaid 24-72 hours ago.
       await maybeFollowUpAbandonedCheckouts(env).catch((error) => console.error("Abandoned checkout follow-up failed:", error instanceof Error ? error.message : String(error)));
       await runDomainWatch(env).catch((error) => console.error("Domain watch failed:", error instanceof Error ? error.message : String(error)));

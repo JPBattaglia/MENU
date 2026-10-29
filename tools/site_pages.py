@@ -12,7 +12,7 @@ from pathlib import Path
 import re
 
 ROOT = Path(__file__).resolve().parent.parent
-CSS_VERSION = "20261028-accounts"
+CSS_VERSION = "20261028-stage10"
 CATALOG_JS = '<script src="site-catalog.js?v=20261028-stage9" defer></script>'
 
 NAV = [
@@ -31,6 +31,8 @@ FOOTER_LINKS = (
     '<a href="website-design.html">Website Package</a>'
     '<a href="google-visibility.html">Google Visibility</a>'
     '<a href="accessibility-services.html">Accessibility Monitoring</a>'
+    '<a href="staff-merch.html">Staff Merch</a>'
+    '<a href="https://ninobattaglia.com/services.html#design-services">Design by Nino &#8599;</a>'
     '<a href="portfolio.html">Our Work</a>'
     '<a href="about.html">Meet JP &amp; Nino</a>'
     '<a href="account.html">Your account</a>'
@@ -540,6 +542,8 @@ def page_plans():
   </div>
 </section>
 
+{team_and_design_block()}
+
 <section class="section menu-faq" id="faq" aria-labelledby="faq-title">
   <div class="container"><header class="section-head"><h2 id="faq-title">Billing questions</h2></header>
 {faq_block()}
@@ -547,6 +551,107 @@ def page_plans():
 </section>
 """
     return head(title, desc, "plans.html", "plans-page", faq_jsonld()) + body + foot()
+
+
+# Stage 10 cross-sell: staff merch (sold here) and Nino's design services (sold on ninobattaglia.com).
+def team_and_design_block():
+    return """<section class="section" id="team" aria-labelledby="team-title">
+  <div class="container">
+    <header class="section-head"><h2 id="team-title">For your team and your brand</h2><p>Designed by Nino Battaglia, the designer behind Menu-Made.</p></header>
+    <div class="mm-singles">
+<article class="mm-single">
+  <h3>Staff merch</h3><p>Shirts for your team in any of Nino's designs, with your logo on the back if you like. Shop price per shirt, +$5 with your logo, 10% off 12 or more and 15% off 24 or more. Printed and shipped for you.</p>
+  <div class="mm-single-actions"><a class="btn primary" href="staff-merch.html">Order staff shirts</a></div>
+</article>
+<article class="mm-single">
+  <h3>Design by Nino</h3><p>A logo, a flyer, a redesigned print menu or a pack of social graphics, made for your business and approved by Nino before it reaches you.</p>
+  <div class="mm-single-actions"><a class="btn primary" href="https://ninobattaglia.com/services.html#design-services">See design services &#8599;</a></div>
+</article>
+    </div>
+  </div>
+</section>"""
+
+
+def page_staff_merch():
+    title = "Staff Merch with Nino Battaglia Designs — MENU-MADE"
+    desc = "Staff shirts for restaurants and local businesses in Nino Battaglia's designs, with your logo on the back if you like. Team discounts from 12 shirts; printed and shipped for you."
+    body = """<section class="hero mm-page-hero">
+  <div class="container">
+    <span class="pill">Staff merch</span>
+    <h1>Staff shirts in Nino Battaglia's designs</h1>
+    <p class="hero-intro">Pick designs from Nino's collection, choose colours and sizes for your team, and add your logo on the back if you like. Each shirt costs what it does in Nino's shop, plus $5 with your logo. Order 12 or more for 10% off, 24 or more for 15% off. Printed by Printful and shipped to you.</p>
+  </div>
+</section>
+
+<section class="section" aria-labelledby="pick-title">
+  <div class="container">
+    <header class="section-head"><h2 id="pick-title">1. Choose a design</h2><p id="designCount">Loading designs…</p></header>
+    <label for="designSearch" class="merch-visually-hidden">Search designs</label>
+    <input id="designSearch" class="merch-search" type="search" placeholder="Search designs">
+    <div id="designGrid" class="merch-grid" aria-live="polite"></div>
+
+    <div id="pickerStep" class="merch-panel" hidden>
+      <h2>2. Colour, sizes and how many</h2>
+      <div class="merch-picker">
+        <img id="pickerImage" src="" alt="" width="280" height="280">
+        <div>
+          <h3 id="pickerTitle"></h3>
+          <div id="colorList" class="merch-swatches" aria-label="Colours"></div>
+          <div id="sizeList" class="merch-sizes"></div>
+          <p><small>You can mix designs and colours: pick another design above and add more sizes.</small></p>
+        </div>
+      </div>
+    </div>
+
+    <div class="merch-panel">
+      <h2>Your team's shirts</h2>
+      <ul id="cartLines" class="merch-cart"></ul>
+      <p id="cartSummary"></p>
+    </div>
+
+    <form id="detailsForm" class="merch-panel" hidden novalidate>
+      <h2>3. Your logo and where to ship</h2>
+      <p><label><input type="checkbox" id="wantLogo"> Add our logo on the back (+$5 a shirt)</label></p>
+      <div id="logoField" hidden>
+        <label for="logoFile">Logo (PNG or JPG, under 5 MB; a transparent PNG prints best)</label><br>
+        <input id="logoFile" type="file" accept="image/png,image/jpeg">
+        <img id="logoPreview" alt="Your logo" hidden>
+        <p><small>Nino checks every logo order before anything is printed. Only upload a logo your business owns.</small></p>
+      </div>
+      <div class="merch-form">
+        <label class="full">Name for delivery<input id="shipName" required autocomplete="name"></label>
+        <label class="full">Street address<input id="shipAddress1" required autocomplete="address-line1"></label>
+        <label class="full">Apartment, suite (optional)<input id="shipAddress2" autocomplete="address-line2"></label>
+        <label>City<input id="shipCity" required autocomplete="address-level2"></label>
+        <label>State (2 letters)<input id="shipState" maxlength="2" autocomplete="address-level1"></label>
+        <label>ZIP / postcode<input id="shipZip" required autocomplete="postal-code"></label>
+        <label>Country (2 letters)<input id="shipCountry" value="US" maxlength="2" autocomplete="country"></label>
+      </div>
+      <p id="detailsStatus" class="merch-status" role="alert" hidden></p>
+      <button id="quoteBtn" class="btn primary" type="submit">Get delivery price</button>
+    </form>
+
+    <div id="quoteBox" class="merch-panel" hidden>
+      <h2>4. Review and pay</h2>
+      <table class="merch-table"><thead><tr><th>Shirt</th><th>Qty</th><th>Each</th><th>Total</th></tr></thead><tbody id="quoteLines"></tbody></table>
+      <fieldset class="merch-fieldset"><legend>Delivery</legend><div id="quoteRates"></div></fieldset>
+      <p id="quoteTotal"></p>
+      <div class="merch-form">
+        <label>Business name<input id="buyerBusiness" required autocomplete="organization"></label>
+        <label>Your name<input id="buyerName" autocomplete="name"></label>
+        <label>Email<input id="buyerEmail" type="email" required autocomplete="email"></label>
+        <label>Phone (optional)<input id="buyerPhone" autocomplete="tel"></label>
+      </div>
+      <p id="quoteStatus" class="merch-status" role="alert" hidden></p>
+      <button id="payBtn" class="btn primary" type="button">Pay securely</button>
+      <p><small>Payment by Stripe. Prices are checked again with Nino's shop and Printful before you pay. Shirts usually print in 3-7 days, then ship; we email the tracking link.</small></p>
+    </div>
+    <p id="merchStatus" class="merch-status" hidden></p>
+  </div>
+</section>
+"""
+    scripts = '<script src="staff-merch.js?v=20261028-stage10" defer></script>\n'
+    return head(title, desc, "staff-merch.html", "merch-page") + body + foot(scripts)
 
 
 def page_services():
@@ -933,6 +1038,7 @@ def main():
         "website-design.html": page_website(),
         "google-visibility.html": page_google(),
         "accessibility-services.html": page_accessibility(),
+        "staff-merch.html": page_staff_merch(),
     }
     for path, html in pages.items():
         (ROOT / path).write_text(html)

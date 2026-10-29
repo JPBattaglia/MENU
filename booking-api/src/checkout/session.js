@@ -33,7 +33,7 @@ async function createCheckout(request, env, environment) {
     }
     if (live) {
       for (const item of normalizedItems) {
-        if (!item.menuPackage && !item.stripePriceId) {
+        if (!item.menuPackage && !item.inlinePrice && !item.stripePriceId) {
           return jsonResponse({ ok: false, error: `No live Stripe price is configured for ${item.offerCode}` }, 500);
         }
       }
@@ -41,8 +41,12 @@ async function createCheckout(request, env, environment) {
     if (cart.plan && !normalizeName(data?.customer?.business || data?.business)) {
       return jsonResponse({ ok: false, error: "Business name is required for a monthly plan" }, 400);
     }
+    // Orders started on ninobattaglia.com (Nino design services) return there after Stripe.
+    const returnTo = data?.return_to === "nino" ? "nino" : null;
+    if (returnTo) for (const item of normalizedItems) item.extraMetadata = { ...(item.extraMetadata || {}), return_to: returnTo };
     const orderItems = cart.plan ? [...normalizedItems, cart.orderItem()] : normalizedItems;
     const pending = await createPendingOrder(data, orderItems, env, environment);
+    pending.returnTo = returnTo;
     if (!pending.ok) {
       return jsonResponse({ ok: false, error: pending.error }, pending.status);
     }
@@ -70,8 +74,13 @@ async function createCheckout(request, env, environment) {
 async function openStripeSession(env, environment, { cart, normalizedItems, orderItems, pending, tracking = {}, resumed = false }) {
     const params = new URLSearchParams();
     params.append("mode", cart.plan ? "subscription" : "payment");
-    params.append("success_url", `https://menu-made.com/checkoutsuccess.html?session_id={CHECKOUT_SESSION_ID}&order_id=${encodeURIComponent(pending.orderId)}`);
-    params.append("cancel_url", "https://menu-made.com/checkoutcancel.html");
+    if (pending.returnTo === "nino") {
+      params.append("success_url", `https://ninobattaglia.com/design-thanks.html?order_id=${encodeURIComponent(pending.orderId)}`);
+      params.append("cancel_url", "https://ninobattaglia.com/services.html#design-services");
+    } else {
+      params.append("success_url", `https://menu-made.com/checkoutsuccess.html?session_id={CHECKOUT_SESSION_ID}&order_id=${encodeURIComponent(pending.orderId)}`);
+      params.append("cancel_url", "https://menu-made.com/checkoutcancel.html");
+    }
     if (cart.stripeCustomerId) {
       params.append("customer", cart.stripeCustomerId);
     } else {

@@ -1,5 +1,6 @@
 import { jsonResponse, nowIso, parseJsonOrNull } from "../lib/http.js";
 import { MENU_PACKAGE_PRICING } from "./quote.js";
+import { NINO_PRODUCTS } from "../producers/nino-design/products.js";
 
 async function getPublicOffers(env) {
   try {
@@ -266,6 +267,11 @@ async function getSiteCatalog(env) {
             ? { prices: {}, includes: Array.isArray(scope.includes) ? scope.includes : [row.code], requires_setup: scope.requires_setup || null }
             : { price_cents: Number(row.price_cents) })
         };
+        // Nino design services (stage 10) are sold on ninobattaglia.com, which reads its prices from here too.
+        if (/^NINO_/.test(row.code)) offer.site = "ninobattaglia.com";
+        if (row.code === "NINO_MENU_DESIGN") {
+          offer.design_pages = { included_pages: NINO_PRODUCTS.NINO_MENU_DESIGN.includedPages, extra_page_cents: NINO_PRODUCTS.NINO_MENU_DESIGN.extraPageCents, max_pages: NINO_PRODUCTS.NINO_MENU_DESIGN.maxPages };
+        }
         if (row.code === "ONLINE_MENU_QR") {
           offer.menu_package = {
             setup_cents: MENU_PACKAGE_PRICING.setupCents,
