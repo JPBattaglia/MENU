@@ -7,6 +7,7 @@ import { createPeriodJobs, serviceMonthsDue } from "./periods.js";
 import { PRODUCING, subscriptionEnvironment, syncSubscription } from "./sync.js";
 import { createReviewWeekJobs } from "../producers/review-replies/weeks.js";
 import { remindGoogleVisibilityConnects } from "../producers/google-visibility/intake.js";
+import { remindMenuHostingRenewals } from "../producers/menu-qr/hosting-renewal.js";
 
 const DAILY_MARKER = "SUBSCRIPTIONS_DAILY_PASS";
 const MIN_HOURS_BETWEEN = 20;
@@ -58,6 +59,12 @@ async function runDailySubscriptionPass(env, { now = new Date(), force = false }
     summary.visibility_reminders = (await remindGoogleVisibilityConnects(env, now)).sent;
   } catch (error) {
     summary.errors.push({ id: "visibility-reminders", error: error instanceof Error ? error.message : String(error) });
+  }
+  try {
+    // Online Menu + QR: hosting moves to Menu Care after the first year; reminders 30 and 7 days before.
+    summary.menu_hosting_reminders = (await remindMenuHostingRenewals(env, { now })).sent;
+  } catch (error) {
+    summary.errors.push({ id: "menu-hosting-reminders", error: error instanceof Error ? error.message : String(error) });
   }
   await env.DB.prepare(`
       INSERT INTO business_events (id, created_at, event_type, entity_type, entity_id, actor_type, actor_id, correlation_id, payload_json)
