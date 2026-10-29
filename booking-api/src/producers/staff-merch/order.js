@@ -260,12 +260,12 @@ async function emailMerchTracking(env, now = new Date()) {
   if (!env.DB || !env.MERCH || now.getUTCMinutes() >= 5) return null;
   const since = new Date(now.getTime() - 45 * 864e5).toISOString();
   const rows = (await env.DB.prepare(`
-      SELECT id FROM projects WHERE workflow_key = ? AND status = 'DELIVERED' AND created_at > ?
+      SELECT id FROM projects WHERE workflow_key = 'STAFF_MERCH_V1' AND status = 'DELIVERED' AND created_at > ?
         AND json_extract(metadata_json, '$.merch.printful_order_id') IS NOT NULL
         AND json_extract(metadata_json, '$.merch.tracking_emailed_at') IS NULL
         AND COALESCE(json_extract(metadata_json, '$.merch.environment'), 'live') = 'live'
       LIMIT 10
-    `).bind(WORKFLOW, since).all()).results || [];
+    `).bind(since).all()).results || [];
   let sent = 0;
   for (const row of rows) {
     const context = await loadDeliveryContext(row.id, env);

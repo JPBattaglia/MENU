@@ -151,3 +151,15 @@ test('Menu-made delivery emails offer staff merch and Nino design; merch and Nin
     assert.doesNotMatch(f.emails[1].html, /staff-merch\.html/);
   });
 });
+
+test('the runner produces a self-test buyer\'s checkout order (no source tag); only its subscription-period jobs are held', async () => {
+  const f = setup();
+  await withFetch(f.fetch, async () => {
+    f.DB.raw.exec(`UPDATE offers SET is_public = 1 WHERE code = 'STAFF_MERCH'`);
+    const quote = await post(f, '/api/merch/quote', { environment: 'sandbox', recipient: ADDRESS, items: [{ product_id: '101', variant_id: '501', quantity: 1 }] });
+    const checkout = await post(f, '/api/merch/checkout', { quote_id: quote.body.quote_id, rate_id: 'STANDARD', customer: { email: 'delivered@resend.dev', business: 'Self-Test Cafe' } });
+    await handleCheckoutCompleted({ id: 'evt_9', data: { object: { id: 'cs_test_merch1', metadata: { order_id: checkout.body.order_id }, payment_intent: 'pi_9', amount_total: 5000, currency: 'usd' } } }, f.env);
+    await api.runScheduledProduction(f.env); await Promise.all(f.pending);
+    assert.equal(f.row(`SELECT status FROM projects`).status, 'DELIVERED');
+  });
+});
