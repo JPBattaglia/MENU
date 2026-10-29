@@ -43,6 +43,7 @@ import { advanceGoogleVisibilitySelfTests } from "./selftest/google-visibility-s
 import { advanceStage5ExitTests } from "./selftest/stage5-exit-selftest.js";
 import { handleGoogleMedia, handlePhotoLibrary } from "./producers/google-care/library.js";
 import { handleGoogleCallback, handleGoogleConnect, handleGoogleLocation } from "./google/connect.js";
+import { handleStoreKeys } from "./store-app/keys.js";
 import { advanceAccessibilitySelfTests } from "./selftest/accessibility-selftest.js";
 import { advanceSocialPostsSelfTests } from "./selftest/social-posts-selftest.js";
 import { advanceRoutingSelfTests } from "./selftest/routing-selftest.js";
@@ -79,6 +80,8 @@ var worker_default = {
     if (googleConnectMatch && (request.method === "GET" || request.method === "POST")) {
       return handleGoogleConnect(request, env, googleConnectMatch[1].toLowerCase());
     }
+    // Stage 11 part 2: the owner hands over Apple keys (emailed one-hour link, keys checked with Apple, stored sealed).
+    if (url.pathname === "/api/store-keys/owner" && (request.method === "GET" || request.method === "POST")) return handleStoreKeys(request, env);
     if (url.pathname === "/api/google/callback" && request.method === "GET") {
       return handleGoogleCallback(request, env);
     }
