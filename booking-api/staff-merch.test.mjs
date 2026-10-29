@@ -36,11 +36,13 @@ function setup() {
   const fetch = async (url, init = {}) => {
     const u = String(url);
     if (u === 'https://api.resend.com/emails') { emails.push(JSON.parse(init.body)); return Response.json({ id: `e${emails.length}` }); }
+    if (u === 'https://api.stripe.com/v1/customers') { const p = new URLSearchParams(init.body); stripe.push(p); return Response.json({ id: 'cus_merch1' }); }
     if (u === 'https://api.stripe.com/v1/checkout/sessions') {
       const p = new URLSearchParams(init.body); stripe.push(p);
-      let total = 0; for (let i = 0; p.get(`line_items[${i}][quantity]`); i++) total += Number(p.get(`line_items[${i}][quantity]`)) * Number(p.get(`line_items[${i}][price_data][unit_amount]`));
-      total += Number(p.get('shipping_options[0][shipping_rate_data][fixed_amount][amount]'));
-      return Response.json({ id: 'cs_test_merch1', url: 'https://checkout.stripe.com/c/pay/cs_test_merch1', amount_total: total });
+      let sub = 0; for (let i = 0; p.get(`line_items[${i}][quantity]`); i++) sub += Number(p.get(`line_items[${i}][quantity]`)) * Number(p.get(`line_items[${i}][price_data][unit_amount]`));
+      const ship = Number(p.get('shipping_options[0][shipping_rate_data][fixed_amount][amount]'));
+      const tax = Math.round((sub + ship) * 0.08625);
+      return Response.json({ id: 'cs_test_merch1', url: 'https://checkout.stripe.com/c/pay/cs_test_merch1', amount_subtotal: sub, total_details: { amount_shipping: ship, amount_tax: tax }, amount_total: sub + ship + tax, automatic_tax: { enabled: p.get('automatic_tax[enabled]') === 'true' } });
     }
     throw new Error(`Unexpected fetch ${u}`);
   };
@@ -71,7 +73,8 @@ async function buy(f, { logo }) {
   const order = f.row(`SELECT * FROM orders WHERE id = ?`, checkout.body.order_id);
   assert.equal(order.total_cents, quote.body.pricing.subtotal_cents + 1299);
   assert.equal((await post(f, '/api/merch/checkout', { quote_id: quote.body.quote_id, rate_id: 'STANDARD', customer: { email: 'x@y.co', business: 'X' } })).status, 409, 'a quote is used once');
-  await handleCheckoutCompleted({ id: 'evt_1', data: { object: { id: 'cs_test_merch1', metadata: { order_id: order.id }, payment_intent: 'pi_1', amount_total: order.total_cents, currency: 'usd' } } }, f.env);
+  const tax = Math.round(order.total_cents * 0.08625);
+  await handleCheckoutCompleted({ id: 'evt_1', data: { object: { id: 'cs_test_merch1', metadata: { order_id: order.id }, payment_intent: 'pi_1', amount_total: order.total_cents + tax, currency: 'usd' } } }, f.env);
   await api.runScheduledProduction(f.env); await Promise.all(f.pending);
   return order.id;
 }
@@ -80,7 +83,16 @@ test('logo order: quote, checkout, paid, proof waits for the owner, approval pla
   const f = setup();
   await withFetch(f.fetch, async () => {
     const orderId = await buy(f, { logo: true });
-    assert.equal(f.stripe[0].get('line_items[0][price_data][unit_amount]'), String(Math.round(3100 * 0.9)));
+    const customer = f.stripe.find((p) => p.get('shipping[address][postal_code]'));
+    assert.equal(customer.get('shipping[address][state]'), 'CA', 'Stripe Tax gets the delivery address');
+    const session = f.stripe.find((p) => p.get('mode'));
+    assert.equal(session.get('line_items[0][price_data][unit_amount]'), String(Math.round(3100 * 0.9)));
+    assert.equal(session.get('automatic_tax[enabled]'), 'true');
+    assert.equal(session.get('line_items[0][price_data][product_data][tax_code]'), 'txcd_30011000');
+    assert.equal(session.get('line_items[0][price_data][tax_behavior]'), 'exclusive');
+    assert.equal(session.get('customer'), 'cus_merch1');
+    const paid = f.row(`SELECT subtotal_cents, tax_cents, total_cents FROM orders WHERE id = ?`, orderId);
+    assert.ok(paid.tax_cents > 0); assert.equal(paid.total_cents, paid.subtotal_cents + paid.tax_cents);
     assert.equal(f.row(`SELECT status FROM approvals`).status, 'PENDING');
     assert.ok(!f.merchCalls.some(([m]) => m === 'placeOrder'), 'nothing ordered before approval');
     const owner = f.emails.find((e) => /logo proof/.test(e.subject));
@@ -95,6 +107,7 @@ test('logo order: quote, checkout, paid, proof waits for the owner, approval pla
     assert.equal(placed.external_id, externalIdFor(orderId));
     assert.match(placed.logo_url, /^https:\/\/menu-made\.com\/api\/merch-logo\//);
     assert.equal(placed.lines[0].retail_cents, Math.round(3100 * 0.9));
+    assert.equal(placed.max_cost_cents, f.row(`SELECT subtotal_cents FROM orders`).subtotal_cents, 'Printful is capped at shirts + delivery, never the tax');
     const logo = await api.default.fetch(new Request(placed.logo_url), f.env, f.ctx);
     assert.equal(logo.status, 200, 'Printful can download the logo');
     assert.equal(f.row(`SELECT status FROM projects`).status, 'DELIVERED');

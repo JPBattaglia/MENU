@@ -31,6 +31,7 @@ function proofHtml({ business, merch, logoDataUri }) {
 <body><main><h1>${e(business)}: staff shirts</h1><p>Order proof. ${p.shirts} shirt${p.shirts === 1 ? "" : "s"}, designs by Nino Battaglia, printed and shipped by Printful.</p>${cards}
 <section class="sum"><p>Shirts ${money(p.list_subtotal_cents)}${p.discount_percent ? ` &minus; ${p.discount_percent}% team discount ${money(p.discount_cents)}` : ""} = <strong>${money(p.subtotal_cents)}</strong>${p.logo_fee_cents ? ` (includes the ${money(p.logo_fee_cents)} logo print on each shirt)` : ""}</p>
 <p>Delivery: ${e(merch.rate.name)} ${money(merch.rate.amount_cents)}</p>
+${merch.tax_cents ? `<p>Sales tax: ${money(merch.tax_cents)} &middot; Paid: <strong>${money(p.subtotal_cents + merch.rate.amount_cents + merch.tax_cents)}</strong></p>` : ""}
 <p>Ships to: ${e([r.name, r.address1, r.address2, r.city, r.state_code, r.zip, r.country_code].filter(Boolean).join(", "))}</p></section></main></body></html>`;
 }
 

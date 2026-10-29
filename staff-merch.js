@@ -126,7 +126,7 @@
     $('quoteRates').innerHTML = q.rates.map((r, i) => `<label class="merch-rate"><input type="radio" name="rate" value="${esc(r.id)}" ${i === 0 ? 'checked' : ''}> ${esc(r.name)} · ${money(r.amount_cents)}${r.min_days ? ` <small>(${r.min_days}-${r.max_days} days)</small>` : ''}</label>`).join('');
     const update = () => {
       const rate = q.rates.find((r) => r.id === document.querySelector('input[name="rate"]:checked')?.value) || q.rates[0];
-      $('quoteTotal').innerHTML = `Shirts ${money(p.subtotal_cents)}${p.discount_percent ? ` <small>(${p.discount_percent}% team discount, you save ${money(p.discount_cents)})</small>` : ''} + delivery ${money(rate.amount_cents)} = <strong>${money(p.subtotal_cents + rate.amount_cents)}</strong>`;
+      $('quoteTotal').innerHTML = `Shirts ${money(p.subtotal_cents)}${p.discount_percent ? ` <small>(${p.discount_percent}% team discount, you save ${money(p.discount_cents)})</small>` : ''} + delivery ${money(rate.amount_cents)} = <strong>${money(p.subtotal_cents + rate.amount_cents)}</strong> + sales tax, calculated at checkout from the delivery address`;
     };
     $('quoteRates').onchange = update; update();
     $('quoteBox').hidden = false;
