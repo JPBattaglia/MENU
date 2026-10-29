@@ -8,7 +8,9 @@
   const TEST = new URLSearchParams(location.search).get('checkout') === 'test';
   const $ = (id) => document.getElementById(id);
   const money = (c) => '$' + (c / 100).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-  const esc = (t) => String(t ?? '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+  // Nino's catalog titles can arrive HTML-encoded (e.g. &#39;); decode first so they aren't shown twice-escaped.
+  const decode = (t) => { const d = document.createElement('textarea'); d.innerHTML = String(t ?? ''); return d.value; };
+  const esc = (t) => decode(t).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
   const state = { products: [], cart: new Map(), product: null, color: null, logoId: null, quote: null };
 
   if (TEST) {
@@ -35,7 +37,7 @@
 
   function renderDesigns() {
     const q = $('designSearch').value.trim().toLowerCase();
-    const list = state.products.filter((p) => !q || p.title.toLowerCase().includes(q));
+    const list = state.products.filter((p) => !q || decode(p.title).toLowerCase().includes(q));
     $('designCount').textContent = `${list.length} design${list.length === 1 ? '' : 's'}`;
     $('designGrid').innerHTML = list.slice(0, 60).map((p) => `<button type="button" class="merch-design" data-id="${esc(p.id)}" aria-pressed="${state.product?.id === p.id}">
       <img loading="lazy" src="${esc(p.image || p.variants[0]?.image || '')}" alt="" width="240" height="240"><span>${esc(p.title)}</span></button>`).join('') + (list.length > 60 ? '<p class="merch-more">Search to find more designs.</p>' : '');
@@ -56,9 +58,9 @@
     const colors = [...new Map(p.variants.filter((v) => v.available).map((v) => [v.color, v])).values()];
     if (!state.color || !colors.some((v) => v.color === state.color)) state.color = colors[0]?.color || null;
     const current = p.variants.find((v) => v.color === state.color && v.image);
-    $('pickerTitle').textContent = p.title;
+    $('pickerTitle').textContent = decode(p.title);
     $('pickerImage').src = current?.image || p.image || '';
-    $('pickerImage').alt = `${p.title} in ${state.color || ''}`;
+    $('pickerImage').alt = `${decode(p.title)} in ${state.color || ''}`;
     $('colorList').innerHTML = colors.map((v) => `<button type="button" class="merch-swatch" data-color="${esc(v.color)}" aria-pressed="${v.color === state.color}" title="${esc(v.color)}"><span style="background:${esc(v.color_hex || '#ccc')}"></span>${esc(v.color)}</button>`).join('');
     const sizes = p.variants.filter((v) => v.available && v.color === state.color);
     $('sizeList').innerHTML = sizes.map((v) => {
@@ -73,7 +75,7 @@
     if (!v) return;
     const q = Math.max(0, Math.min(100, Math.floor(Number(quantity) || 0)));
     if (q === 0) state.cart.delete(String(v.id));
-    else state.cart.set(String(v.id), { product_id: String(p.id), variant_id: String(v.id), quantity: q, title: p.title, color: v.color, size: v.size, price: v.price.amount });
+    else state.cart.set(String(v.id), { product_id: String(p.id), variant_id: String(v.id), quantity: q, title: decode(p.title), color: v.color, size: v.size, price: v.price.amount });
     state.quote = null;
     renderCart();
   }

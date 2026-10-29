@@ -19,6 +19,7 @@ NAV = [
     ("index.html", "Home"),
     ("plans.html", "Plans"),
     ("services.html", "Services"),
+    ("staff-merch.html", "Staff Merch"),
     ("portfolio.html", "Our Work"),
     ("about.html", "About"),
     ("account.html", "Account"),
@@ -650,7 +651,7 @@ def page_staff_merch():
   </div>
 </section>
 """
-    scripts = '<script src="staff-merch.js?v=20261028-stage10" defer></script>\n'
+    scripts = '<script src="staff-merch.js?v=20261028-stage10b" defer></script>\n'
     return head(title, desc, "staff-merch.html", "merch-page") + body + foot(scripts)
 
 
