@@ -1,0 +1,98 @@
+# Builds the Store App (stage 11 part 2) on GitHub's standard runners, which are free and unmetered because
+# this repo is public: iOS on macOS, Android on Linux. Current version proves the pipeline with the fictional
+# Sample Cafe: unsigned iOS simulator build and Android debug APK, no store upload, and records how long each
+# takes. Signing and upload (TestFlight / Play internal testing) are added next, with keys fetched from the
+# worker over this workflow's OIDC token and masked; they never live in this repo.
+#
+# Public repo = public logs: never print customer data, keys or signing material here.
+name: Store app build
+
+on:
+  workflow_dispatch:
+    inputs:
+      config:
+        description: Build config path
+        default: app-shell/sample/build.json
+  push:
+    branches: [master]
+    paths:
+      - "app-shell/**"
+      - ".github/workflows/store-app-build.yml"
+
+concurrency:
+  group: store-app-build-${{ github.ref }}
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+env:
+  CONFIG: ${{ inputs.config || 'app-shell/sample/build.json' }}
+  CAP_PACKAGES: "@capacitor/core@latest @capacitor/cli@latest @capacitor/ios@latest @capacitor/android@latest @capacitor/push-notifications@latest"
+
+jobs:
+  android:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+      - name: Install Capacitor
+        working-directory: app-shell
+        run: |
+          npm init -y >/dev/null
+          npm install --no-audit --no-fund $CAP_PACKAGES
+          npx cap --version
+      - name: Configure and add Android
+        run: |
+          node app-shell/configure.mjs "$CONFIG"
+          cd app-shell && npx cap add android && npx cap sync android
+      - name: Build debug APK
+        working-directory: app-shell/android
+        run: |
+          start=$(date +%s)
+          ./gradlew assembleDebug --no-daemon -q
+          echo "ANDROID_BUILD_SECONDS=$(( $(date +%s) - start ))" | tee -a "$GITHUB_STEP_SUMMARY"
+          ls -la app/build/outputs/apk/debug/
+      - uses: actions/upload-artifact@v4
+        with:
+          name: sample-android-apk
+          path: app-shell/android/app/build/outputs/apk/debug/*.apk
+          retention-days: 3
+
+  ios:
+    runs-on: macos-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Install Capacitor
+        working-directory: app-shell
+        run: |
+          npm init -y >/dev/null
+          npm install --no-audit --no-fund $CAP_PACKAGES
+          npx cap --version
+          xcodebuild -version
+      - name: Configure and add iOS
+        run: |
+          node app-shell/configure.mjs "$CONFIG"
+          cd app-shell && npx cap add ios && npx cap sync ios
+          ls ios/App
+      - name: Build for the iOS simulator (unsigned)
+        working-directory: app-shell/ios/App
+        run: |
+          start=$(date +%s)
+          if [ -d App.xcworkspace ]; then target="-workspace App.xcworkspace"; else target="-project App.xcodeproj"; fi
+          xcodebuild $target -scheme App -configuration Release -sdk iphonesimulator \
+            -destination 'generic/platform=iOS Simulator' -derivedDataPath build \
+            CODE_SIGNING_ALLOWED=NO build -quiet
+          echo "IOS_BUILD_SECONDS=$(( $(date +%s) - start ))" | tee -a "$GITHUB_STEP_SUMMARY"
+          ls build/Build/Products/Release-iphonesimulator/
