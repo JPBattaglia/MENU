@@ -120,7 +120,9 @@ async function signingKey(kid, fetchImpl) {
   return crypto.subtle.importKey("jwk", jwk, { name: "RSASSA-PKCS1-v1_5", hash: "SHA-256" }, false, ["verify"]);
 }
 
-async function verifyRenderer(request, env) {
+// Also used by the Store App build (src/store-app/build-credentials.js) with its own audience and workflow, and only for
+// a manual run (event workflow_dispatch) when `events` is given.
+async function verifyRenderer(request, env, { audience: wanted = OIDC_AUDIENCE, workflow = RENDER_WORKFLOW, events = null } = {}) {
   const token = (request.headers.get("Authorization") || "").replace(/^Bearer\s+/i, "").trim();
   const parts = token.split(".");
   if (parts.length !== 3) return { ok: false, status: 401, error: "A GitHub Actions identity token is required" };
@@ -133,8 +135,9 @@ async function verifyRenderer(request, env) {
     const valid = await crypto.subtle.verify("RSASSA-PKCS1-v1_5", key, b64url(parts[2]), new TextEncoder().encode(`${parts[0]}.${parts[1]}`));
     const now = Math.floor(Date.now() / 1000);
     const audience = Array.isArray(claims.aud) ? claims.aud : [claims.aud];
-    if (!valid || claims.iss !== OIDC_ISSUER || !audience.includes(OIDC_AUDIENCE) || !(claims.exp > now) || (claims.nbf && claims.nbf > now + 60)
-      || claims.repository !== RENDER_REPOSITORY || claims.ref !== "refs/heads/master" || claims.job_workflow_ref !== RENDER_WORKFLOW) {
+    if (!valid || claims.iss !== OIDC_ISSUER || !audience.includes(wanted) || !(claims.exp > now) || (claims.nbf && claims.nbf > now + 60)
+      || claims.repository !== RENDER_REPOSITORY || claims.ref !== "refs/heads/master" || claims.job_workflow_ref !== workflow
+      || (events && !events.includes(claims.event_name))) {
       return { ok: false, status: 403, error: "This token may not render" };
     }
     return { ok: true };

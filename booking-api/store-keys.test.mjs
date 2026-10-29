@@ -160,3 +160,31 @@ test('saved keys are checked again without uploading anything, with a corrected 
   assert.equal(f.row(`SELECT check_status FROM store_credentials WHERE kind = 'APPLE_PUSH_KEY'`).check_status, 'VERIFIED');
   assert.equal((await keys.loadCredential(f.env, 'owner', 'APPLE_PUSH_KEY')).p8, push.text, 'the saved file was reused');
 });
+
+test('build credentials: only a manual run of the store-app workflow on master gets the verified API key', async () => {
+  const f = setup();
+  const api = await p8();
+  await upload(f, { t: await token(f), issuer_id: ISSUER }, { api_file: ['AuthKey_APIKEY1234.p8', api.text] });
+  const b64u = (v) => Buffer.from(typeof v === 'string' ? v : v).toString('base64url');
+  const pair = await crypto.subtle.generateKey({ name: 'RSASSA-PKCS1-v1_5', modulusLength: 2048, publicExponent: new Uint8Array([1, 0, 1]), hash: 'SHA-256' }, true, ['sign', 'verify']);
+  const kid = 'kid-store-build';
+  const jwk = { ...(await crypto.subtle.exportKey('jwk', pair.publicKey)), kid, alg: 'RS256', use: 'sig' };
+  f.env.RENDER_OIDC_FETCH = async () => Response.json({ keys: [jwk] });
+  const now = Math.floor(Date.now() / 1000);
+  const good = { iss: 'https://token.actions.githubusercontent.com', aud: 'menu-made-store-build', exp: now + 300, nbf: now - 5, repository: 'JPBattaglia/MENU', ref: 'refs/heads/master',
+    job_workflow_ref: 'JPBattaglia/MENU/.github/workflows/store-app-build.yml@refs/heads/master', event_name: 'workflow_dispatch' };
+  const sign = async (claims) => { const h = b64u(JSON.stringify({ alg: 'RS256', kid, typ: 'JWT' })); const b = b64u(JSON.stringify(claims));
+    return `${h}.${b}.${b64u(new Uint8Array(await crypto.subtle.sign('RSASSA-PKCS1-v1_5', pair.privateKey, new TextEncoder().encode(`${h}.${b}`))))}`; };
+  const get = async (claims) => call(f, 'https://menu-made.com/api/store-build/credentials?scope=owner', { headers: claims ? { Authorization: `Bearer ${await sign(claims)}` } : {} });
+  const res = await get(good);
+  assert.equal(res.status, 200);
+  assert.equal(res.headers.get('Cache-Control'), 'no-store');
+  const body = await res.json();
+  assert.deepEqual([body.apple.key_id, body.apple.issuer_id, body.apple.team_id, body.apple.p8], ['APIKEY1234', ISSUER, TEAM, api.text]);
+  assert.equal((await get(null)).status, 401);
+  for (const change of [{ event_name: 'push' }, { aud: 'menu-made-render' }, { job_workflow_ref: 'JPBattaglia/MENU/.github/workflows/render-social-posts.yml@refs/heads/master' },
+    { ref: 'refs/heads/other' }, { repository: 'someone/MENU' }]) assert.equal((await get({ ...good, ...change })).status, 403, JSON.stringify(change));
+  f.sql = (q) => f.DB.raw.prepare(q).run();
+  f.sql(`UPDATE store_credentials SET check_status = 'FAILED'`);
+  assert.equal((await get(good)).status, 409, 'an unverified key is never handed out');
+});
