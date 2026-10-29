@@ -121,7 +121,9 @@ async function handleMerchQuote(request, env) {
   const logoId = data?.logo_id ? String(data.logo_id) : null;
   const head = logoId && /^[0-9a-f-]{36}\.(png|jpg)$/.test(logoId) ? await env.ASSETS.head(`merch-uploads/${logoId}`) : null;
   if (logoId && !head) return fail(400, "Upload the logo again.");
-  const logo = head ? { url: await uploadUrlFor(env, logoId), width: Number(head.customMetadata?.width) || 1000, height: Number(head.customMetadata?.height) || 1000 } : null;
+  // Embroidery threads matched to the logo's colours by the page (the Nino shop keeps only Printful's thread colours).
+  const threads = Array.isArray(data?.thread_colors) ? data.thread_colors.slice(0, 6).map((c) => String(c).slice(0, 7)) : [];
+  const logo = head ? { url: await uploadUrlFor(env, logoId), width: Number(head.customMetadata?.width) || 1000, height: Number(head.customMetadata?.height) || 1000, thread_colors: threads } : null;
   const ninoItems = Array.isArray(data?.items) ? data.items : [];
   const logoItems = Array.isArray(data?.logo_items) ? data.logo_items : [];
   const quote = await merchService(env, "quote", { items: ninoItems, logo_items: logoItems, logo, recipient: data?.recipient });
@@ -132,7 +134,7 @@ async function handleMerchQuote(request, env) {
   const expires = new Date(Date.now() + QUOTE_TTL_MINUTES * 60000).toISOString();
   await env.DB.prepare(`INSERT INTO merch_quotes (id, created_at, expires_at, environment, recipient_json, lines_json, rates_json, pricing_json, logo_key) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`)
     .bind(id, t, expires, environment, JSON.stringify(quote.recipient), JSON.stringify(pricing.lines), JSON.stringify(quote.rates),
-      JSON.stringify({ ...pricing, lines: undefined, logo: logo ? { width: logo.width, height: logo.height } : null }), logoId ? `merch-uploads/${logoId}` : null).run();
+      JSON.stringify({ ...pricing, lines: undefined, logo: logo ? { width: logo.width, height: logo.height, thread_colors: logo.thread_colors } : null }), logoId ? `merch-uploads/${logoId}` : null).run();
   const strip = ({ fingerprint, catalog_variant_id, ...l }) => l;
   return jsonResponse({ ok: true, quote_id: id, expires_at: expires, environment, lines: [...pricing.lines, ...pricing.logo_lines].map(strip), rates: quote.rates, pricing: { ...pricing, lines: undefined, logo_lines: undefined } });
 }
@@ -304,7 +306,7 @@ async function placePrintfulOrder(env, context) {
     external_id: merch.external_id,
     lines: merch.lines.map((l) => ({ product_id: l.product_id, variant_id: l.variant_id, quantity: l.quantity, title: l.title, retail_cents: l.unit_cents, fingerprint: l.fingerprint })),
     logo_lines: (merch.logo_lines || []).map((l) => ({ key: l.key, variant_id: l.variant_id, quantity: l.quantity, retail_cents: l.unit_cents })),
-    logo: merch.logo_key && merch.logo ? { url: await logoUrlFor(env, context.id), width: merch.logo.width, height: merch.logo.height } : null,
+    logo: merch.logo_key && merch.logo ? { url: await logoUrlFor(env, context.id), width: merch.logo.width, height: merch.logo.height, thread_colors: merch.logo.thread_colors || [] } : null,
     recipient: merch.recipient, email: context.customer_email, shipping_method: merch.rate.id,
     logo_url: merch.logo_key ? await logoUrlFor(env, context.id) : null,
     // Printful may never cost more than the buyer paid for the shirts and delivery.
