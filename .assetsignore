@@ -15,3 +15,5 @@ menu-made-worker/
 *.test.mjs
 # Local Claude instructions are not website content.
 CLAUDE.md
+# Page builder script, not website content.
+tools/

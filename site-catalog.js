@@ -18,6 +18,8 @@
   }
   function priceOf(offer, interval) {
     if (!offer) return null;
+    // Online Menu + QR is sold as its first year: setup plus first-year hosting for the included pages.
+    if (offer.menu_package) return offer.menu_package.setup_cents + offer.menu_package.hosting_first_year_cents;
     return offer.prices ? (offer.prices[interval] ?? null) : offer.price_cents;
   }
   // What the included plans cost bought one by one. Google Profile Care already answers reviews,
