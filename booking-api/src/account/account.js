@@ -11,6 +11,7 @@ import { billingPortalLink } from "../subscriptions/portal.js";
 import { settingsLink } from "../subscriptions/settings.js";
 import { activeConnection, googleConnectUrl } from "../google/connect.js";
 import { menuCareLink } from "../producers/menu-care/care-step.js";
+import { menuHostingState, renewalLink } from "../producers/menu-qr/hosting-renewal.js";
 import { siteCareLink } from "../producers/website-care/care-step.js";
 import { appUrl, loadLiveApp, updateLink } from "../producers/guest-app/app-step.js";
 import { intakeLink as appIntakeLink } from "../producers/guest-app/intake.js";
@@ -251,7 +252,16 @@ async function accountSummary(env, customerId) {
     const menu = await hostedMenu(env, business.id).catch(() => null);
     const website = await liveWebsite(env, business.id).catch(() => null);
     const app = await loadLiveApp(env, { businessId: business.id }).catch(() => null);
-    businessList.push({ id: business.id, name: business.name, menu: menu || null, website: website || null, app: app?.slug ? appUrl(env, app.slug) : null });
+    // Online Menu + QR without Menu Care: say when the menu goes (or went) offline and offer the Menu Care link.
+    let menuHosting = null;
+    if (menu) {
+      const state = await menuHostingState(env, business.id).catch(() => null);
+      const soon = state?.coveredUntil && Date.parse(state.coveredUntil) - Date.now() < 45 * 864e5;
+      if (state?.menuQrProjectId && ["covered", "grace", "offline"].includes(state.reason) && (soon || state.reason !== "covered")) {
+        menuHosting = { status: state.reason === "offline" ? "OFFLINE" : "ENDING", offline_at: state.offlineAt, renew_url: await renewalLink(env, state.menuQrProjectId) };
+      }
+    }
+    businessList.push({ id: business.id, name: business.name, menu: menu || null, menu_hosting: menuHosting, website: website || null, app: app?.slug ? appUrl(env, app.slug) : null });
   }
 
   const subs = (await env.DB.prepare(`

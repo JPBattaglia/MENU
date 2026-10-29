@@ -48,7 +48,7 @@ function appendCheckoutLineItem(params, item, index, environment) {
       ? `${item.offerName} — ${item.menuPackage.menu_pages} menu pages + first-year hosting`
       : item.offerName);
     if (item.menuPackage) {
-      params.append(`${prefix}[price_data][product_data][description]`, "$129 setup includes up to 3 pages and two revisions; $20 per additional page; $15 first-year hosting. After the first year, hosting continues with Menu Care.");
+      params.append(`${prefix}[price_data][product_data][description]`, "$129 setup includes up to 3 pages and two revisions; $20 per additional page; $15 first-year hosting. After the first year, hosting continues with Menu Care; without it the menu goes offline 30 days later.");
     }
   } else {
     params.append(`${prefix}[price]`, item.stripePriceId);
