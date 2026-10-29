@@ -1,7 +1,7 @@
 // Guest App intake (stage 8): after payment the buyer gets a signed link to one form with everything the app is built
 // from. The form is pre-filled with what Menu-made already holds for the business (its website order's menu, phone,
 // address, hours and colour; its name), and the owner checks and corrects it. A logo from the website is used unless
-// a new one is uploaded. Answers become project_inputs and guest_apps.data_json; the logo is checked by its bytes and
+// a new one is uploaded, else the logo uploaded with the business's Online Menu + QR. Answers become project_inputs and guest_apps.data_json; the logo is checked by its bytes and
 // stored as an asset. When the required answers are in, the project is released to production.
 //   GET/POST /api/app-intake/<projectId>?t=<token>     (token kind "appintake")
 // Address: a business that already has a Menu-made website keeps its slug (site at /, app at /app/); otherwise the
@@ -81,7 +81,7 @@ function formPage(action, token, values, { error = null, fields = FIELDS, logo =
   return simplePage(error ? 400 : 200, heading, `${intro}${error ? `<p style="color:#9b1c1c"><strong>${escapeHtml(error)}</strong></p>` : ""}
 <form method="post" action="${escapeHtml(action)}" enctype="multipart/form-data"><input type="hidden" name="t" value="${escapeHtml(token)}">
 ${fields.map((f) => control(f, values[f.key])).join("")}
-${logo ? `<p><label for="logo"><strong>Logo (optional)</strong></label><br><input id="logo" name="logo" type="file" accept="image/png,image/jpeg"><br><small>PNG or JPG, under 1.5 MB. A square logo looks best as a home-screen icon. Without one we use the logo from your Menu-made website if you have one, otherwise your initials.</small></p>` : ""}
+${logo ? `<p><label for="logo"><strong>Logo (optional)</strong></label><br><input id="logo" name="logo" type="file" accept="image/png,image/jpeg"><br><small>PNG or JPG, under 1.5 MB. A square logo looks best as a home-screen icon. Without one we use the logo from your Menu-Made website or online menu if you gave us one, otherwise your initials.</small></p>` : ""}
 <button type="submit">Send</button></form>`);
 }
 
