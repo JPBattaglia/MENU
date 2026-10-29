@@ -47,6 +47,13 @@ jobs:
         working-directory: booking-api
         run: npm install --omit=dev --no-audit --no-fund
 
+      # Display fonts for the Nino design services (open-licence Google Fonts as TTF). Not part of package.json, so a
+      # registry hiccup here never blocks the worker's deploy; without them designs fall back to Liberation Sans.
+      - name: Install display fonts
+        if: steps.check.outputs.work == 'true'
+        working-directory: booking-api
+        run: npm install --no-save --omit=dev --no-audit --no-fund @expo-google-fonts/playfair-display @expo-google-fonts/montserrat @expo-google-fonts/bebas-neue @expo-google-fonts/dm-serif-display @expo-google-fonts/pacifico @expo-google-fonts/abril-fatface || echo "Display fonts unavailable; using Liberation Sans"
+
       - name: Draw and upload
         if: steps.check.outputs.work == 'true'
         run: node booking-api/scripts/render-social-posts.mjs

@@ -10,6 +10,8 @@ import { startGoogleVisibility } from "../producers/google-visibility/intake.js"
 import { refreshOnboardingState } from "../onboarding/onboarding.js";
 import { handleExtraPagesPaid } from "../producers/menu-qr/page-billing.js";
 import { SUBSCRIPTION_EVENTS, handleSubscriptionEvent, onSubscriptionCheckoutCompleted } from "../subscriptions/webhooks.js";
+import { startDesignBrief } from "../producers/nino-design/brief.js";
+import { startStaffMerch } from "../producers/staff-merch/order.js";
 
 async function handleStripeWebhook(request, env) {
   try {
@@ -553,6 +555,28 @@ async function handleCheckoutCompleted(event, env) {
       await startGuestAppIntake(env, { projectId: appProject.id });
     } catch (startError) {
       console.error("Guest App intake start failed:", startError instanceof Error ? startError.message : String(startError));
+    }
+  }
+  // Nino design services (stage 10): email the buyer the brief form.
+  const designProjects = await env.DB.prepare(`
+      SELECT id FROM projects WHERE order_id = ? AND workflow_key IN ('NINO_SOCIAL_PACK_V1', 'NINO_FLYER_V1', 'NINO_MENU_DESIGN_V1', 'NINO_LOGO_V1') AND status = 'AWAITING_INPUTS'
+    `).bind(orderId).all();
+  for (const designProject of designProjects.results || []) {
+    try {
+      await startDesignBrief(env, { projectId: designProject.id });
+    } catch (startError) {
+      console.error("Design brief start failed:", startError instanceof Error ? startError.message : String(startError));
+    }
+  }
+  // Staff merch (stage 10): the order is already fully specified; release it to production.
+  const merchProjects = await env.DB.prepare(`
+      SELECT id FROM projects WHERE order_id = ? AND workflow_key = 'STAFF_MERCH_V1' AND status = 'AWAITING_INPUTS'
+    `).bind(orderId).all();
+  for (const merchProject of merchProjects.results || []) {
+    try {
+      await startStaffMerch(env, { projectId: merchProject.id });
+    } catch (startError) {
+      console.error("Staff merch start failed:", startError instanceof Error ? startError.message : String(startError));
     }
   }
   const existingAudit = await env.DB.prepare(`

@@ -19,6 +19,10 @@
   "kv_namespaces": [
     { "binding": "STRIPE_EVENTS", "id": "28987675a91d4778b39f1c25e81851b3" }
   ],
+  // Stage 10 staff merch: the Nino shop's private entrypoint, which holds the Printful token (deploy the Nino worker first).
+  "services": [
+    { "binding": "MERCH", "service": "nino-printful-commerce-api", "entrypoint": "NinoMerch" }
+  ],
   "r2_buckets": [
     { "binding": "ASSETS", "bucket_name": "menu-made-assets" }
   ],

@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Staff Merch with Nino Battaglia Designs — MENU-MADE</title>
+  <meta name="description" content="Staff shirts for restaurants and local businesses in Nino Battaglia's designs, with your logo on the back if you like. Team discounts from 12 shirts; printed and shipped for you.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Philosopher:wght@400;700&family=Aldrich&display=swap" rel="stylesheet">
+  <link rel="icon" type="image/png" href="MENU=.png">
+  <link rel="shortcut icon" href="MENU=.png">
+  <link rel="apple-touch-icon" href="MENU=.png">
+  <link rel="stylesheet" href="main.css?v=20261028-stage10">
+  <script src="funnel.js?v=20261016-service-measurement" defer></script>
+  <script src="site-nav.js?v=20261016-accessible-navigation" defer></script>
+  <script src="site-catalog.js?v=20261028-stage9" defer></script>
+  <link rel="canonical" href="https://menu-made.com/staff-merch">
+  <meta property="og:type" content="website">
+  <meta property="og:locale" content="en_US">
+  <meta property="og:site_name" content="MENU-MADE">
+  <meta property="og:title" content="Staff Merch with Nino Battaglia Designs — MENU-MADE">
+  <meta property="og:description" content="Staff shirts for restaurants and local businesses in Nino Battaglia's designs, with your logo on the back if you like. Team discounts from 12 shirts; printed and shipped for you.">
+  <meta property="og:url" content="https://menu-made.com/staff-merch">
+  <meta property="og:image" content="https://menu-made.com/assets/social-preview.png">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta property="og:image:alt" content="MENU-MADE — Menus, websites and Google care for local businesses">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="Staff Merch with Nino Battaglia Designs — MENU-MADE">
+  <meta name="twitter:description" content="Staff shirts for restaurants and local businesses in Nino Battaglia's designs, with your logo on the back if you like. Team discounts from 12 shirts; printed and shipped for you.">
+  <meta name="twitter:image" content="https://menu-made.com/assets/social-preview.png">
+</head>
+<body class="merch-page">
+<a class="site-skip" href="#main-content">Skip to content</a>
+<header class="header">
+  <div class="container header-inner">
+    <div class="brand">
+      <a class="gear-link" href="index.html" aria-label="Home">
+        <img src="MENU=.png" class="brand-mark" alt="Menu-Made gear">
+      </a>
+      <a class="word-link" href="about.html" aria-label="About">
+        <img src="MENU1.png" class="brand-word" alt="Menu-Made">
+      </a>
+    </div>
+    <button class="gear-burger" type="button" aria-expanded="false" aria-controls="primaryNav" aria-label="Open navigation menu" hidden><img src="MENU=.png" alt="" aria-hidden="true"></button>
+    <nav class="nav" id="primaryNav" aria-label="Primary">
+      <a href="index.html">Home</a>
+      <a href="plans.html">Plans</a>
+      <a href="services.html">Services</a>
+      <a href="portfolio.html">Our Work</a>
+      <a href="about.html">About</a>
+      <a href="account.html">Account</a>
+      <a class="nav-cta" href="contact.html">Start</a>
+    </nav>
+  </div>
+</header>
+<main id="main-content" tabindex="-1">
+<section class="hero mm-page-hero">
+  <div class="container">
+    <span class="pill">Staff merch</span>
+    <h1>Staff shirts in Nino Battaglia's designs</h1>
+    <p class="hero-intro">Pick designs from Nino's collection, choose colours and sizes for your team, and add your logo on the back if you like. Each shirt costs what it does in Nino's shop, plus $5 with your logo. Order 12 or more for 10% off, 24 or more for 15% off. Printed by Printful and shipped to you.</p>
+  </div>
+</section>
+
+<section class="section" aria-labelledby="pick-title">
+  <div class="container">
+    <header class="section-head"><h2 id="pick-title">1. Choose a design</h2><p id="designCount">Loading designs…</p></header>
+    <label for="designSearch" class="merch-visually-hidden">Search designs</label>
+    <input id="designSearch" class="merch-search" type="search" placeholder="Search designs">
+    <div id="designGrid" class="merch-grid" aria-live="polite"></div>
+
+    <div id="pickerStep" class="merch-panel" hidden>
+      <h2>2. Colour, sizes and how many</h2>
+      <div class="merch-picker">
+        <img id="pickerImage" src="" alt="" width="280" height="280">
+        <div>
+          <h3 id="pickerTitle"></h3>
+          <div id="colorList" class="merch-swatches" aria-label="Colours"></div>
+          <div id="sizeList" class="merch-sizes"></div>
+          <p><small>You can mix designs and colours: pick another design above and add more sizes.</small></p>
+        </div>
+      </div>
+    </div>
+
+    <div class="merch-panel">
+      <h2>Your team's shirts</h2>
+      <ul id="cartLines" class="merch-cart"></ul>
+      <p id="cartSummary"></p>
+    </div>
+
+    <form id="detailsForm" class="merch-panel" hidden novalidate>
+      <h2>3. Your logo and where to ship</h2>
+      <p><label><input type="checkbox" id="wantLogo"> Add our logo on the back (+$5 a shirt)</label></p>
+      <div id="logoField" hidden>
+        <label for="logoFile">Logo (PNG or JPG, under 5 MB; a transparent PNG prints best)</label><br>
+        <input id="logoFile" type="file" accept="image/png,image/jpeg">
+        <img id="logoPreview" alt="Your logo" hidden>
+        <p><small>Nino checks every logo order before anything is printed. Only upload a logo your business owns.</small></p>
+      </div>
+      <div class="merch-form">
+        <label class="full">Name for delivery<input id="shipName" required autocomplete="name"></label>
+        <label class="full">Street address<input id="shipAddress1" required autocomplete="address-line1"></label>
+        <label class="full">Apartment, suite (optional)<input id="shipAddress2" autocomplete="address-line2"></label>
+        <label>City<input id="shipCity" required autocomplete="address-level2"></label>
+        <label>State (2 letters)<input id="shipState" maxlength="2" autocomplete="address-level1"></label>
+        <label>ZIP / postcode<input id="shipZip" required autocomplete="postal-code"></label>
+        <label>Country (2 letters)<input id="shipCountry" value="US" maxlength="2" autocomplete="country"></label>
+      </div>
+      <p id="detailsStatus" class="merch-status" role="alert" hidden></p>
+      <button id="quoteBtn" class="btn primary" type="submit">Get delivery price</button>
+    </form>
+
+    <div id="quoteBox" class="merch-panel" hidden>
+      <h2>4. Review and pay</h2>
+      <table class="merch-table"><thead><tr><th>Shirt</th><th>Qty</th><th>Each</th><th>Total</th></tr></thead><tbody id="quoteLines"></tbody></table>
+      <fieldset class="merch-fieldset"><legend>Delivery</legend><div id="quoteRates"></div></fieldset>
+      <p id="quoteTotal"></p>
+      <div class="merch-form">
+        <label>Business name<input id="buyerBusiness" required autocomplete="organization"></label>
+        <label>Your name<input id="buyerName" autocomplete="name"></label>
+        <label>Email<input id="buyerEmail" type="email" required autocomplete="email"></label>
+        <label>Phone (optional)<input id="buyerPhone" autocomplete="tel"></label>
+      </div>
+      <p id="quoteStatus" class="merch-status" role="alert" hidden></p>
+      <button id="payBtn" class="btn primary" type="button">Pay securely</button>
+      <p><small>Payment by Stripe. Prices are checked again with Nino's shop and Printful before you pay. Shirts usually print in 3-7 days, then ship; we email the tracking link.</small></p>
+    </div>
+    <p id="merchStatus" class="merch-status" hidden></p>
+  </div>
+</section>
+</main>
+<footer class="footer">
+  <div class="container footer-inner">
+    <div class="footer-copy">© 2019–2026 MENU-MADE</div>
+    <a class="footer-logo" href="index.html" aria-label="Home">
+      <img src="MENU1.png" alt="MENU-MADE">
+    </a>
+    <div class="footer-social" aria-label="Social links">
+      <a class="social-icon" href="https://www.facebook.com/MenuMade.OnlinePresence" target="_blank" rel="noopener" aria-label="Facebook">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14 8.5V7c0-.8.5-1 1-1h2V3h-3c-2.8 0-4 1.7-4 4v1.5H8V12h2v9h4v-9h2.7l.3-3.5H14z"/></svg>
+      </a>
+      <a class="social-icon" href="https://www.linkedin.com/company/menu-made/" target="_blank" rel="noopener" aria-label="LinkedIn">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 3a2 2 0 1 1 0 4 2 2 0 0 1 0-4zM3 9h4v12H3V9zm6 0h4v1.6c.8-1.2 2-1.9 3.6-1.9 3.2 0 4.4 2 4.4 5.4V21h-4v-6.1c0-1.7-.3-2.8-1.8-2.8-1.6 0-2.2 1.2-2.2 2.8V21H9V9z"/></svg>
+      </a>
+      <a class="social-icon" href="https://www.instagram.com/menumade.gram/" target="_blank" rel="noopener" aria-label="Instagram">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 2h10a5 5 0 0 1 5 5v10a5 5 0 0 1-5 5H7a5 5 0 0 1-5-5V7a5 5 0 0 1 5-5zm10 2H7a3 3 0 0 0-3 3v10a3 3 0 0 0 3 3h10a3 3 0 0 0 3-3V7a3 3 0 0 0-3-3zm-5 4.2a3.8 3.8 0 1 1 0 7.6 3.8 3.8 0 0 1 0-7.6zm0 2a1.8 1.8 0 1 0 0 3.6 1.8 1.8 0 0 0 0-3.6zM18 6.3a.9.9 0 1 1 0 1.8.9.9 0 0 1 0-1.8z"/></svg>
+      </a>
+    </div>
+  </div>
+  <nav class="footer-links" aria-label="More from MENU-MADE"><a href="plans.html">Plans &amp; Pricing</a><a href="services.html">Services</a><a href="website-design.html">Website Package</a><a href="google-visibility.html">Google Visibility</a><a href="accessibility-services.html">Accessibility Monitoring</a><a href="staff-merch.html">Staff Merch</a><a href="https://ninobattaglia.com/services.html#design-services">Design by Nino &#8599;</a><a href="portfolio.html">Our Work</a><a href="about.html">Meet JP &amp; Nino</a><a href="account.html">Your account</a><a href="privacy.html">Privacy</a><a href="accessability.html">Site Accessibility</a></nav>
+</footer>
+<script src="section-parallax.js?v=20261015-unified" defer></script>
+<script src="staff-merch.js?v=20261028-stage10" defer></script>
+</body>
+</html>

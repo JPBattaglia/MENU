@@ -27,15 +27,18 @@ const specKey = (id) => `render-jobs/social/${id}/spec.json`;
 
 // ---------- Queue (called from the PRODUCE step) ----------
 
-// Workflows whose PRODUCE step can wait for the renderer. Guest App setups use it for their home-screen icons.
-const RENDER_WORKFLOWS = ["SOCIAL_POSTS_V1", "GUEST_APP_SETUP_V1"];
+// Workflows whose PRODUCE step can wait for the renderer. Guest App setups use it for their home-screen icons, the
+// Nino design services (stage 10) for every design they make.
+const RENDER_WORKFLOWS = ["SOCIAL_POSTS_V1", "GUEST_APP_SETUP_V1", "NINO_SOCIAL_PACK_V1", "NINO_FLYER_V1", "NINO_MENU_DESIGN_V1", "NINO_LOGO_V1"];
 const RENDER_IN = `wr.workflow_key IN (${RENDER_WORKFLOWS.map((k) => `'${k}'`).join(", ")})`;
 
 // files: [{ name, svg, width, height, min_bytes? }]; extra: [{ name, text }]; assets: { logo: data URI } substituted
 // for __LOGO_DATA_URI__ in the SVGs by the renderer; finish: what the result handler needs later (finish.kind picks it).
-async function queueRender(env, targetStep, { kind = "SOCIAL", files, extra = [], assets = {}, finish }) {
+// fonts: display font families the renderer should load (Nino designs); preview: { title, sections, widths } asks the
+// renderer to add preview.html (small copies of the images on one page) to the ZIP.
+async function queueRender(env, targetStep, { kind = "SOCIAL", files, extra = [], assets = {}, fonts = [], preview = null, finish }) {
   const id = targetStep.workflow_step_id;
-  await env.ASSETS.put(specKey(id), JSON.stringify({ version: 1, id, kind, zip_name: finish.pack_filename, files, extra, assets }), {
+  await env.ASSETS.put(specKey(id), JSON.stringify({ version: 1, id, kind, zip_name: finish.pack_filename, files, extra, assets, ...(fonts.length ? { fonts } : {}), ...(preview ? { preview } : {}) }), {
     httpMetadata: { contentType: "application/json" }
   });
   const output = { waiting_for: "RENDER", render_job: id, requested_at: nowIso(), finish };
@@ -186,7 +189,10 @@ function checkPack(entries, spec) {
     if (data.length < (file.min_bytes ?? 2000)) return `${file.name} is suspiciously small (${data.length} bytes)`;
   }
   for (const file of spec.extra || []) if (!byName.has(file.name)) return `${file.name} is missing`;
-  if (entries.length !== spec.files.length + (spec.extra || []).length) return `the ZIP holds ${entries.length} files, expected ${spec.files.length + (spec.extra || []).length}`;
+  const previewFiles = spec.preview ? 1 : 0;
+  if (spec.preview && !byName.has("preview.html")) return "preview.html is missing";
+  const expected = spec.files.length + (spec.extra || []).length + previewFiles;
+  if (entries.length !== expected) return `the ZIP holds ${entries.length} files, expected ${expected}`;
   return null;
 }
 
@@ -241,10 +247,15 @@ async function handleRenderJobs(request, env, jobId) {
     .bind(nowIso(), jobId).run();
   if (Number(claimed.meta?.changes || 0) === 0) return jsonResponse({ ok: false, error: "This render job was already finished" }, 409);
   let output;
-  if (finish.kind === "GUEST_APP") {
+  if (finish.kind === "GUEST_APP" || finish.kind === "NINO_DESIGN") {
     try {
-      const { finishGuestAppRender } = await import("../guest-app/app-step.js");
-      output = await finishGuestAppRender(env, context, listZip(bytes), finish);
+      if (finish.kind === "NINO_DESIGN") {
+        const { finishNinoDesignRender } = await import("../nino-design/produce.js");
+        output = await finishNinoDesignRender(env, context, listZip(bytes), finish, { zipBytes: bytes });
+      } else {
+        const { finishGuestAppRender } = await import("../guest-app/app-step.js");
+        output = await finishGuestAppRender(env, context, listZip(bytes), finish);
+      }
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
       await env.DB.prepare(`UPDATE workflow_steps SET status = 'FAILED', error_message = ?, completed_at = ? WHERE id = ?`).bind(message.slice(0, 500), nowIso(), jobId).run();
@@ -286,13 +297,13 @@ async function alertStaleRenders(env, now = Date.now()) {
   for (const job of stale) {
     const sent = await sendTransactionalEmail(env, {
       to: ownerEmailAddress(env),
-      subject: "Social Posts graphics are waiting to be drawn",
+      subject: "Graphics are waiting to be drawn",
       html: brandedEmailHtml({
         preheader: "The GitHub renderer has not picked up a job for over an hour.",
         eyebrow: "AUTOMATION ALERT",
         heading: "Graphics have waited over an hour",
         paragraphs: [
-          "Social Posts graphics or Guest App icons are waiting, but GitHub has not drawn them yet, so nothing has gone to you for approval.",
+          "Social Posts graphics, Guest App icons or a Nino design are waiting, but GitHub has not drawn them yet, so nothing has gone to you for approval.",
           "Open the JPBattaglia/MENU repository on GitHub, go to Actions, choose \"Render social posts\" and click \"Run workflow\". If the workflow shows as disabled, enable it first."
         ],
         rows: [["Render job", job.id]]

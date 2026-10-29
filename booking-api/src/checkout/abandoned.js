@@ -68,6 +68,8 @@ function cartInputFromItems(items) {
   const inputs = [];
   let interval = "month";
   let menuPages;
+  let designPages;
+  let returnTo;
   for (const item of items) {
     const meta = parseJsonOrNull(item.metadata_json) || {};
     if (meta.billing === "RECURRING") {
@@ -77,9 +79,11 @@ function cartInputFromItems(items) {
       continue;
     }
     if (meta.menu_package) menuPages = Number(meta.menu_package.menu_pages);
+    if (meta.design_pages) designPages = Number(meta.design_pages);
+    if (meta.return_to === "nino") returnTo = "nino";
     inputs.push({ key: item.offer_code, qty: Number(item.quantity || 1) });
   }
-  return { items: inputs, interval, ...(menuPages ? { menu_pages: menuPages } : {}) };
+  return { items: inputs, interval, ...(menuPages ? { menu_pages: menuPages } : {}), ...(designPages ? { design_pages: designPages } : {}), ...(returnTo ? { return_to: returnTo } : {}) };
 }
 
 async function resumeLink(env, orderId) {
@@ -166,6 +170,8 @@ async function followUpAbandonedCheckouts(env, { now = new Date(), orderIds = nu
       if (!loaded || loaded.order.status !== "PAYMENT_PENDING" || !["PENDING", "UNPAID"].includes(loaded.order.payment_status)) { skip("no longer unpaid"); continue; }
       if (!orderIds && loaded.environment !== "live") { skip("sandbox order"); continue; }
       if (!isCustomerEmail(loaded.order.email, PURPOSE, env)) { skip("owner address"); continue; }
+      // Staff merch carts carry sizes, colours and a shipping quote that expire; the merch page rebuilds them instead.
+      if (loaded.items.some((item) => parseJsonOrNull(item.metadata_json)?.staff_merch)) { skip("staff merch order"); continue; }
       if (!orderIds && await boughtOrRetriedSince(env, row)) { skip("buyer came back since"); continue; }
       // The webhook may be late: never remind someone who actually paid.
       const session = loaded.order.stripe_checkout_session_id
@@ -244,7 +250,8 @@ ${trial ? `<p>${escapeHtml(trial)}</p>` : ""}
       name: [order.first_name, order.last_name].filter(Boolean).join(" "),
       businessName: order.business_name || "",
       phone: order.customer_phone || "",
-      notes: order.notes || ""
+      notes: order.notes || "",
+      returnTo: data.return_to || null
     };
     const opened = await openStripeSession(env, environment, { cart, normalizedItems, orderItems, pending, resumed: true });
     if (!opened.ok) return closedPage("Checkout couldn't open", "Stripe didn't open a checkout just now. Please try the link again in a minute, or reply to our email.");
