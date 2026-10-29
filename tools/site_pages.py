@@ -12,14 +12,13 @@ from pathlib import Path
 import re
 
 ROOT = Path(__file__).resolve().parent.parent
-CSS_VERSION = "20261028-stage10c"
+CSS_VERSION = "20261028-stage10d"
 CATALOG_JS = '<script src="site-catalog.js?v=20261028-stage9" defer></script>'
 
 NAV = [
     ("index.html", "Home"),
     ("plans.html", "Plans"),
     ("services.html", "Services"),
-    ("staff-merch.html", "Staff Merch"),
     ("portfolio.html", "Our Work"),
     ("about.html", "About"),
     ("account.html", "Account"),
