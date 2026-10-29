@@ -2779,3 +2779,5 @@ a.is-soon{opacity:.85;background:transparent!important;color:var(--gold)!importa
 .merch-note{font-size:14px;opacity:.85}
 details.merch-panel summary{cursor:pointer;list-style:none}details.merch-panel summary h2{display:inline}
 details.merch-panel summary::before{content:"▸ ";font-size:1.3em}details.merch-panel[open] summary::before{content:"▾ "}
+/* The logo preview stays hidden until a logo is chosen (site-wide img rules would otherwise show an empty box). */
+.merch-drop img[hidden]{display:none}
