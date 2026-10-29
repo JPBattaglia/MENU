@@ -13,6 +13,10 @@ on:
       config:
         description: Build config path
         default: app-shell/sample/build.json
+      upload:
+        description: Sign the iOS build and upload it to TestFlight
+        type: boolean
+        default: false
   push:
     branches: [master]
     paths:
@@ -25,6 +29,7 @@ concurrency:
 
 permissions:
   contents: read
+  id-token: write   # only the TestFlight job uses it, to fetch the App Store Connect key from the worker
 
 env:
   CONFIG: ${{ inputs.config || 'app-shell/sample/build.json' }}
@@ -118,3 +123,77 @@ jobs:
             CODE_SIGNING_ALLOWED=NO build -quiet
           echo "IOS_BUILD_SECONDS=$(( $(date +%s) - start ))" | tee -a "$GITHUB_STEP_SUMMARY"
           ls build/Build/Products/Release-iphonesimulator/
+
+  # Signed iOS build uploaded to TestFlight (manual runs with upload ticked only). Signing is Xcode's automatic signing
+  # with the App Store Connect API key (Admin), so certificates and profiles are created and kept by Apple; nothing is
+  # stored here. The key comes from the worker over this job's OIDC token and every line of it is masked.
+  ios-testflight:
+    if: github.event_name == 'workflow_dispatch' && inputs.upload
+    runs-on: macos-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Use the newest Xcode on the runner (App Store uploads need a current SDK)
+        run: |
+          xc=$(ls -d /Applications/Xcode_*.app 2>/dev/null | grep -v beta | sort -V | tail -1)
+          [ -n "$xc" ] && sudo xcode-select -s "$xc"
+          xcodebuild -version
+      - name: Fetch the App Store Connect key from the worker
+        run: |
+          token=$(curl -sSf -H "Authorization: Bearer $ACTIONS_ID_TOKEN_REQUEST_TOKEN" "$ACTIONS_ID_TOKEN_REQUEST_URL&audience=menu-made-store-build" | jq -r .value)
+          echo "::add-mask::$token"
+          curl -sSf -H "Authorization: Bearer $token" "https://menu-made.com/api/store-build/credentials?scope=owner" -o "$RUNNER_TEMP/creds.json"
+          jq -r .apple.p8 "$RUNNER_TEMP/creds.json" | while IFS= read -r line; do [ -n "$line" ] && echo "::add-mask::$line"; done
+          jq -r .apple.p8 "$RUNNER_TEMP/creds.json" > "$RUNNER_TEMP/AuthKey.p8"
+          {
+            echo "ASC_KEY_ID=$(jq -r .apple.key_id "$RUNNER_TEMP/creds.json")"
+            echo "ASC_ISSUER_ID=$(jq -r .apple.issuer_id "$RUNNER_TEMP/creds.json")"
+            echo "TEAM_ID=$(jq -r .apple.team_id "$RUNNER_TEMP/creds.json")"
+          } >> "$GITHUB_ENV"
+          rm -f "$RUNNER_TEMP/creds.json"
+          echo "Key received"
+      - name: Install Capacitor and make the iOS project
+        run: |
+          cd app-shell && npm init -y >/dev/null && npm install --no-audit --no-fund $CAP_PACKAGES && cd ..
+          node app-shell/configure.mjs "$CONFIG"
+          cd app-shell && npx cap add ios && npx cap sync ios
+          plist=ios/App/App/Info.plist
+          /usr/libexec/PlistBuddy -c "Add :ITSAppUsesNonExemptEncryption bool false" "$plist" 2>/dev/null || /usr/libexec/PlistBuddy -c "Set :ITSAppUsesNonExemptEncryption false" "$plist"
+          cat > ios/App/App/App.entitlements <<'PLIST'
+          <?xml version="1.0" encoding="UTF-8"?>
+          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+          <plist version="1.0"><dict><key>aps-environment</key><string>production</string></dict></plist>
+          PLIST
+          sed -i '' 's/^          //' ios/App/App/App.entitlements
+      - name: Archive (signed)
+        working-directory: app-shell/ios/App
+        run: |
+          if [ -d App.xcworkspace ]; then target="-workspace App.xcworkspace"; else target="-project App.xcodeproj"; fi
+          app_id=$(jq -r .app_id "$GITHUB_WORKSPACE/$CONFIG"); version=$(jq -r '.version // "1.0.0"' "$GITHUB_WORKSPACE/$CONFIG")
+          xcodebuild $target -scheme App -configuration Release -destination 'generic/platform=iOS' -archivePath "$RUNNER_TEMP/App.xcarchive" \
+            -allowProvisioningUpdates -authenticationKeyPath "$RUNNER_TEMP/AuthKey.p8" -authenticationKeyID "$ASC_KEY_ID" -authenticationKeyIssuerID "$ASC_ISSUER_ID" \
+            DEVELOPMENT_TEAM="$TEAM_ID" CODE_SIGN_STYLE=Automatic CODE_SIGN_ENTITLEMENTS=App/App.entitlements PRODUCT_BUNDLE_IDENTIFIER="$app_id" \
+            MARKETING_VERSION="$version" CURRENT_PROJECT_VERSION="${{ github.run_number }}" archive -quiet
+      - name: Upload to TestFlight
+        run: |
+          cat > "$RUNNER_TEMP/ExportOptions.plist" <<PLIST
+          <?xml version="1.0" encoding="UTF-8"?>
+          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+          <plist version="1.0"><dict>
+          <key>method</key><string>app-store-connect</string>
+          <key>destination</key><string>upload</string>
+          <key>teamID</key><string>$TEAM_ID</string>
+          <key>signingStyle</key><string>automatic</string>
+          <key>uploadSymbols</key><true/>
+          <key>manageAppVersionAndBuildNumber</key><false/>
+          </dict></plist>
+          PLIST
+          xcodebuild -exportArchive -archivePath "$RUNNER_TEMP/App.xcarchive" -exportOptionsPlist "$RUNNER_TEMP/ExportOptions.plist" -exportPath "$RUNNER_TEMP/export" \
+            -allowProvisioningUpdates -authenticationKeyPath "$RUNNER_TEMP/AuthKey.p8" -authenticationKeyID "$ASC_KEY_ID" -authenticationKeyIssuerID "$ASC_ISSUER_ID"
+          echo "Uploaded build ${{ github.run_number }} to App Store Connect" | tee -a "$GITHUB_STEP_SUMMARY"
+      - name: Remove the key
+        if: always()
+        run: rm -f "$RUNNER_TEMP/AuthKey.p8" "$RUNNER_TEMP/creds.json"
