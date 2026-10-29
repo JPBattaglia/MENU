@@ -2670,7 +2670,7 @@ a.is-soon{opacity:.85;background:transparent!important;color:var(--gold)!importa
 .mm-product-body{display:grid;grid-template-columns:1.2fr 1fr;gap:28px;margin-top:18px}
 .mm-product-body h4{margin:0 0 6px;font-size:17px;color:var(--gold)}
 .mm-product-body p{margin:0 0 14px;line-height:1.5}
-.mm-product-actions{margin-top:16px}
+.mm-product-actions{margin-top:16px;display:flex;flex-wrap:wrap;gap:10px;align-items:center}
 .mm-legal{max-width:820px;line-height:1.6}
 .mm-legal h2{margin:34px 0 10px;font-size:26px}
 .mm-legal li{margin:6px 0}

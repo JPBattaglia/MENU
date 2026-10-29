@@ -23,7 +23,8 @@ function scrub(text, names = []) {
   for (const name of names.filter(Boolean).sort((a, b) => b.length - a.length)) out = out.split(name).join(SAMPLE_NAME);
   out = out.replace(/(?:[A-Z][A-Za-z0-9]*\s+){0,3}Self-Test\s+(?:Cafe|Trattoria|Bistro|Restaurant)/g, SAMPLE_NAME)
     .replace(/Menu-Made Self-Test/g, "Sam Sample")
-    .replace(/\bSelf-Test\b/g, "Sample");
+    .replace(/\bSelf-Test\b/g, "Sample")
+    .replace(/[A-Za-z]*SelfTest(?:Cafe|Trattoria|Bistro)?/g, "SampleCafe");
   // Signed private links (change forms, approvals, settings, deliveries) never leave a sample.
   out = out.replace(/https?:\/\/[a-z0-9.-]*menu-made\.com\/api\/[^"'\s<>)]*[?&](?:amp;)?t=[^"'\s<>)]*/gi, "#")
     .replace(/delivered@resend\.dev/gi, "hello@example.com");

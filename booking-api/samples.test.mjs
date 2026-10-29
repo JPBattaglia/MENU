@@ -8,12 +8,14 @@ const { default: worker } = await import('./src/worker.js');
 const { scrub } = await import('./src/delivery/samples.js');
 
 test('scrub renames test businesses and removes every signed link', () => {
-  const out = scrub(`<h1>Social Posts Self-Test Cafe</h1><p>Menu-Made Self-Test</p><a href="https://menu-made.com/api/menu-care/abc?t=eyJr.sig">Change</a><a href="https://menu-made.com/api/delivery/1?x=1&amp;t=tok">Get</a><a href="https://menu-made.com/plans.html">Plans</a> delivered@resend.dev`, ['Social Posts Self-Test Cafe']);
+  const out = scrub(`<h1>Social Posts Self-Test Cafe</h1><p>Menu-Made Self-Test</p><a href="https://menu-made.com/api/menu-care/abc?t=eyJr.sig">Change</a><a href="https://menu-made.com/api/delivery/1?x=1&amp;t=tok">Get</a><a href="https://menu-made.com/plans.html">Plans</a> delivered@resend.dev #SocialPostsSelfTestCafe #CafeLife`, ['Social Posts Self-Test Cafe']);
   assert.match(out, /<h1>Sample Cafe<\/h1>/);
   assert.doesNotMatch(out, /Self-Test/);
   assert.doesNotMatch(out, /t=eyJr|t=tok/);
   assert.match(out, /https:\/\/menu-made\.com\/plans\.html/, 'ordinary links stay');
   assert.doesNotMatch(out, /resend\.dev/);
+  assert.match(out, /#SampleCafe #CafeLife/);
+  assert.doesNotMatch(out, /SelfTest/);
 });
 
 test('/api/samples/menu serves the self-test buyer\'s newest menu, never a real customer\'s', async () => {
