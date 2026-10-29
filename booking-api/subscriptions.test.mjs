@@ -160,6 +160,30 @@ test('public offers list stays unchanged: no plan is on sale yet', async () => {
   } finally { h.restore(); }
 });
 
+test('site catalog lists every plan with monthly and annual prices, bundle contents and on-sale flags', async () => {
+  const h = setup();
+  try {
+    const res = await h.call('/api/catalog');
+    assert.equal(res.status, 200);
+    assert.match(res.headers.get('Cache-Control'), /max-age=300/);
+    const body = await res.json();
+    const by = Object.fromEntries(body.offers.map((o) => [o.code, o]));
+    for (const [code, entry] of Object.entries({ ...catalog.subscriptions, ...catalog.bundles })) {
+      assert.deepEqual(by[code].prices, { month: entry.monthly.amount, year: entry.annual.amount }, code);
+      assert.equal(by[code].on_sale, false, code);
+    }
+    assert.equal(by.BUNDLE_GROWTH.kind, 'BUNDLE');
+    assert.deepEqual(by.BUNDLE_GROWTH.includes, catalog.bundles.BUNDLE_GROWTH.includes);
+    assert.equal(by.GUEST_APP.requires_setup, 'GUEST_APP_SETUP');
+    assert.equal(by.WEBSITE_PACKAGE.price_cents, catalog.one_time.WEBSITE_PACKAGE.amount);
+    assert.equal(by.ONLINE_MENU_QR.on_sale, true);
+    assert.equal(by.ONLINE_MENU_QR.kind, 'ONE_TIME');
+    h.env.DB.raw.prepare(`UPDATE offers SET is_public = 1 WHERE code = 'BUNDLE_STARTER'`).run();
+    const after = Object.fromEntries((await (await h.call('/api/catalog')).json()).offers.map((o) => [o.code, o]));
+    assert.equal(after.BUNDLE_STARTER.on_sale, true);
+  } finally { h.restore(); }
+});
+
 test('sandbox Growth checkout opens a subscription-mode session; annual uses the yearly price', async () => {
   const h = setup();
   try {
