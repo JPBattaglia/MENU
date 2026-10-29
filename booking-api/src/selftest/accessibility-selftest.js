@@ -10,6 +10,7 @@ import { signLinkToken } from "../lib/links.js";
 import { ensureProductionWorkflow } from "../workflows/definitions.js";
 import { DISCLAIMER } from "../producers/accessibility/access-step.js";
 import { updateTest } from "./menu-qr-selftest.js";
+import { dailyClock } from "./daily-clock.js";
 
 const KIND = "ACCESSIBILITY_RUN";
 const STAGE_TIMEOUT_MINUTES = 30;
@@ -21,7 +22,8 @@ async function loadActiveTests(env) {
   return (await env.DB.prepare(`SELECT * FROM self_tests WHERE kind = ? AND status IN ('REQUESTED', 'RUNNING') ORDER BY created_at ASC LIMIT 2`).bind(KIND).all()).results || [];
 }
 
-async function maybeScheduleDaily(env, now = new Date()) {
+async function maybeScheduleDaily(env, now = dailyClock(env)) {
+  if (!now) return;
   if (now.getUTCHours() !== DAILY_HOUR_UTC || now.getUTCMinutes() < 50) return;
   const recent = await env.DB.prepare(`SELECT 1 FROM self_tests WHERE kind = ? AND created_at > ? LIMIT 1`).bind(KIND, new Date(now.getTime() - 20 * 3600000).toISOString()).first();
   if (recent) return;

@@ -31,6 +31,28 @@ env:
   CAP_PACKAGES: "@capacitor/core@latest @capacitor/cli@latest @capacitor/ios@latest @capacitor/android@latest @capacitor/push-notifications@latest"
 
 jobs:
+  # The app's content comes live from the restaurant's Guest App (<app>/api/content). Checks it answers like the app
+  # expects. Retries for up to 10 minutes because a push that also changes the worker deploys it in parallel.
+  # Prints only counts and yes/no, never the content.
+  content:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - name: Live content endpoint
+        run: |
+          base=$(jq -r .api_base "$CONFIG")
+          for i in $(seq 1 20); do
+            if curl -sSf -H "Origin: capacitor://localhost" -D headers.txt "$base/content" -o content.json 2>/dev/null \
+               && jq -e '.ok == true and (.name | length > 0) and (.menu | type == "array") and (.hours | type == "array") and (.loyalty | has("enabled"))' content.json >/dev/null \
+               && grep -qi '^access-control-allow-origin: capacitor://localhost' headers.txt; then
+              jq -r '"content ok: \(.menu | length) menu sections, \(.hours | length) hours lines, specials \(if .specials != "" then "yes" else "no" end), rewards \(if .loyalty.enabled then "on" else "off" end)"' content.json | tee -a "$GITHUB_STEP_SUMMARY"
+              exit 0
+            fi
+            echo "not ready yet ($i/20)"; sleep 30
+          done
+          echo "The content endpoint never answered as expected"; exit 1
+
   android:
     runs-on: ubuntu-latest
     timeout-minutes: 30

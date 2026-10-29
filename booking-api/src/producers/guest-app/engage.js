@@ -34,6 +34,11 @@ const BATCH = 10;
 const DEFAULT_GOAL = 10;
 const enc = new TextEncoder();
 
+// The Store App's origins (stage 11 part 2; native.js serves its content). Kept here so native.js can import engage.js
+// without a cycle back.
+const NATIVE_ORIGINS = new Set(["capacitor://localhost", "https://localhost"]);
+const nativeCors = (origin) => ({ "Access-Control-Allow-Origin": origin, "Access-Control-Allow-Methods": "GET, POST, OPTIONS", "Access-Control-Allow-Headers": "Content-Type", "Access-Control-Max-Age": "86400", Vary: "Origin" });
+
 const API_HEADERS = { "Content-Type": "application/json", "Cache-Control": "no-store", "X-Content-Type-Options": "nosniff", "Content-Security-Policy": "default-src 'none'; frame-ancestors 'none'" };
 const json = (data, status = 200) => new Response(JSON.stringify(data), { status, headers: API_HEADERS });
 
@@ -145,9 +150,18 @@ async function handleAppApi(request, env, slug, path) {
     return json({ push: { enabled: Boolean(keys), key: keys?.publicKey || null }, loyalty: settings.loyalty });
   }
   if (request.method !== "POST") return json({ ok: false, error: "Not found" }, 404);
-  if (request.headers.get("Origin") !== new URL(request.url).origin) return json({ ok: false, error: "Not allowed" }, 403);
+  const origin = request.headers.get("Origin") || "";
+  // The Store App (stage 11 part 2) runs from capacitor://localhost or https://localhost and may only use rewards;
+  // the counter code is what protects a visit, the Origin check only stops other websites posting for a guest.
+  const native = NATIVE_ORIGINS.has(origin);
+  if (origin !== new URL(request.url).origin && !(native && path === "loyalty")) return json({ ok: false, error: "Not allowed" }, 403);
   const body = await readJson(request);
   if (!body) return json({ ok: false, error: "Bad request" }, 400);
+  if (native) {
+    const response = await loyaltyAction(env, app, body);
+    for (const [k, v] of Object.entries(nativeCors(origin))) response.headers.set(k, v);
+    return response;
+  }
   if (path === "push/subscribe") return subscribe(env, app, body);
   if (path === "push/unsubscribe") {
     await env.DB.prepare(`UPDATE push_subscriptions SET status = 'GONE', updated_at = ? WHERE endpoint = ? AND app_id = ?`).bind(nowIso(), String(body.endpoint || ""), app.id).run();
@@ -277,7 +291,7 @@ async function handleAppCounter(request, env, appId) {
 }
 
 export {
-  COUNTER_LINK_KIND, DAILY_PUSH_LIMIT, EARN_GAP_HOURS, PUSH_LINK_KIND, WINDOW_SECONDS,
+  COUNTER_LINK_KIND, DAILY_PUSH_LIMIT, EARN_GAP_HOURS, NATIVE_ORIGINS, PUSH_LINK_KIND, WINDOW_SECONDS, nativeCors,
   counterCode, counterLink, engagementSettings, handleAppApi, handleAppCounter, handleAppPush, matchCode, pushLink,
   queuePush, sendPushMessage, sendQueuedPushes, windowAt
 };

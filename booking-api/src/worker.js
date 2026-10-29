@@ -143,7 +143,7 @@ var worker_default = {
       return handleAppPreview(request, env, appPreviewMatch[1].toLowerCase(), appPreviewMatch[2], appPreviewMatch[3]);
     }
     const liveSiteMatch = url.pathname.match(/^\/api\/site\/([a-z0-9][a-z0-9-]{1,28}[a-z0-9])\/?(.*)$/);
-    if (liveSiteMatch && (request.method === "GET" || request.method === "HEAD" || (request.method === "POST" && APP_API_PATH.test(liveSiteMatch[2])))) {
+    if (liveSiteMatch && methodAllowed(request, liveSiteMatch[2])) {
       return serveSlug(request, env, liveSiteMatch[1], liveSiteMatch[2]);
     }
     const extraPagesMatch = url.pathname.match(/^\/api\/extra-pages\/([A-Za-z0-9-]{1,64})(\/done)?$/);
@@ -278,7 +278,8 @@ var worker_default = {
 
 // The Guest App's own API (notifications and rewards) is the only place on a customer address that takes a POST.
 const APP_API_PATH = /^app\/api\//;
-const methodAllowed = (request, path) => request.method === "GET" || request.method === "HEAD" || (request.method === "POST" && APP_API_PATH.test(path || ""));
+// OPTIONS reaches it too: the Store App (stage 11 part 2) asks before posting to rewards (guest-app/native.js).
+const methodAllowed = (request, path) => request.method === "GET" || request.method === "HEAD" || ((request.method === "POST" || request.method === "OPTIONS") && APP_API_PATH.test(path || ""));
 
 // One slug serves the website at / and the Guest App at /app/. A slug with only an app opens the app from its root.
 async function serveSlug(request, env, slug, path) {

@@ -9,6 +9,7 @@ import { ownerEmailAddress, publicBaseUrl } from "../lib/config.js";
 import { SELF_TEST_EMAIL, brandedEmailHtml, sendTransactionalEmail } from "../lib/email.js";
 import { nowIso, parseJsonOrNull } from "../lib/http.js";
 import { signLinkToken } from "../lib/links.js";
+import { dailyClock } from "./daily-clock.js";
 
 const KIND = "MENU_QR_EXTRA_PAGES";
 const STAGE_TIMEOUT_MINUTES = 25;
@@ -126,7 +127,8 @@ async function updateTest(env, test, patch) {
   return next;
 }
 
-async function maybeScheduleDaily(env, now = new Date()) {
+async function maybeScheduleDaily(env, now = dailyClock(env)) {
+  if (!now) return;
   if (now.getUTCHours() !== DAILY_HOUR_UTC) return;
   const recent = await env.DB.prepare(`
       SELECT 1 FROM self_tests WHERE kind = ? AND created_at > ? LIMIT 1

@@ -8,11 +8,13 @@ import { brandedEmailHtml, sendTransactionalEmail } from "../lib/email.js";
 import { nowIso } from "../lib/http.js";
 import { checkSaasSetup, saasConfig } from "../producers/website/domains.js";
 import { updateTest } from "./menu-qr-selftest.js";
+import { dailyClock } from "./daily-clock.js";
 
 const KIND = "CUSTOM_DOMAIN_SETUP";
 const DAILY_HOUR_UTC = 16; // 9am Pacific
 
-async function maybeScheduleDaily(env, now = new Date()) {
+async function maybeScheduleDaily(env, now = dailyClock(env)) {
+  if (!now) return;
   if (!saasConfig(env) || now.getUTCHours() !== DAILY_HOUR_UTC) return;
   const recent = await env.DB.prepare(`SELECT 1 FROM self_tests WHERE kind = ? AND created_at > ? LIMIT 1`)
     .bind(KIND, new Date(now.getTime() - 20 * 3600000).toISOString()).first();

@@ -14,6 +14,7 @@ import { googleConfig } from "../google/oauth.js";
 import { mediaUrl } from "../producers/google-care/library.js";
 import { ensureProductionWorkflow } from "../workflows/definitions.js";
 import { updateTest } from "./menu-qr-selftest.js";
+import { dailyClock } from "./daily-clock.js";
 
 const KIND = "GOOGLE_PROFILE_CARE_RUN";
 const STAGE_TIMEOUT_MINUTES = 25;
@@ -23,7 +24,8 @@ const SPECIAL = "Pumpkin ravioli is back for autumn, $19.";
 const PHOTO_PNG = "iVBORw0KGgoAAAANSUhEUgAAASwAAAEsCAIAAAD2HxkiAAACeUlEQVR42u3TMQ0AAAzDsPInMgTjVwy79lgygkhJZoFPEoAJwYSACcGEgAnBhIAJwYSACcGEgAnBhIAJwYSACcGEgAnBhIAJwYSACcGEgAnBhIAJwYSACcGEgAnBhIAJwYSACcGEgAnBhIAJwYSACcGEgAnBhIAJwYSACcGEgAnBhIAJwYSACcGEgAnBhIAJwYSACcGEgAnBhIAJwYSACcGEYEIJwIRgQsCEYELAhGBCwIRgQsCEYELAhGBCwIRgQsCEYELAhGBCwIRgQsCEYELAhGBCwIRgQsCEYELAhGBCwIRgQsCEYELAhGBCwIRgQsCEYELAhGBCwIRgQsCEYELAhGBCwIRgQsCEYELAhGBCwIRgQsCEYELAhGBCwIRgQsCEYEIwoQpgQjAhYEIwIWBCMCFgQjAhYEIwIWBCMCFgQjAhYEIwIWBCMCFgQjAhYEIwIWBCMCFgQjAhYEIwIWBCMCFgQjAhYEIwIWBCMCFgQjAhYEIwIWBCMCFgQjAhYEIwIWBCMCFgQjAhYEIwIWBCMCFgQjAhYEIwIWBCMCFgQjAhYEIwIZgQMCGYEDAhmBAwIZgQMCGYEDAhmBAwIZgQMCGYEDAhmBAwIZgQMCGYEDAhmBAwIZgQMCGYEDAhmBAwIZgQMCGYEDAhmBAwIZgQMCGYEDAhmBAwIZgQMCGYEDAhmBAwIZgQMCGYEDAhmBAwIZgQMCGYEDAhmBAwIZgQMCGYEJAATAgmBEwIJgRMCCYETAgmBEwIJgRMCCYETAgmBEwIJgRMCCYETAgmBEwIJgRMCCYETAgmBEwIJgRMCCYETAgmBEwIJgRMCCYETAgmBEwIJgRuCtFNA8PXnr8aAAAAAElFTkSuQmCC";
 const state = (test) => parseJsonOrNull(test.state_json) || {};
 
-async function maybeScheduleDaily(env, now = new Date()) {
+async function maybeScheduleDaily(env, now = dailyClock(env)) {
+  if (!now) return;
   if (now.getUTCHours() !== DAILY_HOUR_UTC || now.getUTCMinutes() < 50 || !googleConfig(env)) return;
   const owner = await env.DB.prepare(`SELECT 1 FROM google_connections WHERE subscription_id = ? AND status = 'ACTIVE'`).bind(OWNER).first();
   if (!owner) return;

@@ -12,6 +12,7 @@ import { sha256Hex } from "../lib/util.js";
 import { buildDesignedMenuHtml } from "../producers/menu-qr/design.js";
 import { createMenuChangeRequest } from "../producers/menu-care/intake.js";
 import { updateTest } from "./menu-qr-selftest.js";
+import { dailyClock } from "./daily-clock.js";
 
 const KIND = "MENU_CARE_EDIT";
 const STAGE_TIMEOUT_MINUTES = 25;
@@ -30,7 +31,8 @@ async function loadActiveTests(env) {
   return (await env.DB.prepare(`SELECT * FROM self_tests WHERE kind = ? AND status IN ('REQUESTED', 'RUNNING') ORDER BY created_at ASC LIMIT 2`).bind(KIND).all()).results || [];
 }
 
-async function maybeScheduleDaily(env, now = new Date()) {
+async function maybeScheduleDaily(env, now = dailyClock(env)) {
+  if (!now) return;
   if (now.getUTCHours() !== DAILY_HOUR_UTC || now.getUTCMinutes() < 40) return;
   const recent = await env.DB.prepare(`SELECT 1 FROM self_tests WHERE kind = ? AND created_at > ? LIMIT 1`).bind(KIND, new Date(now.getTime() - 20 * 3600000).toISOString()).first();
   if (recent) return;

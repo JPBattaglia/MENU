@@ -13,6 +13,7 @@ import { buildQueue } from "../admin/queue.js";
 import { ensureProductionWorkflow } from "../workflows/definitions.js";
 import { completeStep } from "../workflows/runner.js";
 import { updateTest } from "./menu-qr-selftest.js";
+import { dailyClock } from "./daily-clock.js";
 
 const KIND = "ROUTING_APPROVAL";
 const STAGE_TIMEOUT_MINUTES = 25;
@@ -29,7 +30,8 @@ async function loadActiveTests(env) {
     `).bind(KIND).all()).results || [];
 }
 
-async function maybeScheduleDaily(env, now = new Date()) {
+async function maybeScheduleDaily(env, now = dailyClock(env)) {
+  if (!now) return;
   if (now.getUTCHours() !== DAILY_HOUR_UTC || now.getUTCMinutes() < 40) return;
   const recent = await env.DB.prepare(`SELECT 1 FROM self_tests WHERE kind = ? AND created_at > ? LIMIT 1`)
     .bind(KIND, new Date(now.getTime() - 20 * 3600000).toISOString()).first();

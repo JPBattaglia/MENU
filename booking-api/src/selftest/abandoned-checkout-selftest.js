@@ -10,12 +10,14 @@ import { brandedEmailHtml, sendTransactionalEmail, SELF_TEST_EMAIL } from "../li
 import { nowIso } from "../lib/http.js";
 import { stripeRequest } from "../lib/stripe.js";
 import { updateTest } from "./menu-qr-selftest.js";
+import { dailyClock } from "./daily-clock.js";
 
 const KIND = "ABANDONED_CHECKOUT";
 const DAILY_HOUR_UTC = 16;
 const DAILY_MINUTE_FROM = 30;
 
-async function maybeScheduleDaily(env, now = new Date()) {
+async function maybeScheduleDaily(env, now = dailyClock(env)) {
+  if (!now) return;
   if (now.getUTCHours() !== DAILY_HOUR_UTC || now.getUTCMinutes() < DAILY_MINUTE_FROM) return;
   const recent = await env.DB.prepare(`SELECT 1 FROM self_tests WHERE kind = ? AND created_at > ? LIMIT 1`)
     .bind(KIND, new Date(now.getTime() - 20 * 3600000).toISOString()).first();
