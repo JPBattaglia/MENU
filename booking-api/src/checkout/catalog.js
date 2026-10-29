@@ -232,7 +232,7 @@ async function resolveActiveOffer(identifier, env, options = {}) {
 
 // Stage 9: what the revamped site shows. Every active, non-test offer with both billing intervals,
 // what a plan or bundle includes, and on_sale (is_public). Pages read prices only from here, never
-// hard-coded. Cached at the edge for 5 minutes to keep D1 reads low (free-tier read limit).
+// hard-coded. Browsers may reuse it for a minute; each request reads only the small offers tables.
 const SITE_HIDDEN = /^(ROUTING_SELFTEST_|M25_)/;
 
 async function getSiteCatalog(env) {
@@ -283,7 +283,7 @@ async function getSiteCatalog(env) {
       }
     }
     const response = jsonResponse({ ok: true, offers: [...byCode.values()] });
-    response.headers.set("Cache-Control", "public, max-age=300");
+    response.headers.set("Cache-Control", "public, max-age=60");
     return response;
   } catch (error) {
     return jsonResponse({ ok: false, error: error instanceof Error ? error.message : String(error) }, 500);
