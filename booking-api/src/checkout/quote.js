@@ -40,9 +40,11 @@ function quoteMenuPackage(menuPages) {
   };
 }
 
-function appendCheckoutLineItem(params, item, index, environment) {
+// autoTax: the session has Stripe automatic tax on (a taxed item is in the cart). Stripe then requires a tax behavior on
+// EVERY line item, so untaxed items are sent inline and marked non-taxable (txcd_00000000) instead of being skipped.
+function appendCheckoutLineItem(params, item, index, environment, { autoTax = false } = {}) {
   const prefix = `line_items[${index}]`;
-  if (item.menuPackage || item.inlinePrice || environment === "sandbox") {
+  if (item.menuPackage || item.inlinePrice || environment === "sandbox" || autoTax) {
     params.append(`${prefix}[price_data][currency]`, item.currency.toLowerCase());
     params.append(`${prefix}[price_data][unit_amount]`, String(item.priceCents));
     params.append(`${prefix}[price_data][product_data][name]`, item.menuPackage
@@ -52,6 +54,9 @@ function appendCheckoutLineItem(params, item, index, environment) {
     if (item.taxCode) {
       params.append(`${prefix}[price_data][tax_behavior]`, "exclusive");
       params.append(`${prefix}[price_data][product_data][tax_code]`, item.taxCode);
+    } else if (autoTax) {
+      params.append(`${prefix}[price_data][tax_behavior]`, "exclusive");
+      params.append(`${prefix}[price_data][product_data][tax_code]`, "txcd_00000000");
     }
     if (item.ninoDesign) {
       params.append(`${prefix}[price_data][product_data][description]`, "Designed by Nino Battaglia's studio. After payment you'll get a short brief form; you see the result before it's final.");

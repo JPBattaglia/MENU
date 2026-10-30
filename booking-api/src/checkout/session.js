@@ -106,9 +106,10 @@ async function openStripeSession(env, environment, { cart, normalizedItems, orde
     if (tracking.source) params.append("metadata[source]", String(tracking.source));
     if (tracking.medium) params.append("metadata[medium]", String(tracking.medium));
     if (tracking.campaign) params.append("metadata[campaign]", String(tracking.campaign));
-    normalizedItems.forEach((item, index) => appendCheckoutLineItem(params, item, index, environment));
     // Taxed items (the Nino flyer): Stripe Tax adds sales tax from the billing address collected at checkout.
-    if (!cart.plan && normalizedItems.some((item) => item.taxCode)) {
+    const autoTax = !cart.plan && normalizedItems.some((item) => item.taxCode);
+    normalizedItems.forEach((item, index) => appendCheckoutLineItem(params, item, index, environment, { autoTax }));
+    if (autoTax) {
       params.append("automatic_tax[enabled]", "true");
       params.append("billing_address_collection", "required");
       if (cart.stripeCustomerId) params.append("customer_update[address]", "auto");
