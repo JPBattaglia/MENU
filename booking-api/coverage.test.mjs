@@ -60,6 +60,15 @@ test('green when every public offer and shared system passed within 36 hours; hi
   assert.equal(store.status, 'NEVER_PASSED', 'listed with its real status, but not counted while hidden');
 });
 
+test('an offer taken off sale with no self-test is left off the map', async () => {
+  const f = setup({ offers: [['MENU_CARE', 1], ['ACCESSIBILITY_UPGRADE', 0], ['STORE_APP_SETUP', 0]] });
+  allSystemsPass(f);
+  f.pass('MENU_CARE_EDIT', 1);
+  const map = await cov.buildCoverage(f.env, NOW);
+  assert.deepEqual(map.offers.map((o) => o.code), ['MENU_CARE', 'STORE_APP_SETUP']);
+  assert.equal(map.ok, true);
+});
+
 test('red for a stale test, a test that never passed, and an offer with no self-test; the last failure is shown', async () => {
   const f = setup({ offers: [['MENU_CARE', 1], ['GUEST_APP_SETUP', 1], ['WEBSITE_PACKAGE', 1], ['BRAND_NEW_THING', 1]] });
   allSystemsPass(f);

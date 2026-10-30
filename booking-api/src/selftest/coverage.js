@@ -8,8 +8,8 @@
 //
 // A row is OK when every one of its self-tests passed within FRESH_HOURS. Otherwise: NO_TEST (nothing listed for the
 // offer), NEVER_PASSED, or STALE (last pass too old, which is what happens to a self-test that isn't scheduled daily).
-// The map is "green" only when every public offer and every shared system is OK; hidden offers are listed but don't
-// count until they go public.
+// The map is "green" only when every public offer and every shared system is OK; hidden offers waiting to launch are
+// listed but don't count until they go public; other hidden offers aren't listed.
 import { ownerEmailAddress, publicBaseUrl } from "../lib/config.js";
 import { brandedEmailHtml, escapeHtml, sendTransactionalEmail } from "../lib/email.js";
 import { simplePage } from "../lib/http.js";
@@ -87,7 +87,9 @@ async function buildCoverage(env, now = Date.now()) {
   const kinds = [...new Set([...Object.values(OFFER_TESTS).flat().map(([k]) => k), ...SYSTEMS.map(([, k]) => k)])];
   const results = await lastResults(env, kinds);
   const detail = (pairs) => pairs.map(([kind, covers]) => ({ kind, covers, ...results.get(kind) }));
-  const rows = offers.map((o) => {
+  // Hidden offers are shown only when they're waiting to launch (they have self-tests listed); an offer taken off sale
+  // (e.g. Accessibility Upgrade, Oct 2026) isn't part of the business any more.
+  const rows = offers.filter((o) => o.is_public || OFFER_TESTS[o.code]).map((o) => {
     const tests = detail(OFFER_TESTS[o.code] || []);
     return { type: "offer", code: o.code, name: o.name, public: Boolean(o.is_public), status: judge(tests, results, now), tests };
   });
