@@ -112,5 +112,30 @@
       "price": "price_1T6j0xHw7f6jhUv8Ci1ZQ9qS",
       "replaced_by": "ACCESSIBILITY_MONITORING"
     }
+  },
+  "launch_pending": {
+    "note": "Store App (stage 11 part 2). Live Stripe prices made Oct 30, 2026; offers in migration 0025 with is_public = 0. Moves into one_time / subscriptions when stage 11 exits.",
+    "one_time": {
+      "STORE_APP_SETUP": {
+        "name": "Store App Setup",
+        "product": "prod_VXEy8Xu5g51CHT",
+        "price": "price_1UWAUVHw7f6jhUv8RCyjWwVi",
+        "amount": 99900
+      }
+    },
+    "subscriptions": {
+      "STORE_APP_CARE": {
+        "name": "Website & App Care (app tier)",
+        "product": "prod_VXEyspzuP4ZnSY",
+        "monthly": {
+          "price": "price_1UWAUXHw7f6jhUv8hHMfHHCU",
+          "amount": 9900
+        },
+        "annual": {
+          "price": "price_1UWAUfHw7f6jhUv80MHBgFgY",
+          "amount": 99000
+        }
+      }
+    }
   }
 }

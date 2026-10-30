@@ -18,11 +18,11 @@ async function classifyItem(identifier, env) {
     `).bind(clean, clean, clean).first();
 }
 
-async function setupTrialDays(env) {
+async function setupTrialDays(env, setupCode = "WEBSITE_PACKAGE") {
   const row = await env.DB.prepare(`
       SELECT v.scope_json FROM offers o JOIN offer_versions v ON v.offer_id = o.id
-      WHERE o.code = 'WEBSITE_PACKAGE' AND v.status = 'ACTIVE' ORDER BY v.version_number DESC LIMIT 1
-    `).first();
+      WHERE o.code = ? AND v.status = 'ACTIVE' ORDER BY v.version_number DESC LIMIT 1
+    `).bind(setupCode).first();
   const months = Number(parseJsonOrNull(row?.scope_json)?.includes_trial?.months || 3);
   return Math.round(months * 30);
 }
@@ -64,11 +64,22 @@ async function buildSubscriptionCart(itemsInput, data, env, environment) {
   }
   let planIdentifier = planInputs[0]?.identifier || null;
   let trialDays = 0;
+  if (setupCodes.has("WEBSITE_PACKAGE") && setupCodes.has("STORE_APP_SETUP")) {
+    throw new CheckoutValidationError("Check out the Website Package and the Store App separately.");
+  }
   if (setupCodes.has("WEBSITE_PACKAGE")) {
     if (!planIdentifier) {
       planIdentifier = "WEBSITE_CARE";
       trialDays = await setupTrialDays(env);
     }
+  }
+  // Stage 11: the Store App starts Website & App Care (app tier) with a 90-day trial in the same checkout.
+  if (setupCodes.has("STORE_APP_SETUP")) {
+    if (planIdentifier && String(planIdentifier).toUpperCase() !== "STORE_APP_CARE") {
+      throw new CheckoutValidationError("The Store App includes Website & App Care (app tier); check it out on its own.");
+    }
+    planIdentifier = "STORE_APP_CARE";
+    trialDays = await setupTrialDays(env, "STORE_APP_SETUP");
   }
   let plan = null;
   if (planIdentifier) {

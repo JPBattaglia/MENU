@@ -18,6 +18,8 @@ import { slugify, sniffImage, validSlug } from "../website/intake.js";
 
 const LINK_KIND = "appintake";
 const WORKFLOW = "GUEST_APP_SETUP_V1";
+// The Store App (stage 11) uses the same form: its store apps show this content.
+const APP_WORKFLOWS = new Set([WORKFLOW, "STORE_APP_SETUP_V1"]);
 const MAX_LOGO = 1_500_000;
 const FIELDS = [
   { key: "app_name", label: "App name", type: "text", required: true, max: 45, help: "Usually your business name. Shown at the top of the app." },
@@ -187,7 +189,7 @@ async function handleAppIntake(request, env, projectId) {
   if (!env.DB || !env.ASSETS) return simplePage(503, "Temporarily unavailable", "<p>Please try again in a minute.</p>");
   const denied = () => simplePage(403, "This link has expired or isn't valid", "<p>Reply to your latest email and we'll send a fresh one.</p>");
   const context = await loadDeliveryContext(projectId, env);
-  if (!context || context.workflow_key !== WORKFLOW) return denied();
+  if (!context || !APP_WORKFLOWS.has(context.workflow_key)) return denied();
   const lockedPage = () => simplePage(200, "We're building your app", "<p>Thank you - we have everything we need and your Guest App is being built. You'll get an email with a preview link soon.</p>");
   const locked = context.status !== "AWAITING_INPUTS";
   const action = `/api/app-intake/${projectId}`;
@@ -218,7 +220,7 @@ async function handleAppIntake(request, env, projectId) {
     await env.DB.prepare(`UPDATE project_inputs SET value_text = ?, status = ?, submitted_at = ?, validated_at = ?, updated_at = ? WHERE project_id = ? AND input_key = ?`)
       .bind(values[f.key] || null, values[f.key] ? "VALID" : "MISSING", t, t, t, projectId, f.key).run();
   }
-  await refreshOnboardingState(projectId, context.order_id, context.customer_id, WORKFLOW, env);
+  await refreshOnboardingState(projectId, context.order_id, context.customer_id, context.workflow_key, env);
   return simplePage(200, "Thank you", `<p>We have what we need and we're building your Guest App now. You'll get an email with a preview link; the app will be at <strong>${escapeHtml(saved.slug)}.menu-made.com/app</strong>.</p>`);
 }
 

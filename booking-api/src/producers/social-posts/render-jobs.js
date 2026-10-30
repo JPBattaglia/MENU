@@ -29,7 +29,7 @@ const specKey = (id) => `render-jobs/social/${id}/spec.json`;
 
 // Workflows whose PRODUCE step can wait for the renderer. Guest App setups use it for their home-screen icons, the
 // Nino design services (stage 10) for every design they make.
-const RENDER_WORKFLOWS = ["SOCIAL_POSTS_V1", "GUEST_APP_SETUP_V1", "NINO_SOCIAL_PACK_V1", "NINO_FLYER_V1", "NINO_MENU_DESIGN_V1", "NINO_LOGO_V1"];
+const RENDER_WORKFLOWS = ["SOCIAL_POSTS_V1", "GUEST_APP_SETUP_V1", "STORE_APP_SETUP_V1", "NINO_SOCIAL_PACK_V1", "NINO_FLYER_V1", "NINO_MENU_DESIGN_V1", "NINO_LOGO_V1"];
 const RENDER_IN = `wr.workflow_key IN (${RENDER_WORKFLOWS.map((k) => `'${k}'`).join(", ")})`;
 
 // files: [{ name, svg, width, height, min_bytes? }]; extra: [{ name, text }]; assets: { logo: data URI } substituted

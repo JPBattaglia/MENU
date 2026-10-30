@@ -24,6 +24,7 @@ import { handleAppCounter, handleAppPush, sendQueuedPushes } from "./producers/g
 import { handleNativePushJobs, nudgeNativePushes, sendAndroidPushes } from "./store-app/native-push.js";
 import { handleGoogleKeys } from "./store-app/google-keys.js";
 import { handleSwitches } from "./lib/switches.js";
+import { advanceStoreApps, handleStoreAppDone } from "./store-app/store-flow.js";
 import { advanceGuestAppPushSelfTests } from "./selftest/guest-app-push-selftest.js";
 import { customHostSlug, runDomainWatch } from "./producers/website/domains.js";
 import { handlePlanSettings } from "./subscriptions/settings.js";
@@ -93,6 +94,8 @@ var worker_default = {
     if (url.pathname === "/api/store-keys/owner" && (request.method === "GET" || request.method === "POST")) return handleStoreKeys(request, env);
     if (url.pathname === "/api/store-keys/google" && (request.method === "GET" || request.method === "POST")) return handleGoogleKeys(request, env);
     if (url.pathname === "/api/switches" && (request.method === "GET" || request.method === "POST")) return handleSwitches(request, env);
+    const storeAppDoneMatch = url.pathname.match(/^\/api\/store-app\/([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})\/done$/i);
+    if (storeAppDoneMatch && (request.method === "GET" || request.method === "POST")) return handleStoreAppDone(request, env, storeAppDoneMatch[1].toLowerCase());
     // Stage 11 part 2: native push batches for the GitHub sender (.github/workflows/native-push.yml), OIDC only.
     const nativePushMatch = url.pathname.match(/^\/api\/native-push\/(next|[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})$/i);
     if (nativePushMatch && (request.method === "GET" || request.method === "POST")) return handleNativePushJobs(request, env, nativePushMatch[1].toLowerCase());
@@ -354,6 +357,7 @@ const mmWorkerWithBooking = {
       await sendQueuedPushes(env).catch((error) => console.error("Guest App notifications failed:", error instanceof Error ? error.message : String(error)));
       await nudgeNativePushes(env).catch((error) => console.error("Native push nudge failed:", error instanceof Error ? error.message : String(error)));
       await sendAndroidPushes(env).catch((error) => console.error("Android notifications failed:", error instanceof Error ? error.message : String(error)));
+      await advanceStoreApps(env).catch((error) => console.error("Store App steps failed:", error instanceof Error ? error.message : String(error)));
       await advanceGuestAppPushSelfTests(env, app).catch((error) => console.error("Guest App push self-test failed:", error instanceof Error ? error.message : String(error)));
       await advanceGuestAppSelfTests(env, app).catch((error) => console.error("Guest App self-test failed:", error instanceof Error ? error.message : String(error)));
       await advanceGoogleSelfTests(env).catch((error) => console.error("Google self-test failed:", error instanceof Error ? error.message : String(error)));

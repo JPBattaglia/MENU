@@ -107,7 +107,7 @@ function presenterFor(workflowKey) {
   if (workflowKey === "MENU_CARE_V1") return { ...genericPresenter, ...menuCareOverrides };
   if (workflowKey === "WEBSITE_CARE_V1") return { ...genericPresenter, ...websiteCareOverrides };
   if (workflowKey === "WEBSITE_PACKAGE_V1") return { ...genericPresenter, ...websiteOverrides };
-  if (workflowKey === "GUEST_APP_SETUP_V1") return { ...genericPresenter, ...guestAppOverrides };
+  if (workflowKey === "GUEST_APP_SETUP_V1" || workflowKey === "STORE_APP_SETUP_V1") return { ...genericPresenter, ...guestAppOverrides };
   if (workflowKey === "CONVERSION_FIX_V1") return { ...genericPresenter, ...conversionOverrides };
   if (workflowKey === "REVIEW_REPLIES_V1") return { ...genericPresenter, ...reviewRepliesOverrides };
   if (workflowKey === "GOOGLE_PROFILE_CARE_V1") return { ...genericPresenter, ...googleCareOverrides };

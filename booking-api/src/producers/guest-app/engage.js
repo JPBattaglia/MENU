@@ -249,7 +249,8 @@ async function linkedApp(env, request, appId, kind) {
   return { app, token, form, data: parseJsonOrNull(app.data_json) || {} };
 }
 
-const planActive = async (env, businessId) => Boolean(businessId && await env.DB.prepare(`SELECT 1 AS ok FROM entitlements WHERE business_id = ? AND entitlement_type = 'GUEST_APP' AND status = 'ACTIVE' LIMIT 1`).bind(businessId).first());
+// The Guest App plan, or the Store App's Website & App Care (app tier), which runs on the same app.
+const planActive = async (env, businessId) => Boolean(businessId && await env.DB.prepare(`SELECT 1 AS ok FROM entitlements WHERE business_id = ? AND entitlement_type IN ('GUEST_APP', 'STORE_APP_CARE') AND status = 'ACTIVE' LIMIT 1`).bind(businessId).first());
 
 async function handleAppPush(request, env, appId) {
   if (!env.DB) return simplePage(503, "Temporarily unavailable", "<p>Please try again in a minute.</p>");

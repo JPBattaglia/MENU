@@ -17,7 +17,7 @@ import { engagementSettings, queuePush } from "./engage.js";
 const UPDATE_FIELDS = FIELDS.filter((f) => !["subdomain", "brand_color"].includes(f.key));
 
 async function planActive(env, businessId) {
-  const row = await env.DB.prepare(`SELECT 1 AS ok FROM entitlements WHERE business_id = ? AND entitlement_type = 'GUEST_APP' AND status = 'ACTIVE' LIMIT 1`).bind(businessId).first();
+  const row = await env.DB.prepare(`SELECT 1 AS ok FROM entitlements WHERE business_id = ? AND entitlement_type IN ('GUEST_APP', 'STORE_APP_CARE') AND status = 'ACTIVE' LIMIT 1`).bind(businessId).first();
   return Boolean(row);
 }
 
