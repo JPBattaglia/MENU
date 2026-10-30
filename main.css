@@ -2837,3 +2837,4 @@ details.merch-panel summary::before{content:"▸ ";font-size:1.3em}details.merch
 @media (max-width:900px){:where(body.project-page) .project-logo-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media (max-width:520px){:where(body.project-page) .project-logo-grid{grid-template-columns:1fr}}
 .project-lead-image.project-full-image{aspect-ratio:auto;object-fit:contain}
+.project-lead-link{display:block;border-radius:22px}.project-lead-link .project-lead-image{display:block;transition:transform .2s ease}.project-lead-link:hover .project-lead-image{transform:translateY(-3px)}
