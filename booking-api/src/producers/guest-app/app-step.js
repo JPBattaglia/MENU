@@ -28,6 +28,19 @@ function appUrl(env, slug) {
   return String(env.SITE_WILDCARD) === "1" ? `https://${slug}.menu-made.com/app/` : `${publicBaseUrl(env)}/api/site/${slug}/app/`;
 }
 
+// The logo uploaded on the app form, else the business's website logo, else the logo uploaded with its Online Menu
+// + QR (owner decision Oct 28, 2026). PNG or JPG only: the renderer can't draw WebP or SVG. Also used by the Store App
+// build (store-app/store-build.js) for its 1024 px store icon. context: { id (project id), business_id }.
+async function findAppLogo(env, context) {
+  return await env.DB.prepare(`SELECT storage_key, mime_type FROM assets WHERE project_id = ? AND status = 'VALID' AND json_extract(metadata_json, '$.app_image') = 'logo' ORDER BY uploaded_at DESC LIMIT 1`).bind(context.id).first()
+    || await env.DB.prepare(`SELECT storage_key, mime_type FROM assets WHERE business_id = ? AND status = 'VALID' AND json_extract(metadata_json, '$.site_image') = 'logo' AND mime_type IN ('image/png', 'image/jpeg') ORDER BY uploaded_at DESC LIMIT 1`).bind(context.business_id).first()
+    || (context.business_id ? await env.DB.prepare(`
+        SELECT a.storage_key, a.mime_type FROM assets a JOIN projects p ON p.id = a.project_id
+        WHERE a.business_id = ? AND a.asset_type = 'LOGO' AND a.status = 'VALID' AND p.workflow_key = 'MENU_QR_V1'
+          AND a.mime_type IN ('image/png', 'image/jpeg') ORDER BY a.uploaded_at DESC LIMIT 1
+      `).bind(context.business_id).first() : null);
+}
+
 async function updateLink(env, appId) {
   const token = await signLinkToken(env, { kind: UPDATE_LINK_KIND, id: appId, ttlDays: UPDATE_LINK_TTL_DAYS });
   return `${publicBaseUrl(env)}/api/app-update/${appId}?t=${token}`;
@@ -84,15 +97,7 @@ async function runGuestAppSetupStep(targetStep, env) {
   const app = parseJsonOrNull(row?.data_json);
   if (!row || !app?.app_name || !app.menu || !app.phone || !app.address || !app.hours) return blocked("the app details are incomplete", ["The intake form is missing required answers."]);
 
-  // The logo uploaded on the app form, else the business's website logo, else the logo uploaded with its Online Menu
-  // + QR (owner decision Oct 28, 2026). PNG or JPG only: the renderer can't draw WebP or SVG.
-  const logo = await env.DB.prepare(`SELECT storage_key, mime_type FROM assets WHERE project_id = ? AND status = 'VALID' AND json_extract(metadata_json, '$.app_image') = 'logo' ORDER BY uploaded_at DESC LIMIT 1`).bind(context.id).first()
-    || await env.DB.prepare(`SELECT storage_key, mime_type FROM assets WHERE business_id = ? AND status = 'VALID' AND json_extract(metadata_json, '$.site_image') = 'logo' AND mime_type IN ('image/png', 'image/jpeg') ORDER BY uploaded_at DESC LIMIT 1`).bind(context.business_id).first()
-    || (context.business_id ? await env.DB.prepare(`
-        SELECT a.storage_key, a.mime_type FROM assets a JOIN projects p ON p.id = a.project_id
-        WHERE a.business_id = ? AND a.asset_type = 'LOGO' AND a.status = 'VALID' AND p.workflow_key = 'MENU_QR_V1'
-          AND a.mime_type IN ('image/png', 'image/jpeg') ORDER BY a.uploaded_at DESC LIMIT 1
-      `).bind(context.business_id).first() : null);
+  const logo = await findAppLogo(env, context);
   const logoObject = logo ? await env.ASSETS.get(logo.storage_key) : null;
   const hasLogo = Boolean(logoObject);
   const version = String(targetStep.workflow_step_id || crypto.randomUUID()).slice(0, 8);
@@ -178,4 +183,4 @@ async function runGuestAppMonthStep(targetStep, env) {
   return { outcome: "MONTH_OPENED" };
 }
 
-export { UPDATE_LINK_KIND, appUrl, finishGuestAppRender, loadLiveApp, runGuestAppMonthStep, runGuestAppSetupStep, updateLink };
+export { findAppLogo, UPDATE_LINK_KIND, appUrl, finishGuestAppRender, loadLiveApp, runGuestAppMonthStep, runGuestAppSetupStep, updateLink };

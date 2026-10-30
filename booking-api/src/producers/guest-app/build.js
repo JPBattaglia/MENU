@@ -58,6 +58,18 @@ function iconSpecs(app, { hasLogo }) {
   });
 }
 
+// The Store App's 1024 px icons (stage 11 part 2): a full square, no transparency and no rounded corners (Apple and
+// Google round it themselves). pad 0.14 = the store icon (like the Apple touch icon); pad 0.24 = the Android adaptive
+// icon's foreground, whose logo must stay inside the 66 of 108 dp every launcher mask keeps.
+function storeIconSvg(app, { hasLogo, pad = 0.14 }) {
+  const brand = brandOf(app);
+  const inner = 512 * (1 - 2 * pad);
+  const art = hasLogo
+    ? `<image href="${LOGO_PLACEHOLDER}" x="${512 * pad}" y="${512 * pad}" width="${inner}" height="${inner}" preserveAspectRatio="xMidYMid meet"/>`
+    : `<text x="256" y="256" dy="0.35em" text-anchor="middle" font-family="Liberation Sans" font-weight="bold" font-size="${Math.round(inner * 0.5)}" fill="${readableOn(brand)}">${esc(initials(app.app_name))}</text>`;
+  return `<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 512 512"><rect width="512" height="512" fill="${brand}"/>${art}</svg>`;
+}
+
 function manifest(app) {
   const brand = brandOf(app);
   return JSON.stringify({
@@ -158,4 +170,4 @@ function buildApp(app, { version, hasLogo }) {
   };
 }
 
-export { APP_JS, DEFAULT_BRAND, ICONS, LOGO_PLACEHOLDER, brandOf, buildApp, iconSpecs, initials, serviceWorker, shortNameOf, workerVersion };
+export { storeIconSvg, APP_JS, DEFAULT_BRAND, ICONS, LOGO_PLACEHOLDER, brandOf, buildApp, iconSpecs, initials, serviceWorker, shortNameOf, workerVersion };

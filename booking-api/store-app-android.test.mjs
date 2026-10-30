@@ -213,5 +213,9 @@ test('app shell: Android push only when the build carried google-services.json',
   assert.match(app, /p === "android" && cfg\.push_android/);
   assert.match(wf, /\.push_android = true/);
   assert.match(wf, /cp "\$RUNNER_TEMP\/google-services\.json" android\/app\/google-services\.json/);
-  assert.match(wf, /android-bundle\?scope=owner/);
+  assert.match(wf, /android-bundle\?\$TARGET/);
+  assert.match(wf, /echo "TARGET=scope=owner"/, 'the sample build keeps the owner scope');
+  assert.match(wf, /echo "TARGET=store_app=\$STORE_APP"/, "a restaurant's build asks by store app id");
+  assert.match(wf, /api\/store-build\/result\?store_app=/, 'signed jobs report back');
+  assert.match(wf, /sips -s format jpeg/, 'the iOS icon loses its alpha channel (Apple refuses it)');
 });

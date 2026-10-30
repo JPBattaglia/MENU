@@ -5,7 +5,8 @@
 //   POST /api/store-keys/app/<store app id>        (no form data) emails a one-hour signed link to the owner inbox
 //   GET  /api/store-keys/app/<store app id>?t=     the upload form
 //   POST /api/store-keys/app/<store app id>        (multipart, with t) checks each file live, then stores it
-// Scope = the restaurant's business id (native-push.js looks keys up the same way, falling back to 'owner').
+// Scope = the restaurant's business id (native-push.js looks keys up the same way, falling back to 'owner'); the
+// owner's test app uses 'owner'.
 // What a restaurant has of its own:
 //   APPLE_API_KEY, APPLE_PUSH_KEY   made in the restaurant's Apple team (sealed, as for the owner)
 //   google-services.json            the restaurant's Android app, added to Menu-made's own Firebase project
@@ -17,7 +18,7 @@ import { ownerEmailAddress, publicBaseUrl } from "../lib/config.js";
 import { brandedEmailHtml, escapeHtml, sendTransactionalEmail } from "../lib/email.js";
 import { simplePage } from "../lib/http.js";
 import { signLinkToken, verifyLinkToken } from "../lib/links.js";
-import { OWNER, loadCredential, mark, processAppleKeys, saveCredential, status } from "./keys.js";
+import { OWNER, OWNER_BUNDLE_ID, loadCredential, mark, processAppleKeys, saveCredential, status } from "./keys.js";
 import { loadGoogleServices, servicesKey } from "./google-keys.js";
 import { checkPlay, parseGoogleServices, parseServiceAccount } from "./google.js";
 
@@ -25,7 +26,9 @@ const LINK_KIND = "storekeys-app";
 const LINK_TTL_DAYS = 1 / 24;
 const MAX_FILE_BYTES = 16384;
 
-const storeScope = (storeApp) => storeApp?.business_id || null;
+// The owner's own test app (Sample Cafe, com.menumade.samplecafe) is the test restaurant: a Store App with that bundle
+// id uses the owner's keys, so the whole per-restaurant path can be proven on the owner's accounts.
+const storeScope = (storeApp) => (storeApp?.bundle_id === OWNER_BUNDLE_ID ? OWNER : storeApp?.business_id || null);
 
 async function loadStoreApp(env, id) {
   const row = await env.DB.prepare(`SELECT * FROM store_apps WHERE id = ?`).bind(id).first();
