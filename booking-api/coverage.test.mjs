@@ -112,3 +112,28 @@ test('owner page: emailed 7-day link, no token to remember; admin token gives JS
   assert.ok(Array.isArray(body.offers) && body.systems.length === cov.SYSTEMS.length);
   assert.equal((await call('https://menu-made.com/api/system/coverage', { headers: { Authorization: 'Bearer wrong' } })).status, 401);
 });
+
+test('stage 12 gaps: the Guest App, website trial and Store App trial self-tests are scheduled daily, once a day each', async () => {
+  const guest = await import('./src/selftest/guest-app-selftest.js');
+  const trial = await import('./src/selftest/website-trial-selftest.js');
+  const f = setup();
+  const at = (h, m) => new Date(Date.UTC(2026, 9, 31, h, m));
+  const kinds = () => f.DB.raw.prepare(`SELECT kind, requested_by FROM self_tests ORDER BY kind`).all().map((r) => ({ ...r }));
+  await guest.maybeScheduleDaily(f.env, at(19, 59));
+  await trial.maybeScheduleDaily(f.env, at(20, 19));
+  assert.deepEqual(kinds(), [], 'nothing outside the slots');
+  await guest.maybeScheduleDaily(f.env, at(20, 0));
+  await guest.maybeScheduleDaily(f.env, at(20, 5));
+  await trial.maybeScheduleDaily(f.env, at(20, 20));
+  await trial.maybeScheduleDaily(f.env, at(20, 25));
+  await trial.maybeScheduleDaily(f.env, at(20, 40));
+  await trial.maybeScheduleDaily(f.env, at(20, 45));
+  assert.deepEqual(kinds(), [
+    { kind: 'GUEST_APP_RUN', requested_by: 'daily' },
+    { kind: 'STORE_APP_TRIAL_RUN', requested_by: 'daily' },
+    { kind: 'WEBSITE_TRIAL_RUN', requested_by: 'daily' }
+  ], 'one of each, even with several ticks in the slot');
+  await trial.maybeScheduleDaily(f.env, at(21, 0));
+  assert.equal(kinds().length, 3);
+  assert.equal(await guest.maybeScheduleDaily({ DB: f.DB }), undefined, 'off outside the deployed worker (no SELFTEST_SCHEDULE)');
+});

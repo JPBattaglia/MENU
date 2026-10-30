@@ -13,6 +13,7 @@ import { ownerEmailAddress, publicBaseUrl } from "../lib/config.js";
 import { SELF_TEST_EMAIL, brandedEmailHtml, sendTransactionalEmail } from "../lib/email.js";
 import { nowIso, parseJsonOrNull } from "../lib/http.js";
 import { payTestCheckout, stripeTest, updateTest } from "./menu-qr-selftest.js";
+import { dailyClock } from "./daily-clock.js";
 
 const KIND = "WEBSITE_TRIAL_RUN";
 // What each kind buys and expects. Same steps, same safety guards.
@@ -21,6 +22,20 @@ const RUNS = {
   STORE_APP_TRIAL_RUN: { item: "STORE_APP_SETUP", plan: "STORE_APP_CARE", cents: 99900, workflow: "STORE_APP_SETUP_V1", entitlement: "STORE_APP_CARE", product: "Store App", care: "Website & App Care (app tier)", business: "Store Trial Self-Test Cafe" }
 };
 const runOf = (test) => RUNS[test.kind] || RUNS[KIND];
+// Daily (stage 12: every offer's self-test runs daily): the website trial at 1:20pm Pacific, the Store App trial at
+// 1:40pm, each from its minute until the end of that 20-minute slot.
+const DAILY = { WEBSITE_TRIAL_RUN: [20, 20], STORE_APP_TRIAL_RUN: [20, 40] };
+
+async function maybeScheduleDaily(env, now = dailyClock(env)) {
+  if (!now) return;
+  for (const [kind, [hour, from]] of Object.entries(DAILY)) {
+    if (now.getUTCHours() !== hour || now.getUTCMinutes() < from || now.getUTCMinutes() >= from + 20) continue;
+    const recent = await env.DB.prepare(`SELECT 1 FROM self_tests WHERE kind = ? AND created_at > ? LIMIT 1`).bind(kind, new Date(now.getTime() - 20 * 3600000).toISOString()).first();
+    if (recent) continue;
+    const t = now.toISOString();
+    await env.DB.prepare(`INSERT INTO self_tests (id, kind, status, requested_by, created_at, updated_at) VALUES (?, ?, 'REQUESTED', 'daily', ?, ?)`).bind(crypto.randomUUID(), kind, t, t).run();
+  }
+}
 const STAGE_TIMEOUT_MINUTES = 20;
 const TRIAL_DAYS = 90;
 
@@ -113,8 +128,9 @@ async function failTest(env, test, message) {
   return failed;
 }
 
-async function advanceWebsiteTrialSelfTests(env, app) {
+async function advanceWebsiteTrialSelfTests(env, app, deps = {}) {
   if (!env.DB) return [];
+  await maybeScheduleDaily(env, deps.now).catch(() => null);
   const tests = (await env.DB.prepare(`SELECT * FROM self_tests WHERE kind IN ('WEBSITE_TRIAL_RUN', 'STORE_APP_TRIAL_RUN') AND status IN ('REQUESTED', 'RUNNING') ORDER BY created_at LIMIT 2`).all()).results || [];
   const results = [];
   for (let test of tests) {
@@ -142,4 +158,4 @@ async function advanceWebsiteTrialSelfTests(env, app) {
   return results;
 }
 
-export { advanceWebsiteTrialSelfTests };
+export { advanceWebsiteTrialSelfTests, maybeScheduleDaily };

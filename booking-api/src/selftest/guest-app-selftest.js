@@ -3,7 +3,8 @@
 // GitHub renderer draws the icons; the preview is checked (page, manifest, offline worker, icons at their exact pixel
 // sizes) and must not be live yet; the owner approval is clicked through the approve page; then the live app is fetched.
 // The app stays live afterwards, so a phone can install it from the address in the log (the stage 8 phone check).
-// Start one by inserting a self_tests row, kind GUEST_APP_RUN, status REQUESTED. Only a failure emails the owner.
+// Daily at 1pm Pacific (stage 12: every offer's self-test runs daily), or start one by inserting a self_tests row,
+// kind GUEST_APP_RUN, status REQUESTED. Only a failure emails the owner.
 import { ownerEmailAddress, publicBaseUrl } from "../lib/config.js";
 import { SELF_TEST_EMAIL, brandedEmailHtml, sendTransactionalEmail } from "../lib/email.js";
 import { nowIso, parseJsonOrNull } from "../lib/http.js";
@@ -13,8 +14,19 @@ import { intakeLink, startGuestAppIntake } from "../producers/guest-app/intake.j
 import { appPreviewUrl } from "../producers/guest-app/presenter.js";
 import { pngSize } from "../producers/social-posts/render-jobs.js";
 import { updateTest } from "./menu-qr-selftest.js";
+import { dailyClock } from "./daily-clock.js";
 
 const KIND = "GUEST_APP_RUN";
+const DAILY_HOUR_UTC = 20;
+
+async function maybeScheduleDaily(env, now = dailyClock(env)) {
+  if (!now) return;
+  if (now.getUTCHours() !== DAILY_HOUR_UTC || now.getUTCMinutes() >= 20) return;
+  const recent = await env.DB.prepare(`SELECT 1 FROM self_tests WHERE kind = ? AND created_at > ? LIMIT 1`).bind(KIND, new Date(now.getTime() - 20 * 3600000).toISOString()).first();
+  if (recent) return;
+  const t = now.toISOString();
+  await env.DB.prepare(`INSERT INTO self_tests (id, kind, status, requested_by, created_at, updated_at) VALUES (?, ?, 'REQUESTED', 'daily', ?, ?)`).bind(crypto.randomUUID(), KIND, t, t).run();
+}
 const STAGE_TIMEOUT_MINUTES = 40; // includes the GitHub renderer picking the job up
 const NAME = "App Self-Test Cafe";
 const state = (test) => parseJsonOrNull(test.state_json) || {};
@@ -132,8 +144,9 @@ async function failTest(env, test, message) {
   return failed;
 }
 
-async function advanceGuestAppSelfTests(env, app) {
+async function advanceGuestAppSelfTests(env, app, deps = {}) {
   if (!env.DB) return [];
+  await maybeScheduleDaily(env, deps.now).catch(() => null);
   const tests = (await env.DB.prepare(`SELECT * FROM self_tests WHERE kind = ? AND status IN ('REQUESTED', 'RUNNING') ORDER BY created_at ASC LIMIT 2`).bind(KIND).all()).results || [];
   const results = [];
   for (let test of tests) {
@@ -159,4 +172,4 @@ async function advanceGuestAppSelfTests(env, app) {
   return results;
 }
 
-export { advanceGuestAppSelfTests };
+export { advanceGuestAppSelfTests, maybeScheduleDaily };
