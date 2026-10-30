@@ -24,6 +24,7 @@ import { handleAppCounter, handleAppPush, sendQueuedPushes } from "./producers/g
 import { handleNativePushJobs, nudgeNativePushes, sendAndroidPushes } from "./store-app/native-push.js";
 import { handleGoogleKeys } from "./store-app/google-keys.js";
 import { handleSwitches } from "./lib/switches.js";
+import { handleCoverage } from "./selftest/coverage.js";
 import { advanceStoreApps, handleStoreAppDone } from "./store-app/store-flow.js";
 import { advanceGuestAppPushSelfTests } from "./selftest/guest-app-push-selftest.js";
 import { advanceStoreAppSelfTests } from "./selftest/store-app-selftest.js";
@@ -106,6 +107,7 @@ var worker_default = {
     const restaurantKeysMatch = url.pathname.match(/^\/api\/store-keys\/app\/([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})$/i);
     if (restaurantKeysMatch && (request.method === "GET" || request.method === "POST")) return handleRestaurantKeys(request, env, restaurantKeysMatch[1].toLowerCase());
     if (url.pathname === "/api/switches" && (request.method === "GET" || request.method === "POST")) return handleSwitches(request, env);
+    if (url.pathname === "/api/system/coverage" && (request.method === "GET" || request.method === "POST")) return handleCoverage(request, env);
     const storeAppDoneMatch = url.pathname.match(/^\/api\/store-app\/([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})\/done$/i);
     if (storeAppDoneMatch && (request.method === "GET" || request.method === "POST")) return handleStoreAppDone(request, env, storeAppDoneMatch[1].toLowerCase());
     const storeAppRebuildMatch = url.pathname.match(/^\/api\/store-app\/([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})\/rebuild$/i);
