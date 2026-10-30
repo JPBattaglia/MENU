@@ -12,7 +12,7 @@ from pathlib import Path
 import re
 
 ROOT = Path(__file__).resolve().parent.parent
-CSS_VERSION = "20261029-picker2"
+CSS_VERSION = "20261029-cards2"
 CATALOG_JS = '<script src="site-catalog.js?v=20261028-stage9" defer></script>'
 
 NAV = [
@@ -573,7 +573,7 @@ def team_and_design_block(include_merch=False):
 </article>
 <article class="mm-single">
   <h3>Design by Nino</h3><p>A logo, a flyer, a redesigned print menu or a pack of social graphics, made for your business and approved by Nino before it reaches you.</p>
-  <div class="mm-single-actions"><a class="btn primary" href="https://ninobattaglia.com/services.html#design-services">See design services &#8599;</a></div>
+  <div class="mm-single-actions"><a class="btn primary" href="https://ninobattaglia.com/services.html#design-services">Design services &#8599;</a></div>
 </article>
     </div>
   </div>

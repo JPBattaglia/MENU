@@ -2797,3 +2797,19 @@ details.merch-panel summary::before{content:"▸ ";font-size:1.3em}details.merch
 :where(body.start-page) .service-choice-group .service-bottom{justify-items:stretch}
 :where(body.start-page) .service-choice-group .service-bottom .btn{width:100% !important;min-width:0 !important;max-width:100%;box-sizing:border-box;justify-self:stretch}
 :where(body.start-page) .service-choice-group .service-bottom .price{min-width:0;overflow-wrap:anywhere}
+/* Oct 29, 2026 (owner): every card grid is symmetrical above phone size: all cards in a grid are the same width,
+   cards in a row are the same height with their buttons on one line, and a short last row is centred. */
+@media (min-width:701px){
+  .mm-singles,:where(body.start-page) .service-choice-group,:where(body:not(.sample-menu-page)) .cards{display:flex;flex-wrap:wrap;justify-content:center;align-items:stretch;gap:var(--card-gap)}
+  .mm-singles{--card-cols:4;--card-gap:18px}
+  :where(body.start-page) .service-choice-group{--card-cols:3;--card-gap:14px}
+  :where(body:not(.sample-menu-page)) .cards{--card-cols:2;--card-gap:32px}
+  .mm-singles>*,:where(body.start-page) .service-choice-group>.service-card,:where(body:not(.sample-menu-page)) .cards>*{flex:0 0 calc((100% - (var(--card-cols) - 1) * var(--card-gap)) / var(--card-cols));max-width:calc((100% - (var(--card-cols) - 1) * var(--card-gap)) / var(--card-cols));min-width:0;box-sizing:border-box;height:auto}
+  :where(body.start-page) .service-choice-group>h3{flex:0 0 100%}
+  .mm-single .mm-single-price{margin-top:auto}
+  .mm-single .mm-single-price+.mm-single-actions{margin-top:0}
+  :where(body:not(.sample-menu-page)) .cards .service-bottom,:where(body.start-page) .service-choice-group .service-bottom{margin-top:auto;padding-top:16px}
+}
+@media (min-width:701px) and (max-width:1100px){.mm-singles{--card-cols:3}}
+:where(body.start-page) .service-choice-group .service-card .service-bottom{grid-template-columns:minmax(0,1fr)}
+.mm-single-actions .btn,.mm-single-actions .cta-pill{white-space:nowrap}
