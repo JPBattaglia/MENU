@@ -1,4 +1,4 @@
-// Website Care PRODUCE step (stage 7). Two kinds of run reach it:
+// Website & App Care PRODUCE step (stage 7). Two kinds of run reach it:
 //   - the monthly period run (trigger SUBSCRIPTION_PERIOD): emails the customer the monthly health report and their change link
 //   - a change-request run (trigger SITE_CARE_REQUEST): applies the request to the live site's details and copy, rebuilds the
 //     pages, runs the full site checks and stores the result as a draft SITE_BUILD. The shared DELIVER step asks the owner to
@@ -42,10 +42,10 @@ async function runMonthOpening(targetStep, context, metadata, env) {
   const business = context.business_name || "your business";
   const sent = await sendTransactionalEmail(env, {
     to: context.customer_email,
-    subject: `Website Care: your monthly report for ${business}`,
+    subject: `Website & App Care: your monthly report for ${business}`,
     html: brandedEmailHtml({
       preheader: "How your website did this month, and how to send changes.",
-      eyebrow: "WEBSITE CARE",
+      eyebrow: "WEBSITE & APP CARE",
       heading: "Your website this month",
       paragraphs: [
         `Hi ${escapeHtml(context.first_name || "there")}, here is how <strong>${escapeHtml(url)}</strong> did:`,
@@ -54,7 +54,7 @@ async function runMonthOpening(targetStep, context, metadata, env) {
         "Need to change your menu, hours, phone, address or wording? Tell us and we'll update the site. We check each update before it goes live."
       ],
       buttons: [{ label: "Send a website change", url: link, primary: true }, { label: "Open my website", url }],
-      footnote: "Keep this email: the button works all month and every month while Website Care is active."
+      footnote: "Keep this email: the button works all month and every month while Website &amp; App Care is active."
     }),
     text: `Your website this month (${url}):\n- ${report.lines.join("\n- ")}\n\n${report.note}\n\nNeed a change? Tell us and we'll update the site (we check each update before it goes live): ${link}`,
     idempotencyKey: `site-care-open/${metadata.subscription_id}/${metadata.period_start}`,
@@ -62,7 +62,7 @@ async function runMonthOpening(targetStep, context, metadata, env) {
     templateKey: "website_care_open_v1",
     context: { customerId: context.customer_id, businessId: context.business_id, orderId: context.order_id, projectId: context.id }
   });
-  if (!sent.ok) throw new Error(`Website Care opening email failed: ${sent.error}`);
+  if (!sent.ok) throw new Error(`Website & App Care opening email failed: ${sent.error}`);
   await finishRun(targetStep, context, { outcome: "MONTH_OPENED", email_id: sent.id, checks: report.checks, answered: report.answered }, env);
   return { outcome: "MONTH_OPENED" };
 }
@@ -74,7 +74,7 @@ async function tellBlocked(env, context, request, reasons) {
     to: context.customer_email,
     subject: "We need a little more detail for your website change",
     html: brandedEmailHtml({
-      preheader: "We could not apply this change yet.", eyebrow: "WEBSITE CARE", heading: "We need a little more detail",
+      preheader: "We could not apply this change yet.", eyebrow: "WEBSITE & APP CARE", heading: "We need a little more detail",
       paragraphs: [`Hi ${escapeHtml(context.first_name || "there")}, we didn't change your website yet because:`, `<ul>${list}</ul>`,
         "Please send it again with the exact wording, prices or details you want, using the same link as before. Your live website has not changed."],
       footnote: "Or just reply to this email and we'll take care of it."
@@ -85,8 +85,8 @@ async function tellBlocked(env, context, request, reasons) {
   });
   await sendTransactionalEmail(env, {
     to: ownerEmailAddress(env),
-    subject: `[Website Care] Request not applied for ${business}`,
-    html: brandedEmailHtml({ eyebrow: "WEBSITE CARE", heading: `${escapeHtml(business)}: request not applied`, paragraphs: [`Request: ${escapeHtml(request.request_text)}`, `<ul>${list}</ul>`] }),
+    subject: `[Website & App Care] Request not applied for ${business}`,
+    html: brandedEmailHtml({ eyebrow: "WEBSITE & APP CARE", heading: `${escapeHtml(business)}: request not applied`, paragraphs: [`Request: ${escapeHtml(request.request_text)}`, `<ul>${list}</ul>`] }),
     text: `${business}: request not applied\n\nRequest: ${request.request_text}\n- ${reasons.join("\n- ")}`,
     idempotencyKey: `site-care-blocked-owner/${request.id}`, purpose: "WEBSITE_CARE_BLOCKED_OWNER", templateKey: "website_care_blocked_owner_v1"
   });

@@ -42,12 +42,12 @@ const conversionOverrides = {
         eyebrow: "YOUR ORDER IS READY",
         heading: `${business}'s Conversion Fix report`,
         paragraphs: [`Hi ${escapeHtml(context.first_name || "there")}, ${escapeHtml(info.summary || "your report is ready.")}`,
-          "Want us to make these changes for you? <strong>Website Care</strong> keeps your site updated on request, and a <strong>Website Package</strong> gives you a new site built around what works. See both at https://menu-made.com/services.html."],
+          "Want us to make these changes for you? <strong>Website &amp; App Care</strong> keeps your site updated on request, and a <strong>Website Package</strong> gives you a new site built around what works. See both at https://menu-made.com/services.html."],
         buttons: links,
         footnote: `These links work for ${DELIVERY_LINK_TTL_DAYS} days, so save your files. Questions? Reply to this email.`
       }),
       text: [`Hi ${context.first_name || "there"},`, "", info.summary || "Your Conversion Fix report is ready.", "", ...links.map((l) => `${l.label}: ${l.url}`), "",
-        "Want us to make these changes for you? Website Care and the Website Package are at https://menu-made.com/services.html", "",
+        "Want us to make these changes for you? Website & App Care and the Website Package are at https://menu-made.com/services.html", "",
         `These links work for ${DELIVERY_LINK_TTL_DAYS} days. Questions? Reply to this email.`].join("\n")
     };
   }

@@ -34,7 +34,7 @@ function notFound(build, headers = {}) {
 async function handleLiveSite(request, env, slug, path) {
   if (!env.DB || !env.ASSETS) return simplePage(503, "Temporarily unavailable", "<p>Please try again in a minute.</p>");
   // Newest approved build for this site from ANY project of the business: the original Website Package or a later
-  // Website Care edit. The slug check keeps one business's two sites apart.
+  // Website & App Care edit. The slug check keeps one business's two sites apart.
   let row;
   try {
   row = await env.DB.prepare(`

@@ -28,7 +28,7 @@
       "annual": { "price": "price_1UUJwxHw7f6jhUv8ss0mpsJO", "amount": 129000 }
     },
     "WEBSITE_CARE": {
-      "name": "Website Care",
+      "name": "Website & App Care (website tier)",
       "product": "prod_VVKbtuOfdXmjEV",
       "monthly": { "price": "price_1UUJw4Hw7f6jhUv8RxCroO3S", "amount": 4900 },
       "annual": { "price": "price_1UUJwzHw7f6jhUv8Jnsl35lP", "amount": 49000 }

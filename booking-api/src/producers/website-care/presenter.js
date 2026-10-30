@@ -1,4 +1,4 @@
-// What the owner and the customer read for a Website Care update (stage 7). Reuses the Website Package preview links.
+// What the owner and the customer read for a Website & App Care update (stage 7). Reuses the Website Package preview links.
 import { APPROVAL_TTL_DAYS } from "../../lib/config.js";
 import { brandedEmailHtml, escapeHtml } from "../../lib/email.js";
 import { parseJsonOrNull } from "../../lib/http.js";
@@ -43,7 +43,7 @@ const websiteCareOverrides = {
       subject: `${isTestOrder(context) ? "[TEST] " : ""}Your website is updated`,
       templateKey: "delivery_website_care_v1",
       html: brandedEmailHtml({
-        preheader: `${business}'s website now has your changes.`, eyebrow: "WEBSITE CARE", heading: "Your website is updated",
+        preheader: `${business}'s website now has your changes.`, eyebrow: "WEBSITE & APP CARE", heading: "Your website is updated",
         paragraphs: [`Hi ${escapeHtml(context.first_name || "there")}, your website now shows:`, `<ul>${changes.map((l) => `<li>${escapeHtml(l)}</li>`).join("")}</ul>`, "Your web address stays the same."],
         buttons: [{ label: "See my website", url, primary: true }],
         footnote: "Something not right? Reply to this email."

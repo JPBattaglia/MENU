@@ -1,4 +1,4 @@
-// Website Care: which site a subscription looks after, and what is live on it now.
+// Website & App Care: which site a subscription looks after, and what is live on it now.
 import { loadBuild } from "../website/serve.js";
 
 // The (first) website Menu-made built for this business, with its newest approved build.

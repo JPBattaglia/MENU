@@ -1,4 +1,4 @@
-// Website Care: a daily check that each live site answers, and how fast. One request per site per day through the public
+// Website & App Care: a daily check that each live site answers, and how fast. One request per site per day through the public
 // address (so DNS, the edge and the Worker are all in the path), recorded in site_health_checks. The monthly report reads
 // these. To protect the free-tier limits it only runs inside one UTC hour and checks at most 10 sites per tick.
 import { publicBaseUrl } from "../../lib/config.js";

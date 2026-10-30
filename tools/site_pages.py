@@ -9,6 +9,7 @@ site-catalog.js fills from /api/catalog.
 Run from the repo root:  python3 tools/site_pages.py
 """
 from pathlib import Path
+import html
 import re
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -198,7 +199,7 @@ PLANS = {
         delivery="Delivered at the start of each month.",
     ),
     "WEBSITE_CARE": dict(
-        name="Website Care", anchor="website-care", short="Hosting and changes for your Menu-Made site",
+        name="Website &amp; App Care", anchor="website-care", short="Hosting and changes for your Menu-Made site",
         gets=["Hosting for the website Menu-Made built for you",
               "Changes on request from your private change link: menu or services, hours, phone, address, wording, style and colour",
               "Every change checked and approved before it goes live",
@@ -233,8 +234,8 @@ BUNDLES = {
     "BUNDLE_GROWTH": dict(name="Growth", tagline="Everything in Starter, plus a busy Google profile.",
                           includes=["Menu Care", "Google Profile Care (with review replies)", "Accessibility Monitoring"], badge="Most popular"),
     "BUNDLE_PRO": dict(name="Pro", tagline="Your whole online presence, handled.",
-                       includes=["Everything in Growth", "Social Posts", "Website Care"],
-                       note="Website Care looks after a website Menu-Made built: add the Website Package if you need one."),
+                       includes=["Everything in Growth", "Social Posts", "Website &amp; App Care"],
+                       note="Website &amp; App Care looks after a website Menu-Made built: add the Website Package if you need one."),
 }
 
 ONCE = {
@@ -250,11 +251,11 @@ ONCE = {
     ),
     "WEBSITE_PACKAGE": dict(
         name="Website Package", anchor="website-package", service="website",
-        short="A finished website, with 3 months of Website Care",
+        short="A finished website, with 3 months of Website &amp; App Care",
         gets=["A website of up to 5 pages: Home, Menu or Services, About, Gallery, Contact &amp; Hours",
               "Your choice of 9 styles, written from what you tell us about your business",
               "Live at yourname.menu-made.com once approved, and on your own domain when you point it to us",
-              "3 months of Website Care included"],
+              "3 months of Website &amp; App Care included"],
         provide="A short form after checkout: your story, menu or services, hours, contact details, logo and up to 6 photos.",
         delivery="We approve it before it goes live. Not included: online ordering, booking systems, member areas, custom integrations or more than 5 pages.",
     ),
@@ -388,7 +389,7 @@ def faq_jsonld():
 def service_jsonld(name, description, url):
     import json
     return '<script type="application/ld+json">' + json.dumps({
-        "@context": "https://schema.org", "@type": "Service", "name": name, "description": description,
+        "@context": "https://schema.org", "@type": "Service", "name": html.unescape(name), "description": html.unescape(description),
         "provider": {"@type": "Organization", "name": "MENU-MADE", "url": "https://menu-made.com/"},
         "areaServed": "US", "url": url,
     }) + "</script>\n"
@@ -441,7 +442,7 @@ def page_index():
     <header class="section-head"><h2 id="once-title">Need one thing done?</h2><p>One-time services, no plan required.</p></header>
     <div class="cards">
       <article class="service-card"><h3>Online Menu + QR</h3><p>Your PDF or photo menu turned into a mobile menu page and a QR code for every table.</p><div class="service-bottom"><span class="price">{price("ONLINE_MENU_QR")}</span><a class="cta-pill" href="contact.html?service=menu">Start my menu</a></div></article>
-      <article class="service-card"><h3>Website Package</h3><p>A finished website of up to 5 pages in your choice of 9 styles, with 3 months of Website Care.</p><div class="service-bottom"><span class="price">{price("WEBSITE_PACKAGE")}</span><a class="cta-pill" href="website-design.html">See the package</a></div></article>
+      <article class="service-card"><h3>Website Package</h3><p>A finished website of up to 5 pages in your choice of 9 styles, with 3 months of Website &amp; App Care.</p><div class="service-bottom"><span class="price">{price("WEBSITE_PACKAGE")}</span><a class="cta-pill" href="website-design.html">See the package</a></div></article>
       <article class="service-card"><h3>Google Visibility</h3><p>A one-time tune-up of your Google profile, with a before-and-after report.</p><div class="service-bottom"><span class="price">{price("GOOGLE_VISIBILITY")}</span><a class="cta-pill" href="google-visibility.html">See what we check</a></div></article>
       <article class="service-card"><h3>Conversion Fix</h3><p>A prioritized fix list for your current website, with rewritten copy and code snippets.</p><div class="service-bottom"><span class="price">{price("CONVERSION_FIX")}</span><a class="cta-pill" href="services.html#conversion-fix">See the details</a></div></article>
     </div>
@@ -500,7 +501,7 @@ def page_plans():
         ("Accessibility Monitoring: monthly site check", True, True, True),
         ("Google Profile Care: weekly posts, photos, monthly report", False, True, True),
         ("Social Posts: 12 posts a month", False, False, True),
-        ("Website Care: hosting and changes for your Menu-Made site", False, False, True),
+        ("Website &amp; App Care: hosting and changes for your Menu-Made site", False, False, True),
     ]
     tick = '<span aria-label="Included">✓</span>'
     dash = '<span aria-label="Not included">—</span>'
@@ -696,7 +697,7 @@ def page_staff_merch():
 
 def page_services():
     title = "What Each Service Does — MENU-MADE"
-    desc = "Menu Care, Review Replies, Google Profile Care, Social Posts, Website Care, Accessibility Monitoring, Guest App and one-time setups: what you get, what you provide and how it's delivered."
+    desc = "Menu Care, Review Replies, Google Profile Care, Social Posts, Website &amp; App Care, Accessibility Monitoring, Guest App and one-time setups: what you get, what you provide and how it's delivered."
     monthly = "\n".join(product_section(c, p, "plan") for c, p in PLANS.items())
     once = "\n".join(product_section(c, p, "once") for c, p in ONCE.items())
     jump = " · ".join(f'<a href="#{p["anchor"]}">{p["name"]}</a>' for p in list(PLANS.values()) + list(ONCE.values())) + ' · <a href="#staff-merch">Staff merch</a>'
@@ -761,12 +762,12 @@ def detail_page(path, code, kind, title, desc, eyebrow, h1, intro, checklist_tit
 
 
 def page_website():
-    extra = """<section class="section"><div class="container service-preparation"><div><h2>What we’ll ask after checkout</h2><ul class="service-preparation-list"><li>Your business story in a few sentences, and anything you want on the About page.</li><li>Your menu or list of services, hours, phone, address and email.</li><li>Your logo and up to 6 photos (PNG, JPEG or WebP).</li><li>Your favourite of the 9 styles and a brand colour, or let us pick.</li><li>The name you want before .menu-made.com, and your own domain if you have one.</li></ul></div><aside class="service-scope-note"><h3>What it isn’t</h3><p>The package is a fixed-scope site of up to 5 pages. Online ordering, booking systems, member areas and custom integrations aren’t included.</p><p>After the 3 included months, Website Care continues at its monthly price unless you cancel. It covers hosting and changes on request.</p><a href="services.html#website-care">How Website Care works</a></aside></div></section>"""
+    extra = """<section class="section"><div class="container service-preparation"><div><h2>What we’ll ask after checkout</h2><ul class="service-preparation-list"><li>Your business story in a few sentences, and anything you want on the About page.</li><li>Your menu or list of services, hours, phone, address and email.</li><li>Your logo and up to 6 photos (PNG, JPEG or WebP).</li><li>Your favourite of the 9 styles and a brand colour, or let us pick.</li><li>The name you want before .menu-made.com, and your own domain if you have one.</li></ul></div><aside class="service-scope-note"><h3>What it isn’t</h3><p>The package is a fixed-scope site of up to 5 pages. Online ordering, booking systems, member areas and custom integrations aren’t included.</p><p>After the 3 included months, Website &amp; App Care continues at its monthly price unless you cancel. It covers hosting and changes on request.</p><a href="services.html#website-care">How Website &amp; App Care works</a></aside></div></section>"""
     return detail_page("website-design.html", "WEBSITE_PACKAGE", "once",
                        "Website Package for Restaurants &amp; Local Businesses — MENU-MADE",
-                       "A finished website of up to 5 pages in your choice of 9 styles, live on a menu-made.com address once approved and on your own domain when you point it. Includes 3 months of Website Care.",
+                       "A finished website of up to 5 pages in your choice of 9 styles, live on a menu-made.com address once approved and on your own domain when you point it. Includes 3 months of Website &amp; App Care.",
                        "Website Package", "A finished website, without the back-and-forth",
-                       "Tell us about your business in one short form. We build a site of up to 5 pages in the style you choose, check it, approve it and put it live, then keep it hosted and updated with Website Care.",
+                       "Tell us about your business in one short form. We build a site of up to 5 pages in the style you choose, check it, approve it and put it live, then keep it hosted and updated with Website &amp; App Care.",
                        "Up to 5 pages", ["Home", "Menu or Services", "About", "Gallery", "Contact &amp; Hours"], extra)
 
 
@@ -1006,7 +1007,7 @@ def page_start():
             <button class="btn secondary" id="clearBtn" type="button" disabled>Clear</button>
           </div>
           <div class="status" id="status" role="status" aria-live="polite"></div>
-          <details class="billing-details" id="billingDetails" hidden><summary>How billing works</summary><p class="mini">Today’s total covers your first month or year of the plan and any one-time services. Plans renew automatically. You can switch plans or cancel from the billing link in your plan emails; cancelling stops the plan at the end of the paid period. The Website Package includes 3 months of Website Care before its first charge. You’ll see the final total at Stripe before paying.</p></details>
+          <details class="billing-details" id="billingDetails" hidden><summary>How billing works</summary><p class="mini">Today’s total covers your first month or year of the plan and any one-time services. Plans renew automatically. You can switch plans or cancel from the billing link in your plan emails; cancelling stops the plan at the end of the paid period. The Website Package includes 3 months of Website &amp; App Care before its first charge. You’ll see the final total at Stripe before paying.</p></details>
 
           <div class="intake" id="intakeStep">
             <div class="two">
