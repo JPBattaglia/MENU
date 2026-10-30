@@ -26,6 +26,7 @@ import { handleGoogleKeys } from "./store-app/google-keys.js";
 import { handleSwitches } from "./lib/switches.js";
 import { advanceStoreApps, handleStoreAppDone } from "./store-app/store-flow.js";
 import { advanceGuestAppPushSelfTests } from "./selftest/guest-app-push-selftest.js";
+import { advanceStoreAppSelfTests } from "./selftest/store-app-selftest.js";
 import { customHostSlug, runDomainWatch } from "./producers/website/domains.js";
 import { handlePlanSettings } from "./subscriptions/settings.js";
 import { handleMenuCareRequest } from "./producers/menu-care/intake.js";
@@ -374,6 +375,7 @@ const mmWorkerWithBooking = {
       await advanceStoreBuilds(env).catch((error) => console.error("Store App builds failed:", error instanceof Error ? error.message : String(error)));
       await advanceStoreListings(env).catch((error) => console.error("Store App listings failed:", error instanceof Error ? error.message : String(error)));
       await advanceGuestAppPushSelfTests(env, app).catch((error) => console.error("Guest App push self-test failed:", error instanceof Error ? error.message : String(error)));
+      await advanceStoreAppSelfTests(env).catch((error) => console.error("Store App self-test failed:", error instanceof Error ? error.message : String(error)));
       await advanceGuestAppSelfTests(env, app).catch((error) => console.error("Guest App self-test failed:", error instanceof Error ? error.message : String(error)));
       await advanceGoogleSelfTests(env).catch((error) => console.error("Google self-test failed:", error instanceof Error ? error.message : String(error)));
       await advanceReviewRepliesSelfTests(env, app).catch((error) => console.error("Review Replies self-test failed:", error instanceof Error ? error.message : String(error)));
