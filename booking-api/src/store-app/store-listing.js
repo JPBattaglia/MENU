@@ -67,8 +67,10 @@ function listingText(data, { businessName, baseUrl, rewards = false, year = new 
     "Turn on notifications to hear about new specials first.",
     data.address ? `Find us at ${String(data.address).trim()}.` : ""
   ].filter(Boolean).join("\n\n");
-  const keywordParts = [...String(name).toLowerCase().split(/[^a-z0-9']+/), city.toLowerCase(), "menu", "restaurant", "food", "specials", ...(rewards ? ["rewards"] : []), ...(order ? ["order"] : []), "hours"]
-    .filter((w, i, a) => w && w.length > 1 && a.indexOf(w) === i);
+  // Apple already searches the app name, so its words would waste the 100 characters.
+  const nameWords = new Set(String(name).toLowerCase().split(/[^a-z0-9']+/));
+  const keywordParts = [city.toLowerCase(), "menu", "restaurant", "food", "specials", ...(rewards ? ["rewards"] : []), ...(order ? ["order"] : []), "hours"]
+    .filter((w, i, a) => w && w.length > 1 && !nameWords.has(w) && a.indexOf(w) === i);
   let keywords = "";
   for (const w of keywordParts) if ((keywords ? `${keywords},${w}` : w).length <= 100) keywords = keywords ? `${keywords},${w}` : w;
   const subtitle = rewards ? "Menu, specials and rewards" : "Menu, specials and hours";

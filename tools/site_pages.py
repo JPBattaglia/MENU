@@ -1074,6 +1074,34 @@ def refresh_shared(path):
     (ROOT / path).write_text(src)
 
 
+def page_store_app():
+    """Stage 11 part 2: the Store App product page. Hidden until the stage 11 exit passes: not in the nav, footer,
+    sitemap or Start page, and noindex. Prices come from the catalog (STORE_APP_SETUP, STORE_APP_CARE); while the
+    offers are not on sale, site-catalog.js turns the buttons into "Opening soon · ask us" by itself."""
+    path = "store-app.html"
+    title = "Your Restaurant App in the App Store and Google Play — MENU-MADE"
+    desc = "Your restaurant's own app in the App Store and Google Play: menu, specials, hours, notifications and a rewards card, built from your details and kept current with Website &amp; App Care."
+    checklist = ["Your own listing in the App Store and Google Play", "Menu, specials, hours, call, directions and your ordering link",
+                 "Notifications to every guest who turns them on", "A rewards card: guests collect a visit with the code at your counter",
+                 "Menu and specials changes reach the app with no store update"]
+    body = f"""<section class="hero"><div class="container service-detail-hero"><div class="service-lead-copy">
+<span class="pill">Store App · premium</span><h1>Your restaurant in the App Store and Google Play</h1>
+<p class="service-lead-intro">Your own app, under your restaurant’s name, built from the details you give us. Guests download it from the stores, get your specials as notifications and collect rewards every visit.</p>
+<p class="service-price"><strong>{price("STORE_APP_SETUP")}</strong><span>one-time setup, then Website &amp; App Care at {price("STORE_APP_CARE", "month")} after a 90-day free trial</span></p>
+<div class="hero-actions"><a class="btn primary" data-plan-cta="STORE_APP_SETUP" data-cta-label="Start the Store App" href="contact.html?plan=STORE_APP_SETUP">Start the Store App</a><a class="btn ghost" href="contact.html#inquiry">Ask a question</a></div>
+</div><aside class="service-profile-plan" aria-labelledby="checklist-title"><p class="service-eyebrow">What you get</p><h2 id="checklist-title">An app guests keep</h2><ul>{''.join(f'<li>{c}</li>' for c in checklist)}</ul></aside></div></section>
+<section class="section"><div class="container service-preparation"><div><h2>How it works</h2><ul class="service-preparation-list">
+<li>After checkout, one short form for your app: name, logo, colours, menu, hours and the reward you want (pre-filled if Menu-Made already has your details).</li>
+<li>You open developer accounts with Apple ($99 a year, paid to Apple) and Google ($25 once, paid to Google) as your business, and invite Menu-Made. Apple and Google ask for a free D-U-N-S number, which can take a few days to get. We email you the steps.</li>
+<li>We set up the app in both stores, build it, write the store listing and submit it. Part of this setup is done by hand on Apple’s and Google’s websites, because they require it.</li>
+<li>Apple and Google review the app, usually in 1 to 3 days. Most apps are live within 1 to 3 weeks of checkout, depending on how quickly the accounts are verified.</li>
+<li>Website &amp; App Care keeps it running: hosting, notifications, the rewards card, store upkeep and the yearly rebuilds Apple and Google require. Free for the first 90 days.</li>
+</ul></div><aside class="service-scope-note"><h3>Good to know</h3><p>Approval is decided by Apple and Google and isn’t guaranteed. If a store asks for changes, we make them and resubmit.</p><p>The app lives in your own developer accounts, so it stays yours. If you cancel Website &amp; App Care, the apps stay in your accounts but notifications and rewards stop, and the app shows your web menu.</p><p>Online ordering inside the app isn’t included: the app links to the ordering you already use.</p><p>Want something simpler? The <a href="services.html#guest-app">Guest App</a> installs from your link or QR code, with notifications and rewards too, and needs no store accounts.</p></aside></div></section>
+<section class="section"><div class="container cta"><div><h2>Ready for your own app?</h2><p>Checkout asks only what we need. Your next step arrives by email right after payment.</p></div><div class="cta-actions"><a class="btn primary" data-plan-cta="STORE_APP_SETUP" data-cta-label="Start the Store App" href="contact.html?plan=STORE_APP_SETUP">Start the Store App</a><a class="btn ghost" href="plans.html">See all plans</a></div></div></section>
+"""
+    return head(title, desc, path, "service-detail-page", '<meta name="robots" content="noindex">') + body + foot()
+
+
 def main():
     pages = {
         "index.html": page_index(),
@@ -1086,6 +1114,7 @@ def main():
         "google-visibility.html": page_google(),
         "accessibility-services.html": page_accessibility(),
         "staff-merch.html": page_staff_merch(),
+        "store-app.html": page_store_app(),  # hidden until the stage 11 exit (noindex, not linked)
     }
     for path, html in pages.items():
         (ROOT / path).write_text(html)
