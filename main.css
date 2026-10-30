@@ -2813,3 +2813,6 @@ details.merch-panel summary::before{content:"▸ ";font-size:1.3em}details.merch
 @media (min-width:701px) and (max-width:1100px){.mm-singles{--card-cols:3}}
 :where(body.start-page) .service-choice-group .service-card .service-bottom{grid-template-columns:minmax(0,1fr)}
 .mm-single-actions .btn,.mm-single-actions .cta-pill{white-space:nowrap}
+/* Oct 29, 2026 (owner): staff merch page, upload step sits close under the intro. */
+:where(body.merch-page) .mm-page-hero{padding-bottom:28px}
+:where(body.merch-page) .mm-page-hero+.section{padding-top:0}
