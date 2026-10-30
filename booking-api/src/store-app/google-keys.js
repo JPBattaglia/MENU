@@ -110,6 +110,11 @@ ${CHECKLIST}
   const servicesText = uploads.find((t) => parseGoogleServices(t));
   if (uploads.length && !saText && !servicesText) return formPage(token, "Those files aren't the Firebase service account key or google-services.json.");
   if (saFile && !saText && !servicesFile) return formPage(token, "That file isn't a service account key. Use Project settings, Service accounts, Generate new private key.");
+  // Two files sent but one isn't recognised: say so rather than saving only the other (Oct 30, 2026: a second file was
+  // dropped without a word).
+  if (uploads.length === 2 && !(saText && servicesText)) return formPage(token, saText
+    ? "One file is the key, but the other isn't google-services.json (Firebase, Project settings, General, your Android app, google-services.json)."
+    : "One file is google-services.json, but the other isn't the Firebase key. Use Project settings, Service accounts, Generate new private key: the file is named like menu-made-apps-firebase-adminsdk-….json.");
   if (playFile && !parseServiceAccount(playFile.text)) return formPage(token, "The Google Play file isn't a service account key.");
   let services = null;
   if (servicesText) {
