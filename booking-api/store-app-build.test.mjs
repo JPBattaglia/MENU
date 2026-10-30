@@ -21,7 +21,7 @@ const PNG = new Uint8Array([0x89, 0x50, 0x4e, 0x47, 1, 2, 3, 4]);
 
 async function setup({ status = 'READY_TO_BUILD', logo = true } = {}) {
   const DB = createD1(); const ASSETS = createR2();
-  for (const m of ['0012_guest_app.sql', '0022_store_credentials.sql', '0024_android.sql', '0025_store_app.sql', '0026_store_app_builds.sql']) DB.raw.exec(read(m));
+  for (const m of ['0012_guest_app.sql', '0022_store_credentials.sql', '0024_android.sql', '0025_store_app.sql', '0026_store_app_builds.sql', '0027_store_app_listings.sql']) DB.raw.exec(read(m));
   DB.raw.exec('PRAGMA foreign_keys = OFF');
   const sql = (q, ...a) => DB.raw.prepare(q).run(...a);
   const t = '2026-10-30T00:00:00.000Z';
@@ -99,6 +99,8 @@ test("build config: the restaurant's id, name, colour, content address and a 102
   assert.match(body.icon_svg, /^<svg[^>]+width="1024" height="1024"/);
   assert.match(body.icon_svg, /href="data:image\/png;base64,iVBORw/, 'logo inlined');
   assert.doesNotMatch(body.icon_svg, /rx="/, 'square: the stores round it');
+  assert.match(body.feature_svg, /^<svg[^>]+width="1024" height="500"/, 'Play feature graphic');
+  assert.match(body.feature_svg, /Joe's Pizza<\/text>/);
   assert.equal((await call(f, `https://menu-made.com/api/store-build/config?store_app=${ID}`)).status, 401);
   assert.equal((await req('/api/store-build/config?store_app=99999999-2222-4333-8444-555555555555')).status, 404);
 
@@ -174,4 +176,17 @@ test('silence: a build with no report after 2 hours alerts the owner once', asyn
   assert.match(f.emails[0].html, /hasn&#039;t reported|hasn't reported/);
   await withEmails(f, () => build.advanceStoreBuilds(f.env, Date.parse('2026-10-30T04:00:00.000Z')));
   assert.equal(f.emails.length, 1, 'once');
+});
+
+test('listing pictures: the build sends PNGs by name for its own store app; anything else is refused', async () => {
+  const f = await setup({ status: 'BUILDING' });
+  const req = await oidc(f);
+  const png = new Uint8Array(300); png.set([0x89, 0x50, 0x4e, 0x47]); new DataView(png.buffer).setUint32(16, 1290); new DataView(png.buffer).setUint32(20, 2796);
+  const res = await (await req(`/api/store-build/listing?store_app=${ID}&name=ios-1`, { method: 'POST', body: png })).json();
+  assert.deepEqual([res.ok, res.w, res.h], [true, 1290, 2796]);
+  assert.ok(await f.ASSETS.get(`store-app/${ID}/listing/ios-1.png`));
+  assert.deepEqual(Object.keys(JSON.parse(f.row(`SELECT images_json FROM store_app_listings`).images_json)), ['ios-1']);
+  assert.equal((await req(`/api/store-build/listing?store_app=${ID}&name=../x`, { method: 'POST', body: png })).status, 400);
+  assert.equal((await req(`/api/store-build/listing?store_app=${ID}&name=ios-2`, { method: 'POST', body: new Uint8Array(300) })).status, 422);
+  assert.equal((await call(f, `https://menu-made.com/api/store-build/listing?store_app=${ID}&name=ios-2`, { method: 'POST', body: png })).status, 401);
 });

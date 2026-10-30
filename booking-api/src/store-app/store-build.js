@@ -86,8 +86,23 @@ async function handleBuildConfig(request, env) {
       version: "1.0.0"
     },
     icon_svg: draw(0.14),
-    android_foreground_svg: draw(0.24)
+    android_foreground_svg: draw(0.24),
+    feature_svg: featureSvg(data, logoUri)
   });
+}
+
+// Google Play's feature graphic (1024 x 500): the brand colour, the logo (or nothing) and the app name.
+function featureSvg(data, logoUri) {
+  const brand = brandOf(data);
+  const m = /^#([0-9a-f]{6})$/i.exec(brand); const n = m ? parseInt(m[1], 16) : 0;
+  const lum = (c) => { c /= 255; return c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4; };
+  const ink = 0.2126 * lum(n >> 16 & 255) + 0.7152 * lum(n >> 8 & 255) + 0.0722 * lum(n & 255) > 0.4 ? "#1b1f23" : "#ffffff";
+  const name = String(data.app_name || "").trim().slice(0, 30).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+  const size = name.length > 20 ? 52 : name.length > 12 ? 64 : 80;
+  const x = logoUri ? 380 : 512;
+  return `<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="500" viewBox="0 0 1024 500"><rect width="1024" height="500" fill="${brand}"/>`
+    + (logoUri ? `<image href="${logoUri}" x="90" y="110" width="280" height="280" preserveAspectRatio="xMidYMid meet"/>` : "")
+    + `<text x="${x}" y="250" dy="0.35em" text-anchor="${logoUri ? "start" : "middle"}" font-family="Liberation Sans" font-weight="bold" font-size="${size}" fill="${ink}">${name}</text></svg>`;
 }
 
 function base64(bytes) {
@@ -210,4 +225,4 @@ async function handleRebuild(request, env, id) {
   return simplePage(200, "Queued", "<p>The build starts within 5 minutes. You'll get an email only if something needs a look.</p>");
 }
 
-export { BUILD_AUDIENCE, BUILD_WORKFLOW, REBUILD_KIND, advanceStoreBuilds, buildTarget, handleBuildConfig, handleBuildResult, handleRebuild };
+export { BUILD_AUDIENCE, BUILD_WORKFLOW, REBUILD_KIND, advanceStoreBuilds, rebuildLink, buildTarget, handleBuildConfig, handleBuildResult, handleRebuild };

@@ -50,6 +50,7 @@ import { handleGoogleCallback, handleGoogleConnect, handleGoogleLocation } from 
 import { handleStoreKeys } from "./store-app/keys.js";
 import { handleRestaurantKeys } from "./store-app/restaurant-keys.js";
 import { advanceStoreBuilds, handleBuildConfig, handleBuildResult, handleRebuild } from "./store-app/store-build.js";
+import { advanceStoreListings, handleListingImage, handleListingImageView, handleListingPage } from "./store-app/store-listing.js";
 import { handleAndroidBundle, handleAndroidKey, handleBuildCredentials, handleBundleDownload } from "./store-app/build-credentials.js";
 import { advanceAccessibilitySelfTests } from "./selftest/accessibility-selftest.js";
 import { advanceSocialPostsSelfTests } from "./selftest/social-posts-selftest.js";
@@ -91,6 +92,10 @@ var worker_default = {
     if (url.pathname === "/api/store-build/credentials" && request.method === "GET") return handleBuildCredentials(request, env);
     if (url.pathname === "/api/store-build/config" && request.method === "GET") return handleBuildConfig(request, env);
     if (url.pathname === "/api/store-build/result" && request.method === "POST") return handleBuildResult(request, env);
+    if (url.pathname === "/api/store-build/listing" && request.method === "POST") return handleListingImage(request, env);
+    const listingMatch = url.pathname.match(/^\/api\/store-app\/([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})\/listing(?:\/([a-z0-9-]{1,20})\.png)?$/i);
+    if (listingMatch && listingMatch[2] && request.method === "GET") return handleListingImageView(request, env, listingMatch[1].toLowerCase(), listingMatch[2]);
+    if (listingMatch && !listingMatch[2] && (request.method === "GET" || request.method === "POST")) return handleListingPage(request, env, listingMatch[1].toLowerCase());
     if (url.pathname === "/api/store-build/android-key" && request.method === "POST") return handleAndroidKey(request, env);
     if (url.pathname === "/api/store-build/android-bundle" && request.method === "POST") return handleAndroidBundle(request, env);
     const bundleMatch = url.pathname.match(/^\/api\/store-build\/bundle\/(\d{1,9})$/);
@@ -367,6 +372,7 @@ const mmWorkerWithBooking = {
       await sendAndroidPushes(env).catch((error) => console.error("Android notifications failed:", error instanceof Error ? error.message : String(error)));
       await advanceStoreApps(env).catch((error) => console.error("Store App steps failed:", error instanceof Error ? error.message : String(error)));
       await advanceStoreBuilds(env).catch((error) => console.error("Store App builds failed:", error instanceof Error ? error.message : String(error)));
+      await advanceStoreListings(env).catch((error) => console.error("Store App listings failed:", error instanceof Error ? error.message : String(error)));
       await advanceGuestAppPushSelfTests(env, app).catch((error) => console.error("Guest App push self-test failed:", error instanceof Error ? error.message : String(error)));
       await advanceGuestAppSelfTests(env, app).catch((error) => console.error("Guest App self-test failed:", error instanceof Error ? error.message : String(error)));
       await advanceGoogleSelfTests(env).catch((error) => console.error("Google self-test failed:", error instanceof Error ? error.message : String(error)));
