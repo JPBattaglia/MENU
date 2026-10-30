@@ -562,8 +562,8 @@ def team_and_design_block():
     <header class="section-head"><h2 id="team-title">For your team and your brand</h2><p>Designed by Nino Battaglia, the designer behind Menu-Made.</p></header>
     <div class="mm-singles">
 <article class="mm-single">
-  <h3>Staff merch</h3><p>Shirts for your team in any of Nino's designs, with your logo on the back if you like. Shop price per shirt, +$5 with your logo, 10% off 12 or more and 15% off 24 or more. Printed and shipped for you.</p>
-  <div class="mm-single-actions"><a class="btn primary" href="staff-merch.html">Order staff shirts</a></div>
+  <h3>Staff merch</h3><p>Your logo on staff shirts, hoodies, aprons, caps, mugs, coasters and more. Upload it and see mockups right away; 10% off 12 or more items, 15% off 24 or more. Nino checks every logo order before anything is printed, then it's printed and shipped to you. Nino Battaglia shirt designs are an option.</p>
+  <div class="mm-single-actions"><a class="btn primary" href="staff-merch.html">Order staff merch</a></div>
 </article>
 <article class="mm-single">
   <h3>Design by Nino</h3><p>A logo, a flyer, a redesigned print menu or a pack of social graphics, made for your business and approved by Nino before it reaches you.</p>
@@ -678,7 +678,7 @@ def page_services():
     desc = "Menu Care, Review Replies, Google Profile Care, Social Posts, Website Care, Accessibility Monitoring, Guest App and one-time setups: what you get, what you provide and how it's delivered."
     monthly = "\n".join(product_section(c, p, "plan") for c, p in PLANS.items())
     once = "\n".join(product_section(c, p, "once") for c, p in ONCE.items())
-    jump = " · ".join(f'<a href="#{p["anchor"]}">{p["name"]}</a>' for p in list(PLANS.values()) + list(ONCE.values()))
+    jump = " · ".join(f'<a href="#{p["anchor"]}">{p["name"]}</a>' for p in list(PLANS.values()) + list(ONCE.values())) + ' · <a href="#team">Staff merch</a>'
     body = f"""<section class="hero mm-page-hero">
   <div class="container">
     <span class="pill">Services</span>
@@ -706,6 +706,8 @@ def page_services():
     </div>
   </div>
 </section>
+
+{team_and_design_block()}
 
 <section class="section" aria-label="Call to action">
   <div class="container cta">
