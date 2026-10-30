@@ -12,7 +12,7 @@ from pathlib import Path
 import re
 
 ROOT = Path(__file__).resolve().parent.parent
-CSS_VERSION = "20261028-stage10d"
+CSS_VERSION = "20261029-picker"
 CATALOG_JS = '<script src="site-catalog.js?v=20261028-stage9" defer></script>'
 
 NAV = [
@@ -488,7 +488,12 @@ def page_plans():
   <h3>{p['name']}</h3><p>{p['short']}.</p>
   <p class="mm-single-price">{price(code)}{' <span class="mm-plus">first year</span>' if code == 'ONLINE_MENU_QR' else ''}</p>
   <div class="mm-single-actions"><a class="cta-pill" href="services.html#{p['anchor']}">Details</a><a class="btn primary" data-plan-cta="{code}" data-cta-label="Start" href="contact.html?service={p['service']}">Start</a></div>
-</article>""" for code, p in ONCE.items())
+</article>""" for code, p in ONCE.items()) + """
+<article class="mm-single">
+  <h3>Staff merch</h3><p>Your logo on staff shirts, aprons, caps, mugs and more, with mockups as you order.</p>
+  <p class="mm-single-price">10% off 12+ items <span class="mm-plus">15% off 24+</span></p>
+  <div class="mm-single-actions"><a class="cta-pill" href="services.html#team">Details</a><a class="btn primary" href="staff-merch.html">Order</a></div>
+</article>"""
     rows = [
         ("Menu Care: unlimited menu updates", True, True, True),
         ("Review Replies: every Google review answered", True, True, True),
@@ -544,7 +549,7 @@ def page_plans():
   </div>
 </section>
 
-{team_and_design_block()}
+{team_and_design_block(include_merch=False)}
 
 <section class="section menu-faq" id="faq" aria-labelledby="faq-title">
   <div class="container"><header class="section-head"><h2 id="faq-title">Billing questions</h2></header>
@@ -556,8 +561,8 @@ def page_plans():
 
 
 # Stage 10 cross-sell: staff merch (sold here) and Nino's design services (sold on ninobattaglia.com).
-def team_and_design_block():
-    return """<section class="section" id="team" aria-labelledby="team-title">
+def team_and_design_block(include_merch=True):
+    html = """<section class="section" id="team" aria-labelledby="team-title">
   <div class="container">
     <header class="section-head"><h2 id="team-title">For your team and your brand</h2><p>Designed by Nino Battaglia, the designer behind Menu-Made.</p></header>
     <div class="mm-singles">
@@ -572,6 +577,9 @@ def team_and_design_block():
     </div>
   </div>
 </section>"""
+    if not include_merch:
+        html = re.sub(r'<article class="mm-single">\s*<h3>Staff merch</h3>.*?</article>\n', "", html, flags=re.S)
+    return html
 
 
 def page_staff_merch():
@@ -943,8 +951,12 @@ def page_start():
             {single_cards}
           </section>
           <section class="service-choice-group" aria-labelledby="onceChoiceTitle">
-            <h3 id="onceChoiceTitle">One-time services</h3>
+            <h3 id="onceChoiceTitle">One-time services and staff merch</h3>
             {once_cards}
+            <article class="service-card mm-choice mm-choice-link" data-name="Staff merch">
+              <h3>Staff merch</h3><p>Your logo on shirts, aprons, caps, mugs and more. Ordered on its own page, with mockups of your logo.</p>
+              <div class="service-bottom"><span class="price">10% off 12+ items</span><a class="btn primary" href="staff-merch.html">Order staff merch</a></div>
+            </article>
           </section>
         </div>
       </details>
