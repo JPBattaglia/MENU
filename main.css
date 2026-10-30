@@ -2785,7 +2785,6 @@ details.merch-panel summary::before{content:"▸ ";font-size:1.3em}details.merch
 
 /* Oct 29, 2026: the Start page chooser opens across the full width and shows its cards 2-3 side by side
    (owner: the list was too long). Closed, it sits beside the order as before. */
-.start-page .start-grid:has(> .optional-services[open]) > .optional-services{grid-column:1/-1}
 :where(body.start-page) .service-choice-group{grid-template-columns:repeat(auto-fill,minmax(max(150px,calc((100% - 28px)/3)),1fr));gap:14px;align-items:stretch}
 :where(body.start-page) .service-choice-group>h3{grid-column:1/-1}
 :where(body.start-page) .service-choice-group .service-card{display:flex;flex-direction:column;padding:16px;margin:0;min-width:0}
@@ -2802,7 +2801,7 @@ details.merch-panel summary::before{content:"▸ ";font-size:1.3em}details.merch
 @media (min-width:701px){
   .mm-singles,:where(body.start-page) .service-choice-group,:where(body:not(.sample-menu-page)) .cards{display:flex;flex-wrap:wrap;justify-content:center;align-items:stretch;gap:var(--card-gap)}
   .mm-singles{--card-cols:4;--card-gap:18px}
-  :where(body.start-page) .service-choice-group{--card-cols:3;--card-gap:14px}
+  :where(body.start-page) .service-choice-group{--card-cols:2;--card-gap:14px}
   :where(body:not(.sample-menu-page)) .cards{--card-cols:2;--card-gap:32px}
   .mm-singles>*,:where(body.start-page) .service-choice-group>.service-card,:where(body:not(.sample-menu-page)) .cards>*{flex:0 0 calc((100% - (var(--card-cols) - 1) * var(--card-gap)) / var(--card-cols));max-width:calc((100% - (var(--card-cols) - 1) * var(--card-gap)) / var(--card-cols));min-width:0;box-sizing:border-box;height:auto}
   :where(body.start-page) .service-choice-group>h3{flex:0 0 100%}
@@ -2825,3 +2824,6 @@ details.merch-panel summary::before{content:"▸ ";font-size:1.3em}details.merch
 :where(body.account-page) .mm-page-hero{padding-bottom:28px}
 :where(body.account-page) .mm-page-hero~.section{padding-top:0}
 :where(body.account-page) .mm-page-hero~.section{padding-bottom:48px}
+/* Oct 29, 2026 (owner): the chooser stays in the left column, 2 cards across, and Your order stays in view on the
+   right while the chooser is scrolled (larger screens only; phones and tablets stack as before). */
+@media (min-width:901px){:where(body.start-page) .cart{position:sticky;top:110px;align-self:start;max-height:calc(100vh - 130px);overflow-y:auto;overscroll-behavior:contain}}
