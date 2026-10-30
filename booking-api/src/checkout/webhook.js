@@ -553,7 +553,7 @@ async function handleCheckoutCompleted(event, env) {
     }
   }
   const appProjects = await env.DB.prepare(`
-      SELECT id FROM projects WHERE order_id = ? AND workflow_key = 'GUEST_APP_SETUP_V1' AND status = 'AWAITING_INPUTS'
+      SELECT id FROM projects WHERE order_id = ? AND workflow_key IN ('GUEST_APP_SETUP_V1', 'STORE_APP_SETUP_V1') AND status = 'AWAITING_INPUTS'
     `).bind(orderId).all();
   for (const appProject of appProjects.results || []) {
     try {

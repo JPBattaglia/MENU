@@ -233,8 +233,8 @@ async function orderActions(env, orderId) {
     if (project.offer_code === "WEBSITE_PACKAGE" && project.status === "AWAITING_INPUTS") {
       actions.push(link("Tell us about your website", await siteIntakeLink(env, project.id)));
     }
-    if (project.offer_code === "GUEST_APP_SETUP" && project.status === "AWAITING_INPUTS") {
-      actions.push(link("Fill in your Guest App details", await appIntakeLink(env, project.id)));
+    if ((project.offer_code === "GUEST_APP_SETUP" || project.offer_code === "STORE_APP_SETUP") && project.status === "AWAITING_INPUTS") {
+      actions.push(link(project.offer_code === "STORE_APP_SETUP" ? "Fill in your app details" : "Fill in your Guest App details", await appIntakeLink(env, project.id)));
     }
     if (project.offer_code === "GOOGLE_VISIBILITY" && !(await activeConnection(env, project.id))) {
       actions.push(link("Connect your Google profile", await googleConnectUrl(env, project.id)));
