@@ -64,11 +64,11 @@ const websiteOverrides = {
         preheader: `${business}'s website is live.`,
         eyebrow: "YOUR WEBSITE IS LIVE",
         heading: `${business} is on the web`,
-        paragraphs: [`Hi ${escapeHtml(context.first_name || "there")}, your website is live at <strong>${escapeHtml(url)}</strong>.`, "Your plan includes two rounds of changes: reply to this email with what to change. Your Website Care trial keeps the site hosted and updated.", ...extra],
+        paragraphs: [`Hi ${escapeHtml(context.first_name || "there")}, your website is live at <strong>${escapeHtml(url)}</strong>.`, "Your plan includes two rounds of changes: reply to this email with what to change. Your Website &amp; App Care trial keeps the site hosted and updated.", ...extra],
         buttons: [{ label: "Open my website", url, primary: true }],
         footnote: `Questions or changes? Reply to this email.`
       }),
-      text: [`Hi ${context.first_name || "there"},`, "", `Your website is live: ${url}`, "", "Your plan includes two rounds of changes: reply to this email with what to change. Your Website Care trial keeps the site hosted and updated.", ...(domain ? ["", `You asked to use your own domain, ${domain}. We'll email you the exact steps to point it at your site.`] : [])].join("\n")
+      text: [`Hi ${context.first_name || "there"},`, "", `Your website is live: ${url}`, "", "Your plan includes two rounds of changes: reply to this email with what to change. Your Website & App Care trial keeps the site hosted and updated.", ...(domain ? ["", `You asked to use your own domain, ${domain}. We'll email you the exact steps to point it at your site.`] : [])].join("\n")
     };
   }
 };

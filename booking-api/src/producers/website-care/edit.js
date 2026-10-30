@@ -1,4 +1,4 @@
-// Website Care (stage 7): apply a customer's change request to the live site's own details and copy.
+// Website & App Care (stage 7): apply a customer's change request to the live site's own details and copy.
 //   applySiteChange(env, {site, copy, requestText, scope, deps}) -> { site, copy, summary, changes, problems, understood }
 // The AI only proposes new values for named fields. Nothing it writes is trusted: every price, time, phone, email and
 // address number must come from the request or the old site, copy must pass the same checks as a new site, and a change

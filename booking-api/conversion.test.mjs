@@ -122,7 +122,7 @@ test('a paid order is audited, written up, approved by the owner and delivered w
     await Promise.all(f.pending);
     assert.equal(f.emails.length, 3);
     assert.deepEqual(f.emails[2].to, ['joe@joespizza.example']);
-    assert.match(f.emails[2].text, /Website Care/);
+    assert.match(f.emails[2].text, /Website & App Care/);
     assert.equal(f.row(`SELECT status FROM projects WHERE id = 'cp'`).status, 'DELIVERED');
     assert.equal(f.row(`SELECT COUNT(*) AS n FROM business_events WHERE event_type = 'AI_USAGE'`).n, 1);
   });

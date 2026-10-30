@@ -1,4 +1,4 @@
-// Website Care: the monthly health report. Facts only: how many daily checks answered, how fast, what the automated
+// Website & App Care: the monthly health report. Facts only: how many daily checks answered, how fast, what the automated
 // page checks find on the live pages, and how many changes were made. It says what it measures and what it does not.
 import { checkSite } from "../website/check.js";
 

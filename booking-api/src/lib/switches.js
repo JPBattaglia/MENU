@@ -31,7 +31,7 @@ const SERVICES = [
   { key: "ACCESSIBILITY_MONITORING", label: "Accessibility Monitoring", offers: ["ACCESSIBILITY_MONITORING"], workflows: ["ACCESSIBILITY_MONITORING_V1"] },
   { key: "CONVERSION_FIX", label: "Conversion Fix", offers: ["CONVERSION_FIX"], workflows: ["CONVERSION_FIX_V1"] },
   { key: "WEBSITE_PACKAGE", label: "Website Package", offers: ["WEBSITE_PACKAGE"], workflows: ["WEBSITE_PACKAGE_V1"] },
-  { key: "WEBSITE_CARE", label: "Website Care", offers: ["WEBSITE_CARE"], workflows: ["WEBSITE_CARE_V1"] },
+  { key: "WEBSITE_CARE", label: "Website & App Care", offers: ["WEBSITE_CARE"], workflows: ["WEBSITE_CARE_V1"] },
   { key: "GUEST_APP", label: "Guest App", offers: ["GUEST_APP", "GUEST_APP_SETUP"], workflows: ["GUEST_APP_SETUP_V1", "GUEST_APP_V1"] },
   { key: "STORE_APP", label: "Store App", offers: ["STORE_APP_SETUP", "STORE_APP_CARE"], workflows: ["STORE_APP_SETUP_V1", "STORE_APP_CARE_V1"] },
   { key: "NINO_DESIGN", label: "Nino design services", offers: ["NINO_SOCIAL_PACK", "NINO_FLYER", "NINO_MENU_DESIGN", "NINO_LOGO"], workflows: ["NINO_SOCIAL_PACK_V1", "NINO_FLYER_V1", "NINO_MENU_DESIGN_V1", "NINO_LOGO_V1"] },

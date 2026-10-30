@@ -247,7 +247,7 @@ test('cart rules: one plan, business required, Website Package trial, Guest App 
     res = await h.checkout({ items: [{ key: 'GUEST_APP' }], customer: buyer });
     assert.equal(res.status, 400); assert.match(res.body.error, /setup/);
     res = await h.checkout({ items: [{ key: 'WEBSITE_PACKAGE' }, { key: 'BUNDLE_STARTER' }], customer: buyer });
-    assert.equal(res.status, 400); assert.match(res.body.error, /Website Care/);
+    assert.equal(res.status, 400); assert.match(res.body.error, /Website & App Care/);
     assert.equal(h.stripe.sessions.length, 0);
 
     res = await h.checkout({ items: [{ key: 'WEBSITE_PACKAGE' }], customer: buyer });

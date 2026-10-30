@@ -46,7 +46,7 @@ async function loadOrder(env, orderId) {
 function cartLines(items) {
   return items.filter((item) => {
     const meta = parseJsonOrNull(item.metadata_json) || {};
-    return !(meta.billing === "RECURRING" && meta.trial_days); // Website Care during the Website Package trial
+    return !(meta.billing === "RECURRING" && meta.trial_days); // Website & App Care during the Website Package trial
   }).map((item) => {
     const meta = parseJsonOrNull(item.metadata_json) || {};
     if (meta.billing === "RECURRING") {

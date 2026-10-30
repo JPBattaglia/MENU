@@ -216,7 +216,7 @@ test('end to end: intake, AI copy, checks, owner preview, approval, live site, b
     assert.equal((await call(f, 'https://menu-made.com/api/site/joes-pizza', { redirect: 'manual' })).status, 301);
     assert.equal((await call(f, 'https://menu-made.com/api/site/unknown-site/')).status, 404);
     const buyer = f.emails.at(-1);
-    assert.deepEqual(buyer.to, ['joe@joespizza.example']); assert.match(buyer.text, /api\/site\/joes-pizza\//); assert.match(buyer.text, /Website Care/);
+    assert.deepEqual(buyer.to, ['joe@joespizza.example']); assert.match(buyer.text, /api\/site\/joes-pizza\//); assert.match(buyer.text, /Website & App Care/);
     assert.equal(f.row(`SELECT COUNT(*) AS n FROM business_events WHERE event_type = 'AI_USAGE'`).n, 1);
   });
 });

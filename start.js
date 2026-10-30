@@ -80,7 +80,7 @@ function menuQuote() {
   return { pages, extraPages, extrasCents, totalCents: pkg.setup_cents + pkg.hosting_first_year_cents + extrasCents, pkg };
 }
 
-// The plan the checkout will start. A Website Package bought without a plan starts Website Care on a trial.
+// The plan the checkout will start. A Website Package bought without a plan starts Website & App Care on a trial.
 function effectivePlan() {
   if (order.plan) return { code: order.plan, trial: false };
   if (order.once.has(WEBSITE)) return { code: 'WEBSITE_CARE', trial: true };
@@ -91,7 +91,7 @@ function effectivePlan() {
 function orderProblem() {
   const plan = order.plan ? offer(order.plan) : null;
   if (order.once.has(WEBSITE) && plan && !plan.includes.includes('WEBSITE_CARE')) {
-    return `The Website Package comes with Website Care. Check it out on its own, or with a plan that includes Website Care (Pro or Website Care), and add ${plan.name} in a second checkout.`;
+    return `The Website Package comes with Website & App Care. Check it out on its own, or with a plan that includes Website & App Care (Pro or Website & App Care), and add ${plan.name} in a second checkout.`;
   }
   for (const code of [order.plan, ...order.once].filter(Boolean)) {
     if (offers && !sellable(offer(code))) return `${nameOf(code)} opens soon. Remove it to continue, or ask us about it below.`;
@@ -221,12 +221,12 @@ function add(code, { quiet = false } = {}) {
   if (!o || !sellable(o)) { if (!quiet) showStatus(`${nameOf(code)} opens soon. Ask us about it below.`); return false; }
   clearStatus();
   if (code === 'WEBSITE_CARE' && order.once.has(WEBSITE)) {
-    if (!quiet) showStatus('Website Care is already included free for 3 months with your Website Package.');
+    if (!quiet) showStatus('Website & App Care is already included free for 3 months with your Website Package.');
     return false;
   }
   if (code === WEBSITE && order.plan === 'WEBSITE_CARE') {
     order.plan = null;
-    showStatus('The Website Package includes 3 months of Website Care, so the separate Website Care plan was removed.');
+    showStatus('The Website Package includes 3 months of Website & App Care, so the separate Website & App Care plan was removed.');
   }
   if (o.prices) {
     if (order.plan === code) return false;

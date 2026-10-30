@@ -1,4 +1,4 @@
-// Sandbox self-test for Website Care (stage 7), run by the worker's 5-minute schedule and once a day.
+// Sandbox self-test for Website & App Care (stage 7), run by the worker's 5-minute schedule and once a day.
 // A synthetic customer with a live website asks for a menu change through the real intake code. The real shared AI step edits
 // the site, the real approval flow asks the owner (the test approves through the approve page), and the same address must then
 // show the new price and dish while everything else is untouched. The test also runs the real health check against the
@@ -50,7 +50,7 @@ async function livePage(app, env, slug, page) {
   return { status: response.status, html: await response.text() };
 }
 
-// A synthetic customer, business, Website Care subscription and an approved live website.
+// A synthetic customer, business, Website & App Care subscription and an approved live website.
 async function scaffold(env, test) {
   const t = nowIso();
   // Letters and digits only: a hand-named id like "wpkg-st-1" once made the invalid address "selftest-wpkg-st-".
@@ -62,7 +62,7 @@ async function scaffold(env, test) {
   }
   const care = await env.DB.prepare(`SELECT o.id AS offer_id, v.id AS version_id FROM offers o JOIN offer_versions v ON v.offer_id = o.id WHERE o.code = 'WEBSITE_CARE' AND v.status = 'ACTIVE' ORDER BY v.version_number LIMIT 1`).first();
   const pkg = await env.DB.prepare(`SELECT o.id AS offer_id, v.id AS version_id FROM offers o JOIN offer_versions v ON v.offer_id = o.id WHERE o.code = 'WEBSITE_PACKAGE' AND v.status = 'ACTIVE' ORDER BY v.version_number LIMIT 1`).first();
-  if (!care || !pkg) throw new Error("The Website Care or Website Package offer is not in the catalog");
+  if (!care || !pkg) throw new Error("The Website & App Care or Website Package offer is not in the catalog");
   const businessId = crypto.randomUUID(); const subscriptionId = crypto.randomUUID(); const orderId = crypto.randomUUID();
   const itemId = crypto.randomUUID(); const projectId = crypto.randomUUID(); const assetId = crypto.randomUUID();
   const slug = `carest-${short}`;
@@ -79,7 +79,7 @@ async function scaffold(env, test) {
   await env.DB.prepare(`
       INSERT INTO orders (id, created_at, updated_at, customer_id, business_id, status, currency, subtotal_cents, discount_cents, tax_cents, total_cents, payment_status, stripe_checkout_session_id, placed_at, notes)
       VALUES (?, ?, ?, ?, ?, 'DELIVERED', 'USD', 0, 0, 0, 0, 'PAID', ?, ?, ?)
-    `).bind(orderId, t, t, customer.id, businessId, `cs_test_sitecare_${short}`, t, `Website Care self-test ${test.id}`).run();
+    `).bind(orderId, t, t, customer.id, businessId, `cs_test_sitecare_${short}`, t, `Website & App Care self-test ${test.id}`).run();
   await env.DB.prepare(`INSERT INTO order_items (id, order_id, offer_id, offer_version_id, quantity, unit_price_cents, line_total_cents, fulfillment_status) VALUES (?, ?, ?, ?, 1, 0, 0, 'FULFILLED')`).bind(itemId, orderId, pkg.offer_id, pkg.version_id).run();
   await env.DB.prepare(`
       INSERT INTO projects (id, order_id, order_item_id, business_id, customer_id, project_type, status, workflow_key, workflow_version, priority, manual_review_required, created_at, updated_at, metadata_json)
@@ -163,15 +163,15 @@ async function failTest(env, test, message) {
   const failed = await updateTest(env, test, { status: "FAILED", error: `${message}${detail ? ` | ${detail}` : ""}`.slice(0, 1000), log: `FAILED: ${message}` });
   await sendTransactionalEmail(env, {
     to: ownerEmailAddress(env),
-    subject: "Website Care self-test failed",
+    subject: "Website & App Care self-test failed",
     html: brandedEmailHtml({
-      preheader: "The automated test of Website Care failed.",
+      preheader: "The automated test of Website & App Care failed.",
       eyebrow: "SELF-TEST",
-      heading: "The Website Care self-test failed",
+      heading: "The Website & App Care self-test failed",
       paragraphs: ["A test website change did not go live as expected. Real customers' website changes may hit the same problem."],
       rows: [["Stage", test.stage || "START"], ["Error", failed.error], ["Self-test", test.id]]
     }),
-    text: `The Website Care self-test failed at ${test.stage || "START"}.\n${failed.error}\nSelf-test: ${test.id}`,
+    text: `The Website & App Care self-test failed at ${test.stage || "START"}.\n${failed.error}\nSelf-test: ${test.id}`,
     idempotencyKey: `self-test-failed/${test.id}`,
     purpose: "AUTOMATION_ALERT",
     templateKey: "self_test_failed_v1"

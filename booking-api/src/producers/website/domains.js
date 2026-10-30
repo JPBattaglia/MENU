@@ -1,5 +1,5 @@
 // Custom domains for generated sites (stage 7), through Cloudflare for SaaS custom hostnames (the first 100 are free).
-//   1. The customer asks for a domain they own (Website Care page). We create a custom hostname with the Cloudflare API and
+//   1. The customer asks for a domain they own (Website & App Care page). We create a custom hostname with the Cloudflare API and
 //      email them the one DNS record to add: hostname CNAME -> the fallback host (default sites.<root>).
 //   2. Once the CNAME resolves Cloudflare validates and issues the certificate by itself. A scheduled pass polls PENDING
 //      domains and, when the hostname and certificate are both active, marks it ACTIVE and emails the customer.

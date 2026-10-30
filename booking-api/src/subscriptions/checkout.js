@@ -1,7 +1,7 @@
 // Stage 3: turns a cart that holds a plan or bundle into a subscription-mode Stripe Checkout.
 // Rules (handbook, Stage plans → Stage 3):
 //   - one plan or bundle per checkout, monthly or annual; setups ride along as one-time line items
-//   - Website Package alone starts Website Care with a 90-day trial in the same checkout
+//   - Website Package alone starts Website & App Care with a 90-day trial in the same checkout
 //   - Guest App needs the Guest App Setup in the same cart
 import { CheckoutValidationError } from "../checkout/quote.js";
 import { parseJsonOrNull } from "../lib/http.js";
@@ -93,7 +93,7 @@ async function buildSubscriptionCart(itemsInput, data, env, environment) {
       throw new CheckoutValidationError(`No live Stripe price is configured for ${plan.offerCode}`, 500);
     }
     if (setupCodes.has("WEBSITE_PACKAGE") && !plan.includes.includes("WEBSITE_CARE")) {
-      throw new CheckoutValidationError("The Website Package includes Website Care; check it out on its own or with a plan that includes Website Care.");
+      throw new CheckoutValidationError("The Website Package includes Website & App Care; check it out on its own or with a plan that includes Website & App Care.");
     }
   }
   const stripeCustomerId = await testClockCustomer(data?.stripe_test_customer, env, environment);
