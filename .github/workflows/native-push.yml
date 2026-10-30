@@ -1,0 +1,34 @@
+# Sends Store App notifications to Apple for the menu-checkout worker (Workers can't speak HTTP/2, which Apple's push
+# service requires). The worker starts this workflow itself when a notification is queued (GitHub API, worker secret
+# GITHUB_DISPATCH_TOKEN) and again from its 5-minute schedule if one waits. Details:
+# booking-api/src/store-app/native-push.js. The worker answers only an OIDC token from a manual run of this workflow on
+# master; this workflow holds no secret.
+#
+# This repo is public, so these logs are public: the script masks the key, device tokens and message text and prints
+# only counts and Apple's reason codes.
+name: Native push
+
+on:
+  workflow_dispatch:
+
+concurrency:
+  group: native-push
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  send:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          sparse-checkout: booking-api/scripts
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Send waiting notifications
+        run: node booking-api/scripts/native-push.mjs

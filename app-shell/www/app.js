@@ -1,7 +1,8 @@
 // Store App screens (stage 11 part 2). Content comes from the restaurant's live app, <app>/api/content
 // (booking-api/src/producers/guest-app/native.js), so menu and special changes reach the app with no store update.
 // The last copy is kept on the phone and shown when offline. Rewards use the same card rules and counter code as the
-// Guest App (<app>/api/loyalty); the card is a random key kept only on this phone. Native push is added with signing.
+// Guest App (<app>/api/loyalty); the card is a random key kept only on this phone. Notifications: native push on
+// iPhone (Apple token registered at <app>/api/push/native; sent by booking-api/src/store-app/native-push.js).
 (function () {
   "use strict";
   var $ = function (id) { return document.getElementById(id); };
@@ -133,6 +134,43 @@
   $("earn").addEventListener("click", function () { act("earn"); });
   $("redeem").addEventListener("click", function () { act("redeem"); });
 
+  // ---- notifications (iPhone; Android joins with Firebase) ----
+  // Capacitor's native bridge provides window.Capacitor; the plugin is reached without a bundler.
+  function pushPlugin() {
+    var C = window.Capacitor;
+    if (!C || !C.isNativePlatform || !C.isNativePlatform() || C.getPlatform() !== "ios") return null;
+    return (C.Plugins && C.Plugins.PushNotifications) || (C.registerPlugin ? C.registerPlugin("PushNotifications") : null);
+  }
+  function pushMsg(text) { $("push-msg").textContent = text || ""; }
+  function startPush() {
+    var push = pushPlugin();
+    if (!push) return;
+    push.addListener("registration", function (t) {
+      var token = String(t && t.value || "").toLowerCase();
+      if (!/^[0-9a-f]{64,200}$/.test(token)) return;
+      // Re-sent when the token changes, and once a week so the restaurant's count stays right.
+      var sent = store.get("push-sent") || {};
+      if (sent.token === token && Date.now() - (sent.at || 0) < 7 * 86400000) { $("push-box").hidden = true; return; }
+      api("push/native", { platform: "ios", token: token, bundle_id: cfg.app_id, environment: cfg.push_environment || "production" }).then(function (r) {
+        if (r.ok) { store.set("push-sent", { token: token, at: Date.now() }); pushMsg("Notifications are on."); setTimeout(function () { $("push-box").hidden = true; }, 2500); }
+        else pushMsg(r.error || "Couldn't turn on notifications. Please try again later.");
+      }).catch(function () { pushMsg("You need a connection to turn on notifications."); });
+    });
+    push.addListener("registrationError", function () { pushMsg("Couldn't turn on notifications. Please try again later."); });
+    push.checkPermissions().then(function (p) {
+      if (p.receive === "granted") { push.register(); return; }
+      if (p.receive === "denied") return; // the guest said no; Settings is the only way back, so don't nag
+      $("push-box").hidden = false;
+      $("push-on").addEventListener("click", function () {
+        $("push-on").disabled = true;
+        push.requestPermissions().then(function (r) {
+          if (r.receive === "granted") { pushMsg("Turning on…"); push.register(); }
+          else { pushMsg("Notifications are off. You can turn them on later in Settings."); }
+        }).catch(function () { pushMsg("Couldn't turn on notifications."); }).then(function () { $("push-on").disabled = false; });
+      });
+    }).catch(function () {});
+  }
+
   // ---- start ----
   fetch("config.json").then(function (r) { return r.json(); }).then(function (c) {
     cfg = c;
@@ -142,5 +180,6 @@
     if (cached) render(cached);
     loadContent();
     document.addEventListener("visibilitychange", function () { if (!document.hidden) loadContent(); });
+    startPush();
   }).catch(function () { status("This app couldn't start. Please reinstall it."); });
 })();

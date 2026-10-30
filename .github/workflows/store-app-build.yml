@@ -1,8 +1,8 @@
 # Builds the Store App (stage 11 part 2) on GitHub's standard runners, which are free and unmetered because
 # this repo is public: iOS on macOS, Android on Linux. Current version proves the pipeline with the fictional
-# Sample Cafe: unsigned iOS simulator build and Android debug APK, no store upload, and records how long each
-# takes. Signing and upload (TestFlight / Play internal testing) are added next, with keys fetched from the
-# worker over this workflow's OIDC token and masked; they never live in this repo.
+# Sample Cafe: unsigned iOS simulator build and Android debug APK on every push; manual runs with upload ticked also
+# sign the iOS build and upload it to TestFlight, with the key fetched from the worker over this workflow's OIDC token
+# and masked (it never lives in this repo). patch-ios.mjs adds the AppDelegate hooks native push needs.
 #
 # Public repo = public logs: never print customer data, keys or signing material here.
 name: Store app build
@@ -116,6 +116,7 @@ jobs:
         run: |
           node app-shell/configure.mjs "$CONFIG"
           cd app-shell && npx cap add ios && npx cap sync ios
+          node patch-ios.mjs
           ls ios/App
       - name: Build for the iOS simulator (unsigned)
         working-directory: app-shell/ios/App
@@ -164,6 +165,8 @@ jobs:
           cd app-shell && npm init -y >/dev/null && npm install --no-audit --no-fund $CAP_PACKAGES && cd ..
           node app-shell/configure.mjs "$CONFIG"
           cd app-shell && npx cap add ios && npx cap sync ios
+          node patch-ios.mjs
+          grep -q capacitorDidRegisterForRemoteNotifications ios/App/App/AppDelegate.swift
           plist=ios/App/App/Info.plist
           /usr/libexec/PlistBuddy -c "Add :ITSAppUsesNonExemptEncryption bool false" "$plist" 2>/dev/null || /usr/libexec/PlistBuddy -c "Set :ITSAppUsesNonExemptEncryption false" "$plist"
           cat > ios/App/App/App.entitlements <<'PLIST'

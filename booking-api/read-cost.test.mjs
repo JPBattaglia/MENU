@@ -13,12 +13,13 @@ const migration = readFileSync(new URL('./migrations/0003_read_cost_indexes.sql'
   + readFileSync(new URL('./migrations/0018_menu_hosting_index.sql', import.meta.url), 'utf8')
   + readFileSync(new URL('./migrations/0020_stage10_read_indexes.sql', import.meta.url), 'utf8')
   + readFileSync(new URL('./migrations/0012_guest_app.sql', import.meta.url), 'utf8')
-  + readFileSync(new URL('./migrations/0021_guest_app_engagement.sql', import.meta.url), 'utf8');
+  + readFileSync(new URL('./migrations/0021_guest_app_engagement.sql', import.meta.url), 'utf8')
+  + readFileSync(new URL('./migrations/0023_native_push.sql', import.meta.url), 'utf8');
 
 // Tables that grow without bound. A full SCAN of one of these inside the scheduled tick is a failure.
-const GROWING = ['workflow_steps', 'workflow_runs', 'business_events', 'approvals', 'projects', 'orders', 'communications', 'deliverables', 'push_messages', 'push_subscriptions', 'loyalty_events'];
+const GROWING = ['workflow_steps', 'workflow_runs', 'business_events', 'approvals', 'projects', 'orders', 'communications', 'deliverables', 'push_messages', 'push_subscriptions', 'loyalty_events', 'native_push_jobs', 'native_push_devices'];
 // Partial indexes (migration 0003) that contain only pending rows.
-const PARTIAL_INDEXES = ['idx_push_messages_pending', 'idx_approvals_owner_pending', 'idx_projects_payment_required', 'idx_projects_awaiting_inputs', 'idx_projects_merch_delivered'];
+const PARTIAL_INDEXES = ['idx_push_messages_pending', 'idx_native_push_jobs_pending', 'idx_approvals_owner_pending', 'idx_projects_payment_required', 'idx_projects_awaiting_inputs', 'idx_projects_merch_delivered'];
 // Aliases the worker uses for those tables inside its queries.
 const ALIASES = { ws: 'workflow_steps', previous: 'workflow_steps', wr: 'workflow_runs', px: 'projects', p: 'projects', d: 'deliverables' };
 
