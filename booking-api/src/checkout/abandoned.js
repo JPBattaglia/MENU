@@ -13,6 +13,8 @@ import { nowIso, parseJsonOrNull, simplePage } from "../lib/http.js";
 import { signLinkToken, verifyLinkToken } from "../lib/links.js";
 import { stripeRequest } from "../lib/stripe.js";
 import { buildSubscriptionCart } from "../subscriptions/checkout.js";
+import { automationOff } from "../lib/switches.js";
+
 
 const RESUME_KIND = "checkout-resume";
 const RESUME_TTL_DAYS = 14;
@@ -190,6 +192,7 @@ async function followUpAbandonedCheckouts(env, { now = new Date(), orderIds = nu
 // The hourly tick: minute 0-4 of each hour (the cron runs every 5 minutes).
 async function maybeFollowUpAbandonedCheckouts(env, now = new Date()) {
   if (now.getUTCMinutes() >= 5) return null;
+  if (await automationOff(env, "ABANDONED_EMAILS")) return null; // owner switch
   return followUpAbandonedCheckouts(env, { now });
 }
 

@@ -23,6 +23,7 @@ import { handleAppUpdate } from "./producers/guest-app/update.js";
 import { handleAppCounter, handleAppPush, sendQueuedPushes } from "./producers/guest-app/engage.js";
 import { handleNativePushJobs, nudgeNativePushes, sendAndroidPushes } from "./store-app/native-push.js";
 import { handleGoogleKeys } from "./store-app/google-keys.js";
+import { handleSwitches } from "./lib/switches.js";
 import { advanceGuestAppPushSelfTests } from "./selftest/guest-app-push-selftest.js";
 import { customHostSlug, runDomainWatch } from "./producers/website/domains.js";
 import { handlePlanSettings } from "./subscriptions/settings.js";
@@ -91,6 +92,7 @@ var worker_default = {
     if (bundleMatch && request.method === "GET") return handleBundleDownload(request, env, bundleMatch[1]);
     if (url.pathname === "/api/store-keys/owner" && (request.method === "GET" || request.method === "POST")) return handleStoreKeys(request, env);
     if (url.pathname === "/api/store-keys/google" && (request.method === "GET" || request.method === "POST")) return handleGoogleKeys(request, env);
+    if (url.pathname === "/api/switches" && (request.method === "GET" || request.method === "POST")) return handleSwitches(request, env);
     // Stage 11 part 2: native push batches for the GitHub sender (.github/workflows/native-push.yml), OIDC only.
     const nativePushMatch = url.pathname.match(/^\/api\/native-push\/(next|[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})$/i);
     if (nativePushMatch && (request.method === "GET" || request.method === "POST")) return handleNativePushJobs(request, env, nativePushMatch[1].toLowerCase());

@@ -22,6 +22,7 @@ import { publicBaseUrl } from "../../lib/config.js";
 import { sha256Hex } from "../../lib/util.js";
 import { pushEndpointAllowed, sendWebPush, vapidKeys } from "../../lib/webpush.js";
 import { nativeDeviceCount, queueNativePush, registerNativeDevice } from "../../store-app/native-push.js";
+import { automationOff } from "../../lib/switches.js";
 
 const PUSH_LINK_KIND = "apppush";
 const COUNTER_LINK_KIND = "appcounter";
@@ -179,6 +180,7 @@ async function queuePush(env, appId, { title, body, source = "MANUAL", status = 
   const cleanTitle = String(title || "").replace(/\s+/g, " ").trim().slice(0, 50);
   const cleanBody = String(body || "").replace(/\s+/g, " ").trim().slice(0, 160);
   if (!cleanTitle || !cleanBody) return { ok: false, reason: "empty" };
+  if (status === "QUEUED" && await automationOff(env, "PUSH")) return { ok: false, reason: "paused" }; // owner switch
   const since = new Date(Date.now() - 86400_000).toISOString();
   const sent = await env.DB.prepare(`SELECT COUNT(*) AS n FROM push_messages WHERE app_id = ? AND created_at > ?`).bind(appId, since).first();
   if ((sent?.n || 0) >= DAILY_PUSH_LIMIT) return { ok: false, reason: "limit" };
@@ -221,6 +223,7 @@ async function sendPushMessage(env, message, { max = SENDS_PER_TICK, fetchImpl =
 // From the 5-minute schedule.
 async function sendQueuedPushes(env) {
   if (!env.DB || !env.PRODUCTION_RUNNER_SECRET) return { messages: 0 };
+  if (await automationOff(env, "PUSH")) return { messages: 0, paused: true };
   const messages = (await env.DB.prepare(`SELECT * FROM push_messages WHERE status IN ('QUEUED', 'SENDING') ORDER BY created_at LIMIT 3`).all()).results || [];
   if (!messages.length) return { messages: 0 };
   const keys = await vapidKeys(env);
@@ -267,7 +270,8 @@ async function handleAppPush(request, env, appId) {
   const values = { title: String(form.get("title") || ""), body: String(form.get("body") || "") };
   const queued = await queuePush(env, app.id, { ...values, source: "MANUAL" });
   if (!queued.ok) {
-    const why = queued.reason === "limit" ? `You've sent ${DAILY_PUSH_LIMIT} notifications in the last 24 hours. Please try again tomorrow.` : "Please write a title and a message.";
+    const why = queued.reason === "limit" ? `You've sent ${DAILY_PUSH_LIMIT} notifications in the last 24 hours. Please try again tomorrow.`
+      : queued.reason === "paused" ? "Notifications are paused for a short while. Please try again later." : "Please write a title and a message.";
     return page(400, `<p style="color:#9b1c1c"><strong>${escapeHtml(why)}</strong></p>`, values);
   }
   return simplePage(200, "Notification on its way", `<p>Your notification is going out to ${subscribers} ${subscribers === 1 ? "phone" : "phones"} within the next few minutes.</p>`);

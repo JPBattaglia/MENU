@@ -23,6 +23,8 @@ import { loadDeliveryContext } from "../../approvals/release.js";
 import { refreshOnboardingState } from "../../onboarding/onboarding.js";
 import { sniffImage } from "../website/intake.js";
 import { priceMerch } from "./pricing.js";
+import { pausedForSale, pausedMessage } from "../../lib/switches.js";
+
 
 const WORKFLOW = "STAFF_MERCH_V1";
 // Stripe tax codes: clothing (the Nino shirt shop uses the same one) and general tangible goods (mugs, coasters,
@@ -149,6 +151,10 @@ async function handleMerchCheckout(request, env) {
   if (Date.parse(quote.expires_at) < Date.now()) return fail(409, "That quote has expired. Please review your order again.");
   if (quote.order_id) return fail(409, "That quote was already used. Please review your order again.");
   const environment = quote.environment;
+  if (environment === "live") {
+    const paused = await pausedForSale(env, ["STAFF_MERCH"]);
+    if (paused) return fail(409, pausedMessage(paused));
+  }
   if (environment === "live" ? !env.STRIPE_SECRET_KEY : !env.STRIPE_SECRET_KEY_TEST) return fail(500, "Payments are not configured");
   const rate = (parseJsonOrNull(quote.rates_json) || []).find((r) => r.id === String(data?.rate_id || ""));
   if (!rate) return fail(400, "Choose a delivery option.");

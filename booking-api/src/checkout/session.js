@@ -4,6 +4,8 @@ import { CheckoutValidationError, appendCheckoutLineItem, normalizeCheckoutItems
 import { jsonResponse, normalizeName, normalizeNullableText, nowIso } from "../lib/http.js";
 import { stripeRequest } from "../lib/stripe.js";
 import { buildSubscriptionCart, appendSubscriptionParams } from "../subscriptions/checkout.js";
+import { pausedForSale, pausedMessage } from "../lib/switches.js";
+
 
 // One checkout for both environments. "sandbox" uses the Stripe test key and inline prices;
 // "live" uses the live key and the catalog's live price IDs. A cart with a plan or bundle
@@ -30,6 +32,11 @@ async function createCheckout(request, env, environment) {
     cart.validateSetups(normalizedItems);
     if (normalizedItems.length === 0 && !cart.plan) {
       return jsonResponse({ ok: false, error: "No valid active public offers selected" }, 400);
+    }
+    if (live) {
+      // Owner on/off switches: a service whose Selling switch is off can't be bought (test mode is untouched).
+      const paused = await pausedForSale(env, [cart.plan?.offerCode, ...(cart.plan?.includes || []), ...normalizedItems.map((item) => item.offerCode)]);
+      if (paused) return jsonResponse({ ok: false, paused: true, error: pausedMessage(paused) }, 409);
     }
     if (live) {
       for (const item of normalizedItems) {
