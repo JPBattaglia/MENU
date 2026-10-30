@@ -21,6 +21,7 @@ import { signLinkToken, verifyLinkToken } from "../../lib/links.js";
 import { publicBaseUrl } from "../../lib/config.js";
 import { sha256Hex } from "../../lib/util.js";
 import { pushEndpointAllowed, sendWebPush, vapidKeys } from "../../lib/webpush.js";
+import { nativeDeviceCount, queueNativePush, registerNativeDevice } from "../../store-app/native-push.js";
 
 const PUSH_LINK_KIND = "apppush";
 const COUNTER_LINK_KIND = "appcounter";
@@ -151,14 +152,15 @@ async function handleAppApi(request, env, slug, path) {
   }
   if (request.method !== "POST") return json({ ok: false, error: "Not found" }, 404);
   const origin = request.headers.get("Origin") || "";
-  // The Store App (stage 11 part 2) runs from capacitor://localhost or https://localhost and may only use rewards;
-  // the counter code is what protects a visit, the Origin check only stops other websites posting for a guest.
+  // The Store App (stage 11 part 2) runs from capacitor://localhost or https://localhost and may only use rewards and
+  // register its phone for native push (src/store-app/native-push.js); the counter code is what protects a visit, the
+  // Origin check only stops other websites posting for a guest.
   const native = NATIVE_ORIGINS.has(origin);
-  if (origin !== new URL(request.url).origin && !(native && path === "loyalty")) return json({ ok: false, error: "Not allowed" }, 403);
+  if (origin !== new URL(request.url).origin && !(native && (path === "loyalty" || path === "push/native"))) return json({ ok: false, error: "Not allowed" }, 403);
   const body = await readJson(request);
   if (!body) return json({ ok: false, error: "Bad request" }, 400);
   if (native) {
-    const response = await loyaltyAction(env, app, body);
+    const response = path === "push/native" ? await registerNativeDevice(env, app, body) : await loyaltyAction(env, app, body);
     for (const [k, v] of Object.entries(nativeCors(origin))) response.headers.set(k, v);
     return response;
   }
@@ -183,6 +185,10 @@ async function queuePush(env, appId, { title, body, source = "MANUAL", status = 
   const id = crypto.randomUUID();
   const t = nowIso();
   await env.DB.prepare(`INSERT INTO push_messages (id, app_id, title, body, source, status, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`).bind(id, appId, cleanTitle, cleanBody, source, status, t, t).run();
+  // Store App phones (native push) get the same message through the GitHub sender. Never blocks the web push.
+  if (status === "QUEUED") {
+    await queueNativePush(env, id, appId).catch((error) => console.error("Native push queue failed:", error instanceof Error ? error.message : String(error)));
+  }
   return { ok: true, id };
 }
 
@@ -249,7 +255,8 @@ async function handleAppPush(request, env, appId) {
   const { app, token, form, data } = linked;
   if (!(await planActive(env, app.business_id))) return simplePage(403, "Your Guest App plan isn't active", "<p>Notifications are part of an active Guest App plan. Reply to your latest email and we'll help.</p>");
   const name = data.app_name || "your app";
-  const subscribers = (await env.DB.prepare(`SELECT COUNT(*) AS n FROM push_subscriptions WHERE app_id = ? AND status = 'ACTIVE'`).bind(app.id).first())?.n || 0;
+  const subscribers = ((await env.DB.prepare(`SELECT COUNT(*) AS n FROM push_subscriptions WHERE app_id = ? AND status = 'ACTIVE'`).bind(app.id).first())?.n || 0)
+    + await nativeDeviceCount(env, app.id).catch(() => 0); // Store App phones count too
   const page = (status, notice, values = {}) => simplePage(status, "Send a notification", `${notice || ""}
 <p><strong>${subscribers}</strong> ${subscribers === 1 ? "phone has" : "phones have"} notifications turned on in ${escapeHtml(name)}. You can send ${DAILY_PUSH_LIMIT} notifications a day (this includes the automatic one when you publish a new special), so guests keep them on.</p>
 <form method="post" action="/api/app-push/${escapeHtml(app.id)}"><input type="hidden" name="t" value="${escapeHtml(token)}">

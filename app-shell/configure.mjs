@@ -23,7 +23,9 @@ writeFileSync(join(here, "capacitor.config.json"), JSON.stringify({
 }, null, 2));
 
 writeFileSync(join(here, "www", "config.json"), JSON.stringify({
-  app_name: name, brand_color: cfg.brand_color, api_base: cfg.api_base
+  app_name: name, brand_color: cfg.brand_color, api_base: cfg.api_base, app_id: cfg.app_id,
+  // TestFlight and App Store builds use Apple's production push service; only Xcode debug builds use sandbox.
+  push_environment: cfg.push_environment === "sandbox" ? "sandbox" : "production"
 }, null, 2));
 
 console.log(`Configured ${cfg.app_id} v${cfg.version || "1.0.0"} (${cfg.build_number || 1})`);
