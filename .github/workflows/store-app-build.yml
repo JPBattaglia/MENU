@@ -14,9 +14,14 @@ on:
         description: Build config path
         default: app-shell/sample/build.json
       upload:
-        description: Sign the iOS build and upload it to TestFlight
+        description: Sign and upload (iOS to TestFlight, Android to Play internal testing)
         type: boolean
         default: false
+      platforms:
+        description: Which signed builds to make when upload is ticked
+        type: choice
+        options: [both, ios, android]
+        default: both
   push:
     branches: [master]
     paths:
@@ -133,7 +138,7 @@ jobs:
   # with the App Store Connect API key (Admin), so certificates and profiles are created and kept by Apple; nothing is
   # stored here. The key comes from the worker over this job's OIDC token and every line of it is masked.
   ios-testflight:
-    if: github.event_name == 'workflow_dispatch' && inputs.upload
+    if: github.event_name == 'workflow_dispatch' && inputs.upload && inputs.platforms != 'android'
     runs-on: macos-latest
     timeout-minutes: 60
     steps:
@@ -204,3 +209,88 @@ jobs:
       - name: Remove the key
         if: always()
         run: rm -f "$RUNNER_TEMP/AuthKey.p8" "$RUNNER_TEMP/creds.json"
+
+  # Signed Android build (manual runs with upload ticked). google-services.json (push), the Google Play account and the
+  # upload key come from the worker over this job's OIDC token, every secret line masked. The first run makes the
+  # upload key and hands it to the worker, so later builds sign with the same key (Google Play App Signing holds the real
+  # signing key). Google only takes a new app's first file by hand: when Play doesn't know the app yet, the .aab goes to
+  # the worker, which emails the owner a download link and the steps.
+  android-play:
+    if: github.event_name == 'workflow_dispatch' && inputs.upload && inputs.platforms != 'ios'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+      - name: Fetch the Android files from the worker
+        run: |
+          token=$(curl -sSf -H "Authorization: Bearer $ACTIONS_ID_TOKEN_REQUEST_TOKEN" "$ACTIONS_ID_TOKEN_REQUEST_URL&audience=menu-made-store-build" | jq -r .value)
+          echo "::add-mask::$token"
+          echo "OIDC_TOKEN=$token" >> "$GITHUB_ENV"
+          curl -sSf -H "Authorization: Bearer $token" "https://menu-made.com/api/store-build/credentials?scope=owner&platform=android" -o "$RUNNER_TEMP/creds.json"
+          if jq -e '.android.play_account != null' "$RUNNER_TEMP/creds.json" >/dev/null; then
+            jq -r .android.play_account "$RUNNER_TEMP/creds.json" > "$RUNNER_TEMP/play.json"
+            jq -r .private_key "$RUNNER_TEMP/play.json" | while IFS= read -r line; do [ -n "$line" ] && echo "::add-mask::$line"; done
+            echo "PLAY_ACCOUNT_FILE=$RUNNER_TEMP/play.json" >> "$GITHUB_ENV"
+          fi
+          jq -r .android.google_services "$RUNNER_TEMP/creds.json" > "$RUNNER_TEMP/google-services.json"
+          if jq -e '.android.upload_key == null' "$RUNNER_TEMP/creds.json" >/dev/null; then
+            pass=$(openssl rand -hex 24); echo "::add-mask::$pass"
+            keytool -genkeypair -keystore "$RUNNER_TEMP/new.jks" -alias upload -keyalg RSA -keysize 2048 -validity 10000 \
+              -storepass "$pass" -keypass "$pass" -dname "CN=Menu-made upload key" -noprompt >/dev/null 2>&1
+            jq -n --arg jks "$(base64 -w0 "$RUNNER_TEMP/new.jks")" --arg password "$pass" '{jks: $jks, password: $password}' \
+              | curl -sSf -X POST -H "Authorization: Bearer $token" -H "Content-Type: application/json" --data-binary @- \
+                "https://menu-made.com/api/store-build/android-key?scope=owner" -o "$RUNNER_TEMP/key.json"
+            rm -f "$RUNNER_TEMP/new.jks"
+            echo "Made a new upload key and handed it to the worker"
+          else
+            jq '{upload_key: .android.upload_key}' "$RUNNER_TEMP/creds.json" > "$RUNNER_TEMP/key.json"
+          fi
+          kp=$(jq -r .upload_key.password "$RUNNER_TEMP/key.json"); echo "::add-mask::$kp"
+          jq -r .upload_key.jks "$RUNNER_TEMP/key.json" | base64 -d > "$RUNNER_TEMP/upload.jks"
+          echo "KEY_PASS=$kp" >> "$GITHUB_ENV"
+          echo "PACKAGE=$(jq -r .android.package "$RUNNER_TEMP/creds.json")" >> "$GITHUB_ENV"
+          rm -f "$RUNNER_TEMP/creds.json" "$RUNNER_TEMP/key.json"
+          echo "Files received"
+      - name: Make the Android project (with push)
+        run: |
+          cd app-shell && npm init -y >/dev/null && npm install --no-audit --no-fund $CAP_PACKAGES && cd ..
+          node app-shell/configure.mjs "$CONFIG"
+          [ "$(jq -r .app_id "$CONFIG")" = "$PACKAGE" ] || { echo "Build config app_id doesn't match the Google files"; exit 1; }
+          jq '.push_android = true' app-shell/www/config.json > app-shell/www/c.json && mv app-shell/www/c.json app-shell/www/config.json
+          cd app-shell && npx cap add android
+          cp "$RUNNER_TEMP/google-services.json" android/app/google-services.json
+          npx cap sync android
+          version=$(jq -r '.version // "1.0.0"' "$GITHUB_WORKSPACE/$CONFIG")
+          sed -i -E "s/versionCode [0-9]+/versionCode ${{ github.run_number }}/; s/versionName \"[^\"]*\"/versionName \"$version\"/" android/app/build.gradle
+          grep -E "versionCode|versionName" android/app/build.gradle
+      - name: Build the signed bundle
+        working-directory: app-shell/android
+        run: |
+          ./gradlew bundleRelease --no-daemon -q \
+            -Pandroid.injected.signing.store.file="$RUNNER_TEMP/upload.jks" -Pandroid.injected.signing.store.password="$KEY_PASS" \
+            -Pandroid.injected.signing.key.alias=upload -Pandroid.injected.signing.key.password="$KEY_PASS"
+          ls -la app/build/outputs/bundle/release/
+      - name: Upload to Google Play internal testing
+        run: |
+          aab=app-shell/android/app/build/outputs/bundle/release/app-release.aab
+          code=0
+          if [ -n "$PLAY_ACCOUNT_FILE" ]; then node booking-api/scripts/play-upload.mjs "$aab" "$PACKAGE" "${{ github.run_number }}" || code=$?; else echo "No Google Play account yet"; code=3; fi
+          if [ "$code" = "3" ]; then
+            curl -sSf -X POST -H "Authorization: Bearer $OIDC_TOKEN" -H "Content-Type: application/octet-stream" --data-binary @"$aab" \
+              "https://menu-made.com/api/store-build/android-bundle?scope=owner&version=${{ github.run_number }}" | jq -c '{stored, emailed}'
+            echo "First upload: build ${{ github.run_number }} emailed to the owner to upload by hand" | tee -a "$GITHUB_STEP_SUMMARY"
+          elif [ "$code" = "0" ]; then
+            echo "Uploaded build ${{ github.run_number }} to Google Play internal testing" | tee -a "$GITHUB_STEP_SUMMARY"
+          else
+            exit "$code"
+          fi
+      - name: Remove the files
+        if: always()
+        run: rm -f "$RUNNER_TEMP/upload.jks" "$RUNNER_TEMP/play.json" "$RUNNER_TEMP/google-services.json" "$RUNNER_TEMP/creds.json" "$RUNNER_TEMP/key.json"

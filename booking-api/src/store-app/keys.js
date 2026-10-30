@@ -167,4 +167,4 @@ ${allGood ? "" : `<form method="post" action="/api/store-keys/owner" enctype="mu
 <p><label>Issuer ID (only if it changed)<br><input name="issuer_id" size="40" autocomplete="off"></label></p><p><button type="submit">Check saved keys again</button></p></form>`}`);
 }
 
-export { LINK_KIND, OWNER, OWNER_BUNDLE_ID, handleStoreKeys, keyIdOf, loadCredential, saveCredential, unseal };
+export { LINK_KIND, OWNER, OWNER_BUNDLE_ID, handleStoreKeys, keyIdOf, loadCredential, saveCredential, seal, unseal };

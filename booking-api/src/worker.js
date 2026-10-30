@@ -21,7 +21,8 @@ import { appOnlyRedirect, handleAppPreview, handleLiveApp } from "./producers/gu
 import { handleAppIntake } from "./producers/guest-app/intake.js";
 import { handleAppUpdate } from "./producers/guest-app/update.js";
 import { handleAppCounter, handleAppPush, sendQueuedPushes } from "./producers/guest-app/engage.js";
-import { handleNativePushJobs, nudgeNativePushes } from "./store-app/native-push.js";
+import { handleNativePushJobs, nudgeNativePushes, sendAndroidPushes } from "./store-app/native-push.js";
+import { handleGoogleKeys } from "./store-app/google-keys.js";
 import { advanceGuestAppPushSelfTests } from "./selftest/guest-app-push-selftest.js";
 import { customHostSlug, runDomainWatch } from "./producers/website/domains.js";
 import { handlePlanSettings } from "./subscriptions/settings.js";
@@ -45,7 +46,7 @@ import { advanceStage5ExitTests } from "./selftest/stage5-exit-selftest.js";
 import { handleGoogleMedia, handlePhotoLibrary } from "./producers/google-care/library.js";
 import { handleGoogleCallback, handleGoogleConnect, handleGoogleLocation } from "./google/connect.js";
 import { handleStoreKeys } from "./store-app/keys.js";
-import { handleBuildCredentials } from "./store-app/build-credentials.js";
+import { handleAndroidBundle, handleAndroidKey, handleBuildCredentials, handleBundleDownload } from "./store-app/build-credentials.js";
 import { advanceAccessibilitySelfTests } from "./selftest/accessibility-selftest.js";
 import { advanceSocialPostsSelfTests } from "./selftest/social-posts-selftest.js";
 import { advanceRoutingSelfTests } from "./selftest/routing-selftest.js";
@@ -84,7 +85,12 @@ var worker_default = {
     }
     // Stage 11 part 2: the owner hands over Apple keys (emailed one-hour link, keys checked with Apple, stored sealed).
     if (url.pathname === "/api/store-build/credentials" && request.method === "GET") return handleBuildCredentials(request, env);
+    if (url.pathname === "/api/store-build/android-key" && request.method === "POST") return handleAndroidKey(request, env);
+    if (url.pathname === "/api/store-build/android-bundle" && request.method === "POST") return handleAndroidBundle(request, env);
+    const bundleMatch = url.pathname.match(/^\/api\/store-build\/bundle\/(\d{1,9})$/);
+    if (bundleMatch && request.method === "GET") return handleBundleDownload(request, env, bundleMatch[1]);
     if (url.pathname === "/api/store-keys/owner" && (request.method === "GET" || request.method === "POST")) return handleStoreKeys(request, env);
+    if (url.pathname === "/api/store-keys/google" && (request.method === "GET" || request.method === "POST")) return handleGoogleKeys(request, env);
     // Stage 11 part 2: native push batches for the GitHub sender (.github/workflows/native-push.yml), OIDC only.
     const nativePushMatch = url.pathname.match(/^\/api\/native-push\/(next|[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})$/i);
     if (nativePushMatch && (request.method === "GET" || request.method === "POST")) return handleNativePushJobs(request, env, nativePushMatch[1].toLowerCase());
@@ -345,6 +351,7 @@ const mmWorkerWithBooking = {
       await advanceWebsiteTrialSelfTests(env, app).catch((error) => console.error("Website trial self-test failed:", error instanceof Error ? error.message : String(error)));
       await sendQueuedPushes(env).catch((error) => console.error("Guest App notifications failed:", error instanceof Error ? error.message : String(error)));
       await nudgeNativePushes(env).catch((error) => console.error("Native push nudge failed:", error instanceof Error ? error.message : String(error)));
+      await sendAndroidPushes(env).catch((error) => console.error("Android notifications failed:", error instanceof Error ? error.message : String(error)));
       await advanceGuestAppPushSelfTests(env, app).catch((error) => console.error("Guest App push self-test failed:", error instanceof Error ? error.message : String(error)));
       await advanceGuestAppSelfTests(env, app).catch((error) => console.error("Guest App self-test failed:", error instanceof Error ? error.message : String(error)));
       await advanceGoogleSelfTests(env).catch((error) => console.error("Google self-test failed:", error instanceof Error ? error.message : String(error)));
