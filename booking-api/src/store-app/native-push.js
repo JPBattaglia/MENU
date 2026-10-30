@@ -1,4 +1,4 @@
-// Stage 11 part 2: native push notifications for the Store App (iOS now; Android joins with Firebase).
+// Stage 11 part 2: native push notifications for the Store App (iOS through a GitHub job, Android from the worker).
 //
 // Why a GitHub job: Apple's push service (APNs) speaks HTTP/2 only and Worker fetches don't (the push key check got
 // Cloudflare 520, Oct 29, 2026). So, like the Social Posts renderer, the worker parks the work and a GitHub Actions
@@ -6,8 +6,11 @@
 // the moment a notification is queued (GITHUB_DISPATCH_TOKEN); the 5-minute tick starts it again if a job waits.
 // Delivery takes 1-2 minutes. No outside service and no per-restaurant owner step.
 //
-// Phone side (Store App, from capacitor://localhost; routed through engage.js handleAppApi):
-//   POST <app>/api/push/native     { platform: "ios", token, bundle_id, environment }
+// Android: Firebase Cloud Messaging is plain HTTPS, so the worker sends Android notifications itself from the 5-minute
+// schedule (android_push_jobs, migration 0024) with the Firebase service account from the Google files page.
+//
+// Phone side (Store App, from capacitor://localhost or https://localhost; routed through engage.js handleAppApi):
+//   POST <app>/api/push/native     { platform: "ios" | "android", token, bundle_id, environment }
 // GitHub job side (Bearer <GitHub OIDC token, audience menu-made-native-push>, manual runs of native-push.yml on master):
 //   GET  /api/native-push/next      claims the oldest waiting batch: { job: { id, claim, title, body, tag, devices }, apple }
 //   POST /api/native-push/<id>      { claim, results: [{ device, status, reason }] }
@@ -20,6 +23,7 @@ import { brandedEmailHtml, sendTransactionalEmail } from "../lib/email.js";
 import { nowIso } from "../lib/http.js";
 import { verifyRenderer } from "../producers/social-posts/render-jobs.js";
 import { loadCredential } from "./keys.js";
+import { fcmSend, parseServiceAccount } from "./google.js";
 
 const PUSH_AUDIENCE = "menu-made-native-push";
 const PUSH_WORKFLOW = "JPBattaglia/MENU/.github/workflows/native-push.yml@refs/heads/master";
@@ -31,6 +35,9 @@ const NUDGE_EVERY_MINUTES = 10;
 const STALE_MINUTES = 60;
 const MAX_FAILURES = 5;
 const TOKEN_RE = /^[0-9a-f]{64,200}$/;
+const FCM_TOKEN_RE = /^[A-Za-z0-9_:-]{100,4096}$/;
+const ANDROID_PER_TICK = 100;
+const ANDROID_PARALLEL = 10;
 const BUNDLE_RE = /^[a-z][a-z0-9]*(\.[a-z][a-z0-9]*){2,}$/;
 // Apple's answers that mean this token will never work again.
 const GONE_REASONS = new Set(["BadDeviceToken", "Unregistered", "DeviceTokenNotForTopic", "ExpiredToken"]);
@@ -42,16 +49,17 @@ const json = (data, status = 200) => new Response(JSON.stringify(data), { status
 
 async function registerNativeDevice(env, app, body) {
   const platform = String(body.platform || "").toLowerCase();
-  if (platform !== "ios") return json({ ok: false, error: "Notifications on this phone aren't supported yet." }, 400);
-  const token = String(body.token || "").trim().toLowerCase();
+  if (platform !== "ios" && platform !== "android") return json({ ok: false, error: "Notifications on this phone aren't supported yet." }, 400);
+  // Apple tokens are hex (stored lower case); Firebase tokens are case-sensitive and kept as sent.
+  const token = platform === "ios" ? String(body.token || "").trim().toLowerCase() : String(body.token || "").trim();
   const bundleId = String(body.bundle_id || "").trim();
-  const environment = body.environment === "sandbox" ? "sandbox" : "production";
-  if (!TOKEN_RE.test(token) || !BUNDLE_RE.test(bundleId)) return json({ ok: false, error: "This phone's notification details weren't accepted." }, 400);
+  const environment = platform === "ios" && body.environment === "sandbox" ? "sandbox" : "production";
+  if (!(platform === "ios" ? TOKEN_RE : FCM_TOKEN_RE).test(token) || !BUNDLE_RE.test(bundleId)) return json({ ok: false, error: "This phone's notification details weren't accepted." }, 400);
   const t = nowIso();
   await env.DB.prepare(`
-      INSERT INTO native_push_devices (id, app_id, platform, token, bundle_id, environment, status, failures, created_at, updated_at) VALUES (?, ?, 'IOS', ?, ?, ?, 'ACTIVE', 0, ?, ?)
-      ON CONFLICT(token) DO UPDATE SET app_id = excluded.app_id, bundle_id = excluded.bundle_id, environment = excluded.environment, status = 'ACTIVE', failures = 0, updated_at = excluded.updated_at
-    `).bind(crypto.randomUUID(), app.id, token, bundleId, environment, t, t).run();
+      INSERT INTO native_push_devices (id, app_id, platform, token, bundle_id, environment, status, failures, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, 'ACTIVE', 0, ?, ?)
+      ON CONFLICT(token) DO UPDATE SET app_id = excluded.app_id, platform = excluded.platform, bundle_id = excluded.bundle_id, environment = excluded.environment, status = 'ACTIVE', failures = 0, updated_at = excluded.updated_at
+    `).bind(crypto.randomUUID(), app.id, platform === "ios" ? "IOS" : "ANDROID", token, bundleId, environment, t, t).run();
   return json({ ok: true });
 }
 
@@ -62,6 +70,12 @@ const nativeDeviceCount = async (env, appId) =>
 
 async function queueNativePush(env, messageId, appId) {
   const t = nowIso();
+  // Android: picked up by the next 5-minute tick (sendAndroidPushes). Its own table, so a missing migration 0024 never
+  // stops the iOS job.
+  await env.DB.prepare(`
+      INSERT OR IGNORE INTO android_push_jobs (id, message_id, app_id, status, created_at, updated_at)
+      SELECT ?, ?, ?, 'QUEUED', ?, ? WHERE EXISTS (SELECT 1 FROM native_push_devices WHERE app_id = ? AND platform = 'ANDROID' AND status = 'ACTIVE')
+    `).bind(crypto.randomUUID(), messageId, appId, t, t, appId).run().catch((error) => console.error("Android push queue failed:", error instanceof Error ? error.message : String(error)));
   const made = await env.DB.prepare(`
       INSERT OR IGNORE INTO native_push_jobs (id, message_id, app_id, platform, status, created_at, updated_at)
       SELECT ?, ?, ?, 'IOS', 'QUEUED', ?, ? WHERE EXISTS (SELECT 1 FROM native_push_devices WHERE app_id = ? AND platform = 'IOS' AND status = 'ACTIVE')
@@ -113,7 +127,7 @@ async function nudgeNativePushes(env, now = Date.now()) {
   return { nudged, alerted };
 }
 
-async function alertOwner(env, jobId, heading, paragraphs) {
+async function alertOwner(env, jobId, heading, paragraphs, table = "native_push_jobs") {
   const sent = await sendTransactionalEmail(env, {
     to: ownerEmailAddress(env),
     subject: heading,
@@ -124,16 +138,16 @@ async function alertOwner(env, jobId, heading, paragraphs) {
     templateKey: "native_push_alert_v1"
   }).catch(() => ({ ok: false }));
   if (sent?.ok === false) return false;
-  await env.DB.prepare(`UPDATE native_push_jobs SET alerted_at = ? WHERE id = ?`).bind(nowIso(), jobId).run();
+  await env.DB.prepare(`UPDATE ${table === "android_push_jobs" ? "android_push_jobs" : "native_push_jobs"} SET alerted_at = ? WHERE id = ?`).bind(nowIso(), jobId).run();
   return true;
 }
 
 // ---------- Apple key for an app ----------
 
-async function scopeFor(env, appId) {
+async function scopeFor(env, appId, kind = "APPLE_PUSH_KEY") {
   const app = await env.DB.prepare(`SELECT business_id FROM guest_apps WHERE id = ?`).bind(appId).first();
   if (app?.business_id) {
-    const own = await env.DB.prepare(`SELECT 1 AS ok FROM store_credentials WHERE scope = ? AND kind = 'APPLE_PUSH_KEY'`).bind(app.business_id).first();
+    const own = await env.DB.prepare(`SELECT 1 AS ok FROM store_credentials WHERE scope = ? AND kind = ?`).bind(app.business_id, kind).first();
     if (own) return app.business_id;
   }
   return "owner";
@@ -235,6 +249,67 @@ async function reportResults(env, jobId, body) {
   return json({ ok: true, status: more ? "QUEUED" : "SENT", sent, failed, gone });
 }
 
+// ---------- Android (from the 5-minute schedule) ----------
+
+async function failAndroidJob(env, job, scope, note) {
+  const t = nowIso();
+  await env.DB.prepare(`UPDATE android_push_jobs SET status = 'FAILED', note = ?, updated_at = ?, finished_at = ? WHERE id = ?`).bind(note, t, t, job.id).run();
+  await env.DB.prepare(`UPDATE store_credentials SET check_status = 'FAILED', check_note = ?, updated_at = ? WHERE scope = ? AND kind = 'FIREBASE_ACCOUNT'`).bind(note.slice(0, 160), t, scope).run();
+  await alertOwner(env, job.id, "Android notifications couldn't be sent", [
+    `${note}, so an Android Store App notification wasn't sent.`,
+    `Open ${publicBaseUrl(env)}/api/store-keys/google, ask for the emailed link, and upload the Firebase service account key again. Notifications sent after that go out normally.`
+  ], "android_push_jobs");
+}
+
+async function sendAndroidPushes(env, { fetchImpl = fetch } = {}) {
+  if (!env.DB || !env.PRODUCTION_RUNNER_SECRET) return { jobs: 0, sent: 0 };
+  const jobs = (await env.DB.prepare(`SELECT * FROM android_push_jobs WHERE status IN ('QUEUED', 'SENDING') ORDER BY created_at LIMIT 3`).all()).results || [];
+  let budget = ANDROID_PER_TICK; let sentTotal = 0;
+  for (const job of jobs) {
+    if (budget <= 0) break;
+    const t = nowIso();
+    const message = await env.DB.prepare(`SELECT id, title, body FROM push_messages WHERE id = ?`).bind(job.message_id).first();
+    const devices = message ? (await env.DB.prepare(`
+        SELECT id, token, failures FROM native_push_devices WHERE app_id = ? AND platform = 'ANDROID' AND status = 'ACTIVE' AND id > ? ORDER BY id LIMIT ?
+      `).bind(job.app_id, job.cursor || "", budget).all()).results || [] : [];
+    if (!devices.length) {
+      await env.DB.prepare(`UPDATE android_push_jobs SET status = 'SENT', updated_at = ?, finished_at = ? WHERE id = ?`).bind(t, t, job.id).run();
+      continue;
+    }
+    const scope = await scopeFor(env, job.app_id, "FIREBASE_ACCOUNT");
+    let cred = null;
+    try { cred = await loadCredential(env, scope, "FIREBASE_ACCOUNT"); } catch { cred = null; }
+    const sa = cred ? parseServiceAccount(cred.p8) : null;
+    if (!sa || cred.status === "FAILED" || !cred.teamId) {
+      await failAndroidJob(env, job, scope, sa ? "The Firebase key on file was refused by Google" : "No Firebase key on file");
+      continue;
+    }
+    let sent = 0; let failed = 0; let gone = 0; let keyNote = null;
+    for (let i = 0; i < devices.length && !keyNote; i += ANDROID_PARALLEL) {
+      const batch = devices.slice(i, i + ANDROID_PARALLEL);
+      const outcomes = await Promise.all(batch.map((d) => fcmSend(sa, cred.teamId, d.token, { title: message.title, body: message.body, tag: message.id }, { fetchImpl })
+        .catch((error) => ({ ok: false, status: 0, gone: false, keyProblem: Boolean(error?.auth), reason: String(error?.message || error).slice(0, 120) }))));
+      for (let j = 0; j < batch.length; j++) {
+        const d = batch[j]; const o = outcomes[j];
+        if (o.keyProblem) { keyNote = `Google refused the Firebase key (${o.reason})`; continue; }
+        if (o.ok) { sent++; await env.DB.prepare(`UPDATE native_push_devices SET last_sent_at = ?, failures = 0 WHERE id = ?`).bind(t, d.id).run(); }
+        else if (o.gone || d.failures + 1 >= MAX_FAILURES) { gone++; await env.DB.prepare(`UPDATE native_push_devices SET status = 'GONE', updated_at = ? WHERE id = ?`).bind(t, d.id).run(); }
+        else { failed++; await env.DB.prepare(`UPDATE native_push_devices SET failures = failures + 1, updated_at = ? WHERE id = ?`).bind(t, d.id).run(); }
+      }
+    }
+    if (keyNote) { await failAndroidJob(env, job, scope, keyNote); continue; }
+    if (sent) {
+      await env.DB.prepare(`UPDATE store_credentials SET check_status = 'VERIFIED', check_note = 'Confirmed: Google accepted a notification', updated_at = ? WHERE scope = ? AND kind = 'FIREBASE_ACCOUNT' AND check_status <> 'VERIFIED'`).bind(t, scope).run();
+    }
+    const done = devices.length < budget;
+    budget -= devices.length; sentTotal += sent;
+    await env.DB.prepare(`
+        UPDATE android_push_jobs SET status = ?, cursor = ?, sent_count = sent_count + ?, failed_count = failed_count + ?, gone_count = gone_count + ?, updated_at = ?, finished_at = ? WHERE id = ?
+      `).bind(done ? "SENT" : "SENDING", devices[devices.length - 1].id, sent, failed, gone, t, done ? t : null, job.id).run();
+  }
+  return { jobs: jobs.length, sent: sentTotal };
+}
+
 async function handleNativePushJobs(request, env, jobId) {
   const auth = await verifyRenderer(request, env, { audience: PUSH_AUDIENCE, workflow: PUSH_WORKFLOW, events: ["workflow_dispatch"] });
   if (!auth.ok) return json({ ok: false, error: auth.error }, auth.status);
@@ -253,5 +328,5 @@ async function handleNativePushJobs(request, env, jobId) {
 
 export {
   BATCH_SIZE, CLAIM_MINUTES, PUSH_AUDIENCE, PUSH_WORKFLOW, handleNativePushJobs, nativeDeviceCount, nudgeNativePushes,
-  queueNativePush, registerNativeDevice, startNativePush
+  queueNativePush, registerNativeDevice, sendAndroidPushes, startNativePush
 };

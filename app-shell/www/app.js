@@ -1,8 +1,9 @@
 // Store App screens (stage 11 part 2). Content comes from the restaurant's live app, <app>/api/content
 // (booking-api/src/producers/guest-app/native.js), so menu and special changes reach the app with no store update.
 // The last copy is kept on the phone and shown when offline. Rewards use the same card rules and counter code as the
-// Guest App (<app>/api/loyalty); the card is a random key kept only on this phone. Notifications: native push on
-// iPhone (Apple token registered at <app>/api/push/native; sent by booking-api/src/store-app/native-push.js).
+// Guest App (<app>/api/loyalty); the card is a random key kept only on this phone. Notifications: native push (Apple or
+// Firebase token registered at <app>/api/push/native; sent by booking-api/src/store-app/native-push.js). Android only
+// when the build had google-services.json (config.push_android), or the push plugin would crash without Firebase.
 (function () {
   "use strict";
   var $ = function (id) { return document.getElementById(id); };
@@ -134,11 +135,13 @@
   $("earn").addEventListener("click", function () { act("earn"); });
   $("redeem").addEventListener("click", function () { act("redeem"); });
 
-  // ---- notifications (iPhone; Android joins with Firebase) ----
+  // ---- notifications ----
   // Capacitor's native bridge provides window.Capacitor; the plugin is reached without a bundler.
   function pushPlugin() {
     var C = window.Capacitor;
-    if (!C || !C.isNativePlatform || !C.isNativePlatform() || C.getPlatform() !== "ios") return null;
+    if (!C || !C.isNativePlatform || !C.isNativePlatform()) return null;
+    var p = C.getPlatform();
+    if (p !== "ios" && !(p === "android" && cfg.push_android)) return null;
     return (C.Plugins && C.Plugins.PushNotifications) || (C.registerPlugin ? C.registerPlugin("PushNotifications") : null);
   }
   function pushMsg(text) { $("push-msg").textContent = text || ""; }
@@ -146,12 +149,14 @@
     var push = pushPlugin();
     if (!push) return;
     push.addListener("registration", function (t) {
-      var token = String(t && t.value || "").toLowerCase();
-      if (!/^[0-9a-f]{64,200}$/.test(token)) return;
+      var platform = window.Capacitor.getPlatform();
+      var token = String(t && t.value || "");
+      if (platform === "ios") token = token.toLowerCase();
+      if (!(platform === "ios" ? /^[0-9a-f]{64,200}$/ : /^[A-Za-z0-9_:-]{100,4096}$/).test(token)) return;
       // Re-sent when the token changes, and once a week so the restaurant's count stays right.
       var sent = store.get("push-sent") || {};
       if (sent.token === token && Date.now() - (sent.at || 0) < 7 * 86400000) { $("push-box").hidden = true; return; }
-      api("push/native", { platform: "ios", token: token, bundle_id: cfg.app_id, environment: cfg.push_environment || "production" }).then(function (r) {
+      api("push/native", { platform: platform, token: token, bundle_id: cfg.app_id, environment: cfg.push_environment || "production" }).then(function (r) {
         if (r.ok) { store.set("push-sent", { token: token, at: Date.now() }); pushMsg("Notifications are on."); setTimeout(function () { $("push-box").hidden = true; }, 2500); }
         else pushMsg(r.error || "Couldn't turn on notifications. Please try again later.");
       }).catch(function () { pushMsg("You need a connection to turn on notifications."); });
