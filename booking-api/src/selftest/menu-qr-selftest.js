@@ -82,7 +82,13 @@ async function payTestCheckout(env, sessionId) {
     type: "card",
     "card[token]": "tok_visa",
     "billing_details[email]": SELF_TEST_EMAIL,
-    "billing_details[name]": "Menu-Made Self-Test"
+    "billing_details[name]": "Menu-Made Self-Test",
+    // Checkouts with a taxed item (the Nino flyer) require a billing address so Stripe Tax can compute sales tax.
+    "billing_details[address][line1]": "1 Market St",
+    "billing_details[address][city]": "San Francisco",
+    "billing_details[address][state]": "CA",
+    "billing_details[address][postal_code]": "94105",
+    "billing_details[address][country]": "US"
   });
   const expected = page?.total_summary?.due ?? session.amount_total;
   const confirmed = await stripeTest(env, `/v1/payment_pages/${sessionId}/confirm`, "POST", {
