@@ -8,7 +8,9 @@
 //                         reminders every 3 days (at most 5); the buyer presses a signed Done link
 //   WAITING_OWNER_SETUP   owner emailed the hands-on checklist (accept the invites, app records, privacy forms) with
 //                         the exact values; reminders every 2 days; the owner presses a signed Done link
-//   READY_TO_BUILD        next: the restaurant's own keys and the per-restaurant build (not built yet, see handbook)
+//                         (the Done button refuses until the restaurant's keys are uploaded and checked:
+//                         /api/store-keys/app/<id>, restaurant-keys.js)
+//   READY_TO_BUILD        next: the per-restaurant build (not built yet, see handbook)
 // STORE_APP_CARE_V1 (Website & App Care, app tier) sends the same monthly email as the Guest App plan.
 //
 //   GET/POST /api/store-app/<id>/done?t=   the buyer's or the owner's Done button (the link kind says whose)
@@ -18,6 +20,7 @@ import { nowIso, simplePage } from "../lib/http.js";
 import { signLinkToken, verifyLinkToken } from "../lib/links.js";
 import { loadDeliveryContext } from "../approvals/release.js";
 import { runGuestAppMonthStep, runGuestAppSetupStep } from "../producers/guest-app/app-step.js";
+import { keysReady } from "./restaurant-keys.js";
 
 const BUYER_KIND = "storeapp-buyer";
 const OWNER_KIND = "storeapp-owner";
@@ -86,15 +89,16 @@ async function emailOwner(env, storeApp, context, reminder) {
   const { appName, slug } = await appInfo(env, storeApp);
   const link = await doneLink(env, storeApp, OWNER_KIND);
   const support = `${publicBaseUrl(env)}/contact.html`;
+  const keysPage = `${publicBaseUrl(env)}/api/store-keys/app/${storeApp.id}`;
   const privacy = `${publicBaseUrl(env)}/privacy.html`;
   const rows = [["Restaurant", context.business_name || "-"], ["App name", appName], ["Bundle id / package name", storeApp.bundle_id], ["Content", `${slug}.menu-made.com/app`], ["Support URL", support], ["Privacy policy URL", privacy]];
   const steps = [
     `${escapeHtml(context.business_name || "A restaurant")} sent the store invites for ${escapeHtml(appName)}. These are the steps Apple and Google only allow on their websites (the hands-on part of the Store App, about 30-60 minutes).`,
     "1. Accept both invites (App Store Connect email from Apple, Play Console email from Google).",
-    `2. Apple, Certificates, Identifiers &amp; Profiles: register the App ID <strong>${escapeHtml(storeApp.bundle_id)}</strong> with Push Notifications on. Make a push key and an App Store Connect API key (Admin) in the restaurant's team.`,
+    `2. Make the restaurant's keys and hand them over on the key page (it lists every click and emails you a one-hour upload link): <a href="${keysPage}">${escapeHtml(keysPage)}</a>. Apple App ID <strong>${escapeHtml(storeApp.bundle_id)}</strong> with Push Notifications, a push key and an App Store Connect API key (Admin) in the restaurant's team; the Android app <strong>${escapeHtml(storeApp.bundle_id)}</strong> in Menu-made's Firebase project; Menu-made's Play account invited in the restaurant's Play Console.`,
     `3. App Store Connect: New App, name ${escapeHtml(appName)}, bundle id ${escapeHtml(storeApp.bundle_id)}, SKU ${escapeHtml(storeApp.bundle_id)}. App Privacy: the app collects no name, email or phone number; rewards use a random card number kept on the phone; notifications use Apple's device token.`,
     `4. Play Console: Create app ${escapeHtml(appName)}, App, Free. Data safety and content rating with the same facts (a restaurant's menu, hours and rewards; no user-generated content; no ads).`,
-    "Uploading the restaurant's keys and building their app come in the next build step (being added now); press Done when steps 1-4 are finished."
+    "Press Done when steps 1-4 are finished. Done checks the keys first and says what's missing, if anything."
   ];
   return sendTransactionalEmail(env, {
     to: ownerEmailAddress(env),
@@ -152,6 +156,10 @@ async function handleStoreAppDone(request, env, id) {
   const expected = buyer ? "WAITING_STORE_ACCESS" : "WAITING_OWNER_SETUP";
   if (row.status !== expected) {
     return simplePage(200, "Already done", buyer ? "<p>Thank you, we have it. We'll email you as your app moves through the stores.</p>" : "<p>This step is already marked done.</p>");
+  }
+  const keys = buyer ? null : await keysReady(env, row);
+  if (keys && !keys.ready) {
+    return simplePage(409, "Keys still needed", `<p>Before the build can start, upload ${escapeHtml(keys.missing.join(", "))} on the <a href="/api/store-keys/app/${escapeHtml(id)}">key page</a>, then press Done again.</p>`);
   }
   if (request.method === "GET") {
     return simplePage(200, buyer ? "Both invites sent?" : "Store setup finished?", `<p>${buyer ? "Press the button once you've invited Menu-made in both App Store Connect and Play Console." : "Press the button once steps 1-4 of the checklist are finished for this app."}</p>
