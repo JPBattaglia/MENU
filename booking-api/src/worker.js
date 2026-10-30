@@ -49,6 +49,7 @@ import { handleGoogleMedia, handlePhotoLibrary } from "./producers/google-care/l
 import { handleGoogleCallback, handleGoogleConnect, handleGoogleLocation } from "./google/connect.js";
 import { handleStoreKeys } from "./store-app/keys.js";
 import { handleRestaurantKeys } from "./store-app/restaurant-keys.js";
+import { advanceStoreBuilds, handleBuildConfig, handleBuildResult, handleRebuild } from "./store-app/store-build.js";
 import { handleAndroidBundle, handleAndroidKey, handleBuildCredentials, handleBundleDownload } from "./store-app/build-credentials.js";
 import { advanceAccessibilitySelfTests } from "./selftest/accessibility-selftest.js";
 import { advanceSocialPostsSelfTests } from "./selftest/social-posts-selftest.js";
@@ -88,6 +89,8 @@ var worker_default = {
     }
     // Stage 11 part 2: the owner hands over Apple keys (emailed one-hour link, keys checked with Apple, stored sealed).
     if (url.pathname === "/api/store-build/credentials" && request.method === "GET") return handleBuildCredentials(request, env);
+    if (url.pathname === "/api/store-build/config" && request.method === "GET") return handleBuildConfig(request, env);
+    if (url.pathname === "/api/store-build/result" && request.method === "POST") return handleBuildResult(request, env);
     if (url.pathname === "/api/store-build/android-key" && request.method === "POST") return handleAndroidKey(request, env);
     if (url.pathname === "/api/store-build/android-bundle" && request.method === "POST") return handleAndroidBundle(request, env);
     const bundleMatch = url.pathname.match(/^\/api\/store-build\/bundle\/(\d{1,9})$/);
@@ -99,6 +102,8 @@ var worker_default = {
     if (url.pathname === "/api/switches" && (request.method === "GET" || request.method === "POST")) return handleSwitches(request, env);
     const storeAppDoneMatch = url.pathname.match(/^\/api\/store-app\/([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})\/done$/i);
     if (storeAppDoneMatch && (request.method === "GET" || request.method === "POST")) return handleStoreAppDone(request, env, storeAppDoneMatch[1].toLowerCase());
+    const storeAppRebuildMatch = url.pathname.match(/^\/api\/store-app\/([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})\/rebuild$/i);
+    if (storeAppRebuildMatch && (request.method === "GET" || request.method === "POST")) return handleRebuild(request, env, storeAppRebuildMatch[1].toLowerCase());
     // Stage 11 part 2: native push batches for the GitHub sender (.github/workflows/native-push.yml), OIDC only.
     const nativePushMatch = url.pathname.match(/^\/api\/native-push\/(next|[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})$/i);
     if (nativePushMatch && (request.method === "GET" || request.method === "POST")) return handleNativePushJobs(request, env, nativePushMatch[1].toLowerCase());
@@ -361,6 +366,7 @@ const mmWorkerWithBooking = {
       await nudgeNativePushes(env).catch((error) => console.error("Native push nudge failed:", error instanceof Error ? error.message : String(error)));
       await sendAndroidPushes(env).catch((error) => console.error("Android notifications failed:", error instanceof Error ? error.message : String(error)));
       await advanceStoreApps(env).catch((error) => console.error("Store App steps failed:", error instanceof Error ? error.message : String(error)));
+      await advanceStoreBuilds(env).catch((error) => console.error("Store App builds failed:", error instanceof Error ? error.message : String(error)));
       await advanceGuestAppPushSelfTests(env, app).catch((error) => console.error("Guest App push self-test failed:", error instanceof Error ? error.message : String(error)));
       await advanceGuestAppSelfTests(env, app).catch((error) => console.error("Guest App self-test failed:", error instanceof Error ? error.message : String(error)));
       await advanceGoogleSelfTests(env).catch((error) => console.error("Google self-test failed:", error instanceof Error ? error.message : String(error)));

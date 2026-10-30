@@ -4,6 +4,11 @@
 # sign the iOS build and upload it to TestFlight, with the key fetched from the worker over this workflow's OIDC token
 # and masked (it never lives in this repo). patch-ios.mjs adds the AppDelegate hooks native push needs.
 #
+# Restaurants (Oct 30, 2026): the worker starts this workflow with store_app=<store app id>, upload ticked. The
+# restaurant-config job then fetches that app's build config and icons from the worker (booking-api/scripts/
+# store-icons.mjs draws them), every later job builds from those instead of the sample, keys come by store app id, and
+# each signed job reports its result back (POST /api/store-build/result), which moves the app along or alerts the owner.
+#
 # Public repo = public logs: never print customer data, keys or signing material here.
 name: Store app build
 
@@ -17,6 +22,9 @@ on:
         description: Sign and upload (iOS to TestFlight, Android to Play internal testing)
         type: boolean
         default: false
+      store_app:
+        description: Store App id (set by the worker for a restaurant's build; empty = the sample config)
+        default: ""
       platforms:
         description: Which signed builds to make when upload is ticked
         type: choice
@@ -37,18 +45,73 @@ permissions:
   id-token: write   # only the TestFlight job uses it, to fetch the App Store Connect key from the worker
 
 env:
-  CONFIG: ${{ inputs.config || 'app-shell/sample/build.json' }}
+  SAMPLE_CONFIG: ${{ inputs.config || 'app-shell/sample/build.json' }}
+  STORE_APP: ${{ inputs.store_app || '' }}
   CAP_PACKAGES: "@capacitor/core@latest @capacitor/cli@latest @capacitor/ios@latest @capacitor/android@latest @capacitor/push-notifications@latest"
 
 jobs:
+  # A restaurant's build (store_app set): its build config and icons from the worker, over this job's OIDC token. The
+  # answer is the restaurant's public app content (it goes into the stores), but it is never printed here.
+  restaurant-config:
+    if: inputs.store_app != ''
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Install the renderer (resvg only)
+        working-directory: booking-api
+        run: npm install --omit=dev --no-audit --no-fund
+      - name: Fetch the build config
+        run: |
+          token=$(curl -sSf -H "Authorization: Bearer $ACTIONS_ID_TOKEN_REQUEST_TOKEN" "$ACTIONS_ID_TOKEN_REQUEST_URL&audience=menu-made-store-build" | jq -r .value)
+          echo "::add-mask::$token"
+          curl -sSf -H "Authorization: Bearer $token" "https://menu-made.com/api/store-build/config?store_app=$STORE_APP" -o "$RUNNER_TEMP/config.json"
+          echo "Config received"
+      - name: Draw the icons
+        run: |
+          node booking-api/scripts/store-icons.mjs "$RUNNER_TEMP/config.json" "$RUNNER_TEMP/restaurant"
+          node app-shell/configure.mjs "$RUNNER_TEMP/restaurant/build.json" >/dev/null
+          echo "Build config checked"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: restaurant-config
+          path: ${{ runner.temp }}/restaurant
+          retention-days: 3
+      - name: Tell the worker the build couldn't start
+        if: failure()
+        run: |
+          token=$(curl -sSf -H "Authorization: Bearer $ACTIONS_ID_TOKEN_REQUEST_TOKEN" "$ACTIONS_ID_TOKEN_REQUEST_URL&audience=menu-made-store-build" | jq -r .value)
+          echo "::add-mask::$token"
+          curl -sS -X POST -H "Authorization: Bearer $token" -H "Content-Type: application/json" \
+            --data "{\"platform\":\"ios\",\"outcome\":\"FAILED\",\"version\":${{ github.run_number }},\"run_id\":\"${{ github.run_id }}\"}" \
+            "https://menu-made.com/api/store-build/result?store_app=$STORE_APP" >/dev/null
+
   # The app's content comes live from the restaurant's Guest App (<app>/api/content). Checks it answers like the app
   # expects. Retries for up to 10 minutes because a push that also changes the worker deploys it in parallel.
   # Prints only counts and yes/no, never the content.
   content:
+    needs: restaurant-config
+    if: ${{ !cancelled() && needs.restaurant-config.result != 'failure' }}
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
+      - name: Get the restaurant's build config and icons
+        if: env.STORE_APP != ''
+        uses: actions/download-artifact@v4
+        with:
+          name: restaurant-config
+          path: app-shell/restaurant
+      - name: Pick the build config
+        run: |
+          if [ -n "$STORE_APP" ]; then
+            echo "CONFIG=app-shell/restaurant/build.json" >> "$GITHUB_ENV"; echo "TARGET=store_app=$STORE_APP" >> "$GITHUB_ENV"
+          else
+            echo "CONFIG=$SAMPLE_CONFIG" >> "$GITHUB_ENV"; echo "TARGET=scope=owner" >> "$GITHUB_ENV"
+          fi
       # On iPhone the app's own files load from capacitor://localhost, which "https:" does not cover: connect-src must
       # include 'self' or the app can't read its own config.json (first TestFlight build, Oct 29, 2026).
       - name: App page allows reading its own files
@@ -68,10 +131,24 @@ jobs:
           echo "The content endpoint never answered as expected"; exit 1
 
   android:
+    if: inputs.store_app == ''
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4
+      - name: Get the restaurant's build config and icons
+        if: env.STORE_APP != ''
+        uses: actions/download-artifact@v4
+        with:
+          name: restaurant-config
+          path: app-shell/restaurant
+      - name: Pick the build config
+        run: |
+          if [ -n "$STORE_APP" ]; then
+            echo "CONFIG=app-shell/restaurant/build.json" >> "$GITHUB_ENV"; echo "TARGET=store_app=$STORE_APP" >> "$GITHUB_ENV"
+          else
+            echo "CONFIG=$SAMPLE_CONFIG" >> "$GITHUB_ENV"; echo "TARGET=scope=owner" >> "$GITHUB_ENV"
+          fi
       - uses: actions/setup-node@v4
         with:
           node-version: 22
@@ -103,10 +180,24 @@ jobs:
           retention-days: 3
 
   ios:
+    if: inputs.store_app == ''
     runs-on: macos-latest
     timeout-minutes: 45
     steps:
       - uses: actions/checkout@v4
+      - name: Get the restaurant's build config and icons
+        if: env.STORE_APP != ''
+        uses: actions/download-artifact@v4
+        with:
+          name: restaurant-config
+          path: app-shell/restaurant
+      - name: Pick the build config
+        run: |
+          if [ -n "$STORE_APP" ]; then
+            echo "CONFIG=app-shell/restaurant/build.json" >> "$GITHUB_ENV"; echo "TARGET=store_app=$STORE_APP" >> "$GITHUB_ENV"
+          else
+            echo "CONFIG=$SAMPLE_CONFIG" >> "$GITHUB_ENV"; echo "TARGET=scope=owner" >> "$GITHUB_ENV"
+          fi
       - uses: actions/setup-node@v4
         with:
           node-version: 22
@@ -138,11 +229,25 @@ jobs:
   # with the App Store Connect API key (Admin), so certificates and profiles are created and kept by Apple; nothing is
   # stored here. The key comes from the worker over this job's OIDC token and every line of it is masked.
   ios-testflight:
-    if: github.event_name == 'workflow_dispatch' && inputs.upload && inputs.platforms != 'android'
+    needs: restaurant-config
+    if: ${{ !cancelled() && needs.restaurant-config.result != 'failure' && github.event_name == 'workflow_dispatch' && inputs.upload && inputs.platforms != 'android' }}
     runs-on: macos-latest
     timeout-minutes: 60
     steps:
       - uses: actions/checkout@v4
+      - name: Get the restaurant's build config and icons
+        if: env.STORE_APP != ''
+        uses: actions/download-artifact@v4
+        with:
+          name: restaurant-config
+          path: app-shell/restaurant
+      - name: Pick the build config
+        run: |
+          if [ -n "$STORE_APP" ]; then
+            echo "CONFIG=app-shell/restaurant/build.json" >> "$GITHUB_ENV"; echo "TARGET=store_app=$STORE_APP" >> "$GITHUB_ENV"
+          else
+            echo "CONFIG=$SAMPLE_CONFIG" >> "$GITHUB_ENV"; echo "TARGET=scope=owner" >> "$GITHUB_ENV"
+          fi
       - uses: actions/setup-node@v4
         with:
           node-version: 22
@@ -155,7 +260,7 @@ jobs:
         run: |
           token=$(curl -sSf -H "Authorization: Bearer $ACTIONS_ID_TOKEN_REQUEST_TOKEN" "$ACTIONS_ID_TOKEN_REQUEST_URL&audience=menu-made-store-build" | jq -r .value)
           echo "::add-mask::$token"
-          curl -sSf -H "Authorization: Bearer $token" "https://menu-made.com/api/store-build/credentials?scope=owner" -o "$RUNNER_TEMP/creds.json"
+          curl -sSf -H "Authorization: Bearer $token" "https://menu-made.com/api/store-build/credentials?$TARGET" -o "$RUNNER_TEMP/creds.json"
           jq -r .apple.p8 "$RUNNER_TEMP/creds.json" | while IFS= read -r line; do [ -n "$line" ] && echo "::add-mask::$line"; done
           jq -r .apple.p8 "$RUNNER_TEMP/creds.json" > "$RUNNER_TEMP/AuthKey.p8"
           {
@@ -171,6 +276,15 @@ jobs:
           node app-shell/configure.mjs "$CONFIG"
           cd app-shell && npx cap add ios && npx cap sync ios
           node patch-ios.mjs
+          if [ -f restaurant/ios/icon-1024.png ]; then
+            for f in ios/App/App/Assets.xcassets/AppIcon.appiconset/*.png; do
+              w=$(sips -g pixelWidth "$f" | awk '/pixelWidth/ {print $2}')
+              # Apple refuses an app icon with an alpha channel: a JPEG round trip drops it.
+              sips -s format jpeg -s formatOptions best -z "$w" "$w" restaurant/ios/icon-1024.png --out "$RUNNER_TEMP/icon.jpg" >/dev/null
+              sips -s format png "$RUNNER_TEMP/icon.jpg" --out "$f" >/dev/null
+            done
+            echo "App icon set from the restaurant's icon"
+          fi
           grep -q capacitorDidRegisterForRemoteNotifications ios/App/App/AppDelegate.swift
           plist=ios/App/App/Info.plist
           /usr/libexec/PlistBuddy -c "Add :ITSAppUsesNonExemptEncryption bool false" "$plist" 2>/dev/null || /usr/libexec/PlistBuddy -c "Set :ITSAppUsesNonExemptEncryption false" "$plist"
@@ -209,6 +323,15 @@ jobs:
       - name: Remove the key
         if: always()
         run: rm -f "$RUNNER_TEMP/AuthKey.p8" "$RUNNER_TEMP/creds.json"
+      - name: Report the result to the worker
+        if: ${{ always() && env.STORE_APP != '' }}
+        run: |
+          outcome="${{ job.status == 'success' && 'UPLOADED' || 'FAILED' }}"
+          token=$(curl -sSf -H "Authorization: Bearer $ACTIONS_ID_TOKEN_REQUEST_TOKEN" "$ACTIONS_ID_TOKEN_REQUEST_URL&audience=menu-made-store-build" | jq -r .value)
+          echo "::add-mask::$token"
+          jq -n --arg o "$outcome" --arg run "${{ github.run_id }}" '{platform: "ios", outcome: $o, version: ${{ github.run_number }}, run_id: $run}' \
+            | curl -sSf -X POST -H "Authorization: Bearer $token" -H "Content-Type: application/json" --data-binary @- \
+              "https://menu-made.com/api/store-build/result?store_app=$STORE_APP" | jq -c '{status}'
 
   # Signed Android build (manual runs with upload ticked). google-services.json (push), the Google Play account and the
   # upload key come from the worker over this job's OIDC token, every secret line masked. The first run makes the
@@ -216,11 +339,25 @@ jobs:
   # signing key). Google only takes a new app's first file by hand: when Play doesn't know the app yet, the .aab goes to
   # the worker, which emails the owner a download link and the steps.
   android-play:
-    if: github.event_name == 'workflow_dispatch' && inputs.upload && inputs.platforms != 'ios'
+    needs: restaurant-config
+    if: ${{ !cancelled() && needs.restaurant-config.result != 'failure' && github.event_name == 'workflow_dispatch' && inputs.upload && inputs.platforms != 'ios' }}
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4
+      - name: Get the restaurant's build config and icons
+        if: env.STORE_APP != ''
+        uses: actions/download-artifact@v4
+        with:
+          name: restaurant-config
+          path: app-shell/restaurant
+      - name: Pick the build config
+        run: |
+          if [ -n "$STORE_APP" ]; then
+            echo "CONFIG=app-shell/restaurant/build.json" >> "$GITHUB_ENV"; echo "TARGET=store_app=$STORE_APP" >> "$GITHUB_ENV"
+          else
+            echo "CONFIG=$SAMPLE_CONFIG" >> "$GITHUB_ENV"; echo "TARGET=scope=owner" >> "$GITHUB_ENV"
+          fi
       - uses: actions/setup-node@v4
         with:
           node-version: 22
@@ -233,7 +370,7 @@ jobs:
           token=$(curl -sSf -H "Authorization: Bearer $ACTIONS_ID_TOKEN_REQUEST_TOKEN" "$ACTIONS_ID_TOKEN_REQUEST_URL&audience=menu-made-store-build" | jq -r .value)
           echo "::add-mask::$token"
           echo "OIDC_TOKEN=$token" >> "$GITHUB_ENV"
-          curl -sSf -H "Authorization: Bearer $token" "https://menu-made.com/api/store-build/credentials?scope=owner&platform=android" -o "$RUNNER_TEMP/creds.json"
+          curl -sSf -H "Authorization: Bearer $token" "https://menu-made.com/api/store-build/credentials?$TARGET&platform=android" -o "$RUNNER_TEMP/creds.json"
           if jq -e '.android.play_account != null' "$RUNNER_TEMP/creds.json" >/dev/null; then
             jq -r .android.play_account "$RUNNER_TEMP/creds.json" > "$RUNNER_TEMP/play.json"
             jq -r .private_key "$RUNNER_TEMP/play.json" | while IFS= read -r line; do [ -n "$line" ] && echo "::add-mask::$line"; done
@@ -246,7 +383,7 @@ jobs:
               -storepass "$pass" -keypass "$pass" -dname "CN=Menu-made upload key" -noprompt >/dev/null 2>&1
             jq -n --arg jks "$(base64 -w0 "$RUNNER_TEMP/new.jks")" --arg password "$pass" '{jks: $jks, password: $password}' \
               | curl -sSf -X POST -H "Authorization: Bearer $token" -H "Content-Type: application/json" --data-binary @- \
-                "https://menu-made.com/api/store-build/android-key?scope=owner" -o "$RUNNER_TEMP/key.json"
+                "https://menu-made.com/api/store-build/android-key?$TARGET" -o "$RUNNER_TEMP/key.json"
             rm -f "$RUNNER_TEMP/new.jks"
             echo "Made a new upload key and handed it to the worker"
           else
@@ -265,6 +402,7 @@ jobs:
           [ "$(jq -r .app_id "$CONFIG")" = "$PACKAGE" ] || { echo "Build config app_id doesn't match the Google files"; exit 1; }
           jq '.push_android = true' app-shell/www/config.json > app-shell/www/c.json && mv app-shell/www/c.json app-shell/www/config.json
           cd app-shell && npx cap add android
+          if [ -d restaurant/android/res ]; then cp -R restaurant/android/res/. android/app/src/main/res/; echo "Launcher icons set from the restaurant's icon"; fi
           cp "$RUNNER_TEMP/google-services.json" android/app/google-services.json
           npx cap sync android
           version=$(jq -r '.version // "1.0.0"' "$GITHUB_WORKSPACE/$CONFIG")
@@ -284,13 +422,24 @@ jobs:
           if [ -n "$PLAY_ACCOUNT_FILE" ]; then node booking-api/scripts/play-upload.mjs "$aab" "$PACKAGE" "${{ github.run_number }}" || code=$?; else echo "No Google Play account yet"; code=3; fi
           if [ "$code" = "3" ]; then
             curl -sSf -X POST -H "Authorization: Bearer $OIDC_TOKEN" -H "Content-Type: application/octet-stream" --data-binary @"$aab" \
-              "https://menu-made.com/api/store-build/android-bundle?scope=owner&version=${{ github.run_number }}" | jq -c '{stored, emailed}'
+              "https://menu-made.com/api/store-build/android-bundle?$TARGET&version=${{ github.run_number }}" | jq -c '{stored, emailed}'
             echo "First upload: build ${{ github.run_number }} emailed to the owner to upload by hand" | tee -a "$GITHUB_STEP_SUMMARY"
+            echo "ANDROID_OUTCOME=FIRST_UPLOAD" >> "$GITHUB_ENV"
           elif [ "$code" = "0" ]; then
             echo "Uploaded build ${{ github.run_number }} to Google Play internal testing" | tee -a "$GITHUB_STEP_SUMMARY"
+            echo "ANDROID_OUTCOME=UPLOADED" >> "$GITHUB_ENV"
           else
             exit "$code"
           fi
       - name: Remove the files
         if: always()
         run: rm -f "$RUNNER_TEMP/upload.jks" "$RUNNER_TEMP/play.json" "$RUNNER_TEMP/google-services.json" "$RUNNER_TEMP/creds.json" "$RUNNER_TEMP/key.json"
+      - name: Report the result to the worker
+        if: ${{ always() && env.STORE_APP != '' }}
+        run: |
+          outcome="${{ job.status == 'success' && '${ANDROID_OUTCOME:-FAILED}' || 'FAILED' }}"
+          token=$(curl -sSf -H "Authorization: Bearer $ACTIONS_ID_TOKEN_REQUEST_TOKEN" "$ACTIONS_ID_TOKEN_REQUEST_URL&audience=menu-made-store-build" | jq -r .value)
+          echo "::add-mask::$token"
+          jq -n --arg o "$outcome" --arg run "${{ github.run_id }}" '{platform: "android", outcome: $o, version: ${{ github.run_number }}, run_id: $run}' \
+            | curl -sSf -X POST -H "Authorization: Bearer $token" -H "Content-Type: application/json" --data-binary @- \
+              "https://menu-made.com/api/store-build/result?store_app=$STORE_APP" | jq -c '{status}'
