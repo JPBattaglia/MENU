@@ -2816,3 +2816,8 @@ details.merch-panel summary::before{content:"▸ ";font-size:1.3em}details.merch
 /* Oct 29, 2026 (owner): staff merch page, upload step sits close under the intro. */
 :where(body.merch-page) .mm-page-hero{padding-bottom:28px}
 :where(body.merch-page) .mm-page-hero+.section{padding-top:0}
+/* Oct 29, 2026 (owner): the intro paragraph is exactly as wide as the heading (the paragraph adds no width of its own). */
+:where(body.merch-page) .mm-page-hero .container{display:grid;justify-content:start;grid-template-columns:fit-content(100%)}
+:where(body.merch-page) .mm-page-hero .pill{justify-self:start}
+:where(body.merch-page) .mm-page-hero .hero-intro{max-width:none;width:0;min-width:100%}
+:where(body.merch-page) .merch-drop input[type="file"]{max-width:100%;min-width:0}
