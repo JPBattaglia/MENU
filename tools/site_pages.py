@@ -492,7 +492,7 @@ def page_plans():
 <article class="mm-single">
   <h3>Staff merch</h3><p>Your logo on staff shirts, aprons, caps, mugs and more, with mockups as you order.</p>
   <p class="mm-single-price">10% off 12+ items <span class="mm-plus">15% off 24+</span></p>
-  <div class="mm-single-actions"><a class="cta-pill" href="services.html#team">Details</a><a class="btn primary" href="staff-merch.html">Order</a></div>
+  <div class="mm-single-actions"><a class="cta-pill" href="services.html#staff-merch">Details</a><a class="btn primary" href="staff-merch.html">Order</a></div>
 </article>"""
     rows = [
         ("Menu Care: unlimited menu updates", True, True, True),
@@ -549,7 +549,7 @@ def page_plans():
   </div>
 </section>
 
-{team_and_design_block(include_merch=False)}
+{team_and_design_block()}
 
 <section class="section menu-faq" id="faq" aria-labelledby="faq-title">
   <div class="container"><header class="section-head"><h2 id="faq-title">Billing questions</h2></header>
@@ -561,14 +561,15 @@ def page_plans():
 
 
 # Stage 10 cross-sell: staff merch (sold here) and Nino's design services (sold on ninobattaglia.com).
-def team_and_design_block(include_merch=True):
-    html = """<section class="section" id="team" aria-labelledby="team-title">
+def team_and_design_block(include_merch=False):
+    # Oct 29, 2026 (owner): this block is only a promo for Nino's site; staff merch lives in One-time services.
+    return """<section class="section" id="nino" aria-labelledby="nino-title">
   <div class="container">
-    <header class="section-head"><h2 id="team-title">For your team and your brand</h2><p>Designed by Nino Battaglia, the designer behind Menu-Made.</p></header>
+    <header class="section-head"><h2 id="nino-title">Designed by Nino Battaglia</h2><p>Nino is the designer behind Menu-Made. His own site has his shirt shop and design services for your business.</p></header>
     <div class="mm-singles">
 <article class="mm-single">
-  <h3>Staff merch</h3><p>Your logo on staff shirts, hoodies, aprons, caps, mugs, coasters and more. Upload it and see mockups right away; 10% off 12 or more items, 15% off 24 or more. Nino checks every logo order before anything is printed, then it's printed and shipped to you. Nino Battaglia shirt designs are an option.</p>
-  <div class="mm-single-actions"><a class="btn primary" href="staff-merch.html">Order staff merch</a></div>
+  <h3>Nino's shirt shop</h3><p>Original shirt designs by Nino, printed when you order and shipped to you.</p>
+  <div class="mm-single-actions"><a class="btn primary" href="https://ninobattaglia.com/">Visit the shop &#8599;</a></div>
 </article>
 <article class="mm-single">
   <h3>Design by Nino</h3><p>A logo, a flyer, a redesigned print menu or a pack of social graphics, made for your business and approved by Nino before it reaches you.</p>
@@ -577,9 +578,21 @@ def team_and_design_block(include_merch=True):
     </div>
   </div>
 </section>"""
-    if not include_merch:
-        html = re.sub(r'<article class="mm-single">\s*<h3>Staff merch</h3>.*?</article>\n', "", html, flags=re.S)
-    return html
+
+
+STAFF_MERCH_SECTION = """<article class="mm-product" id="staff-merch" aria-labelledby="staff-merch-title">
+  <header class="mm-product-head">
+    <h3 id="staff-merch-title">Staff merch</h3>
+    <p class="mm-product-short">Your logo on your team's shirts, aprons, caps, mugs and more.</p>
+    <p class="mm-product-price">10% off 12+ items <span class="mm-plus">15% off 24+ · item prices on the order page</span></p>
+  </header>
+  <div class="mm-product-body">
+    <div><h4>You get</h4><ul class="mm-checks"><li>Your logo on 10 products: T-shirt, hoodie, embroidered polo, apron, cap and beanie, mug, cork coaster, tote and stickers</li><li>Mockups of your logo as you order</li><li>Nino Battaglia shirt designs as an option</li></ul></div>
+    <div><h4>You provide</h4><p>Your logo (PNG or JPG, at least 300 pixels wide), colours, sizes and quantities, and a delivery address.</p><h4>How it’s delivered</h4><p>Nino checks every logo order before anything is printed. Printed by Printful and shipped to you; shipping and sales tax are added at checkout.</p></div>
+  </div>
+  <div class="mm-product-actions"><a class="btn primary" href="staff-merch.html">Order staff merch</a></div>
+</article>
+"""
 
 
 def page_staff_merch():
@@ -686,7 +699,7 @@ def page_services():
     desc = "Menu Care, Review Replies, Google Profile Care, Social Posts, Website Care, Accessibility Monitoring, Guest App and one-time setups: what you get, what you provide and how it's delivered."
     monthly = "\n".join(product_section(c, p, "plan") for c, p in PLANS.items())
     once = "\n".join(product_section(c, p, "once") for c, p in ONCE.items())
-    jump = " · ".join(f'<a href="#{p["anchor"]}">{p["name"]}</a>' for p in list(PLANS.values()) + list(ONCE.values())) + ' · <a href="#team">Staff merch</a>'
+    jump = " · ".join(f'<a href="#{p["anchor"]}">{p["name"]}</a>' for p in list(PLANS.values()) + list(ONCE.values())) + ' · <a href="#staff-merch">Staff merch</a>'
     body = f"""<section class="hero mm-page-hero">
   <div class="container">
     <span class="pill">Services</span>
@@ -711,6 +724,7 @@ def page_services():
     <header class="section-head"><h2 id="setups-title">One-time services</h2></header>
     <div class="mm-products">
 {once}
+{STAFF_MERCH_SECTION}
     </div>
   </div>
 </section>
