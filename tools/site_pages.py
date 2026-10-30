@@ -12,7 +12,7 @@ from pathlib import Path
 import re
 
 ROOT = Path(__file__).resolve().parent.parent
-CSS_VERSION = "20261029-merchintro"
+CSS_VERSION = "20261029-account"
 CATALOG_JS = '<script src="site-catalog.js?v=20261028-stage9" defer></script>'
 
 NAV = [

@@ -2821,3 +2821,7 @@ details.merch-panel summary::before{content:"▸ ";font-size:1.3em}details.merch
 :where(body.merch-page) .mm-page-hero .pill{justify-self:start}
 :where(body.merch-page) .mm-page-hero .hero-intro{max-width:none;width:0;min-width:100%}
 :where(body.merch-page) .merch-drop input[type="file"]{max-width:100%;min-width:0}
+/* Oct 29, 2026 (owner): Account page sections sit close under the intro, signed out (sign-in card) and signed in. */
+:where(body.account-page) .mm-page-hero{padding-bottom:28px}
+:where(body.account-page) .mm-page-hero~.section{padding-top:0}
+:where(body.account-page) .mm-page-hero~.section{padding-bottom:48px}
