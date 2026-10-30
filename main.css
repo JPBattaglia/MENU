@@ -2793,15 +2793,7 @@ details.merch-panel summary::before{content:"▸ ";font-size:1.3em}details.merch
 :where(body.start-page) .service-choice-group .service-card p{font-size:14px;line-height:1.45;margin:0 0 12px}
 :where(body.start-page) .service-choice-group .service-bottom{margin-top:auto;display:grid;gap:10px;justify-items:start}
 :where(body.start-page) .service-choice-group .service-bottom .btn{width:100%;justify-content:center;text-align:center;padding-left:10px;padding-right:10px}
-@media (max-width:700px){
-  :where(body.start-page) .optional-services > .optional-content{padding:0 10px 14px}
-  :where(body.start-page) .service-choice-group{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
-  :where(body.start-page) .service-choice-group .service-card{padding:12px}
-  :where(body.start-page) .service-choice-group .service-card h3{font-size:16px !important;line-height:1.25 !important}
-  :where(body.start-page) .service-choice-group .service-card p{font-size:15px !important;line-height:1.4 !important}
-  :where(body.start-page) .service-choice-group .service-card .price{font-size:15px !important}
-  :where(body.start-page) .service-choice-group .service-bottom .btn{font-size:15px;min-height:44px}
-}
+@media (max-width:700px){:where(body.start-page) .service-choice-group{grid-template-columns:1fr}}
 :where(body.start-page) .service-choice-group .service-bottom{justify-items:stretch}
 :where(body.start-page) .service-choice-group .service-bottom .btn{width:100% !important;min-width:0 !important;max-width:100%;box-sizing:border-box;justify-self:stretch}
 :where(body.start-page) .service-choice-group .service-bottom .price{min-width:0;overflow-wrap:anywhere}
