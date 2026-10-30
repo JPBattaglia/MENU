@@ -25,6 +25,7 @@ import { LOGO_PLACEHOLDER, brandOf, storeIconSvg } from "../producers/guest-app/
 import { appUrl, findAppLogo } from "../producers/guest-app/app-step.js";
 import { keysReady, storeScope } from "./restaurant-keys.js";
 import { OWNER, OWNER_BUNDLE_ID } from "./keys.js";
+import { pausedWorkflows } from "../lib/switches.js";
 
 const BUILD_AUDIENCE = "menu-made-store-build";
 const BUILD_WORKFLOW = "JPBattaglia/MENU/.github/workflows/store-app-build.yml@refs/heads/master";
@@ -230,6 +231,33 @@ async function advanceStoreBuilds(env, now = Date.now(), { only = null } = {}) {
   return { started };
 }
 
+// ---------- Yearly rebuilds (owner decision, Oct 30, 2026) ----------
+// Apple and Google keep raising the SDK an app must be built with, so an app in the stores is rebuilt every year: a LIVE
+// app whose last version went live a year ago, with an active app-tier plan (STORE_APP_CARE), goes back to
+// READY_TO_BUILD by itself. From there it is the normal path: build (one patch version up), the owner's listing
+// preview, submission, review. Checked once a day (16:00-16:04 UTC tick); the Store App "Making" switch pauses it.
+const YEARLY_MS = 365 * 86400000;
+
+async function scheduleYearlyRebuilds(env, now = Date.now(), { force = false } = {}) {
+  if (!env.DB) return { queued: 0 };
+  const d = new Date(now);
+  if (!force && (d.getUTCHours() !== 16 || d.getUTCMinutes() >= 5)) return { queued: 0 };
+  const paused = await pausedWorkflows(env);
+  if (paused.all || paused.keys.includes("STORE_APP_SETUP_V1")) return { queued: 0 };
+  const due = (await env.DB.prepare(`
+      SELECT s.id FROM store_apps s JOIN store_app_listings l ON l.store_app_id = s.id
+      WHERE s.status = 'LIVE' AND l.live_at IS NOT NULL AND l.live_at < ?
+        AND EXISTS (SELECT 1 FROM entitlements e WHERE e.business_id = s.business_id AND e.entitlement_type = 'STORE_APP_CARE' AND e.status = 'ACTIVE')
+      LIMIT 20`).bind(new Date(now - YEARLY_MS).toISOString()).all()).results || [];
+  let queued = 0;
+  for (const { id } of due) {
+    const r = await env.DB.prepare(`UPDATE store_apps SET status = 'READY_TO_BUILD', note = 'Yearly rebuild', updated_at = ? WHERE id = ? AND status = 'LIVE'`).bind(nowIso(), id).run();
+    queued += r.meta?.changes || 0;
+  }
+  if (queued) console.log(`Store App yearly rebuilds queued: ${queued}`);
+  return { queued };
+}
+
 // ---------- The owner's "Build again" ----------
 
 async function handleRebuild(request, env, id) {
@@ -250,4 +278,4 @@ async function handleRebuild(request, env, id) {
   return simplePage(200, "Queued", "<p>The build starts within 5 minutes. You'll get an email only if something needs a look.</p>");
 }
 
-export { BUILD_AUDIENCE, BUILD_WORKFLOW, REBUILD_KIND, advanceStoreBuilds, buildConfigFor, liveVersionOf, nextVersion, rebuildLink, recordBuildResult, buildTarget, handleBuildConfig, handleBuildResult, handleRebuild };
+export { BUILD_AUDIENCE, BUILD_WORKFLOW, REBUILD_KIND, YEARLY_MS, advanceStoreBuilds, scheduleYearlyRebuilds, buildConfigFor, liveVersionOf, nextVersion, rebuildLink, recordBuildResult, buildTarget, handleBuildConfig, handleBuildResult, handleRebuild };

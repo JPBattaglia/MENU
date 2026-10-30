@@ -199,3 +199,36 @@ test('build config version: 1.0.0 until the app is live, then one patch above th
   f.sql(`INSERT INTO store_app_listings (store_app_id, images_json, live_version, created_at, updated_at) VALUES (?, '{}', '1.0.3', 'x', 'x')`, ID);
   assert.equal(await config(), '1.0.4');
 });
+
+test('yearly rebuild: a LIVE app a year after it went live, with an active app-tier plan, goes back to READY_TO_BUILD once a day', async () => {
+  const f = await setup({ status: 'LIVE' });
+  f.sql(`PRAGMA foreign_keys = OFF`);
+  const NOW = Date.parse('2027-11-02T16:01:00.000Z');
+  const liveAt = (days) => f.sql(`INSERT OR REPLACE INTO store_app_listings (store_app_id, images_json, live_at, live_version, created_at, updated_at) VALUES (?, '{}', ?, '1.0.0', 'x', 'x')`, ID, new Date(NOW - days * 86400000).toISOString());
+  const status = () => f.row(`SELECT status, note FROM store_apps WHERE id = ?`, ID);
+  liveAt(370);
+  assert.equal((await build.scheduleYearlyRebuilds(f.env, NOW)).queued, 0, 'no active app-tier plan: left alone');
+  f.sql(`INSERT INTO entitlements (id, customer_id, business_id, subscription_id, entitlement_type, status, starts_at, created_at, updated_at) VALUES ('ent1', 'cust', 'biz', 'sub1', 'STORE_APP_CARE', 'ACTIVE', 'x', 'x', 'x')`);
+  liveAt(300);
+  assert.equal((await build.scheduleYearlyRebuilds(f.env, NOW)).queued, 0, 'not a year yet');
+  liveAt(370);
+  assert.equal((await build.scheduleYearlyRebuilds(f.env, NOW + 3600000)).queued, 0, 'only checked in the daily slot');
+  assert.equal((await build.scheduleYearlyRebuilds(f.env, NOW)).queued, 1);
+  assert.deepEqual(status(), { status: 'READY_TO_BUILD', note: 'Yearly rebuild' });
+  assert.equal((await build.scheduleYearlyRebuilds(f.env, NOW)).queued, 0, 'queued once');
+  const config = await build.buildConfigFor(f.env, f.row(`SELECT * FROM store_apps WHERE id = ?`, ID));
+  assert.equal(config.body.config.version, '1.0.1', 'the rebuild asks for the next version');
+});
+
+test('yearly rebuild waits while the Store App "Making" switch is off', async () => {
+  const f = await setup({ status: 'LIVE' });
+  f.sql(`PRAGMA foreign_keys = OFF`);
+  const NOW = Date.parse('2027-11-02T16:01:00.000Z');
+  f.sql(`INSERT INTO store_app_listings (store_app_id, images_json, live_at, created_at, updated_at) VALUES (?, '{}', '2026-10-01T00:00:00.000Z', 'x', 'x')`, ID);
+  f.sql(`INSERT INTO entitlements (id, customer_id, business_id, subscription_id, entitlement_type, status, starts_at, created_at, updated_at) VALUES ('ent1', 'cust', 'biz', 'sub1', 'STORE_APP_CARE', 'ACTIVE', 'x', 'x', 'x')`);
+  f.sql(`CREATE TABLE IF NOT EXISTS worker_settings (key TEXT PRIMARY KEY, value TEXT, updated_at TEXT)`);
+  f.sql(`INSERT INTO worker_settings (key, value, updated_at) VALUES ('switch:prod:STORE_APP', 'off', 'x')`);
+  assert.equal((await build.scheduleYearlyRebuilds(f.env, NOW)).queued, 0);
+  f.sql(`DELETE FROM worker_settings`);
+  assert.equal((await build.scheduleYearlyRebuilds(f.env, NOW)).queued, 1);
+});

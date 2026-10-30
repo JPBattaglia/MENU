@@ -51,7 +51,7 @@ import { handleGoogleMedia, handlePhotoLibrary } from "./producers/google-care/l
 import { handleGoogleCallback, handleGoogleConnect, handleGoogleLocation } from "./google/connect.js";
 import { handleStoreKeys } from "./store-app/keys.js";
 import { handleRestaurantKeys } from "./store-app/restaurant-keys.js";
-import { advanceStoreBuilds, handleBuildConfig, handleBuildResult, handleRebuild } from "./store-app/store-build.js";
+import { advanceStoreBuilds, scheduleYearlyRebuilds, handleBuildConfig, handleBuildResult, handleRebuild } from "./store-app/store-build.js";
 import { advanceStoreListings, handleListingImage, handleListingImageView, handleListingPage } from "./store-app/store-listing.js";
 import { handleAndroidBundle, handleAndroidKey, handleBuildCredentials, handleBundleDownload } from "./store-app/build-credentials.js";
 import { advanceAccessibilitySelfTests } from "./selftest/accessibility-selftest.js";
@@ -374,6 +374,7 @@ const mmWorkerWithBooking = {
       await nudgeNativePushes(env).catch((error) => console.error("Native push nudge failed:", error instanceof Error ? error.message : String(error)));
       await sendAndroidPushes(env).catch((error) => console.error("Android notifications failed:", error instanceof Error ? error.message : String(error)));
       await advanceStoreApps(env).catch((error) => console.error("Store App steps failed:", error instanceof Error ? error.message : String(error)));
+      await scheduleYearlyRebuilds(env).catch((error) => console.error("Store App yearly rebuilds failed:", error instanceof Error ? error.message : String(error)));
       await advanceStoreBuilds(env).catch((error) => console.error("Store App builds failed:", error instanceof Error ? error.message : String(error)));
       await advanceStoreListings(env).catch((error) => console.error("Store App listings failed:", error instanceof Error ? error.message : String(error)));
       await advanceGuestAppPushSelfTests(env, app).catch((error) => console.error("Guest App push self-test failed:", error instanceof Error ? error.message : String(error)));
