@@ -21,7 +21,7 @@ const PNG = new Uint8Array([0x89, 0x50, 0x4e, 0x47, 1, 2, 3, 4]);
 
 async function setup({ status = 'READY_TO_BUILD', logo = true } = {}) {
   const DB = createD1(); const ASSETS = createR2();
-  for (const m of ['0012_guest_app.sql', '0022_store_credentials.sql', '0024_android.sql', '0025_store_app.sql', '0026_store_app_builds.sql', '0027_store_app_listings.sql']) DB.raw.exec(read(m));
+  for (const m of ['0012_guest_app.sql', '0022_store_credentials.sql', '0024_android.sql', '0025_store_app.sql', '0026_store_app_builds.sql', '0027_store_app_listings.sql', '0029_store_app_live_version.sql']) DB.raw.exec(read(m));
   DB.raw.exec('PRAGMA foreign_keys = OFF');
   const sql = (q, ...a) => DB.raw.prepare(q).run(...a);
   const t = '2026-10-30T00:00:00.000Z';
@@ -189,4 +189,13 @@ test('listing pictures: the build sends PNGs by name for its own store app; anyt
   assert.equal((await req(`/api/store-build/listing?store_app=${ID}&name=../x`, { method: 'POST', body: png })).status, 400);
   assert.equal((await req(`/api/store-build/listing?store_app=${ID}&name=ios-2`, { method: 'POST', body: new Uint8Array(300) })).status, 422);
   assert.equal((await call(f, `https://menu-made.com/api/store-build/listing?store_app=${ID}&name=ios-2`, { method: 'POST', body: png })).status, 401);
+});
+
+test('build config version: 1.0.0 until the app is live, then one patch above the live version', async () => {
+  assert.deepEqual(['', null, '1.0.0', '1.2.9', 'junk'].map(build.nextVersion), ['1.0.0', '1.0.0', '1.0.1', '1.2.10', '1.0.0']);
+  const f = await setup();
+  const config = async () => (await build.buildConfigFor(f.env, f.row(`SELECT * FROM store_apps WHERE id = ?`, ID))).body.config.version;
+  assert.equal(await config(), '1.0.0');
+  f.sql(`INSERT INTO store_app_listings (store_app_id, images_json, live_version, created_at, updated_at) VALUES (?, '{}', '1.0.3', 'x', 'x')`, ID);
+  assert.equal(await config(), '1.0.4');
 });

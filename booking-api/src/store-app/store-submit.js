@@ -2,7 +2,8 @@
 // Everything here runs with the restaurant's own keys (scope from restaurant-keys.js). Each function returns
 // { ok: true, ... } or { ok: false, step, message } with Apple's or Google's own words, which go to the owner by email.
 //
-// Apple (App Store Connect API): the app record exists (owner's hands-on step); the editable version gets the newest
+// Apple (App Store Connect API): the app record exists (owner's hands-on step); the editable version (or, for an app
+// already live, a new version named after the build's version string, with "What's New" text) gets the newest
 // valid build, its version string, copyright, description, keywords and URLs; the app info gets name, subtitle and
 // privacy URL; iPhone 6.7" screenshots replace any there; review contact = the restaurant; then a review submission.
 // Age rating, pricing and App Privacy are set by the owner on the website (Apple's API leaves those to the website or
@@ -19,6 +20,7 @@ const PLAY_UPLOAD = "https://androidpublisher.googleapis.com/upload/androidpubli
 const EDITABLE = new Set(["PREPARE_FOR_SUBMISSION", "DEVELOPER_REJECTED", "REJECTED", "METADATA_REJECTED", "INVALID_BINARY"]);
 const LIVE_STATES = new Set(["READY_FOR_SALE", "READY_FOR_DISTRIBUTION", "PENDING_DEVELOPER_RELEASE", "PROCESSING_FOR_DISTRIBUTION"]);
 const REJECTED_STATES = new Set(["REJECTED", "METADATA_REJECTED", "INVALID_BINARY"]);
+const WHATS_NEW = "Updated for the latest iPhone software, with performance and reliability improvements.";
 
 class StepError extends Error {
   constructor(step, message) { super(message); this.step = step; }
@@ -71,12 +73,24 @@ async function submitApple({ creds, bundleId, listing, images, contact }, { fetc
     const app = (await asc("GET", `/apps?filter[bundleId]=${encodeURIComponent(bundleId)}&limit=1`, null, "app")).data?.[0];
     if (!app) throw new StepError("app", `There's no app record for ${bundleId} in App Store Connect yet (owner checklist: New App).`);
     const versions = (await asc("GET", `/apps/${app.id}/appStoreVersions?filter[platform]=IOS&limit=20`, null, "version")).data || [];
-    const version = versions.find((v) => EDITABLE.has(v.attributes?.appStoreState || v.attributes?.appVersionState));
-    if (!version) throw new StepError("version", "No App Store version is open for editing (a new version is needed for an app that is already live).");
+    const stateOf = (v) => v.attributes?.appStoreState || v.attributes?.appVersionState;
     const builds = await asc("GET", `/builds?filter[app]=${app.id}&filter[processingState]=VALID&sort=-uploadedDate&limit=1&include=preReleaseVersion`, null, "build");
     const build = builds.data?.[0];
     if (!build) throw new StepError("build", "Apple has no processed build for this app yet (it takes 5-30 minutes after an upload).");
     const buildVersion = (builds.included || []).find((i) => i.type === "preReleaseVersions")?.attributes?.version;
+    // An update (an earlier version is or was in the store) needs "What's New" text; a first release must not have it.
+    const update = versions.some((v) => !EDITABLE.has(stateOf(v)));
+    let version = versions.find((v) => EDITABLE.has(stateOf(v)));
+    if (!version) {
+      // The app is live and nothing is open: a rebuild (yearly SDK update or a fix) opens the next version, whose
+      // string is the build's (the build config asks for one above the live version).
+      if (!buildVersion) throw new StepError("version", "No App Store version is open for editing and the newest build has no version string.");
+      if (versions.some((v) => v.attributes?.versionString === buildVersion)) {
+        throw new StepError("version", `Version ${buildVersion} is already in App Store Connect and not editable; the newest build needs a higher version (press Build again).`);
+      }
+      version = (await asc("POST", "/appStoreVersions", { data: { type: "appStoreVersions", attributes: { platform: "IOS", versionString: buildVersion },
+        relationships: { app: { data: { type: "apps", id: app.id } } } } }, "version")).data;
+    }
     await asc("PATCH", `/appStoreVersions/${version.id}`, { data: { type: "appStoreVersions", id: version.id,
       attributes: { ...(buildVersion ? { versionString: buildVersion } : {}), copyright: listing.copyright, releaseType: "AFTER_APPROVAL" },
       relationships: { build: { data: { type: "builds", id: build.id } } } } }, "version");
@@ -85,7 +99,8 @@ async function submitApple({ creds, bundleId, listing, images, contact }, { fetc
     const loc = locs.find((l) => l.attributes?.locale === "en-US") || locs[0];
     if (!loc) throw new StepError("description", "The App Store version has no language yet; set the primary language to English (U.S.) in App Store Connect.");
     await asc("PATCH", `/appStoreVersionLocalizations/${loc.id}`, { data: { type: "appStoreVersionLocalizations", id: loc.id, attributes: {
-      description: listing.description, keywords: listing.keywords, promotionalText: listing.promo, supportUrl: listing.support_url, marketingUrl: listing.marketing_url } } }, "description");
+      description: listing.description, keywords: listing.keywords, promotionalText: listing.promo, supportUrl: listing.support_url, marketingUrl: listing.marketing_url,
+      ...(update ? { whatsNew: listing.whats_new || WHATS_NEW } : {}) } } }, "description");
 
     const infos = (await asc("GET", `/apps/${app.id}/appInfos`, null, "name")).data || [];
     const info = infos.find((i) => !["READY_FOR_DISTRIBUTION", "READY_FOR_SALE"].includes(i.attributes?.appStoreState || i.attributes?.state)) || infos[0];

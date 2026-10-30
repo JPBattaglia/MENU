@@ -156,7 +156,7 @@ test('site: the Store App page exists but stays hidden until the exit (noindex, 
 
 test('self-test STORE_APP_RUN passes through the real steps, reaches no store or GitHub, emails only the test inbox, and leaves nothing behind', async () => {
   const f = setup();
-  for (const m of ['0026_store_app_builds.sql', '0027_store_app_listings.sql']) f.DB.raw.exec(read(m));
+  for (const m of ['0026_store_app_builds.sql', '0027_store_app_listings.sql', '0029_store_app_live_version.sql']) f.DB.raw.exec(read(m));
   f.env.GITHUB_DISPATCH_TOKEN = 'real-token';
   f.env.GITHUB_DISPATCH_FETCH = async () => { throw new Error('the real GitHub was called'); };
   const { advanceStoreAppSelfTests } = await import('./src/selftest/store-app-selftest.js');

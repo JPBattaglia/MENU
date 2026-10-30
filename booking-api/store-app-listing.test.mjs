@@ -29,9 +29,9 @@ async function p8() {
 }
 
 // A fake App Store Connect and Google Play that remember what they were sent.
-function fakeStores({ appleFail = null, playDraft = false, appleState = 'WAITING_FOR_REVIEW', playLive = false } = {}) {
+function fakeStores({ appleFail = null, playDraft = false, appleState = 'WAITING_FOR_REVIEW', playLive = false, liveVersion = null, buildVersion = '1.0.0' } = {}) {
   const seen = { apple: [], play: [], uploads: 0 };
-  const state = { appleState, playLive };
+  const state = { appleState, playLive, opened: !liveVersion };
   const fetchImpl = async (url, init = {}) => {
     const u = String(url); const m = init.method || 'GET';
     if (u.startsWith('https://oauth2.googleapis.com/token')) return Response.json({ access_token: 'ya29', expires_in: 3600 });
@@ -43,8 +43,11 @@ function fakeStores({ appleFail = null, playDraft = false, appleState = 'WAITING
       const body = init.body ? JSON.parse(init.body) : null;
       if (appleFail && path.startsWith(appleFail.path) && m === appleFail.method) return Response.json({ errors: [{ detail: appleFail.detail }] }, { status: 409 });
       if (path.startsWith('/apps?')) return Response.json({ data: [{ id: 'APP1' }] });
-      if (path.startsWith('/apps/APP1/appStoreVersions')) return Response.json({ data: [{ id: 'V1', attributes: { appStoreState: 'PREPARE_FOR_SUBMISSION' } }] });
-      if (path.startsWith('/builds?')) return Response.json({ data: [{ id: 'B9' }], included: [{ type: 'preReleaseVersions', attributes: { version: '1.0.0' } }] });
+      if (path.startsWith('/apps/APP1/appStoreVersions')) return Response.json({ data: [
+        ...(liveVersion ? [{ id: 'V0', attributes: { appStoreState: 'READY_FOR_SALE', versionString: liveVersion } }] : []),
+        ...(state.opened ? [{ id: 'V1', attributes: { appStoreState: 'PREPARE_FOR_SUBMISSION' } }] : [])] });
+      if (path === '/appStoreVersions' && m === 'POST') { seen.newVersion = body.data.attributes; state.opened = true; return Response.json({ data: { id: 'V1' } }); }
+      if (path.startsWith('/builds?')) return Response.json({ data: [{ id: 'B9' }], included: [{ type: 'preReleaseVersions', attributes: { version: buildVersion } }] });
       if (path === '/appStoreVersions/V1' && m === 'PATCH') { seen.versionPatch = body; return Response.json({ data: { id: 'V1' } }); }
       if (path === '/appStoreVersions/V1' && m === 'GET') return Response.json({ data: { id: 'V1', attributes: { appStoreState: state.appleState } } });
       if (path === '/appStoreVersions/V1/appStoreVersionLocalizations') return Response.json({ data: [{ id: 'L1', attributes: { locale: 'en-US' } }] });
@@ -85,7 +88,7 @@ function fakeStores({ appleFail = null, playDraft = false, appleState = 'WAITING
 async function setup({ testOrder = false, status = 'WAITING_SUBMIT_APPROVAL' } = {}) {
   google.tokenCache.clear();
   const DB = createD1(); const ASSETS = createR2();
-  for (const m of ['0012_guest_app.sql', '0022_store_credentials.sql', '0025_store_app.sql', '0026_store_app_builds.sql', '0027_store_app_listings.sql']) DB.raw.exec(read(m));
+  for (const m of ['0012_guest_app.sql', '0022_store_credentials.sql', '0025_store_app.sql', '0026_store_app_builds.sql', '0027_store_app_listings.sql', '0029_store_app_live_version.sql']) DB.raw.exec(read(m));
   DB.raw.exec('PRAGMA foreign_keys = OFF');
   const sql = (q, ...a) => DB.raw.prepare(q).run(...a);
   const t = '2026-10-30T00:00:00.000Z';
@@ -252,4 +255,48 @@ test('a test order never reaches the stores: approval goes straight to LIVE with
   assert.equal(f.row(`SELECT status FROM store_apps`).status, 'LIVE');
   assert.equal(stores.seen.apple.length + stores.seen.play.length, 0, 'Apple and Google never called');
   assert.match(f.emails.at(-1).subject, /^\[TEST\] Joe's Pizza is live/);
+});
+
+test('a rebuild of a live app opens the next App Store version with What\'s New, records the new live version, and does not email the buyer again', async () => {
+  const f = await setup();
+  const first = fakeStores({ appleState: 'READY_FOR_SALE', playLive: true });
+  await pictures(f);
+  await tick(f, first);
+  await approve(f, previewUrl(f.emails[0]));
+  await tick(f, first);
+  assert.equal(first.seen.newVersion, undefined, 'a first release uses the version Apple opened with the app record');
+  assert.equal(first.seen.description.whatsNew, undefined, "a first release has no What's New");
+  await tick(f, first, Date.now() + 2 * 3600000);
+  assert.equal(f.row(`SELECT status FROM store_apps`).status, 'LIVE');
+  assert.equal(f.row(`SELECT live_version FROM store_app_listings`).live_version, '1.0.0');
+  const buyerEmails = () => f.emails.filter((e) => e.to?.[0] === 'joe@joespizza.example').length;
+  assert.equal(buyerEmails(), 1);
+
+  // A year later: Build again -> the new build (1.0.1, from the build config) is uploaded -> preview -> approve.
+  f.sql(`UPDATE store_apps SET status = 'WAITING_SUBMIT_APPROVAL', updated_at = ?`, new Date().toISOString());
+  await new Promise((r) => setTimeout(r, 5));
+  const update = fakeStores({ liveVersion: '1.0.0', buildVersion: '1.0.1', appleState: 'READY_FOR_SALE', playLive: true });
+  await tick(f, update, Date.now() + 3 * 3600000);
+  await approve(f, previewUrl(f.emails.at(-1)));
+  await tick(f, update, Date.now() + 3 * 3600000);
+  assert.deepEqual(update.seen.newVersion, { platform: 'IOS', versionString: '1.0.1' }, 'a new version named after the build');
+  assert.equal(update.seen.versionPatch.data.attributes.versionString, '1.0.1');
+  assert.ok(update.seen.description.whatsNew, "an update carries What's New");
+  assert.equal(f.row(`SELECT status FROM store_apps`).status, 'IN_REVIEW');
+  await tick(f, update, Date.now() + 6 * 3600000);
+  assert.equal(f.row(`SELECT status, note FROM store_apps`).note, 'Update live in both stores');
+  assert.equal(f.row(`SELECT live_version FROM store_app_listings`).live_version, '1.0.1');
+  assert.equal(buyerEmails(), 1, 'the buyer is not told again that the app is live');
+});
+
+test('Apple refuses to reuse a version string that is already in App Store Connect', async () => {
+  const f = await setup();
+  const stores = fakeStores({ liveVersion: '1.0.0', buildVersion: '1.0.0' });
+  await pictures(f);
+  await tick(f, stores);
+  await approve(f, previewUrl(f.emails[0]));
+  await tick(f, stores);
+  assert.equal(f.row(`SELECT status FROM store_apps`).status, 'WAITING_SUBMIT_APPROVAL');
+  assert.match(f.row(`SELECT submit_error FROM store_app_listings`).submit_error, /1\.0\.0 is already in App Store Connect/);
+  assert.equal(stores.seen.newVersion, undefined);
 });

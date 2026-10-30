@@ -20,7 +20,7 @@ import { brandedEmailHtml, escapeHtml, sendTransactionalEmail } from "../lib/ema
 import { nowIso, simplePage } from "../lib/http.js";
 import { signLinkToken, verifyLinkToken } from "../lib/links.js";
 import { isTestOrder, loadDeliveryContext } from "../approvals/release.js";
-import { buildTarget, rebuildLink } from "./store-build.js";
+import { buildTarget, nextVersion, rebuildLink } from "./store-build.js";
 import { engagementSettings } from "../producers/guest-app/engage.js";
 import { parseOfferings } from "../producers/website/build.js";
 import { storeScope } from "./restaurant-keys.js";
@@ -287,9 +287,9 @@ async function advanceStoreListings(env, now = Date.now(), deps = {}) {
       if (!listing) continue;
       const t = nowIso();
       if (test) {
-        await upsertListing(env, storeApp.id, { submitted_at: t, apple_json: JSON.stringify({ ok: true, sandbox: true }), google_json: JSON.stringify({ ok: true, sandbox: true }), live_at: t });
+        await upsertListing(env, storeApp.id, { submitted_at: t, apple_json: JSON.stringify({ ok: true, sandbox: true }), google_json: JSON.stringify({ ok: true, sandbox: true }), live_at: t, live_version: nextVersion(row.live_version) });
         await env.DB.prepare(`UPDATE store_apps SET status = 'LIVE', note = 'Test order: listing approved, stores not contacted', updated_at = ? WHERE id = ? AND status = 'WAITING_SUBMIT_APPROVAL'`).bind(t, storeApp.id).run();
-        await emailBuyerLive(env, storeApp, context, { apple: `${publicBaseUrl(env)}/`, google: `${publicBaseUrl(env)}/` }, true);
+        if (!row.live_version) await emailBuyerLive(env, storeApp, context, { apple: `${publicBaseUrl(env)}/`, google: `${publicBaseUrl(env)}/` }, true);
         moved++;
         continue;
       }
@@ -343,9 +343,12 @@ async function advanceStoreListings(env, now = Date.now(), deps = {}) {
     if (!google.live && await googleLive(storeApp.bundle_id, deps)) google.live = true;
     await upsertListing(env, storeApp.id, { apple_json: JSON.stringify(apple), google_json: JSON.stringify(google), last_poll_at: t });
     if (apple.live && google.live) {
-      await upsertListing(env, storeApp.id, { live_at: t });
-      await env.DB.prepare(`UPDATE store_apps SET status = 'LIVE', note = 'Live in both stores', updated_at = ? WHERE id = ? AND status = 'IN_REVIEW'`).bind(t, storeApp.id).run();
-      await emailBuyerLive(env, storeApp, context, {
+      // The version that just went live is the one this build asked for (store-build.js nextVersion); the next
+      // rebuild asks for one above it. An update of an app already live doesn't email the buyer again.
+      await upsertListing(env, storeApp.id, { live_at: t, live_version: apple.build || nextVersion(row.live_version) });
+      await env.DB.prepare(`UPDATE store_apps SET status = 'LIVE', note = ?, updated_at = ? WHERE id = ? AND status = 'IN_REVIEW'`)
+        .bind(row.live_version ? "Update live in both stores" : "Live in both stores", t, storeApp.id).run();
+      if (!row.live_version) await emailBuyerLive(env, storeApp, context, {
         apple: `https://apps.apple.com/app/id${encodeURIComponent(apple.appId || "")}`,
         google: `https://play.google.com/store/apps/details?id=${encodeURIComponent(storeApp.bundle_id)}`
       }, false);

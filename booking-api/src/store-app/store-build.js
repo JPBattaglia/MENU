@@ -32,6 +32,17 @@ const DISPATCH_URL = "https://api.github.com/repos/JPBattaglia/MENU/actions/work
 const RUNS_URL = "https://github.com/JPBattaglia/MENU/actions/workflows/store-app-build.yml";
 const REBUILD_KIND = "storeapp-rebuild";
 const BUILD_TIMEOUT_MS = 2 * 3600000;
+// The version string a build asks for: 1.0.0 for an app never live, else one patch above what is live in the stores
+// (a yearly or fix rebuild of a live app needs a higher version; the build number is the workflow run number).
+function nextVersion(live) {
+  const m = /^(\d{1,4})\.(\d{1,4})\.(\d{1,4})$/.exec(String(live || "").trim());
+  return m ? `${m[1]}.${m[2]}.${Number(m[3]) + 1}` : "1.0.0";
+}
+async function liveVersionOf(env, storeAppId) {
+  const row = await env.DB.prepare(`SELECT live_version FROM store_app_listings WHERE store_app_id = ?`).bind(storeAppId).first();
+  return row?.live_version || null;
+}
+
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
 // Statuses a build may run in: the first build, and rebuilds once it is in the stores (yearly SDK updates).
 const BUILDABLE = new Set(["READY_TO_BUILD", "BUILDING", "WAITING_SUBMIT_APPROVAL", "IN_REVIEW", "LIVE", "REJECTED"]);
@@ -81,7 +92,7 @@ async function buildConfigFor(env, storeApp, packageId = storeApp.bundle_id) {
       app_name: appNameOf(data),
       brand_color: brandOf(data),
       api_base: `${appUrl({ ...env, SITE_WILDCARD: "1" }, row.slug)}api`,
-      version: "1.0.0"
+      version: nextVersion(await liveVersionOf(env, storeApp.id))
     },
     icon_svg: draw(0.14),
     android_foreground_svg: draw(0.24),
@@ -239,4 +250,4 @@ async function handleRebuild(request, env, id) {
   return simplePage(200, "Queued", "<p>The build starts within 5 minutes. You'll get an email only if something needs a look.</p>");
 }
 
-export { BUILD_AUDIENCE, BUILD_WORKFLOW, REBUILD_KIND, advanceStoreBuilds, buildConfigFor, rebuildLink, recordBuildResult, buildTarget, handleBuildConfig, handleBuildResult, handleRebuild };
+export { BUILD_AUDIENCE, BUILD_WORKFLOW, REBUILD_KIND, advanceStoreBuilds, buildConfigFor, liveVersionOf, nextVersion, rebuildLink, recordBuildResult, buildTarget, handleBuildConfig, handleBuildResult, handleRebuild };
