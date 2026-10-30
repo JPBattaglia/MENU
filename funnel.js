@@ -5,7 +5,7 @@
   if (!['menu-made.com', 'www.menu-made.com'].includes(windowHost)) return;
   const query = new URLSearchParams(location.search);
   if (navigator.globalPrivacyControl || navigator.doNotTrack === '1' || query.get('mm_measurement') === 'off') return;
-  const pageNames = ['index', 'services', 'contact', 'about', 'accessability', 'portfolio', 'sample-menu', 'checkoutsuccess', 'website-design', 'google-visibility', 'accessibility-services', 'work-pinecrest', 'work-nino', 'work-marios', 'app-demo', 'plans', 'privacy', 'account'];
+  const pageNames = ['index', 'services', 'contact', 'about', 'accessability', 'portfolio', 'sample-menu', 'checkoutsuccess', 'website-design', 'google-visibility', 'accessibility-services', 'work-pinecrest', 'work-nino', 'work-happy-donut', 'work-fahys', 'app-demo', 'plans', 'privacy', 'account'];
   const paths = new Set(['/', ...pageNames.flatMap(name => ['/' + name, '/' + name + '.html'])]);
   const path = paths.has(location.pathname) ? location.pathname : '/other';
   const token = value => /^[a-z0-9_-]{1,64}$/i.test(value || '') ? value.toLowerCase() : null;
@@ -15,7 +15,7 @@
   const offers = { online_menu_qr: 'offer_online_menu_qr', conversion_fix: 'offer_conversion_fix', google_visibility: 'offer_google_visibility', accessibility_upgrade: 'offer_accessibility_upgrade', website_package: 'offer_website_package', accessibility_monitoring: 'offer_accessibility_monitoring' };
   services.website_package = 'website_package'; services.accessibility_monitoring = 'accessibility_monitoring';
   const pageServices = { 'website-design': 'website_package', 'google-visibility': 'google_visibility', 'accessibility-services': 'accessibility_monitoring' };
-  const caseServices = { 'work-pinecrest': 'online_menu_qr', 'work-nino': 'website', 'work-marios': 'website' };
+  const caseServices = { 'work-pinecrest': 'online_menu_qr', 'work-nino': 'website', 'work-happy-donut': 'website', 'work-fahys': 'website' };
   let referrer = null;
   try { const u = new URL(document.referrer); if (!['menu-made.com', 'www.menu-made.com'].includes(u.hostname)) referrer = u.hostname.slice(0, 100); } catch {}
   let session;

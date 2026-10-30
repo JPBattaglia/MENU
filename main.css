@@ -2827,3 +2827,12 @@ details.merch-panel summary::before{content:"▸ ";font-size:1.3em}details.merch
 /* Oct 29, 2026 (owner): the chooser stays in the left column, 2 cards across, and Your order stays in view on the
    right while the chooser is scrolled (larger screens only; phones and tablets stack as before). */
 @media (min-width:901px){:where(body.start-page) .cart{position:sticky;top:110px;align-self:start;max-height:calc(100vh - 130px);overflow-y:auto;overscroll-behavior:contain}}
+/* Oct 29, 2026: project pages — logo modifications grid (Fahy's) and a menu figure (My Happy Donut). */
+:where(body.project-page) .project-logo-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:22px}
+:where(body.project-page) .project-logo-grid figure{margin:0;display:flex;flex-direction:column;gap:10px}
+:where(body.project-page) .project-logo-grid img{width:100%;height:220px;object-fit:contain;padding:18px;box-sizing:border-box;background:#1d2a2c;border:var(--image-border);border-radius:18px}
+:where(body.project-page) .project-logo-grid figcaption,:where(body.project-page) .project-menu-figure figcaption{color:var(--muted);font-size:15px}
+:where(body.project-page) .project-menu-figure{margin:30px auto 0;max-width:484px;display:flex;flex-direction:column;gap:10px}
+:where(body.project-page) .project-menu-figure img{width:100%;height:auto;border:var(--image-border);border-radius:18px}
+@media (max-width:900px){:where(body.project-page) .project-logo-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media (max-width:520px){:where(body.project-page) .project-logo-grid{grid-template-columns:1fr}}
