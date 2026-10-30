@@ -92,3 +92,24 @@ test('the checkout gets a self-test customer on a Stripe test clock, as the chec
   assert.deepEqual(sent.items, [{ key: 'WEBSITE_PACKAGE' }]);
   assert.ok(f.stripe.includes('DELETE /v1/test_helpers/test_clocks/clock_1'), 'a failed start still deletes its clock');
 });
+
+test('STORE_APP_TRIAL_RUN: buys the Store App Setup and checks the app tier trial (STORE_APP_CARE, Store App project)', async () => {
+  const f = setup();
+  f.sql(`UPDATE projects SET workflow_key = 'STORE_APP_SETUP_V1'`);
+  f.sql(`UPDATE entitlements SET entitlement_type = 'STORE_APP_CARE'`);
+  f.sql(`UPDATE self_tests SET kind = 'STORE_APP_TRIAL_RUN'`);
+  await withFetch(f.fetch, async () => {
+    await advanceWebsiteTrialSelfTests(f.env, null);
+    const r = f.row(`SELECT stage, log_json FROM self_tests`);
+    assert.equal(r.stage, 'AWAIT_CANCELLED');
+    assert.match(r.log_json, /app tier\) TRIALING/);
+    assert.match(r.log_json, /Store App project created/);
+  });
+  const g = setup();
+  g.sql(`UPDATE self_tests SET kind = 'STORE_APP_TRIAL_RUN', status = 'REQUESTED', stage = NULL, order_id = NULL, state_json = NULL`);
+  let sent = null;
+  const app = async (request) => { sent = await request.json(); return Response.json({ ok: false, error: 'stop here' }, { status: 400 }); };
+  await withFetch(g.fetch, async () => { await advanceWebsiteTrialSelfTests(g.env, app); });
+  assert.deepEqual(sent.items, [{ key: 'STORE_APP_SETUP' }]);
+  assert.match(g.row(`SELECT error FROM self_tests`).error, /^Store App checkout failed/);
+});
