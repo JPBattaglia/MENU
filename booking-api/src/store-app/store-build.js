@@ -66,20 +66,18 @@ async function appRow(env, storeApp) {
 }
 const appNameOf = (data) => String(data.app_name || "").trim().slice(0, 30);
 
-async function handleBuildConfig(request, env) {
-  const target = await buildTarget(request, env);
-  if (target.error) return target.error;
-  if (!target.storeApp) return json({ ok: false, error: "The owner's sample uses app-shell/sample/build.json" }, 404);
-  const { row, data } = await appRow(env, target.storeApp);
-  if (!row?.slug || !appNameOf(data)) return json({ ok: false, error: "The app content is missing" }, 409);
-  const logo = env.ASSETS ? await findAppLogo(env, { id: target.storeApp.project_id, business_id: row.business_id }) : null;
+// The build config answer for one store app (the self-test calls this directly). -> { status, body }
+async function buildConfigFor(env, storeApp, packageId = storeApp.bundle_id) {
+  const { row, data } = await appRow(env, storeApp);
+  if (!row?.slug || !appNameOf(data)) return { status: 409, body: { ok: false, error: "The app content is missing" } };
+  const logo = env.ASSETS ? await findAppLogo(env, { id: storeApp.project_id, business_id: row.business_id }) : null;
   const logoObject = logo ? await env.ASSETS.get(logo.storage_key) : null;
   const logoUri = logoObject ? `data:${logo.mime_type};base64,${base64(new Uint8Array(await logoObject.arrayBuffer()))}` : null;
   const draw = (pad) => { const svg = storeIconSvg(data, { hasLogo: Boolean(logoUri), pad }); return logoUri ? svg.replace(LOGO_PLACEHOLDER, logoUri) : svg; };
-  return json({
+  return { status: 200, body: {
     ok: true,
     config: {
-      app_id: target.packageId,
+      app_id: packageId,
       app_name: appNameOf(data),
       brand_color: brandOf(data),
       api_base: `${appUrl({ ...env, SITE_WILDCARD: "1" }, row.slug)}api`,
@@ -88,7 +86,15 @@ async function handleBuildConfig(request, env) {
     icon_svg: draw(0.14),
     android_foreground_svg: draw(0.24),
     feature_svg: featureSvg(data, logoUri)
-  });
+  } };
+}
+
+async function handleBuildConfig(request, env) {
+  const target = await buildTarget(request, env);
+  if (target.error) return target.error;
+  if (!target.storeApp) return json({ ok: false, error: "The owner's sample uses app-shell/sample/build.json" }, 404);
+  const out = await buildConfigFor(env, target.storeApp, target.packageId);
+  return json(out.body, out.status);
 }
 
 // Google Play's feature graphic (1024 x 500): the brand colour, the logo (or nothing) and the app name.
@@ -141,11 +147,17 @@ async function handleBuildResult(request, env) {
   if (!target.storeApp) return json({ ok: true, recorded: false }); // the owner's sample build has no row to move
   let body;
   try { body = JSON.parse(await request.text()); } catch { return json({ ok: false, error: "Bad request" }, 400); }
+  const out = await recordBuildResult(env, target.storeApp, body);
+  return json(out.body, out.status);
+}
+
+// One platform's result for one store app (the self-test calls this directly). -> { status, body }
+async function recordBuildResult(env, storeApp, body) {
+  const json = (data, status = 200) => ({ status, body: data });
   const platform = String(body?.platform || ""); const outcome = String(body?.outcome || "");
   if (!["ios", "android"].includes(platform) || !["UPLOADED", "FIRST_UPLOAD", "FAILED"].includes(outcome)) return json({ ok: false, error: "platform must be ios or android; outcome UPLOADED, FIRST_UPLOAD or FAILED" }, 400);
   const version = /^\d{1,9}$/.test(String(body.version || "")) ? Number(body.version) : null;
   const runId = /^\d{1,20}$/.test(String(body.run_id || "")) ? String(body.run_id) : null;
-  const storeApp = target.storeApp;
   const t = nowIso();
   await env.DB.prepare(`INSERT INTO store_app_builds (id, store_app_id, platform, outcome, version, run_id, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)`)
     .bind(crypto.randomUUID(), storeApp.id, platform, outcome, version, runId, t).run();
@@ -182,9 +194,11 @@ async function dispatchBuild(env, storeApp) {
   return { started: status === 204, status };
 }
 
-async function advanceStoreBuilds(env, now = Date.now()) {
+async function advanceStoreBuilds(env, now = Date.now(), { only = null } = {}) {
   if (!env.DB) return { started: 0 };
-  const rows = (await env.DB.prepare(`SELECT * FROM store_apps WHERE status IN ('READY_TO_BUILD', 'BUILDING') ORDER BY updated_at LIMIT 10`).all()).results || [];
+  const rows = (only
+    ? await env.DB.prepare(`SELECT * FROM store_apps WHERE id = ? AND status IN ('READY_TO_BUILD', 'BUILDING')`).bind(only).all()
+    : await env.DB.prepare(`SELECT * FROM store_apps WHERE status IN ('READY_TO_BUILD', 'BUILDING') ORDER BY updated_at LIMIT 10`).all()).results || [];
   let started = 0;
   for (const row of rows) {
     if (row.status === "READY_TO_BUILD") {
@@ -225,4 +239,4 @@ async function handleRebuild(request, env, id) {
   return simplePage(200, "Queued", "<p>The build starts within 5 minutes. You'll get an email only if something needs a look.</p>");
 }
 
-export { BUILD_AUDIENCE, BUILD_WORKFLOW, REBUILD_KIND, advanceStoreBuilds, rebuildLink, buildTarget, handleBuildConfig, handleBuildResult, handleRebuild };
+export { BUILD_AUDIENCE, BUILD_WORKFLOW, REBUILD_KIND, advanceStoreBuilds, buildConfigFor, rebuildLink, recordBuildResult, buildTarget, handleBuildConfig, handleBuildResult, handleRebuild };

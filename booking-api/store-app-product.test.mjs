@@ -153,3 +153,20 @@ test('site: the Store App page exists but stays hidden until the exit (noindex, 
   }
   assert.doesNotMatch(readFileSync(new URL('sitemap.xml', root), 'utf8'), /store-app/);
 });
+
+test('self-test STORE_APP_RUN passes through the real steps, reaches no store or GitHub, emails only the test inbox, and leaves nothing behind', async () => {
+  const f = setup();
+  for (const m of ['0026_store_app_builds.sql', '0027_store_app_listings.sql']) f.DB.raw.exec(read(m));
+  f.env.GITHUB_DISPATCH_TOKEN = 'real-token';
+  f.env.GITHUB_DISPATCH_FETCH = async () => { throw new Error('the real GitHub was called'); };
+  const { advanceStoreAppSelfTests } = await import('./src/selftest/store-app-selftest.js');
+  emails.length = 0;
+  f.sql(`INSERT INTO self_tests (id, kind, status, created_at, updated_at) VALUES ('st-store', 'STORE_APP_RUN', 'REQUESTED', 'x', 'x')`);
+  const [result] = await advanceStoreAppSelfTests(f.env);
+  assert.equal(result.status, 'PASSED', result.error || '');
+  assert.match(result.log_json, /sandbox live and buyer email/);
+  assert.ok(emails.length >= 4, 'buyer checklist, owner checklist, preview and live email');
+  for (const e of emails) assert.deepEqual(e.to, ['delivered@resend.dev'], `${e.subject} went to ${e.to}`);
+  for (const table of ['store_apps', 'store_app_listings', 'store_app_builds', 'store_credentials']) assert.equal(f.row(`SELECT COUNT(*) AS n FROM ${table}`).n, 0, `${table} left behind`);
+  assert.equal(f.row(`SELECT COUNT(*) AS n FROM guest_apps`).n, 0);
+});

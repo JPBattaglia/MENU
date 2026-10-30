@@ -114,9 +114,12 @@ async function appApproved(env, projectId) {
 }
 
 // From the 5-minute tick. Reads only the open rows (partial index).
-async function advanceStoreApps(env, now = Date.now()) {
+// only = one store app id (the self-test runs its own scaffold without touching anyone else's).
+async function advanceStoreApps(env, now = Date.now(), { only = null } = {}) {
   if (!env.DB) return { moved: 0 };
-  const rows = (await env.DB.prepare(`SELECT * FROM store_apps WHERE status IN ('WAITING_APP', 'WAITING_STORE_ACCESS', 'WAITING_OWNER_SETUP') ORDER BY updated_at LIMIT 10`).all()).results || [];
+  const rows = (only
+    ? await env.DB.prepare(`SELECT * FROM store_apps WHERE id = ? AND status IN ('WAITING_APP', 'WAITING_STORE_ACCESS', 'WAITING_OWNER_SETUP')`).bind(only).all()
+    : await env.DB.prepare(`SELECT * FROM store_apps WHERE status IN ('WAITING_APP', 'WAITING_STORE_ACCESS', 'WAITING_OWNER_SETUP') ORDER BY updated_at LIMIT 10`).all()).results || [];
   let moved = 0;
   for (const row of rows) {
     const since = row.last_email_at ? now - Date.parse(row.last_email_at) : Infinity;

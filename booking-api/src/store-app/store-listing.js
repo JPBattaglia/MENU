@@ -108,16 +108,22 @@ async function handleListingImage(request, env) {
   if (target.error) return target.error;
   if (!target.storeApp) return json({ ok: true, stored: false }); // the owner's sample build has no listing
   const name = new URL(request.url).searchParams.get("name") || "";
+  const out = await storeListingImage(env, target.storeApp, name, new Uint8Array(await request.arrayBuffer()));
+  return json(out.body, out.status);
+}
+
+// One listing picture for one store app (the self-test calls this directly). -> { status, body }
+async function storeListingImage(env, storeApp, name, bytes) {
+  const json = (data, status = 200) => ({ status, body: data });
   if (!IMAGE_NAMES.includes(name)) return json({ ok: false, error: `name must be one of ${IMAGE_NAMES.join(", ")}` }, 400);
-  const bytes = new Uint8Array(await request.arrayBuffer());
   if (bytes.length > MAX_IMAGE_BYTES) return json({ ok: false, error: "Too large" }, 413);
   if (bytes.length < 100 || bytes[0] !== 0x89 || bytes[1] !== 0x50 || bytes[2] !== 0x4e || bytes[3] !== 0x47) return json({ ok: false, error: "Not a PNG" }, 422);
   const v = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
   const size = { w: v.getUint32(16), h: v.getUint32(20) };
-  await env.ASSETS.put(imageKey(target.storeApp.id, name), bytes, { httpMetadata: { contentType: "image/png" } });
-  const row = await listingRow(env, target.storeApp.id);
+  await env.ASSETS.put(imageKey(storeApp.id, name), bytes, { httpMetadata: { contentType: "image/png" } });
+  const row = await listingRow(env, storeApp.id);
   const images = { ...parse(row?.images_json, {}), [name]: { ...size, at: nowIso() } };
-  await upsertListing(env, target.storeApp.id, { images_json: JSON.stringify(images) });
+  await upsertListing(env, storeApp.id, { images_json: JSON.stringify(images) });
   return json({ ok: true, stored: bytes.length, ...size });
 }
 
@@ -245,9 +251,12 @@ async function submitBoth(env, storeApp, listing, context, deps) {
   return out;
 }
 
+// deps: { fetchImpl } for Apple and Google; { only } = one store app id (the self-test's scaffold).
 async function advanceStoreListings(env, now = Date.now(), deps = {}) {
   if (!env.DB) return { moved: 0 };
-  const rows = (await env.DB.prepare(`SELECT * FROM store_apps WHERE status IN ('WAITING_SUBMIT_APPROVAL', 'IN_REVIEW') ORDER BY updated_at LIMIT 10`).all()).results || [];
+  const rows = (deps.only
+    ? await env.DB.prepare(`SELECT * FROM store_apps WHERE id = ? AND status IN ('WAITING_SUBMIT_APPROVAL', 'IN_REVIEW')`).bind(deps.only).all()
+    : await env.DB.prepare(`SELECT * FROM store_apps WHERE status IN ('WAITING_SUBMIT_APPROVAL', 'IN_REVIEW') ORDER BY updated_at LIMIT 10`).all()).results || [];
   let moved = 0;
   for (const storeApp of rows) {
     const row = await listingRow(env, storeApp.id);
@@ -352,4 +361,4 @@ async function advanceStoreListings(env, now = Date.now(), deps = {}) {
   return { moved };
 }
 
-export { IMAGE_NAMES, LISTING_KIND, advanceStoreListings, handleListingImage, handleListingImageView, handleListingPage, imageKey, listingText };
+export { IMAGE_NAMES, LISTING_KIND, advanceStoreListings, storeListingImage, handleListingImage, handleListingImageView, handleListingPage, imageKey, listingText };
