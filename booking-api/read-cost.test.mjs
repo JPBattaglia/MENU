@@ -17,7 +17,8 @@ const migration = readFileSync(new URL('./migrations/0003_read_cost_indexes.sql'
   + readFileSync(new URL('./migrations/0023_native_push.sql', import.meta.url), 'utf8')
   + readFileSync(new URL('./migrations/0024_android.sql', import.meta.url), 'utf8')
   + readFileSync(new URL('./migrations/0025_store_app.sql', import.meta.url), 'utf8')
-  + readFileSync(new URL('./migrations/0026_store_app_builds.sql', import.meta.url), 'utf8');
+  + readFileSync(new URL('./migrations/0026_store_app_builds.sql', import.meta.url), 'utf8')
+  + readFileSync(new URL('./migrations/0027_store_app_listings.sql', import.meta.url), 'utf8');
 
 // Tables that grow without bound. A full SCAN of one of these inside the scheduled tick is a failure.
 const GROWING = ['workflow_steps', 'workflow_runs', 'business_events', 'approvals', 'projects', 'orders', 'communications', 'deliverables', 'push_messages', 'push_subscriptions', 'loyalty_events', 'native_push_jobs', 'native_push_devices', 'android_push_jobs', 'store_apps'];

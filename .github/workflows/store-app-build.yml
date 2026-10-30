@@ -4,6 +4,7 @@
 # sign the iOS build and upload it to TestFlight, with the key fetched from the worker over this workflow's OIDC token
 # and masked (it never lives in this repo). patch-ios.mjs adds the AppDelegate hooks native push needs.
 #
+# iPhone only (TARGETED_DEVICE_FAMILY=1): an iPad build would need iPad screenshots in the App Store listing.
 # Restaurants (Oct 30, 2026): the worker starts this workflow with store_app=<store app id>, upload ticked. The
 # restaurant-config job then fetches that app's build config and icons from the worker (booking-api/scripts/
 # store-icons.mjs draws them), every later job builds from those instead of the sample, keys come by store app id, and
@@ -75,6 +76,26 @@ jobs:
           node booking-api/scripts/store-icons.mjs "$RUNNER_TEMP/config.json" "$RUNNER_TEMP/restaurant"
           node app-shell/configure.mjs "$RUNNER_TEMP/restaurant/build.json" >/dev/null
           echo "Build config checked"
+      # Store listing pictures (store-listing.js): screenshots of the real app screens with the live content, plus the
+      # Play icon and feature graphic drawn above, sent to the worker. The owner sees them before anything is submitted.
+      - name: Take the store screenshots
+        run: |
+          mkdir -p "$RUNNER_TEMP/pw" && cd "$RUNNER_TEMP/pw" && npm init -y >/dev/null && npm install --no-audit --no-fund playwright >/dev/null
+          npx playwright install --with-deps chromium >/dev/null
+          cd "$GITHUB_WORKSPACE"
+          python3 -m http.server 8123 --directory app-shell/www >/dev/null 2>&1 &
+          sleep 1
+          PW_DIR="$RUNNER_TEMP/pw" node booking-api/scripts/store-screenshots.mjs http://127.0.0.1:8123/ "$RUNNER_TEMP/restaurant/listing"
+      - name: Send the listing pictures to the worker
+        run: |
+          token=$(curl -sSf -H "Authorization: Bearer $ACTIONS_ID_TOKEN_REQUEST_TOKEN" "$ACTIONS_ID_TOKEN_REQUEST_URL&audience=menu-made-store-build" | jq -r .value)
+          echo "::add-mask::$token"
+          for f in "$RUNNER_TEMP"/restaurant/listing/*.png; do
+            name=$(basename "$f" .png)
+            curl -sSf -X POST -H "Authorization: Bearer $token" -H "Content-Type: image/png" --data-binary @"$f" \
+              "https://menu-made.com/api/store-build/listing?store_app=$STORE_APP&name=$name" -o /dev/null
+          done
+          echo "Listing pictures sent: $(ls "$RUNNER_TEMP"/restaurant/listing/*.png | wc -l)"
       - uses: actions/upload-artifact@v4
         with:
           name: restaurant-config
@@ -301,7 +322,7 @@ jobs:
           app_id=$(jq -r .app_id "$GITHUB_WORKSPACE/$CONFIG"); version=$(jq -r '.version // "1.0.0"' "$GITHUB_WORKSPACE/$CONFIG")
           xcodebuild $target -scheme App -configuration Release -destination 'generic/platform=iOS' -archivePath "$RUNNER_TEMP/App.xcarchive" \
             -allowProvisioningUpdates -authenticationKeyPath "$RUNNER_TEMP/AuthKey.p8" -authenticationKeyID "$ASC_KEY_ID" -authenticationKeyIssuerID "$ASC_ISSUER_ID" \
-            DEVELOPMENT_TEAM="$TEAM_ID" CODE_SIGN_STYLE=Automatic CODE_SIGN_ENTITLEMENTS=App/App.entitlements PRODUCT_BUNDLE_IDENTIFIER="$app_id" \
+            TARGETED_DEVICE_FAMILY=1 DEVELOPMENT_TEAM="$TEAM_ID" CODE_SIGN_STYLE=Automatic CODE_SIGN_ENTITLEMENTS=App/App.entitlements PRODUCT_BUNDLE_IDENTIFIER="$app_id" \
             MARKETING_VERSION="$version" CURRENT_PROJECT_VERSION="${{ github.run_number }}" archive -quiet
       - name: Upload to TestFlight
         run: |
