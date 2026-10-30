@@ -129,6 +129,7 @@ test('listing text fits every store limit and says what the app does', () => {
   assert.match(l.description, /order online/);
   assert.match(l.description, /rewards card/);
   assert.ok(l.keywords.length <= 100 && !/\s/.test(l.keywords), l.keywords);
+  assert.equal(l.keywords, 'petaluma,menu,restaurant,food,specials,rewards,order,hours', 'no words from the name (Apple searches the name already)');
   assert.ok(l.play_short.length <= 80);
   assert.equal(l.copyright, "2026 Joe's Pizza LLC");
   assert.equal(l.privacy_url, 'https://menu-made.com/privacy.html');

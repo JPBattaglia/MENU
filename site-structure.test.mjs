@@ -64,7 +64,8 @@ test('local page links, assets and section targets exist',()=>{
 
 test('sitemap contains every public page once and excludes payment utilities',()=>{
  const urls=[...read('sitemap.xml').matchAll(/<loc>(.*?)<\/loc>/g)].map(m=>m[1]);
- const expected=pages.filter(p=>!p.startsWith('checkout')).map(p=>'https://menu-made.com/'+(p==='index.html'?'':p.replace(/\.html$/,''))).sort();
+ // noindex pages (store-app.html until the stage 11 exit) stay out of the sitemap.
+ const expected=pages.filter(p=>!p.startsWith('checkout')&&!/<meta name="robots" content="noindex">/.test(read(p))).map(p=>'https://menu-made.com/'+(p==='index.html'?'':p.replace(/\.html$/,''))).sort();
  assert.deepEqual([...urls].sort(),expected);assert.equal(new Set(urls).size,urls.length);
  assert.match(read('robots.txt'),/Sitemap: https:\/\/menu-made\.com\/sitemap\.xml/);
 });

@@ -4,6 +4,7 @@
 // Run: node --no-warnings --test booking-api/store-app-product.test.mjs
 import { test, after } from 'node:test';
 import assert from 'node:assert/strict';
+import * as fs from 'node:fs';
 import { readFileSync } from 'node:fs';
 import { createD1, createR2 } from './test-support/d1.mjs';
 
@@ -135,4 +136,20 @@ test('store steps: buyer checklist after approval, reminders, buyer Done -> owne
   await call(f, `https://menu-made.com/api/store-app/${id}/done`, { method: 'POST', body: ownerForm() });
   assert.equal(f.row(`SELECT status FROM store_apps`).status, 'READY_TO_BUILD');
   assert.equal((await call(f, `https://menu-made.com/api/store-app/${id}/done?t=bad`)).status, 403);
+});
+
+test('site: the Store App page exists but stays hidden until the exit (noindex, linked from nowhere, prices from the catalog)', () => {
+  const { readdirSync } = fs;
+  const root = new URL('../', import.meta.url);
+  const page = readFileSync(new URL('store-app.html', root), 'utf8');
+  assert.match(page, /<meta name="robots" content="noindex">/);
+  assert.match(page, /data-price-for="STORE_APP_SETUP"/);
+  assert.match(page, /data-price-for="STORE_APP_CARE" data-price-interval="month"/);
+  assert.match(page, /data-plan-cta="STORE_APP_SETUP"/, 'the button reads "Opening soon" while the offer is not on sale');
+  assert.match(page, /isn’t guaranteed/);
+  assert.doesNotMatch(page, /\$(999|99\/mo|990)/, 'no hard-coded Menu-made prices (Apple and Google fees are theirs)');
+  for (const f of readdirSync(root).filter((n) => n.endsWith('.html') && n !== 'store-app.html')) {
+    assert.doesNotMatch(readFileSync(new URL(f, root), 'utf8'), /store-app\.html/, `${f} links the hidden page`);
+  }
+  assert.doesNotMatch(readFileSync(new URL('sitemap.xml', root), 'utf8'), /store-app/);
 });
