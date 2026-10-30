@@ -12,7 +12,7 @@ from pathlib import Path
 import re
 
 ROOT = Path(__file__).resolve().parent.parent
-CSS_VERSION = "20261029-work3"
+CSS_VERSION = "20261029-noarrows"
 CATALOG_JS = '<script src="site-catalog.js?v=20261028-stage9" defer></script>'
 
 NAV = [
@@ -32,7 +32,7 @@ FOOTER_LINKS = (
     '<a href="google-visibility.html">Google Visibility</a>'
     '<a href="accessibility-services.html">Accessibility Monitoring</a>'
     '<a href="staff-merch.html">Staff Merch</a>'
-    '<a href="https://ninobattaglia.com/services.html#design-services">Design by Nino &#8599;</a>'
+    '<a href="https://ninobattaglia.com/services.html#design-services">Design by Nino</a>'
     '<a href="portfolio.html">Our Work</a>'
     '<a href="about.html">Meet JP &amp; Nino</a>'
     '<a href="account.html">Your account</a>'
@@ -569,11 +569,11 @@ def team_and_design_block(include_merch=False):
     <div class="mm-singles">
 <article class="mm-single">
   <h3>Nino's shirt shop</h3><p>Original shirt designs by Nino, printed when you order and shipped to you.</p>
-  <div class="mm-single-actions"><a class="btn primary" href="https://ninobattaglia.com/">Visit the shop &#8599;</a></div>
+  <div class="mm-single-actions"><a class="btn primary" href="https://ninobattaglia.com/">Visit the shop</a></div>
 </article>
 <article class="mm-single">
   <h3>Design by Nino</h3><p>A logo, a flyer, a redesigned print menu or a pack of social graphics, made for your business and approved by Nino before it reaches you.</p>
-  <div class="mm-single-actions"><a class="btn primary" href="https://ninobattaglia.com/services.html#design-services">Design services &#8599;</a></div>
+  <div class="mm-single-actions"><a class="btn primary" href="https://ninobattaglia.com/services.html#design-services">Design services</a></div>
 </article>
     </div>
   </div>
@@ -951,7 +951,6 @@ def page_start():
           <span class="service-picker-action" aria-hidden="true">
             <span class="service-picker-show">Show options</span>
             <span class="service-picker-hide">Hide options</span>
-            <span class="service-picker-chevron"></span>
           </span>
         </summary>
         <div class="optional-content">
