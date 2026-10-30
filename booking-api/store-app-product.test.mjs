@@ -5,13 +5,15 @@
 import { test, after } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { createD1 } from './test-support/d1.mjs';
+import { createD1, createR2 } from './test-support/d1.mjs';
 
 const { default: worker } = await import('./src/worker.js');
 const { buildSubscriptionCart } = await import('./src/subscriptions/checkout.js');
 const flow = await import('./src/store-app/store-flow.js');
 const sw = await import('./src/lib/switches.js');
 const { signLinkToken } = await import('./src/lib/links.js');
+const keys = await import('./src/store-app/keys.js');
+const gkeys = await import('./src/store-app/google-keys.js');
 const read = (name) => readFileSync(new URL(`./migrations/${name}`, import.meta.url), 'utf8');
 
 // Resend stand-in: records every email.
@@ -26,12 +28,13 @@ after(() => { globalThis.fetch = realFetch; });
 function setup() {
   emails.length = 0;
   const DB = createD1();
-  for (const m of ['0001_subscription_catalog.sql', '0009_website_package.sql', '0010_website_care.sql', '0012_guest_app.sql', '0025_store_app.sql']) DB.raw.exec(read(m));
+  for (const m of ['0001_subscription_catalog.sql', '0009_website_package.sql', '0010_website_care.sql', '0012_guest_app.sql', '0022_store_credentials.sql', '0025_store_app.sql']) DB.raw.exec(read(m));
   DB.raw.exec('PRAGMA foreign_keys = OFF');
   const sql = (q, ...a) => DB.raw.prepare(q).run(...a);
   const row = (q, ...a) => { const r = DB.raw.prepare(q).get(...a); return r ? { ...r } : r; };
-  const env = { DB, PRODUCTION_RUNNER_SECRET: 'runner-secret', RESEND_API_KEY: 're_test', OWNER_EMAIL: 'info@menu-made.com' };
-  return { env, DB, sql, row };
+  const ASSETS = createR2();
+  const env = { DB, ASSETS, PRODUCTION_RUNNER_SECRET: 'runner-secret', RESEND_API_KEY: 're_test', OWNER_EMAIL: 'info@menu-made.com' };
+  return { env, DB, ASSETS, sql, row };
 }
 const call = (f, url, init) => worker.fetch(new Request(url, init), f.env, { waitUntil() {} });
 
@@ -116,8 +119,20 @@ test('store steps: buyer checklist after approval, reminders, buyer Done -> owne
   const wrongKind = new FormData(); wrongKind.set('t', buyerToken);
   await call(f, `https://menu-made.com/api/store-app/${id}/done`, { method: 'POST', body: wrongKind });
   assert.equal(f.row(`SELECT status FROM store_apps`).status, 'WAITING_OWNER_SETUP', "the buyer's link can't finish the owner's step");
-  const ownerForm = new FormData(); ownerForm.set('t', await signLinkToken(f.env, { kind: flow.OWNER_KIND, id, ttlDays: 30 }));
-  await call(f, `https://menu-made.com/api/store-app/${id}/done`, { method: 'POST', body: ownerForm });
+  assert.match(ownerMail.html, new RegExp(`/api/store-keys/app/${id}`), 'the owner checklist links the restaurant key page');
+  const ownerToken = await signLinkToken(f.env, { kind: flow.OWNER_KIND, id, ttlDays: 30 });
+  const ownerForm = () => { const fd = new FormData(); fd.set('t', ownerToken); return fd; };
+  const refused = await call(f, `https://menu-made.com/api/store-app/${id}/done`, { method: 'POST', body: ownerForm() });
+  assert.equal(refused.status, 409);
+  const refusedText = await refused.text();
+  assert.match(refusedText, /App Store Connect API key/);
+  assert.match(refusedText, /google-services\.json/);
+  assert.equal(f.row(`SELECT status FROM store_apps`).status, 'WAITING_OWNER_SETUP', "Done waits for the restaurant's keys");
+  // The restaurant's keys, as the key page stores them (scope = business id).
+  await keys.saveCredential(f.env, 'biz', 'APPLE_API_KEY', { keyId: 'API1234567', issuerId: 'i', teamId: 'T', p8: 'x', status: 'VERIFIED', note: 'ok' });
+  await keys.saveCredential(f.env, 'biz', 'APPLE_PUSH_KEY', { keyId: 'PUSH123456', teamId: 'T', p8: 'x', status: 'UNVERIFIED', note: 'saved' });
+  await f.ASSETS.put(gkeys.servicesKey('biz'), '{}');
+  await call(f, `https://menu-made.com/api/store-app/${id}/done`, { method: 'POST', body: ownerForm() });
   assert.equal(f.row(`SELECT status FROM store_apps`).status, 'READY_TO_BUILD');
   assert.equal((await call(f, `https://menu-made.com/api/store-app/${id}/done?t=bad`)).status, 403);
 });

@@ -48,6 +48,7 @@ import { advanceStage5ExitTests } from "./selftest/stage5-exit-selftest.js";
 import { handleGoogleMedia, handlePhotoLibrary } from "./producers/google-care/library.js";
 import { handleGoogleCallback, handleGoogleConnect, handleGoogleLocation } from "./google/connect.js";
 import { handleStoreKeys } from "./store-app/keys.js";
+import { handleRestaurantKeys } from "./store-app/restaurant-keys.js";
 import { handleAndroidBundle, handleAndroidKey, handleBuildCredentials, handleBundleDownload } from "./store-app/build-credentials.js";
 import { advanceAccessibilitySelfTests } from "./selftest/accessibility-selftest.js";
 import { advanceSocialPostsSelfTests } from "./selftest/social-posts-selftest.js";
@@ -93,6 +94,8 @@ var worker_default = {
     if (bundleMatch && request.method === "GET") return handleBundleDownload(request, env, bundleMatch[1]);
     if (url.pathname === "/api/store-keys/owner" && (request.method === "GET" || request.method === "POST")) return handleStoreKeys(request, env);
     if (url.pathname === "/api/store-keys/google" && (request.method === "GET" || request.method === "POST")) return handleGoogleKeys(request, env);
+    const restaurantKeysMatch = url.pathname.match(/^\/api\/store-keys\/app\/([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})$/i);
+    if (restaurantKeysMatch && (request.method === "GET" || request.method === "POST")) return handleRestaurantKeys(request, env, restaurantKeysMatch[1].toLowerCase());
     if (url.pathname === "/api/switches" && (request.method === "GET" || request.method === "POST")) return handleSwitches(request, env);
     const storeAppDoneMatch = url.pathname.match(/^\/api\/store-app\/([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})\/done$/i);
     if (storeAppDoneMatch && (request.method === "GET" || request.method === "POST")) return handleStoreAppDone(request, env, storeAppDoneMatch[1].toLowerCase());
