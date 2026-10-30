@@ -13,6 +13,8 @@ import { runProduceStep } from "../producers/produce.js";
 import { runGenerateQrStep } from "../producers/menu-qr/qr-step.js";
 import { runQualityCheckStep } from "../producers/menu-qr/quality-check.js";
 import { sendPageBillingReminders } from "../producers/menu-qr/page-billing.js";
+import { pausedWorkflows } from "../lib/switches.js";
+
 
 function verifyProductionRunner(request, env) {
   if (!env.PRODUCTION_RUNNER_SECRET) {
@@ -200,6 +202,8 @@ async function runNextProductionStep(request, env, options = {}) {
     }
   } catch { return jsonResponse({ok:false,error:"Invalid runner JSON"},400); }
   let targetStep = null;
+  // Owner on/off switches (src/lib/switches.js): a service whose Making switch is off waits; self-test orders still run.
+  const paused = await pausedWorkflows(env);
   try {
     targetStep = await env.DB.prepare(`
           SELECT
@@ -253,6 +257,11 @@ async function runNextProductionStep(request, env, options = {}) {
             AND (? IS NULL OR wr.id = ?)
             AND (? IS NULL OR ws.step_key = ?)
             AND (? IS NULL OR wr.created_at >= ?)
+            AND (
+              (? = 0 AND NOT EXISTS (SELECT 1 FROM json_each(?) j WHERE j.value = wr.workflow_key))
+              OR wr.workflow_key LIKE 'ROUTING_SELFTEST_%'
+              OR EXISTS (SELECT 1 FROM customers cs WHERE cs.id = p.customer_id AND cs.email = 'delivered@resend.dev')
+            )
             AND NOT EXISTS (
               SELECT 1 FROM projects px
               WHERE px.id = wr.project_id AND json_extract(px.metadata_json, '$.extras_until') > ?
@@ -282,7 +291,7 @@ async function runNextProductionStep(request, env, options = {}) {
           LIMIT 1
         `).bind(selection.workflow_run_id || null, selection.workflow_run_id || null,
           selection.step_key || null, selection.step_key || null,
-          createdAfter, createdAfter, nowIso()).first();
+          createdAfter, createdAfter, paused.all ? 1 : 0, JSON.stringify(paused.keys), nowIso()).first();
     if (!targetStep) {
       return jsonResponse({
         ok: true,

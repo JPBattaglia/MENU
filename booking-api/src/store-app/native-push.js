@@ -24,6 +24,7 @@ import { nowIso } from "../lib/http.js";
 import { verifyRenderer } from "../producers/social-posts/render-jobs.js";
 import { loadCredential } from "./keys.js";
 import { fcmSend, parseServiceAccount } from "./google.js";
+import { automationOff } from "../lib/switches.js";
 
 const PUSH_AUDIENCE = "menu-made-native-push";
 const PUSH_WORKFLOW = "JPBattaglia/MENU/.github/workflows/native-push.yml@refs/heads/master";
@@ -109,7 +110,7 @@ async function startNativePush(env) {
 // Every 5-minute tick: a job still waiting 3 minutes after it was queued (or last started) gets the workflow started
 // again, at most every 10 minutes; a job waiting an hour alerts the owner once.
 async function nudgeNativePushes(env, now = Date.now()) {
-  if (!env.DB) return { nudged: false, alerted: 0 };
+  if (!env.DB || await automationOff(env, "PUSH")) return { nudged: false, alerted: 0 };
   const iso = (minutes) => new Date(now - minutes * 60000).toISOString();
   const pending = (await env.DB.prepare(`
       SELECT id, created_at, dispatched_at, alerted_at FROM native_push_jobs WHERE status IN ('QUEUED', 'SENDING') ORDER BY created_at LIMIT 20
@@ -263,6 +264,7 @@ async function failAndroidJob(env, job, scope, note) {
 
 async function sendAndroidPushes(env, { fetchImpl = fetch } = {}) {
   if (!env.DB || !env.PRODUCTION_RUNNER_SECRET) return { jobs: 0, sent: 0 };
+  if (await automationOff(env, "PUSH")) return { jobs: 0, sent: 0, paused: true };
   const jobs = (await env.DB.prepare(`SELECT * FROM android_push_jobs WHERE status IN ('QUEUED', 'SENDING') ORDER BY created_at LIMIT 3`).all()).results || [];
   let budget = ANDROID_PER_TICK; let sentTotal = 0;
   for (const job of jobs) {
@@ -316,6 +318,7 @@ async function handleNativePushJobs(request, env, jobId) {
   if (!env.DB) return json({ ok: false, error: "Temporarily unavailable" }, 503);
   if (jobId === "next") {
     if (request.method !== "GET") return json({ ok: false, error: "Not found" }, 404);
+    if (await automationOff(env, "PUSH")) return json({ ok: true, job: null, paused: true });
     return json({ ok: true, ...(await claimNext(env)) });
   }
   if (request.method !== "POST") return json({ ok: false, error: "Not found" }, 404);
