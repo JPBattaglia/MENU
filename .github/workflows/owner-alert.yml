@@ -1,7 +1,7 @@
 # The owner's second alarm (Stage 12, task 7). The worker starts this only when email itself is failing, so the
 # alert can't go through Resend. The run fails on purpose: GitHub then emails the owner "Run failed: <title>",
 # and the message (what to do) is shown on the run page. Started by src/lib/alert-once.js; at most once every 6 hours.
-name: owner-alert
+name: "MENU-MADE ALERT: email is down (open this)"
 run-name: ${{ inputs.title }}
 on:
   workflow_dispatch:
