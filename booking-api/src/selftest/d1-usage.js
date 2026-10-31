@@ -16,7 +16,7 @@ import { verifyRenderer } from "../producers/social-posts/render-jobs.js";
 const KIND = "D1_USAGE";
 const AUDIENCE = "menu-made-d1-usage";
 const WORKFLOW = "JPBattaglia/MENU/.github/workflows/d1-usage.yml@refs/heads/master";
-const LIMITS = { rows_read: 5000000, rows_written: 100000 }; // Workers Free, per day, whole account
+const LIMITS = { rows_read: 5000000, rows_written: 100000, requests: 100000 }; // Workers Free, per day, whole account
 const NAMES = { "1387bcdc-e462-41ce-bc6b-5cc1b0a47ad0": "Menu-made", "3b48a25e-1854-48ca-b821-ef1552d385cc": "Nino shop" };
 const json = (data, status = 200) => Response.json(data, { status, headers: { "Cache-Control": "no-store" } });
 
@@ -27,14 +27,17 @@ function assessUsage(body, now = Date.now()) {
   const total = (k) => dbs.reduce((n, d) => n + (Number(d[k]) || 0), 0);
   const day = new Date(now); const elapsed = (now - Date.UTC(day.getUTCFullYear(), day.getUTCMonth(), day.getUTCDate())) / 86400000;
   const notes = []; const near = [];
-  for (const k of ["rows_read", "rows_written"]) {
-    const used = total(k); const share = used / LIMITS[k];
+  const workers = Array.isArray(body?.workers) ? body.workers.filter((w) => w && typeof w.script === "string").slice(0, 50) : [];
+  const rows = { rows_read: dbs.map((d) => [NAMES[d.id] || d.id.slice(0, 8), Number(d.rows_read) || 0]), rows_written: dbs.map((d) => [NAMES[d.id] || d.id.slice(0, 8), Number(d.rows_written) || 0]),
+    requests: workers.map((w) => [w.script, Number(w.requests) || 0]).sort((a, b) => b[1] - a[1]).slice(0, 4) };
+  for (const k of ["rows_read", "rows_written", ...(workers.length ? ["requests"] : [])]) {
+    const used = k === "requests" ? workers.reduce((n, w) => n + (Number(w.requests) || 0), 0) : total(k); const share = used / LIMITS[k];
     const pace = elapsed >= 0.25 ? used / elapsed / LIMITS[k] : null;
-    const label = k === "rows_read" ? "reads" : "writes";
-    notes.push(`${label}: ${used.toLocaleString("en-US")} of ${LIMITS[k].toLocaleString("en-US")} today (${Math.round(share * 100)}%${pace !== null ? `, on pace for ${Math.round(pace * 100)}%` : ""}; ${dbs.map((d) => `${NAMES[d.id] || d.id.slice(0, 8)} ${(Number(d[k]) || 0).toLocaleString("en-US")}`).join(", ")})`);
+    const label = { rows_read: "reads", rows_written: "writes", requests: "Worker requests" }[k];
+    notes.push(`${label}: ${used.toLocaleString("en-US")} of ${LIMITS[k].toLocaleString("en-US")} today (${Math.round(share * 100)}%${pace !== null ? `, on pace for ${Math.round(pace * 100)}%` : ""}; ${rows[k].map(([n, v]) => `${n} ${v.toLocaleString("en-US")}`).join(", ")})`);
     if (share >= 0.5 || (pace !== null && pace >= 0.8)) near.push(`${label} ${Math.round(share * 100)}% used${pace !== null ? `, on pace for ${Math.round(pace * 100)}%` : ""}`);
   }
-  return { ok: near.length === 0, near: near.length > 0, problem: near.length ? `D1 near the free daily limit: ${near.join("; ")}` : null, notes };
+  return { ok: near.length === 0, near: near.length > 0, problem: near.length ? `Near the free daily limit: ${near.join("; ")}` : null, notes };
 }
 
 async function recordUsage(env, body, now = Date.now()) {
@@ -49,11 +52,11 @@ async function recordUsage(env, body, now = Date.now()) {
     .bind(`d1-usage-${date}`, KIND, verdict.ok ? "PASSED" : "FAILED", verdict.problem, JSON.stringify(log), t, t, t).run();
   let alerted = false;
   if (verdict.near && await alertOnce(env, "d1-near-limit", 20 * 3600000, now)) {
-    const heading = "The database is near its free daily limit";
+    const heading = "Cloudflare is near its free daily limit";
     const paragraphs = [
       `${verdict.problem}. ${verdict.notes.join(". ")}.`,
-      "If the daily limit is reached, checkouts, deliveries and the Nino shop stop working until midnight UTC (5 pm Pacific).",
-      "What to do: upgrade Cloudflare to Workers Paid ($5 a month; the limit becomes 25 billion reads a month). Go to https://dash.cloudflare.com, click Workers & Pages in the left sidebar, then Plans, and choose Purchase under Workers Paid. Then tell Claude, so it can find what grew."
+      "If a daily limit is reached, checkouts, deliveries, restaurant sites and the Nino shop stop working until midnight UTC (5 pm Pacific).",
+      "What to do: upgrade Cloudflare to Workers Paid ($5 a month; the daily limits go away). Go to https://dash.cloudflare.com, click Workers & Pages in the left sidebar, then Plans, and choose Purchase under Workers Paid. Then tell Claude, so it can find what grew."
     ];
     const sent = await sendTransactionalEmail(env, {
       to: ownerEmailAddress(env), subject: heading,

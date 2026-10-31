@@ -100,7 +100,7 @@ test('D1 usage: normal usage passes; near the limit fails and emails once a day;
   assert.equal((await record(report(2100000), at + 3600000)).status, 'FAILED', 'on pace for over 80%');
   await record(report(2600000), at + 2 * 3600000);
   assert.equal(f.sent.length, 1, 'one email a day');
-  assert.equal(f.sent[0].subject, 'The database is near its free daily limit');
+  assert.equal(f.sent[0].subject, 'Cloudflare is near its free daily limit');
   assert.match(f.sent[0].text, /upgrade Cloudflare to Workers Paid/);
   assert.equal(f.n(`SELECT COUNT(*) AS n FROM self_tests WHERE kind = 'D1_USAGE'`), 1, 'one row per day, updated hourly');
 
@@ -117,4 +117,11 @@ test('D1 usage: early in the day the pace is not judged; writes count too', () =
   const writes = d1.assessUsage({ databases: [{ id: 'x', rows_read: 10, rows_written: 60000 }] }, Date.parse('2026-11-01T20:00:00Z'));
   assert.equal(writes.ok, false);
   assert.match(writes.problem, /writes 60% used/);
+});
+
+test('Worker requests count against the free daily limit too (all workers on the account)', () => {
+  const v = d1.assessUsage({ databases: [{ id: 'x', rows_read: 10, rows_written: 10 }], workers: [{ script: 'booking-api', requests: 50000 }, { script: 'nino-shop', requests: 10000 }] }, Date.parse('2026-11-01T12:00:00Z'));
+  assert.equal(v.ok, false);
+  assert.match(v.problem, /Worker requests 60% used, on pace for 120%/);
+  assert.match(v.notes[2], /Worker requests: 60,000 of 100,000 today .*booking-api 50,000, nino-shop 10,000/);
 });
