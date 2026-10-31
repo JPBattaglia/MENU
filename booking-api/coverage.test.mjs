@@ -247,3 +247,18 @@ test('daily check makes one query for every self-test result, so the 22:00 tick 
   await cov.buildCoverage({ ...f.env, DB }, NOW);
   assert.equal(n, 1);
 });
+
+test('renewals (stage 13): the worker warns 30 days before its GitHub token expires, and when GitHub refuses it', async () => {
+  const { githubTokenItem } = await import('./src/admin/health.js');
+  const at = Date.parse('2026-10-31T22:01:00.000Z');
+  const reply = (status, exp) => async () => new Response('{}', { status, headers: exp ? { 'github-authentication-token-expiration': exp } : {} });
+  const env = (fetch) => ({ GITHUB_DISPATCH_TOKEN: 'x', GITHUB_DISPATCH_FETCH: fetch });
+  assert.equal(await githubTokenItem({}, at), null, 'no token, nothing to check');
+  assert.equal(await githubTokenItem(env(reply(200, '2027-01-25 00:00:00 UTC')), at), null, 'far off');
+  assert.equal(await githubTokenItem(env(reply(200)), at), null, 'no expiry');
+  const soon = await githubTokenItem(env(reply(200, '2026-11-20 00:00:00 UTC')), at);
+  assert.equal(soon.name, 'GitHub token expiring');
+  assert.match(soon.detail, /2026-11-20 \(19 days\)/);
+  assert.equal((await githubTokenItem(env(reply(401)), at)).name, 'GitHub token refused');
+  assert.equal(await githubTokenItem(env(async () => { throw new Error('offline'); }), at), null);
+});

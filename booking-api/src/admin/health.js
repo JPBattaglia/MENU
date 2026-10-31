@@ -98,4 +98,28 @@ async function lastDayLine(env, now = Date.now()) {
   return `Last 24 hours: ${plural(Number(row.orders), "paid order", "paid orders")}, ${plural(Number(row.started), "subscription", "subscriptions")} started, ${Number(row.cancelled)} cancelled.`;
 }
 
-export { APPROVAL_STALE_HOURS, STUCK_HOURS, lastDayLine, operationsNeedingOwner };
+// Renewals calendar (stage 13): GITHUB_DISPATCH_TOKEN is a worker secret, so the worker checks its own expiry. GitHub
+// returns the expiry of a fine-grained token in a response header; /rate_limit costs nothing against the API limit.
+// Domains, the Apple membership and the yearly store deadlines are checked weekly by .github/workflows/renewals.yml.
+const TOKEN_WARN_DAYS = 30;
+async function githubTokenItem(env, now = Date.now()) {
+  if (!env.GITHUB_DISPATCH_TOKEN) return null;
+  let response;
+  try {
+    response = await (env.GITHUB_DISPATCH_FETCH || fetch)("https://api.github.com/rate_limit", { // GITHUB_DISPATCH_FETCH is a test seam
+      headers: { Authorization: `Bearer ${env.GITHUB_DISPATCH_TOKEN}`, Accept: "application/vnd.github+json", "User-Agent": "menu-made-worker" }
+    });
+  } catch {
+    return null; // GitHub unreachable for a moment: tomorrow's check tries again
+  }
+  if (response.status === 401) return { code: "GITHUB_TOKEN", name: "GitHub token refused", detail: "GitHub no longer accepts the worker's token, so app builds, images and notifications wait. Tell Claude \"GitHub token refused\"; it walks you through a new one (about 3 minutes)." };
+  const header = response.headers.get("github-authentication-token-expiration");
+  if (!header) return null; // a token with no expiry
+  const expires = Date.parse(header.replace(" UTC", "Z").replace(" ", "T"));
+  if (!Number.isFinite(expires)) return null;
+  const days = Math.floor((expires - now) / 86400000);
+  if (days > TOKEN_WARN_DAYS) return null;
+  return { code: "GITHUB_TOKEN", name: "GitHub token expiring", detail: `The worker's GitHub token expires on ${new Date(expires).toISOString().slice(0, 10)} (${days} days). Tell Claude "GitHub token expiring"; it walks you through a new one (about 3 minutes).` };
+}
+
+export { APPROVAL_STALE_HOURS, STUCK_HOURS, githubTokenItem, lastDayLine, operationsNeedingOwner };

@@ -1,0 +1,63 @@
+# Renewals calendar (stage 13). Every Monday it checks what has to be renewed and FAILS only when something is due
+# within 30 days, so GitHub emails the owner ("Run failed: renewals"; runbook R12) and a quiet week sends nothing.
+# Each problem is an ::error line, which shows in GitHub's email and on the run page.
+#
+#   Domains          menu-made.com, ninobattaglia.com: real expiry date from the .com registry (RDAP), no setup.
+#   Apple developer  yearly membership: date from the repo variable APPLE_DEVELOPER_RENEWS (YYYY-MM-DD). Until it is
+#                    set, the run shows a warning but doesn't fail.
+#   Apple SDK        each spring Apple requires apps to be built with the newest Xcode (late April in recent years):
+#                    reminder from March 25, so Website & App Care rebuilds are on the new SDK in time.
+#   Google Play      new app versions must target the latest Android API level by August 31 each year: reminder from
+#                    August 1 (only matters once Android store apps are on; stage 11 Android is deferred).
+#   GitHub token     GITHUB_DISPATCH_TOKEN lives on the worker, so the worker checks its own expiry in the daily check.
+name: renewals
+on:
+  schedule: [{ cron: "23 16 * * 1" }]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  renewals:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    env:
+      APPLE_RENEWS: ${{ vars.APPLE_DEVELOPER_RENEWS }}
+      WINDOW_DAYS: "30"
+    steps:
+      - name: Check what is due in the next 30 days
+        run: |
+          set -u
+          due=0
+          now=$(date -u +%s)
+          days_until() { echo $(( ( $(date -u -d "$1" +%s) - now ) / 86400 )); }
+          for d in menu-made.com ninobattaglia.com; do
+            exp=$(curl -sS -m 20 "https://rdap.verisign.com/com/v1/domain/$d" | jq -r '.events[]? | select(.eventAction=="expiration") | .eventDate' | head -1)
+            if [ -z "$exp" ] || [ "$exp" = "null" ]; then
+              echo "::error::$d: couldn't read its renewal date from the registry. Forward this email to Claude."; due=1; continue
+            fi
+            left=$(days_until "$exp")
+            echo "$d renews ${exp%%T*} ($left days)"
+            if [ "$left" -le "$WINDOW_DAYS" ]; then
+              echo "::error::$d renews on ${exp%%T*} ($left days). Make sure the card on your domain account (Squarespace) is current; nothing else is needed if it auto-renews."; due=1
+            fi
+          done
+          if [ -n "$APPLE_RENEWS" ]; then
+            y=$(date -u +%Y); next="$y-${APPLE_RENEWS#*-}"
+            [ "$(days_until "$next")" -lt 0 ] && next="$((y+1))-${APPLE_RENEWS#*-}"
+            left=$(days_until "$next")
+            echo "Apple Developer Program renews $next ($left days)"
+            if [ "$left" -le "$WINDOW_DAYS" ]; then
+              echo "::error::Apple Developer Program renews on $next ($left days). Check the card at developer.apple.com/account (Membership details); if it lapses, Store Apps can't be updated."; due=1
+            fi
+          else
+            echo "::warning::Apple Developer Program renewal date isn't set yet (repo variable APPLE_DEVELOPER_RENEWS)."
+          fi
+          md=$(date -u +%m-%d)
+          if [[ "$md" > "03-24" && "$md" < "04-26" ]]; then
+            echo "::error::Apple's yearly Xcode/SDK minimum usually starts in late April. Tell Claude \"Apple SDK deadline\" so Store App rebuilds use the new SDK in time."; due=1
+          fi
+          if [[ "$md" > "07-31" && "$md" < "09-01" ]]; then
+            echo "::error::Google Play's yearly target API deadline is August 31. Tell Claude \"Play target API deadline\" (only matters if Android store apps are on)."; due=1
+          fi
+          if [ "$due" = 1 ]; then exit 1; fi
+          echo "Nothing due in the next $WINDOW_DAYS days."

@@ -21,7 +21,7 @@ import { brandedEmailHtml, escapeHtml, sendTransactionalEmail } from "../lib/ema
 import { nowIso, simplePage } from "../lib/http.js";
 import { signLinkToken, verifyLinkToken } from "../lib/links.js";
 import { constantTimeEqual } from "../admin/queue.js";
-import { lastDayLine, operationsNeedingOwner } from "../admin/health.js";
+import { githubTokenItem, lastDayLine, operationsNeedingOwner } from "../admin/health.js";
 
 const LINK_KIND = "system-coverage";
 const LINK_TTL_DAYS = 7;
@@ -175,6 +175,8 @@ async function dailyCoverageReport(env, now = Date.now(), { force = false } = {}
     console.error("Daily health summary failed:", error instanceof Error ? error.message : String(error));
     return [{ code: "HEALTH_SUMMARY", name: "Daily health summary", detail: "Couldn't read the orders today. Forward this email to Claude." }];
   });
+  const token = await githubTokenItem(env, now).catch(() => null);
+  if (token) ops.push(token);
   if (map.ok && !ops.length) return { sent: false, ok: true, ops: [] };
   const rows = [...map.offers, ...map.systems].filter((r) => r.public && r.status !== "OK");
   const lines = [...ops.map((o) => [o.name, o.detail]), ...rows.map((r) => [r.name, likelyCause(r)])];
