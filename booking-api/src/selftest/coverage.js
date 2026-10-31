@@ -140,16 +140,27 @@ const likelyCause = (row) => {
   return `${t.kind} last passed ${t.lastPass.slice(0, 16).replace("T", " ")} UTC; it may not have run (not scheduled, or stuck waiting).`;
 };
 
+// One DAILY_CHECK row per UTC day (id daily-check-<day>), green or not, so "the full run green on two separate days"
+// (stage 12 exit) can be read back from the database. Not a self-test kind on the map; nothing runs it.
+const DAILY_CHECK_KIND = "DAILY_CHECK";
+async function recordDailyCheck(env, day, map, at) {
+  const error = map.ok ? null : map.gaps.map((g) => `${g.code} ${g.status}`).join(", ").slice(0, 1000);
+  await env.DB.prepare(`INSERT OR REPLACE INTO self_tests (id, kind, status, requested_by, error, created_at, updated_at, finished_at) VALUES (?, ?, ?, 'daily', ?, ?, ?, ?)`)
+    .bind(`daily-check-${day}`, DAILY_CHECK_KIND, map.ok ? "PASSED" : "FAILED", error, at, at, at).run()
+    .catch((e) => console.error("Daily check record failed:", e instanceof Error ? e.message : String(e)));
+}
+
 // Once a day after the last self-test slot: one email to the owner only if something needs attention.
 async function dailyCoverageReport(env, now = Date.now(), { force = false } = {}) {
   if (!env.DB) return { sent: false };
   const d = new Date(now);
   if (!force && (String(env.SELFTEST_SCHEDULE || "") !== "on" || d.getUTCHours() !== REPORT_HOUR_UTC || d.getUTCMinutes() >= 5)) return { sent: false };
   const map = await buildCoverage(env, now);
+  const day = d.toISOString().slice(0, 10);
+  await recordDailyCheck(env, day, map, d.toISOString());
   if (map.ok) return { sent: false, ok: true };
   const rows = [...map.offers, ...map.systems].filter((r) => r.public && r.status !== "OK");
   const link = `${publicBaseUrl(env)}/api/system/coverage?t=${encodeURIComponent(await signLinkToken(env, { kind: LINK_KIND, id: "owner", ttlDays: LINK_TTL_DAYS }))}`;
-  const day = d.toISOString().slice(0, 10);
   const sent = await sendTransactionalEmail(env, {
     to: ownerEmailAddress(env),
     subject: `${rows.length} Menu-made check${rows.length === 1 ? " needs" : "s need"} a look`,

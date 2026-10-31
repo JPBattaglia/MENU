@@ -177,6 +177,7 @@ test('daily report: nothing on a green day; one email with the likely cause when
   const r1 = await cov.dailyCoverageReport(env(green), at);
   assert.deepEqual(r1, { sent: false, ok: true });
   assert.equal(emails.length, 0);
+  assert.deepEqual({ ...green.DB.raw.prepare(`SELECT id, kind, status, error FROM self_tests WHERE kind = 'DAILY_CHECK'`).get() }, { id: 'daily-check-2026-10-31', kind: 'DAILY_CHECK', status: 'PASSED', error: null }, 'a green day is recorded');
 
   const red = setup({ offers: [['MENU_CARE', 1], ['GUEST_APP_SETUP', 1]] });
   allSystemsPass(red, 2);
@@ -185,6 +186,10 @@ test('daily report: nothing on a green day; one email with the likely cause when
   assert.deepEqual(await cov.dailyCoverageReport(red.f || red.env, at), { sent: false }, 'off outside the deployed worker');
   const r2 = await cov.dailyCoverageReport(env(red), at);
   assert.equal(r2.sent, true);
+  const rec = red.DB.raw.prepare(`SELECT status, error FROM self_tests WHERE id = 'daily-check-2026-10-31'`).get();
+  assert.equal(rec.status, 'FAILED');
+  assert.match(rec.error, /GUEST_APP_SETUP NEVER_PASSED/);
+  assert.equal(red.DB.raw.prepare(`SELECT count(*) n FROM self_tests WHERE kind = 'DAILY_CHECK'`).get().n, 1, 'one row per day');
   assert.deepEqual(r2.gaps.sort(), ['GUEST_APP_SETUP', 'MENU_CARE']);
   assert.equal(emails.length, 1);
   assert.deepEqual(emails[0].to, ['info@menu-made.com']);
