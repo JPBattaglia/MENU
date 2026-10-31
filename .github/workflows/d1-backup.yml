@@ -32,7 +32,10 @@ jobs:
         run: |
           set -eu
           umask 077
-          npx -y wrangler@4 d1 export "$DB" --remote --output "$RUNNER_TEMP/backup.sql" > /dev/null
+          if ! npx -y wrangler@4 d1 export "$DB" --remote --output "$RUNNER_TEMP/backup.sql" > /dev/null 2> "$RUNNER_TEMP/err.txt"; then
+            echo "::error title=Export failed ($DB)::$(grep -v '^\s*$' "$RUNNER_TEMP/err.txt" | tail -8 | tr '\n' ' ' | cut -c1-600)"
+            exit 1
+          fi
           echo "Exported $(wc -c < "$RUNNER_TEMP/backup.sql") bytes"
       - name: Restore into a scratch database and compare with live
         run: |
