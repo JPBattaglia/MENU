@@ -1,0 +1,49 @@
+# Stage 12, task 4: daily site checks for menu-made.com and ninobattaglia.com (tools/site-check/check.mjs).
+# Every page in each sitemap plus the pages they link to: loads with 200, no broken same-site links or files, no
+# JavaScript errors, no arrows on buttons or links, no critical accessibility violations, under 8 s. Phone and
+# desktop screenshots are kept as an artifact for 14 days. The result goes to the worker over this job's OIDC token
+# (no secret) and shows on menu-made.com/api/system/coverage and in the daily failure-only email.
+name: Site check
+on:
+  schedule:
+    - cron: "10 20 * * *"   # 1:10 pm Pacific, before the 22:00 UTC daily report
+  workflow_dispatch:
+permissions:
+  contents: read
+  id-token: write
+concurrency:
+  group: site-check
+  cancel-in-progress: false
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Install Chromium and the accessibility scanner
+        run: |
+          mkdir -p /tmp/sc && cd /tmp/sc && npm init -y >/dev/null
+          npm i --no-audit --no-fund playwright@1 @axe-core/playwright@4
+          npx playwright install --with-deps chromium
+      - name: Check both sites
+        run: |
+          cp tools/site-check/check.mjs /tmp/sc/ && cd /tmp/sc
+          node check.mjs https://menu-made.com https://ninobattaglia.com || true
+      - name: Keep screenshots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: site-check-${{ github.run_id }}
+          path: /tmp/sc/site-check-out/
+          retention-days: 14
+      - name: Report to the worker
+        if: always()
+        run: |
+          cd /tmp/sc
+          if [ -f site-check-out/result.json ]; then body=$(jq --arg run "$GITHUB_RUN_ID" '. + {run_id: $run}' site-check-out/result.json)
+          else body=$(jq -n --arg run "$GITHUB_RUN_ID" '{ok: false, run_id: $run, sites: [{site: "https://menu-made.com", pages: [], failures: ["The site check crashed before it finished (see the run log)"], warnings: []}]}'); fi
+          token=$(curl -sSf -H "Authorization: Bearer $ACTIONS_ID_TOKEN_REQUEST_TOKEN" "$ACTIONS_ID_TOKEN_REQUEST_URL&audience=menu-made-site-check" | jq -r .value)
+          curl -sSf -X POST -H "Authorization: Bearer $token" -H "Content-Type: application/json" --data "$body" https://menu-made.com/api/system/site-check

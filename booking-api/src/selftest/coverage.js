@@ -59,7 +59,8 @@ const SYSTEMS = [
   ["Customer accounts", "ACCOUNT_SIGNIN", "emailed sign-in link, account page, sign-out"],
   ["Unfinished-checkout email", "ABANDONED_CHECKOUT", "reminder email and resumed checkout"],
   ["Custom domains", "CUSTOM_DOMAIN_SETUP", "Cloudflare for SaaS settings, token, fallback origin"],
-  ["Google connection", "GOOGLE_API_HEALTH", "OAuth token refresh and the three Google APIs"]
+  ["Google connection", "GOOGLE_API_HEALTH", "OAuth token refresh and the three Google APIs"],
+  ["Website checks (both sites)", "SITE_CHECK", "every page loads, no broken links or files, no JavaScript errors, no arrows on buttons or links, accessibility, speed (GitHub Actions, daily)"]
 ];
 
 // Not tested from this worker; listed so the map shows the whole business.
@@ -112,7 +113,8 @@ async function buildCoverage(env, now = Date.now()) {
 
 // ---------- the full run ----------
 
-const ALL_KINDS = () => [...new Set([...Object.values(OFFER_TESTS).flat().map(([k]) => k), ...SYSTEMS.map(([, k]) => k)])];
+// SITE_CHECK runs in GitHub Actions (daily), not in the worker, so the full run doesn't queue it.
+const ALL_KINDS = () => [...new Set([...Object.values(OFFER_TESTS).flat().map(([k]) => k), ...SYSTEMS.map(([, k]) => k)])].filter((k) => k !== "SITE_CHECK");
 
 // Start every self-test that isn't already waiting or running. Returns the kinds started.
 async function startFullRun(env, by = "owner-full-run") {
