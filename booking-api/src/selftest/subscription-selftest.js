@@ -2,7 +2,8 @@
 // worker's 5-minute schedule. Stripe test mode with a test clock, through the real routes and real webhooks.
 //   SUBSCRIPTION_GROWTH / SUBSCRIPTION_PRO: bundle checkout (monthly) -> pay with test card -> ACTIVE, one entitlement
 //     and one first-month job per included plan -> advance the clock a month -> renewal invoice.paid creates exactly
-//     one more job per plan -> cancel -> entitlements expire -> advance another month -> no new jobs.
+//     one more job per plan -> cancel (Growth: at the end of the period, as the billing portal does; it keeps producing
+//     until then) -> entitlements expire -> advance further -> no new jobs.
 //   SUBSCRIPTION_STARTER (the lifecycle): Starter checkout -> ACTIVE with 3 plans -> switch to Growth the way the
 //     billing portal does (same proration setting as the portal's configuration) -> 4 entitlements -> the card is
 //     replaced by one that is declined -> renewal fails -> PAST_DUE, entitlements SUSPENDED, no renewal jobs
@@ -19,7 +20,8 @@ const KIND = "SUBSCRIPTION_GROWTH";
 const GROWTH_PLANS = ["ACCESSIBILITY_MONITORING", "GOOGLE_PROFILE_CARE", "MENU_CARE", "REVIEW_REPLIES"];
 // What each kind buys and expects (included plans sorted). minute = its daily start in the 15:00 UTC hour.
 const RUNS = {
-  SUBSCRIPTION_GROWTH: { plan: "BUNDLE_GROWTH", label: "Growth", cents: 17900, plans: GROWTH_PLANS, minute: 30 },
+  // Growth cancels the way the billing portal does (at the end of the period: still producing until then).
+  SUBSCRIPTION_GROWTH: { plan: "BUNDLE_GROWTH", label: "Growth", cents: 17900, plans: GROWTH_PLANS, minute: 30, cancelAtPeriodEnd: true },
   SUBSCRIPTION_STARTER: { plan: "BUNDLE_STARTER", label: "Starter", cents: 7900, plans: ["ACCESSIBILITY_MONITORING", "MENU_CARE", "REVIEW_REPLIES"], minute: 40,
     lifecycle: { switchTo: "BUNDLE_GROWTH", switchCents: 17900, switchPlans: GROWTH_PLANS } },
   SUBSCRIPTION_PRO: { plan: "BUNDLE_PRO", label: "Pro", cents: 29900, plans: ["ACCESSIBILITY_MONITORING", "GOOGLE_PROFILE_CARE", "MENU_CARE", "REVIEW_REPLIES", "SOCIAL_POSTS", "WEBSITE_CARE"], minute: 50 }
@@ -249,18 +251,36 @@ async function stageAwaitRenewal(env, app, test) {
   checkPeriod(jobs, second, "Renewal month", plans);
   const sub = await env.DB.prepare(`SELECT status, current_period_start FROM subscriptions WHERE id = ?`).bind(s.subscription_id).first();
   if (sub?.status !== "ACTIVE" || sub.current_period_start !== second) throw new Error(`Subscription did not roll to the new period (${sub?.status}, ${sub?.current_period_start})`);
+  if (runOf(test).cancelAtPeriodEnd) {
+    await stripeTest(env, `/v1/subscriptions/${s.stripe_subscription_id}`, "POST", { cancel_at_period_end: "true" });
+    return updateTest(env, test, { stage: "AWAIT_CANCEL_SCHEDULED", state: { second_period: second },
+      log: `Renewal created exactly ${plans.length} jobs for ${second.slice(0, 10)}; cancel at period end requested (as the billing portal does)` });
+  }
   await stripeTest(env, `/v1/subscriptions/${s.stripe_subscription_id}`, "DELETE");
   return updateTest(env, test, { stage: "AWAIT_CANCELLED", state: { second_period: second },
     log: `Renewal created exactly ${plans.length} jobs for ${second.slice(0, 10)}; subscription cancelled in Stripe` });
 }
 
+// Portal-style cancel: the plan keeps producing until the period ends, then Stripe ends it.
+async function stageAwaitCancelScheduled(env, app, test) {
+  const s = state(test);
+  const sub = await env.DB.prepare(`SELECT status, cancel_at_period_end, current_period_end FROM subscriptions WHERE id = ?`).bind(s.subscription_id).first();
+  if (Number(sub?.cancel_at_period_end) !== 1) return null;
+  if (sub.status !== "ACTIVE") throw new Error(`A cancel at period end stopped the plan early (${sub.status})`);
+  const open = await env.DB.prepare(`SELECT COUNT(*) AS n FROM entitlements WHERE subscription_id = ? AND status = 'ACTIVE'`).bind(s.subscription_id).first();
+  if (Number(open?.n) !== runOf(test).plans.length) throw new Error(`Services stopped before the period ended (${open?.n} active)`);
+  await advanceClock(env, s.clock_id, Math.floor(Date.parse(sub.current_period_end) / 1000) + 3 * 3600);
+  return updateTest(env, test, { stage: "AWAIT_CANCELLED", log: "Cancel scheduled: still ACTIVE with every service until the period ends; clock advancing past the end" });
+}
+
 async function stageAwaitCancelled(env, app, test) {
   const s = state(test);
   const sub = await env.DB.prepare(`SELECT status FROM subscriptions WHERE id = ?`).bind(s.subscription_id).first();
+  if (state(test).clock_id && !(await clockReady(env, s.clock_id))) return null;
   if (sub?.status !== "CANCELLED") return null;
   const open = await env.DB.prepare(`SELECT COUNT(*) AS n FROM entitlements WHERE subscription_id = ? AND status != 'EXPIRED'`).bind(s.subscription_id).first();
   if (Number(open?.n) !== 0) throw new Error(`${open.n} entitlements still open after cancel`);
-  const target = Math.floor(Date.parse(s.second_period) / 1000) + 40 * 86400;
+  const target = Math.floor(Date.parse(s.second_period) / 1000) + 70 * 86400;
   await advanceClock(env, s.clock_id, target);
   return updateTest(env, test, { stage: "AWAIT_NO_NEW_JOBS", log: "Cancel synced: subscription CANCELLED, entitlements EXPIRED; clock advancing another month" });
 }
@@ -300,6 +320,7 @@ const STAGES = {
   START: stageStart,
   AWAIT_ACTIVE: stageAwaitActive,
   AWAIT_RENEWAL: stageAwaitRenewal,
+  AWAIT_CANCEL_SCHEDULED: stageAwaitCancelScheduled,
   AWAIT_CANCELLED: stageAwaitCancelled,
   AWAIT_NO_NEW_JOBS: stageAwaitNoNewJobs,
   AWAIT_SWITCHED: stageAwaitSwitched,

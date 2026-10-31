@@ -53,6 +53,12 @@ function fakeStripe({ renewalCreatesInvoice = true, portalProration = 'none' } =
         for (const sub of s.subs.values()) {
           if (s.customers.get(sub.customer)?.test_clock !== clock.id || sub.status !== 'active') continue;
           while (sub.items.data[0].current_period_end <= to && renewalCreatesInvoice) {
+            if (sub.cancel_at_period_end) {
+              // Cancel at period end: Stripe ends it at the period boundary, with no new invoice.
+              Object.assign(sub, { status: 'canceled', canceled_at: sub.items.data[0].current_period_end, ended_at: sub.items.data[0].current_period_end });
+              s.webhooks.push({ id: id('evt'), type: 'customer.subscription.deleted', data: { object: { ...sub } } });
+              break;
+            }
             if (sub.default_payment_method === 'pm_fail') {
               // The renewal is declined: Stripe marks the subscription past_due and sends invoice.payment_failed.
               sub.status = 'past_due';
@@ -115,6 +121,7 @@ function fakeStripe({ renewalCreatesInvoice = true, portalProration = 'none' } =
       if (method === 'POST') {
         s.updates.push(Object.fromEntries(p));
         if (p.get('default_payment_method')) sub.default_payment_method = p.get('default_payment_method');
+        if (p.get('cancel_at_period_end') === 'true') sub.cancel_at_period_end = true;
         if (p.get('items[0][price_data][product]')) {
           // A plan switch: the item moves to the new price; the period is unchanged.
           const item = sub.items.data[0];
@@ -189,6 +196,7 @@ test('subscription self-test: Growth renews on a test clock with 4 new jobs, and
     assert.ok(log.some((l) => /4 entitlements and 4 first-month jobs/.test(l)), log.join('\n'));
     assert.ok(log.some((l) => /Renewal created exactly 4 jobs/.test(l)));
     assert.ok(log.some((l) => /No jobs after cancel/.test(l)));
+    assert.ok(log.some((l) => /Cancel scheduled: still ACTIVE with every service until the period ends/.test(l)), 'Growth cancels the way the billing portal does');
     // Test jobs never reach a producer; the clock is deleted.
     assert.equal(f.row(`SELECT COUNT(*) AS n FROM workflow_runs WHERE trigger_type = 'SUBSCRIPTION_PERIOD' AND status != 'CANCELLED'`).n, 0);
     assert.equal(f.row(`SELECT COUNT(*) AS n FROM projects WHERE status = 'CANCELLED'`).n, 8);
