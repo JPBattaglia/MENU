@@ -16,7 +16,9 @@ jobs:
           api() { curl -sS -H "Authorization: Bearer $CF" -H "Content-Type: application/json" "$@"; }
           zone=$(api "https://api.cloudflare.com/client/v4/zones?name=ninobattaglia.com" | jq -r '.result[0].id // empty')
           if [ -z "$zone" ]; then echo "::error::The deploy token can't see the ninobattaglia.com zone"; exit 1; fi
-          existing=$(api "https://api.cloudflare.com/client/v4/zones/$zone/dns_records?type=TXT&name=_dmarc.ninobattaglia.com" | jq -r '[.result[].content] | join(" | ")')
+          list=$(api "https://api.cloudflare.com/client/v4/zones/$zone/dns_records?type=TXT&name=_dmarc.ninobattaglia.com")
+          if [ "$(echo "$list" | jq -r .success)" != "true" ]; then echo "::error::Can't read DNS records: $(echo "$list" | jq -c .errors)"; exit 1; fi
+          existing=$(echo "$list" | jq -r '[.result[]?.content] | join(" | ")')
           if [ -n "$existing" ]; then echo "Already there: $existing"; exit 0; fi
           out=$(api -X POST "https://api.cloudflare.com/client/v4/zones/$zone/dns_records" --data '{"type":"TXT","name":"_dmarc.ninobattaglia.com","content":"\"v=DMARC1; p=none\"","ttl":1,"comment":"DMARC monitoring (Menu-made stage 12)"}')
           echo "$out" | jq '{success, errors, content: .result.content}'
