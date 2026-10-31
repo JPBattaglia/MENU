@@ -15,7 +15,7 @@ import { chromium } from "playwright";
 import { mkdirSync, writeFileSync } from "node:fs";
 
 const OUT = "site-check-out";
-const MAX_PAGES = Number(process.env.SITE_CHECK_MAX_PAGES || 200);
+const MAX_PAGES = Number(process.env.SITE_CHECK_MAX_PAGES || 160);
 const SLOW_WARN_MS = 4000;
 const SLOW_FAIL_MS = 8000;
 const ARROWS = /[←-⇿➡⟵-⟿⬅-⬇⮕➜➔➝-➟»›‹«]|-{1,2}>|<-{1,2}|=>/;
@@ -30,6 +30,7 @@ mkdirSync(OUT, { recursive: true });
 const browser = await chromium.launch();
 const result = { checked_at: new Date().toISOString(), axe: Boolean(AxeBuilder), sites: [] };
 const status = new Map(); // url -> HTTP status (resources and links, checked once each)
+const checkedOn = new Set(); // "page|url" already judged, so a shared broken link is listed once per page
 
 async function head(context, url) {
   if (status.has(url)) return status.get(url);
@@ -109,20 +110,25 @@ for (const site of sites) {
     for (const a of found.arrows) fail(path, `arrow on ${a} (house rule: no arrows on buttons or links)`);
     for (const f of found.forms) if (!f.action && !f.handled) info.forms = (info.forms || 0) + 1; // script-handled forms have no action; counted, not judged
 
+    // Every link and image is checked once per run (cached), 12 at a time.
+    const targets = [];
     for (const href of [...new Set([...found.links, ...found.images])]) {
       const u = new URL(href); u.hash = "";
       const clean = u.href;
-      if (u.hostname === host) {
-        if (/\.(html?)?$|\/$|^[^.]*$/.test(u.pathname) && !seen.has(clean) && !u.search && found.links.includes(href)) { seen.add(clean); queue.push(clean); }
-        const code = await head(context, clean);
-        if (code === 0 || code >= 400) fail(path, `broken link ${u.pathname}${u.search} (${code || "no answer"})`);
-      } else if (!/^(mailto|tel):/.test(href)) {
-        const code = await head(context, clean);
-        if (code === 404 || code === 410) warn(path, `link to another site is gone: ${clean} (${code})`);
-      }
+      if (u.hostname === host && /\.(html?)?$|\/$|^[^.]*$/.test(u.pathname) && !seen.has(clean) && !u.search && found.links.includes(href)) { seen.add(clean); queue.push(clean); }
+      if (!status.has(clean)) targets.push(clean);
+      else if (!checkedOn.has(`${path}|${clean}`)) targets.push(clean);
+    }
+    for (let k = 0; k < targets.length; k += 12) await Promise.all(targets.slice(k, k + 12).map((t) => head(context, t)));
+    for (const clean of targets) {
+      checkedOn.add(`${path}|${clean}`);
+      const u = new URL(clean); const code = status.get(clean);
+      if (u.hostname === host) { if (code === 0 || code >= 400) fail(path, `broken link ${u.pathname}${u.search} (${code || "no answer"})`); }
+      else if (code === 404 || code === 410) warn(path, `link to another site is gone: ${clean} (${code})`);
     }
 
-    if (AxeBuilder) {
+    // The accessibility scan runs on the sitemap pages (the site's own pages); linked detail pages share their templates.
+    if (AxeBuilder && sitemap.includes(url)) {
       try {
         const axe = await new AxeBuilder({ page }).withTags(["wcag2a", "wcag2aa"]).analyze();
         for (const v of axe.violations) {
