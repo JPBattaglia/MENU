@@ -27,6 +27,7 @@ import { handleSwitches } from "./lib/switches.js";
 import { dailyCoverageReport, handleCoverage } from "./selftest/coverage.js";
 import { handleSiteCheckResult } from "./selftest/site-check.js";
 import { handleD1Usage } from "./selftest/d1-usage.js";
+import { countingDb, saveTickCount } from "./lib/query-count.js";
 import { advanceMoneyPathsSelfTests } from "./selftest/money-paths.js";
 import { advanceEmailHealthSelfTests } from "./selftest/email-health.js";
 import { advanceStoreApps, handleStoreAppDone } from "./store-app/store-flow.js";
@@ -356,7 +357,10 @@ const mmWorkerWithBooking = {
     }
     return worker_default.fetch(request, env, ctx);
   },
-  async scheduled(event, env, ctx) {
+  async scheduled(event, realEnv, ctx) {
+    // Stage 12, task 8: count this tick's D1 queries (Workers Free allows 50 per invocation).
+    const counter = realEnv.DB ? countingDb(realEnv.DB) : null;
+    const env = counter ? { ...realEnv, DB: counter.db } : realEnv;
     const app = (request) => mmWorkerWithBooking.fetch(request, env, ctx);
     ctx.waitUntil((async () => {
       // Sandbox self-test steps run before and after production so a test order moves quickly.
@@ -409,6 +413,7 @@ const mmWorkerWithBooking = {
       await runSiteHealthPass(env).catch((error) => console.error("Site health pass failed:", error instanceof Error ? error.message : String(error)));
       // Once a day: reconcile subscriptions with Stripe and create annual plans' monthly jobs.
       await runDailySubscriptionPass(env).catch((error) => console.error("Daily subscription pass failed:", error instanceof Error ? error.message : String(error)));
+      if (counter) await saveTickCount(realEnv.DB, counter.stats).catch(() => null);
     })());
     return mmBookingHandler.scheduled(event, mmBookingEnvironment(env), ctx);
   }

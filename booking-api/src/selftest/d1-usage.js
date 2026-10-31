@@ -42,6 +42,13 @@ function assessUsage(body, now = Date.now()) {
 
 async function recordUsage(env, body, now = Date.now()) {
   const verdict = assessUsage(body, now);
+  // The last 5-minute tick's D1 query count (src/lib/query-count.js): Workers Free refuses more than 50 per invocation.
+  const tick = await env.DB.prepare(`SELECT value FROM worker_settings WHERE key = 'tick:queries'`).first().catch(() => null);
+  let t0 = null; try { t0 = tick ? JSON.parse(tick.value) : null; } catch { t0 = null; }
+  if (t0) {
+    verdict.notes.push(`last 5-minute tick: ${t0.queries} database queries${t0.refused ? `, ${t0.refused} refused for too many in one run` : ""} (Workers Free allows 50)`);
+    if (t0.refused) { verdict.ok = false; verdict.near = true; verdict.problem = [verdict.problem, `the 5-minute tick hit the 50-query limit (${t0.refused} queries refused)`].filter(Boolean).join("; "); }
+  }
   const date = /^\d{4}-\d{2}-\d{2}$/.test(String(body?.date || "")) ? body.date : new Date(now).toISOString().slice(0, 10);
   const t = new Date(now).toISOString();
   const log = verdict.notes.map((note) => ({ at: t, stage: "CHECK", note }));

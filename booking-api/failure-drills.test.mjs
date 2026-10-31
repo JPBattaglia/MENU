@@ -125,3 +125,16 @@ test('Worker requests count against the free daily limit too (all workers on the
   assert.match(v.problem, /Worker requests 60% used, on pace for 120%/);
   assert.match(v.notes[2], /Worker requests: 60,000 of 100,000 today .*booking-api 50,000, nino-shop 10,000/);
 });
+
+test('usage row shows the last tick\'s query count and fails when queries were refused', async () => {
+  const f = setup({ resend: 200 });
+  const put = (v) => f.DB.raw.prepare(`INSERT OR REPLACE INTO worker_settings (key, value, updated_at) VALUES ('tick:queries', ?, 'x')`).run(JSON.stringify(v));
+  const body = { date: '2026-11-01', databases: [{ id: 'x', rows_read: 10, rows_written: 10 }] };
+  put({ at: 'x', queries: 41, refused: 0 });
+  assert.equal((await d1.recordUsage(f.env, body, Date.parse('2026-11-01T12:00:00Z'))).status, 'PASSED');
+  assert.match({ ...f.DB.raw.prepare(`SELECT log_json FROM self_tests`).get() }.log_json, /last 5-minute tick: 41 database queries/);
+  put({ at: 'x', queries: 50, refused: 7 });
+  const o = globalThis.fetch; globalThis.fetch = async () => Response.json({ id: 'e' });
+  try { assert.equal((await d1.recordUsage(f.env, body, Date.parse('2026-11-01T13:00:00Z'))).status, 'FAILED'); } finally { globalThis.fetch = o; }
+  assert.match({ ...f.DB.raw.prepare(`SELECT error FROM self_tests`).get() }.error, /hit the 50-query limit \(7 queries refused\)/);
+});
