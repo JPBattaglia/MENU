@@ -175,7 +175,7 @@ test('daily report: nothing on a green day; one email with the likely cause when
   allSystemsPass(green, 2);
   green.DB.raw.prepare(`INSERT INTO self_tests (id, kind, status, created_at, updated_at, finished_at) VALUES ('m', 'MENU_CARE_EDIT', 'PASSED', ?, ?, ?)`).run(new Date(at - 3600000).toISOString(), 'x', new Date(at - 3600000).toISOString());
   const r1 = await cov.dailyCoverageReport(env(green), at);
-  assert.deepEqual(r1, { sent: false, ok: true });
+  assert.deepEqual(r1, { sent: false, ok: true, ops: [] });
   assert.equal(emails.length, 0);
   assert.deepEqual({ ...green.DB.raw.prepare(`SELECT id, kind, status, error FROM self_tests WHERE kind = 'DAILY_CHECK'`).get() }, { id: 'daily-check-2026-10-31', kind: 'DAILY_CHECK', status: 'PASSED', error: null }, 'a green day is recorded');
 
@@ -193,8 +193,57 @@ test('daily report: nothing on a green day; one email with the likely cause when
   assert.deepEqual(r2.gaps.sort(), ['GUEST_APP_SETUP', 'MENU_CARE']);
   assert.equal(emails.length, 1);
   assert.deepEqual(emails[0].to, ['info@menu-made.com']);
-  assert.match(emails[0].subject, /2 Menu-made checks need a look/);
+  assert.match(emails[0].subject, /2 Menu-made items need a look/);
   assert.match(emails[0].text, /MENU_CARE_EDIT failed: Hosted menu still shows the old price/);
   assert.match(emails[0].text, /GUEST_APP_RUN has never passed/);
   assert.match(emails[0].html, /\/api\/system\/coverage\?t=/, 'links the page; no token to remember');
+});
+
+test('daily health summary (stage 13): real-order items that need the owner join the daily email; test orders never count', async () => {
+  const at = Date.parse('2026-10-31T22:01:00.000Z');
+  const ago = (h) => new Date(at - h * 3600000).toISOString();
+  const f = setup({ offers: [['MENU_CARE', 1]] });
+  allSystemsPass(f, 2);
+  f.DB.raw.prepare(`INSERT INTO self_tests (id, kind, status, created_at, updated_at, finished_at) VALUES ('m', 'MENU_CARE_EDIT', 'PASSED', ?, ?, ?)`).run(ago(1), ago(1), ago(1));
+  const sql = (q, ...b) => f.DB.raw.prepare(q).run(...b);
+  sql(`INSERT INTO customers (id, created_at, updated_at, email) VALUES ('real', 'x', 'x', 'joe@joespizza.example'), ('bot', 'x', 'x', 'delivered@resend.dev')`);
+  sql(`INSERT INTO businesses (id, created_at, updated_at, name) VALUES ('b1', 'x', 'x', 'Joe''s Pizza'), ('b2', 'x', 'x', 'Self Test Cafe')`);
+  // o1 live checkout, o2 a monthly subscription job (no checkout session), o3 Stripe test mode, o4 the self-test buyer on live.
+  sql(`INSERT INTO orders (id, created_at, updated_at, customer_id, business_id, status, subtotal_cents, total_cents, payment_status, stripe_checkout_session_id) VALUES
+       ('o1', ?, 'x', 'real', 'b1', 'IN_PRODUCTION', 100, 100, 'PAID', 'cs_live_1'),
+       ('o2', ?, 'x', 'real', 'b1', 'IN_PRODUCTION', 100, 100, 'PAID', NULL),
+       ('o3', ?, 'x', 'real', 'b2', 'IN_PRODUCTION', 100, 100, 'PAID', 'cs_test_3'),
+       ('o4', ?, 'x', 'bot', 'b2', 'IN_PRODUCTION', 100, 100, 'PAID', 'cs_live_4')`, ago(2), ago(30), ago(30), ago(30));
+  const project = (id, order, status = 'IN_PROGRESS') => sql(`INSERT INTO projects (id, order_id, order_item_id, business_id, customer_id, project_type, status, workflow_key, workflow_version, created_at, updated_at)
+       VALUES (?, ?, 'item', (SELECT business_id FROM orders WHERE id = ?), (SELECT customer_id FROM orders WHERE id = ?), 'MENU', ?, 'MENU_CARE_V1', 1, 'x', 'x')`, id, order, order, order, status);
+  const run = (id, project, status, created) => sql(`INSERT INTO workflow_runs (id, project_id, workflow_key, workflow_version, status, trigger_type, created_at, failed_at) VALUES (?, ?, 'MENU_CARE_V1', 1, ?, 'ORDER', ?, ?)`, id, project, status, created, status === 'FAILED' ? created : null);
+  project('p1', 'o1'); run('r1', 'p1', 'FAILED', ago(3));            // real, failed: counts
+  project('p2', 'o2'); run('r2', 'p2', 'QUEUED', ago(30));            // real subscription job, not moving for 30 h: counts
+  project('p3', 'o3'); run('r3', 'p3', 'FAILED', ago(3));            // test mode: never counts
+  project('p4', 'o4'); run('r4', 'p4', 'FAILED', ago(3));            // self-test buyer on live: never counts
+  sql(`INSERT INTO approvals (id, project_id, approval_type, status, requested_at) VALUES ('a1', 'p1', 'OWNER_RELEASE', 'PENDING', ?), ('a3', 'p3', 'OWNER_RELEASE', 'PENDING', ?)`, ago(40), ago(40));
+
+  const items = await (await import('./src/admin/health.js')).operationsNeedingOwner(f.env, at);
+  assert.deepEqual(items.map((i) => i.code), ['RUN_FAILED', 'APPROVAL_WAITING', 'RUN_STUCK']);
+  assert.match(items[0].name, /^1 order stopped$/);
+  assert.match(items[0].detail, /Joe's Pizza/);
+  assert.doesNotMatch(JSON.stringify(items), /Self Test Cafe/, 'test orders never count');
+
+  const r = await cov.dailyCoverageReport({ ...f.env, SELFTEST_SCHEDULE: 'on' }, at);
+  assert.equal(r.sent, true);
+  assert.equal(r.ok, true, 'every self-test passed');
+  assert.deepEqual({ ...f.DB.raw.prepare(`SELECT status, error FROM self_tests WHERE id = 'daily-check-2026-10-31'`).get() }, { status: 'PASSED', error: null }, 'the stage 12 record stays self-tests only');
+  assert.equal(emails.length, 1);
+  assert.match(emails[0].subject, /3 Menu-made items need a look/);
+  assert.match(emails[0].text, /1 order stopped: Joe's Pizza/);
+  assert.match(emails[0].text, /Last 24 hours: 1 paid order, 0 subscriptions started, 0 cancelled\./);
+  assert.match(emails[0].html, /Something needs you today/);
+});
+
+test('daily check makes one query for every self-test result, so the 22:00 tick stays under the free D1 limit', async () => {
+  const f = setup({ offers: [['MENU_CARE', 1], ['GUEST_APP_SETUP', 1]] });
+  let n = 0;
+  const DB = Object.create(f.DB); DB.prepare = (q) => { if (/FROM self_tests/.test(q)) n++; return f.DB.prepare(q); };
+  await cov.buildCoverage({ ...f.env, DB }, NOW);
+  assert.equal(n, 1);
 });

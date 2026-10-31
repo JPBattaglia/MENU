@@ -21,6 +21,7 @@ import { brandedEmailHtml, escapeHtml, sendTransactionalEmail } from "../lib/ema
 import { nowIso, simplePage } from "../lib/http.js";
 import { signLinkToken, verifyLinkToken } from "../lib/links.js";
 import { constantTimeEqual } from "../admin/queue.js";
+import { lastDayLine, operationsNeedingOwner } from "../admin/health.js";
 
 const LINK_KIND = "system-coverage";
 const LINK_TTL_DAYS = 7;
@@ -71,13 +72,22 @@ const ELSEWHERE = [
   ["Nino shirt shop (ninobattaglia.com)", "the Nino shop worker's own self-check (Stripe key, webhook, Printful order access), daily"]
 ];
 
-// Latest pass and latest run per kind, one indexed query per kind (migration 0030), so reads stay small.
+// Latest pass and latest run per kind in ONE query (stage 13, Oct 31, 2026). It used to be two queries per kind (about
+// 60), on top of the ~55 the 5-minute tick already makes, and Workers Free allows 50 D1 queries per invocation, so the
+// 22:00 UTC check could be refused before its DAILY_CHECK row was saved. self_tests holds about a hundred rows, so
+// reading every row of the listed kinds once costs less than the 60 indexed lookups did.
 async function lastResults(env, kinds) {
-  const out = new Map();
-  for (const kind of kinds) {
-    const pass = await env.DB.prepare(`SELECT finished_at FROM self_tests WHERE kind = ? AND status = 'PASSED' ORDER BY finished_at DESC LIMIT 1`).bind(kind).first();
-    const last = await env.DB.prepare(`SELECT status, error, created_at FROM self_tests WHERE kind = ? ORDER BY created_at DESC LIMIT 1`).bind(kind).first();
-    out.set(kind, { lastPass: pass?.finished_at || null, lastStatus: last?.status || null, lastError: last?.status === "FAILED" ? String(last.error || "").slice(0, 200) : null });
+  const out = new Map(kinds.map((kind) => [kind, { lastPass: null, lastStatus: null, lastError: null }]));
+  if (!kinds.length) return out;
+  const rows = (await env.DB.prepare(`
+      SELECT kind, status, error, last_pass FROM (
+        SELECT kind, status, error,
+               MAX(CASE WHEN status = 'PASSED' THEN finished_at END) OVER (PARTITION BY kind) AS last_pass,
+               ROW_NUMBER() OVER (PARTITION BY kind ORDER BY created_at DESC) AS rn
+        FROM self_tests WHERE kind IN (${kinds.map(() => "?").join(",")})
+      ) WHERE rn = 1`).bind(...kinds).all()).results || [];
+  for (const r of rows) {
+    out.set(r.kind, { lastPass: r.last_pass || null, lastStatus: r.status || null, lastError: r.status === "FAILED" ? String(r.error || "").slice(0, 200) : null });
   }
   return out;
 }
@@ -150,7 +160,8 @@ async function recordDailyCheck(env, day, map, at) {
     .catch((e) => console.error("Daily check record failed:", e instanceof Error ? e.message : String(e)));
 }
 
-// Once a day after the last self-test slot: one email to the owner only if something needs attention.
+// Once a day after the last self-test slot: one email to the owner only if something needs attention (a self-test gap,
+// or an item on a real order from admin/health.js).
 async function dailyCoverageReport(env, now = Date.now(), { force = false } = {}) {
   if (!env.DB) return { sent: false };
   const d = new Date(now);
@@ -158,20 +169,31 @@ async function dailyCoverageReport(env, now = Date.now(), { force = false } = {}
   const map = await buildCoverage(env, now);
   const day = d.toISOString().slice(0, 10);
   await recordDailyCheck(env, day, map, d.toISOString());
-  if (map.ok) return { sent: false, ok: true };
+  // Stage 13: the daily health summary rides on the same email. The DAILY_CHECK row above stays self-tests only (it is
+  // the stage 12 exit record); real-order items only decide whether the owner hears about it.
+  const ops = await operationsNeedingOwner(env, now).catch((error) => {
+    console.error("Daily health summary failed:", error instanceof Error ? error.message : String(error));
+    return [{ code: "HEALTH_SUMMARY", name: "Daily health summary", detail: "Couldn't read the orders today. Forward this email to Claude." }];
+  });
+  if (map.ok && !ops.length) return { sent: false, ok: true, ops: [] };
   const rows = [...map.offers, ...map.systems].filter((r) => r.public && r.status !== "OK");
+  const lines = [...ops.map((o) => [o.name, o.detail]), ...rows.map((r) => [r.name, likelyCause(r)])];
+  const context = await lastDayLine(env, now).catch(() => null);
   const link = `${publicBaseUrl(env)}/api/system/coverage?t=${encodeURIComponent(await signLinkToken(env, { kind: LINK_KIND, id: "owner", ttlDays: LINK_TTL_DAYS }))}`;
+  const intro = rows.length
+    ? "Everything else passed. Forward this email to Claude to have it looked at; the page has every service and its last result."
+    : "Every self-test passed. These are on real orders and need you.";
   const sent = await sendTransactionalEmail(env, {
     to: ownerEmailAddress(env),
-    subject: `${rows.length} Menu-made check${rows.length === 1 ? " needs" : "s need"} a look`,
-    html: brandedEmailHtml({ preheader: rows.map((r) => r.name).join(", "), eyebrow: "DAILY CHECK", heading: "Something didn't pass today",
-      paragraphs: ["Everything else passed. Forward this email to Claude to have it looked at; the page has every service and its last result."],
-      rows: rows.map((r) => [r.name, likelyCause(r)]),
+    subject: `${lines.length} Menu-made item${lines.length === 1 ? " needs" : "s need"} a look`,
+    html: brandedEmailHtml({ preheader: lines.map(([name]) => name).join(", "), eyebrow: "DAILY CHECK", heading: rows.length ? "Something didn't pass today" : "Something needs you today",
+      paragraphs: context ? [intro, context] : [intro],
+      rows: lines,
       buttons: [{ label: "Open coverage", url: link, primary: true }] }),
-    text: `Daily check, ${day}:\n${rows.map((r) => `- ${r.name}: ${likelyCause(r)}`).join("\n")}\n\nCoverage: ${link}`,
-    idempotencyKey: `coverage-report/${day}`, purpose: "AUTOMATION_ALERT", templateKey: "coverage_report_v1"
+    text: `Daily check, ${day}:\n${lines.map(([name, detail]) => `- ${name}: ${detail}`).join("\n")}${context ? `\n\n${context}` : ""}\n\nCoverage: ${link}`,
+    idempotencyKey: `coverage-report/${day}`, purpose: "AUTOMATION_ALERT", templateKey: "coverage_report_v2"
   }).catch((error) => ({ ok: false, error }));
-  return { sent: Boolean(sent?.ok), ok: false, gaps: rows.map((r) => r.code) };
+  return { sent: Boolean(sent?.ok), ok: map.ok, gaps: rows.map((r) => r.code), ops: ops.map((o) => o.code) };
 }
 
 // ---------- owner page ----------
