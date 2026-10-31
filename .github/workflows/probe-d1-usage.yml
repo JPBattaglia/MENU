@@ -11,8 +11,8 @@ jobs:
     steps:
       - run: |
           acc="$ACC"; [ -n "$acc" ] || acc=$(curl -sS -H "Authorization: Bearer $CF" https://api.cloudflare.com/client/v4/accounts | jq -r '.result[0].id')
-          echo "account found: $([ -n "$acc" ] && echo yes || echo no)"
+          echo "::notice::account found: $([ -n "$acc" ] && echo yes || echo no)"
           d=$(date -u +%F)
           q='{"query":"query($a:String!,$d:Date!){viewer{accounts(filter:{accountTag:$a}){d1AnalyticsAdaptiveGroups(limit:10,filter:{date_geq:$d}){sum{rowsRead rowsWritten}dimensions{date databaseId}}}}}","variables":{"a":"'"$acc"'","d":"'"$d"'"}}'
-          curl -sS -H "Authorization: Bearer $CF" -H "Content-Type: application/json" https://api.cloudflare.com/client/v4/graphql --data "$q" | jq -c '{errors: .errors, groups: .data.viewer.accounts[0].d1AnalyticsAdaptiveGroups}' || true
-          curl -sS -H "Authorization: Bearer $CF" "https://api.cloudflare.com/client/v4/accounts/$acc/subscriptions" | jq -c '[.result[]? | {rate_plan: .rate_plan.id, product: .product.name}]' || true
+          curl -sS -H "Authorization: Bearer $CF" -H "Content-Type: application/json" https://api.cloudflare.com/client/v4/graphql --data "$q" | jq -c '{errors: .errors, groups: .data.viewer.accounts[0].d1AnalyticsAdaptiveGroups}' | sed "s/^/::notice::/" || true
+          curl -sS -H "Authorization: Bearer $CF" "https://api.cloudflare.com/client/v4/accounts/$acc/subscriptions" | jq -c '{errors: .errors, subs: [.result[]? | {rate_plan: .rate_plan.id, product: .product.name}]}' | sed "s/^/::notice::/" || true
