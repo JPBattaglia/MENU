@@ -184,3 +184,14 @@ test('app shell: config carries the bundle id and push environment; the page has
   assert.match(configure, /app_id: cfg\.app_id/);
   assert.match(configure, /push_environment/);
 });
+
+test('drill (stage 12 task 7): a refused Apple key stops every notification but sends one alert a day', async () => {
+  const f = await setup({ key: 'FAILED' });
+  await register(f, { platform: 'ios', token: TOKEN_A, bundle_id: BUNDLE });
+  await engage.queuePush(f.env, APP_ID, { title: 'Soup', body: 'Tomato basil today' });
+  await engage.queuePush(f.env, APP_ID, { title: 'Pie', body: 'Apple pie tonight' });
+  const { req } = await oidc(f);
+  assert.equal((await (await req('next')).json()).job, null);
+  assert.equal(f.row(`SELECT COUNT(*) AS n FROM native_push_jobs WHERE status = 'FAILED'`).n, 2);
+  assert.equal(f.row(`SELECT COUNT(*) AS n FROM communications WHERE template_key = 'native_push_alert_v1'`).n, 1);
+});

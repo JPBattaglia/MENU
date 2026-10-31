@@ -1,4 +1,5 @@
 import { nowIso } from "./http.js";
+import { noteMailResult } from "./alert-once.js";
 
 var RESEND_ENDPOINT = "https://api.resend.com/emails";
 
@@ -176,6 +177,8 @@ async function sendTransactionalEmail(env, { to, subject, html, text, idempotenc
       error = sendError instanceof Error ? sendError.message : String(sendError);
     }
   }
+  // Stage 12, task 7: a failed owner alert, or three failed sends in a row, reaches the owner through GitHub instead.
+  if (env.RESEND_API_KEY) await noteMailResult(env, { ok, toOwner: to === (env.OWNER_EMAIL || REPLY_TO_ADDRESS), error }).catch(() => null);
   try {
     const timestamp = nowIso();
     await env.DB.prepare(`

@@ -17,6 +17,7 @@ import { loadDeliveryContext } from "../../approvals/release.js";
 import { storeDeliverable } from "../shared/deliverables.js";
 import { ownerEmailAddress } from "../../lib/config.js";
 import { brandedEmailHtml, sendTransactionalEmail } from "../../lib/email.js";
+import { dispatchRefused } from "../../lib/dispatch-alert.js";
 
 const OIDC_ISSUER = "https://token.actions.githubusercontent.com";
 const OIDC_AUDIENCE = "menu-made-render";
@@ -79,6 +80,7 @@ async function startRenderer(env, jobId) {
   }
   const started = status === 204;
   if (!started) console.error(`Renderer start refused: HTTP ${status}`);
+  if (status !== 204) await dispatchRefused(env, status, "the social post image renderer").catch(() => null);
   await env.DB.prepare(`UPDATE workflow_steps SET output_json = json_set(output_json, '$.dispatched_at', ?, '$.dispatch_status', ?) WHERE id = ? AND status = 'WAITING'`)
     .bind(nowIso(), status, jobId).run().catch(() => null);
   return { started, status };

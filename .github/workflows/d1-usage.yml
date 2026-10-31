@@ -1,0 +1,30 @@
+# Hourly D1 usage check (Stage 12, task 7). Reads today's rows read and written for every D1 database on the
+# Cloudflare account (Menu-made and the Nino shop share the free plan's daily limits) and posts the totals to the
+# worker over GitHub OIDC (no secret). The worker records it on the coverage map and emails the owner once a day if
+# usage is near the limit. Uses the deploy token, which can read account analytics.
+name: d1-usage
+on:
+  schedule: [{ cron: "17 * * * *" }]
+  workflow_dispatch:
+permissions:
+  contents: read
+  id-token: write
+jobs:
+  usage:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    env:
+      CF: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      ACC: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+    steps:
+      - name: Read today's D1 usage and report it
+        run: |
+          set -eu
+          acc="$ACC"; [ -n "$acc" ] || acc=$(curl -sSf -H "Authorization: Bearer $CF" https://api.cloudflare.com/client/v4/accounts | jq -r '.result[0].id')
+          d=$(date -u +%F)
+          q=$(jq -nc --arg a "$acc" --arg d "$d" '{query:"query($a:String!,$d:Date!){viewer{accounts(filter:{accountTag:$a}){d1AnalyticsAdaptiveGroups(limit:50,filter:{date_geq:$d}){sum{rowsRead rowsWritten}dimensions{databaseId}}}}}",variables:{a:$a,d:$d}}')
+          res=$(curl -sS -H "Authorization: Bearer $CF" -H "Content-Type: application/json" https://api.cloudflare.com/client/v4/graphql --data "$q")
+          body=$(echo "$res" | jq -c --arg d "$d" --arg run "$GITHUB_RUN_ID" '{date:$d, run_id:$run, error:(if .errors then (.errors|map(.message)|join("; ")) else null end), databases:[.data.viewer.accounts[0].d1AnalyticsAdaptiveGroups[]? | {id:.dimensions.databaseId, rows_read:.sum.rowsRead, rows_written:.sum.rowsWritten}]}')
+          echo "$body"
+          token=$(curl -sSf -H "Authorization: Bearer $ACTIONS_ID_TOKEN_REQUEST_TOKEN" "$ACTIONS_ID_TOKEN_REQUEST_URL&audience=menu-made-d1-usage" | jq -r .value)
+          curl -sSf -X POST -H "Authorization: Bearer $token" -H "Content-Type: application/json" --data "$body" https://menu-made.com/api/system/d1-usage

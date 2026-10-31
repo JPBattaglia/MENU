@@ -162,7 +162,7 @@ test('full run: "Run every self-test now" starts each self-test once, skipping a
   const requested = f.DB.raw.prepare(`SELECT kind FROM self_tests WHERE status = 'REQUESTED'`).all().map((r) => r.kind);
   const expected = new Set([...Object.values(cov.OFFER_TESTS).flat().map(([k]) => k), ...cov.SYSTEMS.map(([, k]) => k)]);
   expected.delete('MENU_CARE_EDIT');
-  expected.delete('SITE_CHECK'); // runs in GitHub Actions
+  expected.delete('SITE_CHECK'); expected.delete('D1_USAGE'); // reported by GitHub Actions
   assert.deepEqual(new Set(requested), expected);
   assert.equal(requested.length, expected.size, 'one each');
   assert.equal((await cov.startFullRun(f.env)).length, 0, 'pressing again starts nothing new');

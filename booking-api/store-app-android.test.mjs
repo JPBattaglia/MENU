@@ -219,3 +219,16 @@ test('app shell: Android push only when the build carried google-services.json',
   assert.match(wf, /api\/store-build\/result\?store_app=/, 'signed jobs report back');
   assert.match(wf, /sips -s format jpeg/, 'the iOS icon loses its alpha channel (Apple refuses it)');
 });
+
+test('drill (stage 12 task 7): a refused Firebase key sends one alert a day, however many notifications wait', async () => {
+  const f = await setup();
+  await withFirebase(f);
+  await register(f, FCM_A);
+  await engage.queuePush(f.env, APP_ID, { title: 'Soup', body: 'Tomato basil today' });
+  await engage.queuePush(f.env, APP_ID, { title: 'Pie', body: 'Apple pie tonight' });
+  const g = fakeGoogle({ fcm: () => [403, { error: { status: 'PERMISSION_DENIED', message: 'denied' } }] });
+  await native.sendAndroidPushes(f.env, { fetchImpl: g.fetchImpl });
+  await native.sendAndroidPushes(f.env, { fetchImpl: g.fetchImpl });
+  assert.equal(f.row(`SELECT COUNT(*) AS n FROM android_push_jobs WHERE status = 'FAILED'`).n, 2);
+  assert.equal(f.row(`SELECT COUNT(*) AS n FROM communications WHERE template_key = 'native_push_alert_v1'`).n, 1);
+});

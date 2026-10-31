@@ -21,7 +21,7 @@ const PNG = new Uint8Array([0x89, 0x50, 0x4e, 0x47, 1, 2, 3, 4]);
 
 async function setup({ status = 'READY_TO_BUILD', logo = true } = {}) {
   const DB = createD1(); const ASSETS = createR2();
-  for (const m of ['0012_guest_app.sql', '0022_store_credentials.sql', '0024_android.sql', '0025_store_app.sql', '0026_store_app_builds.sql', '0027_store_app_listings.sql', '0029_store_app_live_version.sql']) DB.raw.exec(read(m));
+  for (const m of ['0012_guest_app.sql', '0021_guest_app_engagement.sql', '0022_store_credentials.sql', '0024_android.sql', '0025_store_app.sql', '0026_store_app_builds.sql', '0027_store_app_listings.sql', '0029_store_app_live_version.sql']) DB.raw.exec(read(m));
   DB.raw.exec('PRAGMA foreign_keys = OFF');
   const sql = (q, ...a) => DB.raw.prepare(q).run(...a);
   const t = '2026-10-30T00:00:00.000Z';
@@ -231,4 +231,23 @@ test('yearly rebuild waits while the Store App "Making" switch is off', async ()
   assert.equal((await build.scheduleYearlyRebuilds(f.env, NOW)).queued, 0);
   f.sql(`DELETE FROM worker_settings`);
   assert.equal((await build.scheduleYearlyRebuilds(f.env, NOW)).queued, 1);
+});
+
+test('drill (stage 12 task 7): GitHub refusing builds sends one alert, not one per tick', async () => {
+  const f = await setup();
+  await giveKeys(f);
+  f.env.GITHUB_DISPATCH_FETCH = async () => new Response('{}', { status: 401 });
+  for (let i = 0; i < 3; i++) await withEmails(f, () => build.advanceStoreBuilds(f.env, Date.parse('2026-10-30T00:10:00Z') + i * 300000));
+  assert.equal(f.emails.length, 1, 'one email for a refused token');
+  assert.equal(f.emails[0].subject, 'GitHub refused to start a job');
+  assert.match(f.emails[0].text, /tell Claude "GitHub token refused"/);
+
+  const g = await setup();
+  await giveKeys(g);
+  g.env.GITHUB_DISPATCH_FETCH = async () => new Response('{}', { status: 502 });
+  await withEmails(g, () => build.advanceStoreBuilds(g.env, Date.parse('2026-10-30T00:30:00Z')));
+  assert.equal(g.emails.length, 0, 'a short GitHub outage is retried quietly');
+  for (let i = 0; i < 3; i++) await withEmails(g, () => build.advanceStoreBuilds(g.env, Date.parse('2026-10-30T01:05:00Z') + i * 300000));
+  assert.equal(g.emails.length, 1, 'refused for over an hour: one build alert');
+  assert.match(g.emails[0].subject, /Store App build needs a look/);
 });

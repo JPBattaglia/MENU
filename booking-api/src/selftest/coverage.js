@@ -62,6 +62,7 @@ const SYSTEMS = [
   ["Google connection", "GOOGLE_API_HEALTH", "OAuth token refresh and the three Google APIs"],
   ["Payments (live, read-only)", "MONEY_PATHS", "every live Stripe price matches the catalog, a live checkout opens, the webhook is set up and nothing failed to arrive"],
   ["Email (both brands)", "EMAIL_HEALTH", "sending domain verified, DKIM, SPF, DMARC and MX for both domains, every template that ran rendered cleanly, nothing failed to send or bounced"],
+  ["Database usage (both sites)", "D1_USAGE", "today's D1 reads and writes against the free daily limits, hourly from GitHub Actions; one email a day if near"],
   ["Website checks (both sites)", "SITE_CHECK", "every page loads, no broken links or files, no JavaScript errors, no arrows on buttons or links, accessibility, speed (GitHub Actions, daily)"]
 ];
 
@@ -115,8 +116,8 @@ async function buildCoverage(env, now = Date.now()) {
 
 // ---------- the full run ----------
 
-// SITE_CHECK runs in GitHub Actions (daily), not in the worker, so the full run doesn't queue it.
-const ALL_KINDS = () => [...new Set([...Object.values(OFFER_TESTS).flat().map(([k]) => k), ...SYSTEMS.map(([, k]) => k)])].filter((k) => k !== "SITE_CHECK");
+// SITE_CHECK (daily) and D1_USAGE (hourly) are reported by GitHub Actions, not run by the worker, so the full run doesn't queue them.
+const ALL_KINDS = () => [...new Set([...Object.values(OFFER_TESTS).flat().map(([k]) => k), ...SYSTEMS.map(([, k]) => k)])].filter((k) => k !== "SITE_CHECK" && k !== "D1_USAGE");
 
 // Start every self-test that isn't already waiting or running. Returns the kinds started.
 async function startFullRun(env, by = "owner-full-run") {

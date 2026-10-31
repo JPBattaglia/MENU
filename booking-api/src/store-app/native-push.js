@@ -25,6 +25,8 @@ import { verifyRenderer } from "../producers/social-posts/render-jobs.js";
 import { loadCredential } from "./keys.js";
 import { fcmSend, parseServiceAccount } from "./google.js";
 import { automationOff } from "../lib/switches.js";
+import { dispatchRefused } from "../lib/dispatch-alert.js";
+import { alertOnce } from "../lib/alert-once.js";
 
 const PUSH_AUDIENCE = "menu-made-native-push";
 const PUSH_WORKFLOW = "JPBattaglia/MENU/.github/workflows/native-push.yml@refs/heads/master";
@@ -102,6 +104,7 @@ async function startNativePush(env) {
     console.error("Native push start failed:", error instanceof Error ? error.message : String(error));
   }
   if (status !== 204) console.error(`Native push start refused: HTTP ${status}`);
+  if (status !== 204) await dispatchRefused(env, status, "the app notification sender").catch(() => null);
   // One run handles every waiting job, so every waiting job counts as dispatched.
   await env.DB.prepare(`UPDATE native_push_jobs SET dispatched_at = ?, dispatch_status = ? WHERE status IN ('QUEUED', 'SENDING')`).bind(nowIso(), status).run().catch(() => null);
   return { started: status === 204, status };
@@ -176,7 +179,7 @@ async function claimNext(env) {
     let key = null;
     try { key = await loadCredential(env, scope, "APPLE_PUSH_KEY"); } catch { key = null; }
     if (!key || key.status === "FAILED" || !key.teamId) {
-      await failJob(env, job.id, key ? "The Apple push key on file was refused by Apple" : "No Apple push key on file");
+      await failJob(env, job.id, key ? "The Apple push key on file was refused by Apple" : "No Apple push key on file", scope);
       continue;
     }
     const claim = crypto.randomUUID();
@@ -196,9 +199,11 @@ async function claimNext(env) {
   return { job: null };
 }
 
-async function failJob(env, jobId, note) {
+async function failJob(env, jobId, note, scope = null) {
   const t = nowIso();
   await env.DB.prepare(`UPDATE native_push_jobs SET status = 'FAILED', note = ?, claim_id = NULL, updated_at = ?, finished_at = ? WHERE id = ?`).bind(note, t, t, jobId).run();
+  // One alert a day per key, however many notifications it stops (Stage 12, task 7).
+  if (scope && !(await alertOnce(env, `push-key:apple:${scope}`, 86400000))) return;
   await alertOwner(env, jobId, "Store App notifications couldn't be sent", [
     `${note}, so a Store App notification wasn't sent.`,
     `Open ${publicBaseUrl(env)}/api/store-keys/owner, ask for the emailed link, and upload the push key ("Menu made push", AuthKey_….p8) again. Notifications sent after that go out normally.`
@@ -217,7 +222,7 @@ async function reportResults(env, jobId, body) {
   if (keyProblem) {
     await env.DB.prepare(`UPDATE store_credentials SET check_status = 'FAILED', check_note = ?, updated_at = ? WHERE scope = ? AND kind = 'APPLE_PUSH_KEY'`)
       .bind(`Apple refused the key when sending: ${String(keyProblem.reason || "403").slice(0, 80)}`, t, scope).run();
-    await failJob(env, job.id, `Apple refused the push key (${String(keyProblem.reason || "403").slice(0, 80)})`);
+    await failJob(env, job.id, `Apple refused the push key (${String(keyProblem.reason || "403").slice(0, 80)})`, scope);
     return json({ ok: true, status: "FAILED" });
   }
   let sent = 0; let failed = 0; let gone = 0;
@@ -256,6 +261,7 @@ async function failAndroidJob(env, job, scope, note) {
   const t = nowIso();
   await env.DB.prepare(`UPDATE android_push_jobs SET status = 'FAILED', note = ?, updated_at = ?, finished_at = ? WHERE id = ?`).bind(note, t, t, job.id).run();
   await env.DB.prepare(`UPDATE store_credentials SET check_status = 'FAILED', check_note = ?, updated_at = ? WHERE scope = ? AND kind = 'FIREBASE_ACCOUNT'`).bind(note.slice(0, 160), t, scope).run();
+  if (!(await alertOnce(env, `push-key:firebase:${scope}`, 86400000))) return;
   await alertOwner(env, job.id, "Android notifications couldn't be sent", [
     `${note}, so an Android Store App notification wasn't sent.`,
     `Open ${publicBaseUrl(env)}/api/store-keys/google, ask for the emailed link, and upload the Firebase service account key again. Notifications sent after that go out normally.`

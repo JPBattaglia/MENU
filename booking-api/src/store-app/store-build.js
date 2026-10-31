@@ -26,6 +26,7 @@ import { appUrl, findAppLogo } from "../producers/guest-app/app-step.js";
 import { keysReady, storeScope } from "./restaurant-keys.js";
 import { OWNER, OWNER_BUNDLE_ID } from "./keys.js";
 import { pausedWorkflows } from "../lib/switches.js";
+import { dispatchRefused } from "../lib/dispatch-alert.js";
 
 const BUILD_AUDIENCE = "menu-made-store-build";
 const BUILD_WORKFLOW = "JPBattaglia/MENU/.github/workflows/store-app-build.yml@refs/heads/master";
@@ -218,6 +219,11 @@ async function advanceStoreBuilds(env, now = Date.now(), { only = null } = {}) {
       const result = await dispatchBuild(env, row);
       if (!result.started) {
         await env.DB.prepare(`UPDATE store_apps SET note = ? WHERE id = ?`).bind(`Build start refused: HTTP ${result.status}`, row.id).run();
+        await dispatchRefused(env, result.status, "a Store App build", now).catch(() => null);
+        // Refused for an hour for any other reason: one alert for this build (Stage 12, task 7).
+        if (![401, 403, 404].includes(result.status) && now - Date.parse(row.updated_at) > 3600000 && !(row.last_email_at && row.last_email_at >= row.updated_at)) {
+          await alertBuildProblem(env, row, "A Store App build couldn't start", `GitHub has refused to start this build for over an hour (last answer: HTTP ${result.status || "no response"}). It keeps trying every 5 minutes.`, null);
+        }
         continue;
       }
       const t = nowIso();
