@@ -25,6 +25,7 @@ function setup({ status = 'TRIALING', trialDays = 90 } = {}) {
   sql(`INSERT INTO communications (id, created_at, channel, direction, recipient, subject, purpose, template_key, status, project_id) VALUES ('c1', ?, 'EMAIL', 'OUTBOUND', 'delivered@resend.dev', 'Tell us about your business', 'WEBSITE_INTAKE', 'website_intake_v1', 'SENT', 'proj')`, t);
   sql(`INSERT INTO self_tests (id, kind, status, stage, stage_started_at, order_id, state_json, requested_by, created_at, updated_at) VALUES ('st', 'WEBSITE_TRIAL_RUN', 'RUNNING', 'AWAIT_TRIAL', ?, 'order', '{"customer_id":"cus_test_1","clock_id":"clock_1"}', 'test', ?, ?)`, t, t, t);
   const stripe = []; const emails = []; const customers = [];
+  const clock = { frozen: Math.floor(Date.now() / 1000), steps: 0 };
   const fetch = async (url, init = {}) => {
     if (String(url) === 'https://api.resend.com/emails') { emails.push(JSON.parse(init.body)); return Response.json({ id: 'e' }); }
     if (String(url).startsWith('https://api.stripe.com/')) {
@@ -32,7 +33,13 @@ function setup({ status = 'TRIALING', trialDays = 90 } = {}) {
       stripe.push(`${method} ${path}`);
       if (method === 'POST' && path === '/v1/test_helpers/test_clocks') return Response.json({ id: 'clock_1', status: 'ready' });
       if (method === 'POST' && path === '/v1/customers') { customers.push(Object.fromEntries(params)); return Response.json({ id: 'cus_test_1' }); }
-      if (method === 'GET' && path === '/v1/test_helpers/test_clocks/clock_1') return Response.json({ id: 'clock_1', status: 'ready' });
+      if (method === 'GET' && path === '/v1/test_helpers/test_clocks/clock_1') return Response.json({ id: 'clock_1', status: 'ready', frozen_time: clock.frozen });
+      if (method === 'POST' && path === '/v1/test_helpers/test_clocks/clock_1/advance') {
+        const to = Number(params.get('frozen_time'));
+        if (to - clock.frozen > 61 * 86400) return Response.json({ error: { message: 'You can only advance a test clock up to two intervals' } }, { status: 400 });
+        clock.frozen = to; clock.steps++;
+        return Response.json({ id: 'clock_1', status: 'advancing', frozen_time: to });
+      }
       return Response.json({ id: path.split('/').pop(), deleted: true });
     }
     throw new Error(`Unexpected fetch ${url}`);
@@ -48,7 +55,7 @@ function setup({ status = 'TRIALING', trialDays = 90 } = {}) {
       JSON.stringify({ source: 'SUBSCRIPTION_PERIOD', subscription_id: 'sub', plan_code: plan }), t, t);
     sql(`INSERT INTO workflow_runs (id, project_id, workflow_key, workflow_version, status, trigger_type, created_at) VALUES ('prun', 'pproj', 'WEBSITE_CARE_V1', 1, 'QUEUED', 'SUBSCRIPTION_PERIOD', ?)`, t);
   };
-  return { env, sql, row, stripe, emails, fetch, customers, endTrial };
+  return { env, sql, row, stripe, emails, fetch, customers, endTrial, clock };
 }
 async function withFetch(fake, fn) { const o = globalThis.fetch; globalThis.fetch = fake; try { return await fn(); } finally { globalThis.fetch = o; } }
 
@@ -57,10 +64,12 @@ test('a trialing Website Care subscription passes, then the test subscription, w
   await withFetch(f.fetch, async () => {
     await advanceWebsiteTrialSelfTests(f.env, null);
     assert.equal(f.row(`SELECT stage FROM self_tests`).stage, 'AWAIT_TRIAL_ENDED');
-    assert.equal(f.stripe[0], 'POST /v1/test_helpers/test_clocks/clock_1/advance', 'the clock moves past the trial end');
+    assert.ok(f.stripe.includes('POST /v1/test_helpers/test_clocks/clock_1/advance'), 'the clock moves toward the trial end');
     assert.ok(!f.stripe.includes('DELETE /v1/subscriptions/sub_test_1'), 'not cancelled before the trial has ended');
-    await advanceWebsiteTrialSelfTests(f.env, null);
+    for (let i = 0; i < 3; i++) await advanceWebsiteTrialSelfTests(f.env, null);
     assert.equal(f.row(`SELECT stage FROM self_tests`).stage, 'AWAIT_TRIAL_ENDED', 'waits while the subscription is still trialing');
+    assert.equal(f.clock.steps, 2, '90 days in two steps of at most 55 days (Stripe allows two months per advance)');
+    assert.ok(f.clock.frozen * 1000 > Date.now() + 90 * 86400000, 'the clock ends up past the trial end');
     f.endTrial();
     await advanceWebsiteTrialSelfTests(f.env, null);
     const r = f.row(`SELECT stage, log_json FROM self_tests`);

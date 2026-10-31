@@ -88,10 +88,21 @@ async function stageAwaitTrial(env, app, test) {
   const intake = await env.DB.prepare(`SELECT status FROM communications WHERE project_id = ? ORDER BY created_at LIMIT 1`).bind(project.id).first();
   if (!intake) return null; // the intake email is sent on the same webhook; give it a tick
   // Stage 12: the trial ends on the test clock, the card is charged for the first month and Care work starts.
+  // Stripe only lets a test clock move two billing intervals (two months here) per advance, so it goes in steps.
   const target = Math.floor(Date.parse(trialEnd) / 1000) + 3 * 3600;
-  await stripeTest(env, `/v1/test_helpers/test_clocks/${state(test).clock_id}/advance`, "POST", { frozen_time: String(target) });
-  return updateTest(env, test, { stage: "AWAIT_TRIAL_ENDED", project_id: project.id, state: { subscription_id: sub.id, stripe_subscription_id: sub.provider_subscription_id, trial_end: trialEnd },
+  await stepClock(env, state(test).clock_id, target);
+  return updateTest(env, test, { stage: "AWAIT_TRIAL_ENDED", project_id: project.id, state: { subscription_id: sub.id, stripe_subscription_id: sub.provider_subscription_id, trial_end: trialEnd, clock_target: target },
     log: `${run.care} TRIALING until ${String(trialEnd).slice(0, 10)} (${Math.round(days)} days) with an active entitlement; ${run.product} project created and intake email ${intake.status}; clock advancing past the trial end` });
+}
+
+const CLOCK_STEP_SECONDS = 55 * 86400; // under Stripe's two-month limit per advance
+
+// Moves the clock toward target by at most one step. Returns true once it is there.
+async function stepClock(env, clockId, target, clock = null) {
+  const now = Number(clock?.frozen_time ?? (await stripeTest(env, `/v1/test_helpers/test_clocks/${clockId}`)).frozen_time);
+  if (now >= target) return true;
+  await stripeTest(env, `/v1/test_helpers/test_clocks/${clockId}/advance`, "POST", { frozen_time: String(Math.min(target, now + CLOCK_STEP_SECONDS)) });
+  return false;
 }
 
 async function stageAwaitTrialEnded(env, app, test) {
@@ -99,6 +110,7 @@ async function stageAwaitTrialEnded(env, app, test) {
   const clock = await stripeTest(env, `/v1/test_helpers/test_clocks/${s.clock_id}`);
   if (clock.status === "internal_failure") throw new Error("The Stripe test clock failed to advance");
   if (clock.status !== "ready") return null;
+  if (s.clock_target && !(await stepClock(env, s.clock_id, s.clock_target, clock))) return null; // next step on a later tick
   const sub = await env.DB.prepare(`SELECT status FROM subscriptions WHERE id = ?`).bind(s.subscription_id).first();
   if (sub?.status === "TRIALING") return null;
   if (sub?.status !== "ACTIVE") throw new Error(`When the trial ended the subscription became ${sub?.status}, expected ACTIVE (first month charged)`);

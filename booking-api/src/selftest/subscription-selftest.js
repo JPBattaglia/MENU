@@ -285,7 +285,9 @@ async function stageAwaitCancelled(env, app, test) {
   if (sub?.status !== "CANCELLED") return null;
   const open = await env.DB.prepare(`SELECT COUNT(*) AS n FROM entitlements WHERE subscription_id = ? AND status != 'EXPIRED'`).bind(s.subscription_id).first();
   if (Number(open?.n) !== 0) throw new Error(`${open.n} entitlements still open after cancel`);
-  const target = Math.floor(Date.parse(s.second_period) / 1000) + 70 * 86400;
+  // Stripe moves a test clock at most two months per advance: 40 days past the second period's start for an
+  // immediate cancel; 70 for a cancel at period end, whose clock already stands a month further on.
+  const target = Math.floor(Date.parse(s.second_period) / 1000) + (runOf(test).cancelAtPeriodEnd ? 70 : 40) * 86400;
   await advanceClock(env, s.clock_id, target);
   return updateTest(env, test, { stage: "AWAIT_NO_NEW_JOBS", log: "Cancel synced: subscription CANCELLED, entitlements EXPIRED; clock advancing another month" });
 }

@@ -146,3 +146,49 @@ test('stage 12 gaps: the Guest App, website trial and Store App trial self-tests
   assert.equal(kinds().length, 3);
   assert.equal(await guest.maybeScheduleDaily({ DB: f.DB }), undefined, 'off outside the deployed worker (no SELFTEST_SCHEDULE)');
 });
+
+test('full run: "Run every self-test now" starts each self-test once, skipping any already running', async () => {
+  const f = setup();
+  allSystemsPass(f);
+  f.DB.raw.prepare(`INSERT INTO self_tests (id, kind, status, created_at, updated_at) VALUES ('busy', 'MENU_CARE_EDIT', 'RUNNING', 'x', 'x')`).run();
+  const call = (url, init) => worker.fetch(new Request(url, init), f.env, { waitUntil() {} });
+  await call('https://menu-made.com/api/system/coverage', { method: 'POST' });
+  const link = /href="([^"]+\/api\/system\/coverage\?t=[^"]+)"/.exec(emails[0].html)[1].replaceAll('&amp;', '&');
+  const page = await (await call(link)).text();
+  assert.match(page, /Run every self-test now/);
+  const form = new FormData(); form.set('t', new URL(link).searchParams.get('t')); form.set('run', '1');
+  const after = await (await call('https://menu-made.com/api/system/coverage', { method: 'POST', body: form })).text();
+  assert.match(after, /Started \d+ self-tests/);
+  const requested = f.DB.raw.prepare(`SELECT kind FROM self_tests WHERE status = 'REQUESTED'`).all().map((r) => r.kind);
+  const expected = new Set([...Object.values(cov.OFFER_TESTS).flat().map(([k]) => k), ...cov.SYSTEMS.map(([, k]) => k)]);
+  expected.delete('MENU_CARE_EDIT');
+  assert.deepEqual(new Set(requested), expected);
+  assert.equal(requested.length, expected.size, 'one each');
+  assert.equal((await cov.startFullRun(f.env)).length, 0, 'pressing again starts nothing new');
+});
+
+test('daily report: nothing on a green day; one email with the likely cause when something failed or went stale', async () => {
+  const at = Date.parse('2026-10-31T22:01:00.000Z');
+  const env = (f) => ({ ...f.env, SELFTEST_SCHEDULE: 'on' });
+  const green = setup({ offers: [['MENU_CARE', 1]] });
+  allSystemsPass(green, 2);
+  green.DB.raw.prepare(`INSERT INTO self_tests (id, kind, status, created_at, updated_at, finished_at) VALUES ('m', 'MENU_CARE_EDIT', 'PASSED', ?, ?, ?)`).run(new Date(at - 3600000).toISOString(), 'x', new Date(at - 3600000).toISOString());
+  const r1 = await cov.dailyCoverageReport(env(green), at);
+  assert.deepEqual(r1, { sent: false, ok: true });
+  assert.equal(emails.length, 0);
+
+  const red = setup({ offers: [['MENU_CARE', 1], ['GUEST_APP_SETUP', 1]] });
+  allSystemsPass(red, 2);
+  red.DB.raw.prepare(`INSERT INTO self_tests (id, kind, status, error, created_at, updated_at, finished_at) VALUES ('m', 'MENU_CARE_EDIT', 'FAILED', 'Hosted menu still shows the old price', ?, ?, ?)`).run(new Date(at - 3600000).toISOString(), 'x', new Date(at - 3600000).toISOString());
+  assert.deepEqual(await cov.dailyCoverageReport(env(red), at + 3600000), { sent: false }, 'only in the 22:00 UTC slot');
+  assert.deepEqual(await cov.dailyCoverageReport(red.f || red.env, at), { sent: false }, 'off outside the deployed worker');
+  const r2 = await cov.dailyCoverageReport(env(red), at);
+  assert.equal(r2.sent, true);
+  assert.deepEqual(r2.gaps.sort(), ['GUEST_APP_SETUP', 'MENU_CARE']);
+  assert.equal(emails.length, 1);
+  assert.deepEqual(emails[0].to, ['info@menu-made.com']);
+  assert.match(emails[0].subject, /2 Menu-made checks need a look/);
+  assert.match(emails[0].text, /MENU_CARE_EDIT failed: Hosted menu still shows the old price/);
+  assert.match(emails[0].text, /GUEST_APP_RUN has never passed/);
+  assert.match(emails[0].html, /\/api\/system\/coverage\?t=/, 'links the page; no token to remember');
+});

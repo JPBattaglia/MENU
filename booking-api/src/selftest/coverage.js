@@ -4,7 +4,13 @@
 //
 //   GET  /api/system/coverage        "Email me the link" (no token to remember)   POST (no t) emails a 7-day link
 //   GET  /api/system/coverage?t=     the coverage page
-//   GET  /api/system/coverage        with Authorization: Bearer <ADMIN_API_TOKEN>: the map as JSON (for the full run)
+//   GET  /api/system/coverage        with Authorization: Bearer <ADMIN_API_TOKEN>: the map as JSON
+//   POST /api/system/coverage        with t and run=1: "Run every self-test now" (stage 12 task 3, the full run)
+//
+// Stage 12 task 3: every self-test already runs daily on its own slot (15:00-20:40 UTC). Once a day at 22:00 UTC,
+// after the last slot, the map is checked; only when something failed or went stale does the owner get ONE email
+// with what failed, the likely cause, and a link to this page. A green day sends nothing. (The plan said a GitHub
+// Actions schedule; the worker's own clock does the same with no extra secret.)
 //
 // A row is OK when every one of its self-tests passed within FRESH_HOURS. Otherwise: NO_TEST (nothing listed for the
 // offer), NEVER_PASSED, or STALE (last pass too old, which is what happens to a self-test that isn't scheduled daily).
@@ -12,13 +18,14 @@
 // listed but don't count until they go public; other hidden offers aren't listed.
 import { ownerEmailAddress, publicBaseUrl } from "../lib/config.js";
 import { brandedEmailHtml, escapeHtml, sendTransactionalEmail } from "../lib/email.js";
-import { simplePage } from "../lib/http.js";
+import { nowIso, simplePage } from "../lib/http.js";
 import { signLinkToken, verifyLinkToken } from "../lib/links.js";
 import { constantTimeEqual } from "../admin/queue.js";
 
 const LINK_KIND = "system-coverage";
 const LINK_TTL_DAYS = 7;
 const FRESH_HOURS = 36;
+const REPORT_HOUR_UTC = 22;
 
 // Offer code -> the self-test kinds that prove it (each: what it covers for that offer).
 const OFFER_TESTS = {
@@ -103,6 +110,54 @@ async function buildCoverage(env, now = Date.now()) {
     elsewhere: ELSEWHERE.map(([name, how]) => ({ name, how })), gaps: gaps.map((r) => ({ code: r.code, name: r.name, status: r.status })) };
 }
 
+// ---------- the full run ----------
+
+const ALL_KINDS = () => [...new Set([...Object.values(OFFER_TESTS).flat().map(([k]) => k), ...SYSTEMS.map(([, k]) => k)])];
+
+// Start every self-test that isn't already waiting or running. Returns the kinds started.
+async function startFullRun(env, by = "owner-full-run") {
+  const started = [];
+  for (const kind of ALL_KINDS()) {
+    const busy = await env.DB.prepare(`SELECT 1 FROM self_tests WHERE kind = ? AND status IN ('REQUESTED', 'RUNNING') LIMIT 1`).bind(kind).first();
+    if (busy) continue;
+    const t = nowIso();
+    await env.DB.prepare(`INSERT INTO self_tests (id, kind, status, requested_by, created_at, updated_at) VALUES (?, ?, 'REQUESTED', ?, ?, ?)`).bind(crypto.randomUUID(), kind, by, t, t).run();
+    started.push(kind);
+  }
+  return started;
+}
+
+const likelyCause = (row) => {
+  const t = row.tests.find((x) => x.lastError) || row.tests.find((x) => !x.lastPass) || row.tests[0];
+  if (!t) return "No self-test is set up for it yet.";
+  if (t.lastError) return `${t.kind} failed: ${t.lastError}`;
+  if (!t.lastPass) return `${t.kind} has never passed.`;
+  return `${t.kind} last passed ${t.lastPass.slice(0, 16).replace("T", " ")} UTC; it may not have run (not scheduled, or stuck waiting).`;
+};
+
+// Once a day after the last self-test slot: one email to the owner only if something needs attention.
+async function dailyCoverageReport(env, now = Date.now(), { force = false } = {}) {
+  if (!env.DB) return { sent: false };
+  const d = new Date(now);
+  if (!force && (String(env.SELFTEST_SCHEDULE || "") !== "on" || d.getUTCHours() !== REPORT_HOUR_UTC || d.getUTCMinutes() >= 5)) return { sent: false };
+  const map = await buildCoverage(env, now);
+  if (map.ok) return { sent: false, ok: true };
+  const rows = [...map.offers, ...map.systems].filter((r) => r.public && r.status !== "OK");
+  const link = `${publicBaseUrl(env)}/api/system/coverage?t=${encodeURIComponent(await signLinkToken(env, { kind: LINK_KIND, id: "owner", ttlDays: LINK_TTL_DAYS }))}`;
+  const day = d.toISOString().slice(0, 10);
+  const sent = await sendTransactionalEmail(env, {
+    to: ownerEmailAddress(env),
+    subject: `${rows.length} Menu-made check${rows.length === 1 ? " needs" : "s need"} a look`,
+    html: brandedEmailHtml({ preheader: rows.map((r) => r.name).join(", "), eyebrow: "DAILY CHECK", heading: "Something didn't pass today",
+      paragraphs: ["Everything else passed. Forward this email to Claude to have it looked at; the page has every service and its last result."],
+      rows: rows.map((r) => [r.name, likelyCause(r)]),
+      buttons: [{ label: "Open coverage", url: link, primary: true }] }),
+    text: `Daily check, ${day}:\n${rows.map((r) => `- ${r.name}: ${likelyCause(r)}`).join("\n")}\n\nCoverage: ${link}`,
+    idempotencyKey: `coverage-report/${day}`, purpose: "AUTOMATION_ALERT", templateKey: "coverage_report_v1"
+  }).catch((error) => ({ ok: false, error }));
+  return { sent: Boolean(sent?.ok), ok: false, gaps: rows.map((r) => r.code) };
+}
+
 // ---------- owner page ----------
 
 const LABEL = { OK: "OK", STALE: "Stale", NEVER_PASSED: "Never passed", NO_TEST: "No self-test" };
@@ -113,7 +168,7 @@ const ago = (iso, now) => {
   return h < 1 ? "under an hour ago" : h < 48 ? `${h} hours ago` : `${Math.round(h / 24)} days ago`;
 };
 
-function coveragePage(map, now = Date.parse(map.generated_at)) {
+function coveragePage(map, token = "", notice = "", now = Date.parse(map.generated_at)) {
   const cell = "padding:8px 6px;border-bottom:1px solid #dce8ec;vertical-align:top;text-align:left";
   const row = (r) => `<tr><td style="${cell}"><strong>${escapeHtml(r.name)}</strong>${r.public ? "" : "<br><small>not on sale yet</small>"}</td>
 <td style="${cell};color:${COLOR[r.status]}"><strong>${LABEL[r.status]}</strong></td>
@@ -122,7 +177,8 @@ function coveragePage(map, now = Date.parse(map.generated_at)) {
   const summary = map.ok
     ? `<p style="color:#1a6b3a"><strong>Everything on sale has a self-test that passed in the last ${map.fresh_hours} hours.</strong></p>`
     : `<p style="color:#b42318"><strong>${map.gaps.length} item${map.gaps.length === 1 ? " needs" : "s need"} attention:</strong> ${map.gaps.map((g) => `${escapeHtml(g.name)} (${LABEL[g.status].toLowerCase()})`).join(", ")}.</p>`;
-  return simplePage(200, "System coverage", `${summary}
+  const runForm = token ? `<form method="post" action="/api/system/coverage"><input type="hidden" name="t" value="${escapeHtml(token)}"><input type="hidden" name="run" value="1"><button type="submit">Run every self-test now</button> <small>Results arrive over the next hour; you'll only get an email if something fails.</small></form>` : "";
+  return simplePage(200, "System coverage", `${notice}${summary}${runForm}
 <p><small>Stale means the self-test hasn't passed in the last ${map.fresh_hours} hours, usually because it isn't on a daily schedule yet. Checked ${escapeHtml(map.generated_at.slice(0, 16).replace("T", " "))} UTC.</small></p>
 <h2 style="font-size:18px">What's for sale</h2>${table(map.offers)}
 <h2 style="font-size:18px">Shared systems</h2>${table(map.systems)}
@@ -154,7 +210,11 @@ async function handleCoverage(request, env) {
     if (!env.ADMIN_API_TOKEN || !constantTimeEqual(bearer, env.ADMIN_API_TOKEN)) return noStore(Response.json({ ok: false, error: "Not authorized" }, { status: 401 }));
     return noStore(Response.json(await buildCoverage(env)));
   }
-  const token = url.searchParams.get("t");
+  let token = url.searchParams.get("t");
+  let run = false;
+  if (request.method === "POST") {
+    try { const form = await request.formData(); token = token || String(form.get("t") || ""); run = form.get("run") === "1"; } catch { /* no form */ }
+  }
   if (request.method === "POST" && !token) return noStore(await emailLink(env));
   if (!token) {
     return noStore(simplePage(200, "System coverage", `<p>Every service on sale, the self-tests that prove it works, and when each last passed. We'll email a 7-day link to <strong>${escapeHtml(ownerEmailAddress(env))}</strong>.</p>
@@ -162,7 +222,12 @@ async function handleCoverage(request, env) {
   }
   const payload = await verifyLinkToken(env, token, [LINK_KIND], "owner");
   if (!payload || payload.expired) return noStore(simplePage(403, "This link has expired", `<p>Open <a href="/api/system/coverage">the coverage page</a> again to get a fresh link.</p>`));
-  return noStore(coveragePage(await buildCoverage(env)));
+  let notice = "";
+  if (run) {
+    const started = await startFullRun(env);
+    notice = `<p style="color:#1a6b3a"><strong>${started.length ? `Started ${started.length} self-test${started.length === 1 ? "" : "s"}.` : "Every self-test is already running."}</strong></p>`;
+  }
+  return noStore(coveragePage(await buildCoverage(env), token, notice));
 }
 
-export { ELSEWHERE, FRESH_HOURS, LINK_KIND, OFFER_TESTS, SYSTEMS, buildCoverage, coveragePage, handleCoverage };
+export { ELSEWHERE, FRESH_HOURS, LINK_KIND, OFFER_TESTS, SYSTEMS, buildCoverage, coveragePage, dailyCoverageReport, handleCoverage, startFullRun };
