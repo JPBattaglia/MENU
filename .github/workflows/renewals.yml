@@ -9,6 +9,7 @@
 #                    reminder from March 25, so Website & App Care rebuilds are on the new SDK in time.
 #   Google Play      new app versions must target the latest Android API level by August 31 each year: reminder from
 #                    August 1 (only matters once Android store apps are on; stage 11 Android is deferred).
+#   Keys             fixed expiry dates the owner gave (Printful key for the Nino shop: Dec 31, 2027).
 #   GitHub token     GITHUB_DISPATCH_TOKEN lives on the worker, so the worker checks its own expiry in the daily check.
 name: renewals
 on:
@@ -53,6 +54,14 @@ jobs:
           else
             echo "::warning::Apple Developer Program renewal date isn't set yet (repo variable APPLE_DEVELOPER_RENEWS)."
           fi
+          # Fixed expiry dates of keys that can't renew themselves (owner gave the dates).
+          while IFS='|' read -r name exp action; do
+            left=$(days_until "$exp")
+            echo "::notice::$name expires $exp ($left days)"
+            if [ "$left" -le "$WINDOW_DAYS" ]; then echo "::error::$name expires on $exp ($left days). $action"; due=1; fi
+          done <<'KEYS'
+          Printful key for the Nino shop (both stores)|2027-12-31|Tell Claude "Printful key expiring"; it walks you through a new key (about 5 minutes).
+          KEYS
           md=$(date -u +%m-%d)
           if [[ "$md" > "03-24" && "$md" < "04-26" ]]; then
             echo "::error::Apple's yearly Xcode/SDK minimum usually starts in late April. Tell Claude \"Apple SDK deadline\" so Store App rebuilds use the new SDK in time."; due=1
