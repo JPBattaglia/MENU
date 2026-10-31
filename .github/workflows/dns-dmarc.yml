@@ -1,0 +1,23 @@
+# One-off, run by hand: adds the DMARC record for ninobattaglia.com if it's missing (Stage 12, task 6).
+# Owner approved Oct 30, 2026: TXT _dmarc.ninobattaglia.com "v=DMARC1; p=none". Safe to re-run: it never
+# changes an existing DMARC record.
+name: dns-dmarc
+on: workflow_dispatch
+permissions: { contents: read }
+jobs:
+  dmarc:
+    runs-on: ubuntu-latest
+    env:
+      CF: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+    steps:
+      - name: Add _dmarc.ninobattaglia.com if missing
+        run: |
+          set -u
+          api() { curl -sS -H "Authorization: Bearer $CF" -H "Content-Type: application/json" "$@"; }
+          zone=$(api "https://api.cloudflare.com/client/v4/zones?name=ninobattaglia.com" | jq -r '.result[0].id // empty')
+          if [ -z "$zone" ]; then echo "::error::The deploy token can't see the ninobattaglia.com zone"; exit 1; fi
+          existing=$(api "https://api.cloudflare.com/client/v4/zones/$zone/dns_records?type=TXT&name=_dmarc.ninobattaglia.com" | jq -r '[.result[].content] | join(" | ")')
+          if [ -n "$existing" ]; then echo "Already there: $existing"; exit 0; fi
+          out=$(api -X POST "https://api.cloudflare.com/client/v4/zones/$zone/dns_records" --data '{"type":"TXT","name":"_dmarc.ninobattaglia.com","content":"\"v=DMARC1; p=none\"","ttl":1,"comment":"DMARC monitoring (Menu-made stage 12)"}')
+          echo "$out" | jq '{success, errors, content: .result.content}'
+          [ "$(echo "$out" | jq -r .success)" = "true" ] || { echo "::error::Cloudflare refused the record (token may lack DNS edit)"; exit 1; }
