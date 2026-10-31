@@ -1,0 +1,67 @@
+# Weekly database backups (Stage 13). Exports both D1 databases (menu-made-db and the Nino shop's nino-printful-commerce)
+# with wrangler, gzips them into the private R2 bucket menu-made-assets under backups/<database>/<date>.sql.gz, keeps 8 weeks,
+# and proves every backup restores: the export is loaded into a scratch SQLite database on the runner, checked with
+# integrity_check, and every table's row count is compared with the live database. The SQL never leaves the runner
+# except into R2 (no artifact: this repo is public). Logs show counts only. A failure fails the run, and GitHub emails
+# the owner. D1's own Time Travel covers the last 30 days on top of this.
+# Restore by hand (Claude does this): download the object, gunzip, then
+#   npx wrangler d1 execute <scratch-db> --remote --file backup.sql
+name: d1-backup
+on:
+  schedule: [{ cron: "40 10 * * 0" }]   # Sundays 10:40 UTC (about 3:40 am PT), the quietest hour
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency: { group: d1-backup, cancel-in-progress: false }
+jobs:
+  backup:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        db: [menu-made-db, nino-printful-commerce]
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      DB: ${{ matrix.db }}
+      BUCKET: menu-made-assets
+      KEEP_DAYS: "56"
+    steps:
+      - name: Export
+        run: |
+          set -eu
+          umask 077
+          npx -y wrangler@4 d1 export "$DB" --remote --output "$RUNNER_TEMP/backup.sql" > /dev/null
+          echo "Exported $(wc -c < "$RUNNER_TEMP/backup.sql") bytes"
+      - name: Restore into a scratch database and compare with live
+        run: |
+          set -eu
+          scratch="$RUNNER_TEMP/scratch.sqlite"
+          sqlite3 "$scratch" < "$RUNNER_TEMP/backup.sql"
+          ok=$(sqlite3 "$scratch" "PRAGMA integrity_check;")
+          [ "$ok" = "ok" ] || { echo "integrity_check: $ok"; exit 1; }
+          tables=$(sqlite3 "$scratch" "SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%' AND name NOT LIKE '_cf_%' ORDER BY name;")
+          [ -n "$tables" ] || { echo "No tables restored"; exit 1; }
+          live_tables=$(npx -y wrangler@4 d1 execute "$DB" --remote --json --command "SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%' AND name NOT LIKE '_cf_%' ORDER BY name" | jq -r '.[0].results[].name')
+          [ "$tables" = "$live_tables" ] || { echo "Table list differs from live"; diff <(echo "$tables") <(echo "$live_tables") || true; exit 1; }
+          sql=$(echo "$tables" | sed "s/.*/SELECT '&' AS t, count(*) AS n FROM \"&\"/" | paste -sd'|' | sed 's/|/ UNION ALL /g')
+          npx -y wrangler@4 d1 execute "$DB" --remote --json --command "$sql" | jq -r '.[0].results[] | "\(.t) \(.n)"' | sort > "$RUNNER_TEMP/live.txt"
+          sqlite3 -separator ' ' "$scratch" "$sql" | sort > "$RUNNER_TEMP/restored.txt"
+          # Live rows can be added between the export and the count (self-tests, the 5-minute tick): allow a small drift.
+          bad=$(join "$RUNNER_TEMP/restored.txt" "$RUNNER_TEMP/live.txt" | awk '{d=$3-$2; if (d<0) d=-d; lim=($3*0.02>25?$3*0.02:25); if (d>lim) print $1": restored "$2", live "$3}')
+          [ -z "$bad" ] || { echo "Row counts differ: $bad"; exit 1; }
+          echo "Restore proven: $(echo "$tables" | wc -l) tables, $(awk '{s+=$2} END {print s}' "$RUNNER_TEMP/restored.txt") rows, integrity ok"
+      - name: Store in R2 and drop backups older than 8 weeks
+        run: |
+          set -eu
+          day=$(date -u +%F)
+          gzip -9 -c "$RUNNER_TEMP/backup.sql" > "$RUNNER_TEMP/backup.sql.gz"
+          npx -y wrangler@4 r2 object put "$BUCKET/backups/$DB/$day.sql.gz" --remote --file "$RUNNER_TEMP/backup.sql.gz" --content-type application/gzip > /dev/null
+          echo "Stored backups/$DB/$day.sql.gz ($(wc -c < "$RUNNER_TEMP/backup.sql.gz") bytes)"
+          # Weekly names are dates; remove the ones that fall 8 to 12 weeks back (covers missed or extra runs).
+          for n in $(seq 57 84); do
+            old=$(date -u -d "$day - $n days" +%F)
+            npx -y wrangler@4 r2 object delete "$BUCKET/backups/$DB/$old.sql.gz" --remote > /dev/null 2>&1 || true
+          done
+          rm -f "$RUNNER_TEMP/backup.sql" "$RUNNER_TEMP/backup.sql.gz" "$RUNNER_TEMP/scratch.sqlite"
