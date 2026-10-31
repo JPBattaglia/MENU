@@ -63,7 +63,8 @@ async function recordUsage(env, body, now = Date.now()) {
     const paragraphs = [
       `${verdict.problem}. ${verdict.notes.join(". ")}.`,
       "If a daily limit is reached, checkouts, deliveries, restaurant sites and the Nino shop stop working until midnight UTC (5 pm Pacific).",
-      "What to do: upgrade Cloudflare to Workers Paid ($5 a month; the daily limits go away). Go to https://dash.cloudflare.com, click Workers & Pages in the left sidebar, then Plans, and choose Purchase under Workers Paid. Then tell Claude, so it can find what grew."
+      // Owner decision (Oct 27, 2026, on file): stay on Cloudflare's free plan; reads are cut, the plan isn't upgraded.
+      "What to do: forward this email to Claude. It finds what grew and cuts the reads for free (you stay on the free plan, as decided). Nothing to click."
     ];
     const sent = await sendTransactionalEmail(env, {
       to: ownerEmailAddress(env), subject: heading,

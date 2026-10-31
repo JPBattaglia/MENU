@@ -238,7 +238,7 @@ test('pages within the paid amount go straight through; fewer pages are flagged 
     await queueRun(over);
     await api.runScheduledProduction(over.env);
     assert.equal(over.emails.length, 1);
-    assert.match(over.emails[0].text, /Menu pages: Paid for 5 pages · menu has 3 pages \(2 unused, \$40\)\. Refund from Stripe if you choose\./);
+    assert.match(over.emails[0].text, /Menu pages: Paid for 5 pages · menu has 3 pages \(2 unused, \$40\)\. No refund is due \(no-refund policy\); this is only for your information\./);
   });
 });
 

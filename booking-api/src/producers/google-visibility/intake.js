@@ -62,7 +62,7 @@ async function remindGoogleVisibilityConnects(env, now = new Date()) {
       await sendTransactionalEmail(env, {
         to: ownerEmailAddress(env), subject: `${business} paid for Google Visibility 30 days ago and hasn't connected Google`,
         html: brandedEmailHtml({ eyebrow: "GOOGLE VISIBILITY", heading: `${escapeHtml(business)} hasn't connected Google`,
-          paragraphs: [`Order ${escapeHtml(context.order_id)} (${escapeHtml(context.customer_email)}) has had two reminders. Nothing more is sent automatically; reach out, or refund in Stripe if they've changed their mind.`] }),
+          paragraphs: [`Order ${escapeHtml(context.order_id)} (${escapeHtml(context.customer_email)}) has had two reminders. Nothing more is sent automatically; reach out to them directly. No refund is due (menu-made.com/refunds.html); the order simply stays paused until they connect.`] }),
         text: `${business} (${context.customer_email}), order ${context.order_id}, paid 30 days ago and still hasn't connected Google after two reminders.`,
         idempotencyKey: `gv-not-connected/${row.id}`, purpose: "AUTOMATION_ALERT", templateKey: "gv_not_connected_v1",
         context: { projectId: row.id, businessId: context.business_id, orderId: context.order_id }

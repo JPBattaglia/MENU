@@ -101,7 +101,8 @@ test('D1 usage: normal usage passes; near the limit fails and emails once a day;
   await record(report(2600000), at + 2 * 3600000);
   assert.equal(f.sent.length, 1, 'one email a day');
   assert.equal(f.sent[0].subject, 'Cloudflare is near its free daily limit');
-  assert.match(f.sent[0].text, /upgrade Cloudflare to Workers Paid/);
+  assert.match(f.sent[0].text, /forward this email to Claude/);
+  assert.doesNotMatch(f.sent[0].text, /Workers Paid/, 'the owner stays on the free plan');
   assert.equal(f.n(`SELECT COUNT(*) AS n FROM self_tests WHERE kind = 'D1_USAGE'`), 1, 'one row per day, updated hourly');
 
   const g = setup({ resend: 200 });

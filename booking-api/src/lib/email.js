@@ -1,5 +1,6 @@
 import { nowIso } from "./http.js";
 import { noteMailResult } from "./alert-once.js";
+import { withRunbook } from "./runbook.js";
 
 var RESEND_ENDPOINT = "https://api.resend.com/emails";
 
@@ -153,6 +154,8 @@ function lintEmail({ subject, html, text }) {
 async function sendTransactionalEmail(env, { to, subject, html, text, idempotencyKey, purpose, templateKey, context = {}, bccInternal = false }) {
   if (purpose === "ORDER_DELIVERY" && isCustomerEmail(to, purpose, env) && !/^delivery_(merch|nino_design)_/.test(String(templateKey || ""))) ({ html, text } = withCrossSell(html, text));
   if (isCustomerEmail(to, purpose, env)) ({ html, text } = withAccountLink(html, text));
+  // Stage 13: every owner alert names its runbook entry and the one action to take (lib/runbook.js).
+  if (purpose === "AUTOMATION_ALERT") ({ html, text } = withRunbook(html, text, templateKey));
   const lint = lintEmail({ subject, html, text });
   let ok = false;
   let providerId = null;

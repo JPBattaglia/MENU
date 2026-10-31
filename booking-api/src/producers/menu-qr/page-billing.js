@@ -195,7 +195,7 @@ function pageBillingNote(summary) {
   }
   if (summary.counted_pages < covered) {
     const unused = covered - summary.counted_pages;
-    return `${paidText} · menu has ${pagesWord(summary.counted_pages)} (${unused} unused, ${dollars(unused * MENU_PACKAGE_PRICING.additionalPageCents)}). Refund from Stripe if you choose.`;
+    return `${paidText} · menu has ${pagesWord(summary.counted_pages)} (${unused} unused, ${dollars(unused * MENU_PACKAGE_PRICING.additionalPageCents)}). No refund is due (no-refund policy); this is only for your information.`;
   }
   return `${paidText} · menu has ${pagesWord(summary.counted_pages)}.`;
 }
@@ -348,7 +348,7 @@ async function sendPageBillingReminders(env, now = Date.now()) {
           preheader: `${business} hasn't paid for extra menu pages after ${OWNER_ALERT_DAYS} days.`,
           eyebrow: "ORDER ON HOLD",
           heading: `${business}'s menu is waiting for payment`,
-          paragraphs: [`Production has been paused for ${OWNER_ALERT_DAYS} days. The buyer was emailed the payment link and ${REMINDER_DAYS.length} reminders. Follow up directly, or refund the order from Stripe.`],
+          paragraphs: [`Production has been paused for ${OWNER_ALERT_DAYS} days. The buyer was emailed the payment link and ${REMINDER_DAYS.length} reminders. Follow up with them directly; under the no-refund policy the order simply stays paused until they pay.`],
           rows: [["Business", business], ["Buyer", context?.customer_email || ""], ["Order", context?.order_id || ""],
             ["Pages", `${state.counted_pages} in menu · ${state.paid_pages + Number(state.paid_extra_pages || 0)} paid`], ["Balance", dollars(state.amount_cents)]]
         }),

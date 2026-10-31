@@ -187,7 +187,7 @@ async function runNinoDesignProduceStep(targetStep, env, deps = {}) {
     const pages = Number(parseJsonOrNull(item?.metadata_json)?.design_pages || product.includedPages);
     if (!quoteMenuDesign(pages)) return blocked("the order has no valid page count", [`Page count ${pages} is not between 1 and ${product.maxPages}.`]);
     const r = menuPageSvgs(read.menu, brief, { pages, hasLogo });
-    if (r.error) return blocked("the menu could not be laid out", [r.error, "The buyer may need more pages: ask them to reply, or refund the difference."]);
+    if (r.error) return blocked("the menu could not be laid out", [r.error, "The buyer may need more pages: ask them to reply with which pages to keep, or to pay for the extra pages."]);
     for (const page of r.pages) files.push({ ...page, name: `${slug}-${page.name}`, preview_width: 700 });
     sections.push({ heading: "Your menu", files: files.map((f) => f.name) });
     info.pages = r.pages.length; info.paid_pages = pages; info.scale = r.scale;

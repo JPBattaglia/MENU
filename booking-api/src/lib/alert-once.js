@@ -56,7 +56,7 @@ async function noteMailResult(env, { ok, toOwner, error }, now = Date.now()) {
   const reason = String(error || "unknown error").slice(0, 200);
   const result = await githubOwnerAlert(env, "Menu-made can't send email",
     `Email isn't going out (Resend said: ${reason}). Customer deliveries retry on their own, so nothing is lost yet. ` +
-    "What to do: open https://resend-status.com. If Resend shows an outage, wait; nothing else is needed. If it shows no outage, tell Claude 'email is down' so it can check the Resend key and domain.");
+    "Runbook R11 (email down). What to do: open https://resend-status.com. If Resend shows an outage, wait; nothing else is needed. If it shows no outage, tell Claude 'email is down' so it can check the Resend key and domain.");
   return { fallback: true, ...result };
 }
 
