@@ -38,6 +38,7 @@ FOOTER_LINKS = (
     '<a href="about.html">Meet JP &amp; Nino</a>'
     '<a href="account.html">Your account</a>'
     '<a href="privacy.html">Privacy</a>'
+    '<a href="refunds.html">Refunds &amp; Support</a>'
     '<a href="accessability.html">Site Accessibility</a>'
     '</nav>'
 )
@@ -686,7 +687,7 @@ def page_staff_merch():
       </div>
       <p id="quoteStatus" class="merch-status" role="alert" hidden></p>
       <button id="payBtn" class="btn primary" type="button">Pay securely</button>
-      <p><small>Payment by Stripe. Prices are checked again with Printful before you pay. Items usually take 3-7 days to make, then ship; we email the tracking link.</small></p>
+      <p><small>Payment by Stripe. Prices are checked again with Printful before you pay. Items usually take 3-7 days to make, then ship; we email the tracking link. Made to order: no refunds, but misprinted or damaged items are reprinted free (<a href="refunds.html">refund policy</a>).</small></p>
     </div>
   </div>
 </section>
@@ -862,6 +863,27 @@ def page_privacy():
     return head(title, desc, "privacy.html", "legal-page") + body + foot()
 
 
+def page_refunds():
+    title = "Refunds & Support — MENU-MADE"
+    desc = "MENU-MADE's refund and cancellation policy, and how to get help with an order."
+    body = """<section class="hero mm-page-hero"><div class="container"><span class="pill">Refunds &amp; Support</span><h1>Refunds, cancellations and support</h1><p class="hero-intro">Last updated October 30, 2026.</p></div></section>
+<section class="section"><div class="container mm-legal">
+<h2>Refunds</h2>
+<p>Every MENU-MADE order is made for your business alone, so we don’t offer refunds once you’ve paid.</p>
+
+<h2>Plans</h2>
+<p>Cancel any time under <a href="account.html">Your account</a>, then Manage your plan. Your plan stays on until the end of the period you’ve paid for, then stops. There are no partial refunds for unused time.</p>
+
+<h2>Staff merch</h2>
+<p>If an item arrives misprinted or damaged, email us a photo within 30 days of delivery and we’ll reprint it free.</p>
+
+<h2>Help with an order</h2>
+<p>Reply to any MENU-MADE email or write to <a href="mailto:info@menu-made.com">info@menu-made.com</a>. We answer within one business day.</p>
+</div></section>
+"""
+    return head(title, desc, "refunds.html", "legal-page") + body + foot()
+
+
 def page_account():
     title = "Your Account — MENU-MADE"
     desc = "Sign in with your email to see your plans, orders, deliveries and the links to make changes. No password needed."
@@ -888,7 +910,7 @@ def page_account():
   <h2>Plans</h2><div class="mm-account-list" id="accountPlans"></div>
   <h2>Orders</h2><div class="mm-account-list" id="accountOrders"></div>
   <h2>Deliveries</h2><div class="mm-account-list" id="accountDeliveries"></div>
-  <p class="mini">Something missing or wrong? Reply to any of our emails or write to <a href="mailto:info@menu-made.com">info@menu-made.com</a>.</p>
+  <p class="mini">Something missing or wrong? Reply to any of our emails or write to <a href="mailto:info@menu-made.com">info@menu-made.com</a>; we answer within one business day. <a href="refunds.html">Refunds, cancellations and support</a>.</p>
 </div></section>
 """
     return head(title, desc, "account.html", "account-page") + body + foot('<script src="account.js?v=20261028-accounts" defer></script>\n')
@@ -1040,13 +1062,13 @@ def page_start():
 
             <div class="checkline">
               <input id="scopeConfirm" type="checkbox" required>
-              <label for="scopeConfirm" class="mini">I’ve read <a href="services.html">what’s included</a> and how billing works.</label>
+              <label for="scopeConfirm" class="mini">I’ve read <a href="services.html">what’s included</a>, how billing works and the <a href="refunds.html">refund policy</a>.</label>
             </div>
             <div class="cart-actions checkout-actions">
               <button class="btn primary" id="checkoutBtn" type="button">Proceed to secure checkout</button>
               <button class="btn secondary" id="backBtn" type="button">Hide details</button>
             </div>
-            <div class="mini checkout-privacy-note">Your details are used to start and deliver your order. <a href="privacy.html">Privacy policy</a>.</div>
+            <div class="mini checkout-privacy-note">Your details are used to start and deliver your order. <a href="privacy.html">Privacy policy</a> · <a href="refunds.html">Refunds &amp; support</a>.</div>
           </div>
 
           <p class="mini order-security" id="orderSecurity" hidden>Payment is handled by Stripe. MENU-MADE never sees your card details.</p>
@@ -1110,6 +1132,7 @@ def main():
         "services.html": page_services(),
         "contact.html": page_start(),
         "privacy.html": page_privacy(),
+        "refunds.html": page_refunds(),
         "account.html": page_account(),
         "website-design.html": page_website(),
         "google-visibility.html": page_google(),
