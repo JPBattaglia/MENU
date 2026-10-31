@@ -52,7 +52,7 @@ function setup({ status = 'TRIALING', trialDays = 90 } = {}) {
     sql(`INSERT INTO orders (id, created_at, updated_at, customer_id, business_id, status, subtotal_cents, total_cents, payment_status) VALUES ('porder', ?, ?, 'cust', 'biz', 'READY_FOR_PRODUCTION', ?, ?, 'PAID')`, t, t, cents, cents);
     sql(`INSERT INTO order_items (id, order_id, offer_id, offer_version_id, unit_price_cents, line_total_cents) VALUES ('pitem', 'porder', 'o_care', 'v_care', ?, ?)`, cents, cents);
     sql(`INSERT INTO projects (id, order_id, order_item_id, business_id, customer_id, project_type, status, workflow_key, metadata_json, created_at, updated_at) VALUES ('pproj', 'porder', 'pitem', 'biz', 'cust', 'WEBSITE', 'READY', 'WEBSITE_CARE_V1', ?, ?, ?)`,
-      JSON.stringify({ source: 'SUBSCRIPTION_PERIOD', subscription_id: 'sub', plan_code: plan }), t, t);
+      JSON.stringify({ source: 'SUBSCRIPTION_PERIOD', subscription_id: 'sub', plan_code: plan, period_start: trialEnd }), t, t);
     sql(`INSERT INTO workflow_runs (id, project_id, workflow_key, workflow_version, status, trigger_type, created_at) VALUES ('prun', 'pproj', 'WEBSITE_CARE_V1', 1, 'QUEUED', 'SUBSCRIPTION_PERIOD', ?)`, t);
   };
   return { env, sql, row, stripe, emails, fetch, customers, endTrial, clock };
@@ -155,4 +155,29 @@ test('a first month after the trial at the wrong price fails', async () => {
     assert.equal(f.row(`SELECT status FROM self_tests`).status, 'FAILED');
     assert.match(f.row(`SELECT error FROM self_tests`).error, /charged 9900, expected 4900/);
   });
+});
+
+test("the trial's own Care job (start of the trial) is not mistaken for the first paid month", async () => {
+  const f = setup();
+  await withFetch(f.fetch, async () => {
+    await advanceWebsiteTrialSelfTests(f.env, null);
+    // The job made at checkout for the trial month, carrying the old whole-invoice amount.
+    const t = new Date().toISOString();
+    f.sql(`INSERT INTO orders (id, created_at, updated_at, customer_id, business_id, status, subtotal_cents, total_cents, payment_status) VALUES ('torder', ?, ?, 'cust', 'biz', 'READY_FOR_PRODUCTION', 49900, 49900, 'PAID')`, t, t);
+    f.sql(`INSERT INTO projects (id, order_id, order_item_id, business_id, customer_id, project_type, status, workflow_key, metadata_json, created_at, updated_at) VALUES ('tproj', 'torder', 'item', 'biz', 'cust', 'WEBSITE', 'READY', 'WEBSITE_CARE_V1', ?, ?, ?)`,
+      JSON.stringify({ source: 'SUBSCRIPTION_PERIOD', subscription_id: 'sub', plan_code: 'WEBSITE_CARE', period_start: t }), t, t);
+    f.sql(`UPDATE subscriptions SET status = 'ACTIVE'`);
+    for (let i = 0; i < 3; i++) await advanceWebsiteTrialSelfTests(f.env, null);
+    assert.equal(f.row(`SELECT status, stage FROM self_tests`).stage, 'AWAIT_TRIAL_ENDED', 'still waiting for the first paid month');
+  });
+});
+
+test('an invoice that also carries a one-time item records only the plan lines on the period order', async () => {
+  const { invoiceSubscriptionAmount } = await import('./src/subscriptions/webhooks.js');
+  const firstInvoice = { amount_paid: 49900, lines: { data: [
+    { amount: 49900, parent: { type: 'invoice_item_details' } },
+    { amount: 0, parent: { type: 'subscription_item_details' } }] } };
+  assert.equal(invoiceSubscriptionAmount(firstInvoice), 0, 'trial month: $0, not the $499 package');
+  assert.equal(invoiceSubscriptionAmount({ amount_paid: 4900, lines: { data: [{ amount: 4900, parent: { type: 'subscription_item_details' } }] } }), 4900);
+  assert.equal(invoiceSubscriptionAmount({ amount_paid: 17900, lines: { data: [{ parent: { type: 'subscription_item_details' } }] } }), 17900, 'no line amounts: falls back to amount_paid');
 });

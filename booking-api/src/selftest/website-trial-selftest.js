@@ -117,7 +117,8 @@ async function stageAwaitTrialEnded(env, app, test) {
   const job = await env.DB.prepare(`
       SELECT o.total_cents FROM projects p JOIN orders o ON o.id = p.order_id
       WHERE json_extract(p.metadata_json, '$.subscription_id') = ? AND json_extract(p.metadata_json, '$.plan_code') = ?
-        AND json_extract(p.metadata_json, '$.source') = 'SUBSCRIPTION_PERIOD' LIMIT 1`).bind(s.subscription_id, run.entitlement).first();
+        AND json_extract(p.metadata_json, '$.source') = 'SUBSCRIPTION_PERIOD' AND json_extract(p.metadata_json, '$.period_start') >= ?
+      LIMIT 1`).bind(s.subscription_id, run.entitlement, new Date(Date.parse(s.trial_end) - 86400000).toISOString()).first(); // the first paid month, not the trial's
   if (!job) return null; // invoice.paid makes the month's job; give it a tick
   if (Number(job.total_cents) !== run.careCents) throw new Error(`The first ${run.care} month charged ${job.total_cents}, expected ${run.careCents}`);
   await stripeTest(env, `/v1/subscriptions/${s.stripe_subscription_id}`, "DELETE");

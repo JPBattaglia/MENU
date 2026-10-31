@@ -23,11 +23,20 @@ function invoiceSubscriptionId(invoice) {
 }
 
 // The service period an invoice pays for: its recurring line (not a one-time setup line).
+const isSubscriptionLine = (line) => line?.type === "subscription" || line?.parent?.type === "subscription_item_details"
+  || Boolean(line?.price?.recurring) || Boolean(line?.pricing?.price_details);
+
+// What the invoice charged for the plan itself. A first invoice can also carry a one-time item bought in the same
+// checkout (Website Package $499 with Care's trial): before Oct 30, 2026 the whole amount_paid was recorded on the
+// plan's period order, double-counting the one-time sale (found by the stage 12 trial self-test).
+function invoiceSubscriptionAmount(invoice) {
+  const lines = (invoice?.lines?.data || []).filter(isSubscriptionLine).filter((l) => Number.isFinite(Number(l?.amount)));
+  return lines.length ? lines.reduce((sum, l) => sum + Number(l.amount), 0) : Number(invoice?.amount_paid || 0);
+}
+
 function invoiceServicePeriod(invoice) {
   const lines = invoice?.lines?.data || [];
-  const recurring = lines.find((line) => line?.type === "subscription"
-    || line?.parent?.type === "subscription_item_details"
-    || line?.price?.recurring || line?.pricing?.price_details) || lines[0];
+  const recurring = lines.find(isSubscriptionLine) || lines[0];
   return {
     start: isoFromUnix(recurring?.period?.start ?? invoice?.period_start),
     end: isoFromUnix(recurring?.period?.end ?? invoice?.period_end)
@@ -54,7 +63,7 @@ async function onInvoicePaid(invoice, env, environment) {
   const firstMonthEnd = subscription.plan.interval === "YEAR" ? addMonths(period.start, 1) : period.end;
   return createPeriodJobs(env, subscription, period.start, firstMonthEnd, {
     invoiceId: invoice?.id || null,
-    amountCents: Number(invoice?.amount_paid || 0),
+    amountCents: invoiceSubscriptionAmount(invoice),
     trigger: "INVOICE_PAID"
   });
 }
@@ -103,4 +112,4 @@ async function routeSubscriptionEvent(event, env, environment) {
   }
 }
 
-export { SUBSCRIPTION_EVENTS, handleSubscriptionEvent, onSubscriptionCheckoutCompleted, invoiceSubscriptionId, invoiceServicePeriod };
+export { SUBSCRIPTION_EVENTS, handleSubscriptionEvent, onSubscriptionCheckoutCompleted, invoiceSubscriptionAmount, invoiceSubscriptionId, invoiceServicePeriod };
