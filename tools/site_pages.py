@@ -38,6 +38,7 @@ FOOTER_LINKS = (
     '<a href="about.html">Meet JP &amp; Nino</a>'
     '<a href="account.html">Your account</a>'
     '<a href="privacy.html">Privacy</a>'
+    '<a href="terms.html">Terms</a>'
     '<a href="refunds.html">Refunds &amp; Support</a>'
     '<a href="accessability.html">Site Accessibility</a>'
     '</nav>'
@@ -795,7 +796,7 @@ def page_accessibility():
 def page_privacy():
     title = "Privacy Policy — MENU-MADE"
     desc = "How MENU-MADE collects, uses and protects information, including Google Business Profile data, payments and email."
-    body = """<section class="hero mm-page-hero"><div class="container"><span class="pill">Privacy</span><h1>Privacy Policy</h1><p class="hero-intro">Last updated October 28, 2026. This policy explains what MENU-MADE (“we”, “us”) collects when you use menu-made.com and our services, why, and the choices you have.</p></div></section>
+    body = """<section class="hero mm-page-hero"><div class="container"><span class="pill">Privacy</span><h1>Privacy Policy</h1><p class="hero-intro">Last updated October 31, 2026. This policy explains what MENU-MADE (“we”, “us”) collects when you use menu-made.com and our services, why, and the choices you have.</p></div></section>
 <section class="section"><div class="container mm-legal">
 <h2>Who we are</h2>
 <p>MENU-MADE provides menus, websites, Google Business Profile care and related services to businesses. Contact us at <a href="mailto:info@menu-made.com">info@menu-made.com</a>.</p>
@@ -808,6 +809,10 @@ def page_privacy():
 <li><strong>Site usage</strong>: a random identifier kept only for your browsing session (not a cookie), the pages and services you view, and where you came from (for example a campaign link), so we can see which pages help people choose a service. We skip this entirely if your browser sends Global Privacy Control or Do Not Track. We don’t use advertising cookies.</li>
 <li><strong>Email records</strong>: which service emails we sent you and whether they were delivered.</li>
 <li><strong>Guest Apps we run for businesses</strong>: when a guest turns on notifications in a business’s Guest App, we keep the address their phone’s push service gives us (from Google, Apple or Mozilla) so we can send that business’s notifications; turning notifications off removes it from sending. A rewards card is a random number kept on the guest’s phone, with the visits and rewards collected on it. We don’t ask guests for a name, email or phone number.</li>
+<li><strong>Your account</strong>: when you buy, we make an account for you with your email address; there is no password. To sign in, we email you a link that works once and expires in minutes. Signing in sets one cookie used only to keep you signed in to your account page for 30 days; it is not used for tracking or advertising. Signing out removes it.</li>
+<li><strong>Store Apps we build for businesses</strong>: when a guest allows notifications in a business’s app from the Apple App Store or Google Play, Apple or Google gives us a device address so we can send that business’s notifications. Turning notifications off, or deleting the app, stops them; we remove addresses Apple or Google tell us are no longer valid. The app’s rewards card works as in the Guest App: a random number kept on the guest’s phone, with the visits and rewards collected on it. The app is published under the business’s own Apple and Google developer accounts, with MENU-MADE added as a team member to build and update it, so each business is responsible for its own store listing and its own policies there.</li>
+<li><strong>Staff merch</strong>: for staff shirt orders we collect the shipping name and address, the sizes, and any logo you upload. The order is printed and shipped by Printful, which receives what it needs to do that. Sales tax is calculated on these orders.</li>
+<li><strong>Design services bought on ninobattaglia.com</strong>: social graphics, flyers, menu designs and logo wordmarks bought on ninobattaglia.com are produced and delivered by MENU-MADE using the same systems, so this policy covers them too.</li>
 </ul>
 
 <h2>Google user data</h2>
@@ -836,7 +841,9 @@ def page_privacy():
 <li><strong>Anthropic</strong>: the AI model that reads menus and drafts replies, posts, descriptions and reports.</li>
 <li><strong>Resend</strong>: sending email.</li>
 <li><strong>Google</strong>: the Business Profile APIs you connect.</li>
-<li><strong>GitHub</strong>: turning the designs for your social posts and app icons into image files.</li>
+<li><strong>GitHub</strong>: turning the designs for your social posts and app icons into image files, and building store apps.</li>
+<li><strong>Printful</strong>: printing and shipping staff merch.</li>
+<li><strong>Apple and Google</strong>: publishing store apps and delivering app notifications (including Firebase Cloud Messaging for Android).</li>
 </ul>
 
 <h2>How long we keep it</h2>
@@ -1062,13 +1069,13 @@ def page_start():
 
             <div class="checkline">
               <input id="scopeConfirm" type="checkbox" required>
-              <label for="scopeConfirm" class="mini">I’ve read <a href="services.html">what’s included</a>, how billing works and the <a href="refunds.html">refund policy</a>.</label>
+              <label for="scopeConfirm" class="mini">I’ve read <a href="services.html">what’s included</a>, how billing works, the <a href="terms.html">terms</a> and the <a href="refunds.html">refund policy</a>.</label>
             </div>
             <div class="cart-actions checkout-actions">
               <button class="btn primary" id="checkoutBtn" type="button">Proceed to secure checkout</button>
               <button class="btn secondary" id="backBtn" type="button">Hide details</button>
             </div>
-            <div class="mini checkout-privacy-note">Your details are used to start and deliver your order. <a href="privacy.html">Privacy policy</a> · <a href="refunds.html">Refunds &amp; support</a>.</div>
+            <div class="mini checkout-privacy-note">Your details are used to start and deliver your order. <a href="privacy.html">Privacy policy</a> · <a href="terms.html">Terms</a> · <a href="refunds.html">Refunds &amp; support</a>.</div>
           </div>
 
           <p class="mini order-security" id="orderSecurity" hidden>Payment is handled by Stripe. MENU-MADE never sees your card details.</p>
@@ -1095,6 +1102,47 @@ def refresh_shared(path):
     src = re.sub(r'<nav class="footer-links"[^>]*>.*?</nav>', FOOTER_LINKS, src, count=1, flags=re.S)
     src = re.sub(r'main\.css\?v=[\w-]+', f'main.css?v={CSS_VERSION}', src)
     (ROOT / path).write_text(src)
+
+
+def page_terms():
+    """Stage 13: terms of service, wording approved by the owner on Oct 31, 2026 (California law; samples only with
+    the buyer's permission)."""
+    title = "Terms of Service — MENU-MADE"
+    desc = "The terms for buying and using MENU-MADE's menus, websites, apps, Google profile services and design services."
+    body = """<section class="hero mm-page-hero"><div class="container"><span class="pill">Terms</span><h1>Terms of Service</h1><p class="hero-intro">Last updated October 31, 2026.</p></div></section>
+<section class="section"><div class="container mm-legal">
+<h2>Who these terms are with</h2>
+<p>MENU-MADE provides menus, websites, apps, Google profile services and design services to businesses. By buying, you agree to these terms, the <a href="privacy.html">privacy policy</a> and the <a href="refunds.html">refunds policy</a>.</p>
+
+<h2>What you get</h2>
+<p>Each service delivers what its page describes at checkout. Some work is checked and approved by us before it reaches you; store app listings also need Apple’s and Google’s approval, which we don’t control and can’t guarantee.</p>
+
+<h2>Your materials</h2>
+<p>You confirm you have the right to use the menus, logos, photos and text you send us, and you let us use them to make and host your service. You own your content. We may show finished work as a sample only with your permission.</p>
+
+<h2>Plans</h2>
+<p>Plans renew automatically each month or year until cancelled. You can switch or cancel from your billing link or <a href="account.html">your account</a>; a cancelled plan runs to the end of the period you paid for. If a renewal payment fails, the services on that plan pause until it is paid. Online Menu + QR hosting is included for the first year, then needs Menu Care; without it, the menu goes offline 30 days after the first year ends.</p>
+
+<h2>Payments and refunds</h2>
+<p>Prices are shown at checkout. Every order is made for you, so payments are not refunded; see <a href="refunds.html">Refunds &amp; Support</a> for details, including free reprints of misprinted or damaged staff merch.</p>
+
+<h2>Accounts and apps</h2>
+<p>You’re responsible for keeping access to your email, since that is how you sign in. For store apps you keep your own Apple and Google developer accounts and their fees; removing MENU-MADE from them ends our ability to update the app.</p>
+
+<h2>Google and other connected accounts</h2>
+<p>You can disconnect at any time; the services that need the connection pause until you reconnect.</p>
+
+<h2>Acceptable use</h2>
+<p>Don’t use the services for anything illegal, misleading, or that infringes someone else’s rights. We may pause a service that does.</p>
+
+<h2>Limits</h2>
+<p>We work to keep everything running but can’t promise it never breaks, and we’re not responsible for outages at Stripe, Cloudflare, Google, Apple or other providers. Our total liability for any claim is limited to what you paid us in the 12 months before it.</p>
+
+<h2>Changes and contact</h2>
+<p>We may update these terms; we’ll change the date and email active customers about important changes. Questions: <a href="mailto:info@menu-made.com">info@menu-made.com</a>, answered within one business day. These terms are governed by California law.</p>
+</div></section>
+"""
+    return head(title, desc, "terms.html", "legal-page") + body + foot()
 
 
 def page_store_app():
@@ -1133,6 +1181,7 @@ def main():
         "contact.html": page_start(),
         "privacy.html": page_privacy(),
         "refunds.html": page_refunds(),
+        "terms.html": page_terms(),
         "account.html": page_account(),
         "website-design.html": page_website(),
         "google-visibility.html": page_google(),

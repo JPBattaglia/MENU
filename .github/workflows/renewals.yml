@@ -21,7 +21,8 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     env:
-      APPLE_RENEWS: ${{ vars.APPLE_DEVELOPER_RENEWS }}
+      # Owner's Apple developer membership renews Aug 8 (device reset date, auto-renew on; Oct 31, 2026). A repo variable overrides it.
+      APPLE_RENEWS: ${{ vars.APPLE_DEVELOPER_RENEWS || '2027-08-08' }}
       WINDOW_DAYS: "30"
     steps:
       - name: Check what is due in the next 30 days
