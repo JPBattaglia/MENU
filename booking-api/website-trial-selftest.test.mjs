@@ -32,13 +32,23 @@ function setup({ status = 'TRIALING', trialDays = 90 } = {}) {
       stripe.push(`${method} ${path}`);
       if (method === 'POST' && path === '/v1/test_helpers/test_clocks') return Response.json({ id: 'clock_1', status: 'ready' });
       if (method === 'POST' && path === '/v1/customers') { customers.push(Object.fromEntries(params)); return Response.json({ id: 'cus_test_1' }); }
+      if (method === 'GET' && path === '/v1/test_helpers/test_clocks/clock_1') return Response.json({ id: 'clock_1', status: 'ready' });
       return Response.json({ id: path.split('/').pop(), deleted: true });
     }
     throw new Error(`Unexpected fetch ${url}`);
   };
   const env = { DB, ASSETS: createR2(), STRIPE_SECRET_KEY_TEST: 'sk_test_placeholder', RESEND_API_KEY: 're_test' };
   const row = (q, ...a) => { const r = DB.raw.prepare(q).get(...a); return r ? { ...r } : null; };
-  return { env, sql, row, stripe, emails, fetch, customers };
+  // What Stripe's invoice.paid at the trial end leaves behind: subscription ACTIVE and this month's Care job.
+  const endTrial = (plan = 'WEBSITE_CARE', cents = 4900) => {
+    sql(`UPDATE subscriptions SET status = 'ACTIVE'`);
+    sql(`INSERT INTO orders (id, created_at, updated_at, customer_id, business_id, status, subtotal_cents, total_cents, payment_status) VALUES ('porder', ?, ?, 'cust', 'biz', 'READY_FOR_PRODUCTION', ?, ?, 'PAID')`, t, t, cents, cents);
+    sql(`INSERT INTO order_items (id, order_id, offer_id, offer_version_id, unit_price_cents, line_total_cents) VALUES ('pitem', 'porder', 'o_care', 'v_care', ?, ?)`, cents, cents);
+    sql(`INSERT INTO projects (id, order_id, order_item_id, business_id, customer_id, project_type, status, workflow_key, metadata_json, created_at, updated_at) VALUES ('pproj', 'porder', 'pitem', 'biz', 'cust', 'WEBSITE', 'READY', 'WEBSITE_CARE_V1', ?, ?, ?)`,
+      JSON.stringify({ source: 'SUBSCRIPTION_PERIOD', subscription_id: 'sub', plan_code: plan }), t, t);
+    sql(`INSERT INTO workflow_runs (id, project_id, workflow_key, workflow_version, status, trigger_type, created_at) VALUES ('prun', 'pproj', 'WEBSITE_CARE_V1', 1, 'QUEUED', 'SUBSCRIPTION_PERIOD', ?)`, t);
+  };
+  return { env, sql, row, stripe, emails, fetch, customers, endTrial };
 }
 async function withFetch(fake, fn) { const o = globalThis.fetch; globalThis.fetch = fake; try { return await fn(); } finally { globalThis.fetch = o; } }
 
@@ -46,8 +56,17 @@ test('a trialing Website Care subscription passes, then the test subscription, w
   const f = setup();
   await withFetch(f.fetch, async () => {
     await advanceWebsiteTrialSelfTests(f.env, null);
-    assert.equal(f.row(`SELECT stage FROM self_tests`).stage, 'AWAIT_CANCELLED');
-    assert.deepEqual(f.stripe, ['DELETE /v1/subscriptions/sub_test_1']);
+    assert.equal(f.row(`SELECT stage FROM self_tests`).stage, 'AWAIT_TRIAL_ENDED');
+    assert.equal(f.stripe[0], 'POST /v1/test_helpers/test_clocks/clock_1/advance', 'the clock moves past the trial end');
+    assert.ok(!f.stripe.includes('DELETE /v1/subscriptions/sub_test_1'), 'not cancelled before the trial has ended');
+    await advanceWebsiteTrialSelfTests(f.env, null);
+    assert.equal(f.row(`SELECT stage FROM self_tests`).stage, 'AWAIT_TRIAL_ENDED', 'waits while the subscription is still trialing');
+    f.endTrial();
+    await advanceWebsiteTrialSelfTests(f.env, null);
+    const r = f.row(`SELECT stage, log_json FROM self_tests`);
+    assert.equal(r.stage, 'AWAIT_CANCELLED');
+    assert.match(r.log_json, /Trial ended: subscription ACTIVE, first month charged \(\$49\), this month's Website & App Care job created/);
+    assert.ok(f.stripe.includes('DELETE /v1/subscriptions/sub_test_1'));
     await advanceWebsiteTrialSelfTests(f.env, null);
     assert.equal(f.row(`SELECT status FROM self_tests`).status, 'RUNNING', 'waits for the cancel to sync');
     f.sql(`UPDATE subscriptions SET status = 'CANCELLED'`);
@@ -56,6 +75,7 @@ test('a trialing Website Care subscription passes, then the test subscription, w
     assert.equal(f.row(`SELECT status FROM projects`).status, 'CANCELLED');
     assert.equal(f.row(`SELECT status FROM orders`).status, 'CANCELLED');
     assert.ok(f.stripe.includes('DELETE /v1/test_helpers/test_clocks/clock_1'), 'the test clock (and its customer) is deleted');
+    assert.equal(f.row(`SELECT status FROM workflow_runs WHERE id = 'prun'`).status, 'CANCELLED', "the month's test Care job is cancelled");
     assert.equal(f.emails.length, 0, 'a pass emails nobody');
   });
 });
@@ -100,9 +120,12 @@ test('STORE_APP_TRIAL_RUN: buys the Store App Setup and checks the app tier tria
   f.sql(`UPDATE self_tests SET kind = 'STORE_APP_TRIAL_RUN'`);
   await withFetch(f.fetch, async () => {
     await advanceWebsiteTrialSelfTests(f.env, null);
+    f.endTrial('STORE_APP_CARE', 9900);
+    await advanceWebsiteTrialSelfTests(f.env, null);
     const r = f.row(`SELECT stage, log_json FROM self_tests`);
     assert.equal(r.stage, 'AWAIT_CANCELLED');
     assert.match(r.log_json, /app tier\) TRIALING/);
+    assert.match(r.log_json, /first month charged \(\$99\)/);
     assert.match(r.log_json, /Store App project created/);
   });
   const g = setup();
@@ -112,4 +135,15 @@ test('STORE_APP_TRIAL_RUN: buys the Store App Setup and checks the app tier tria
   await withFetch(g.fetch, async () => { await advanceWebsiteTrialSelfTests(g.env, app); });
   assert.deepEqual(sent.items, [{ key: 'STORE_APP_SETUP' }]);
   assert.match(g.row(`SELECT error FROM self_tests`).error, /^Store App checkout failed/);
+});
+
+test('a first month after the trial at the wrong price fails', async () => {
+  const f = setup();
+  await withFetch(f.fetch, async () => {
+    await advanceWebsiteTrialSelfTests(f.env, null);
+    f.endTrial('WEBSITE_CARE', 9900);
+    await advanceWebsiteTrialSelfTests(f.env, null);
+    assert.equal(f.row(`SELECT status FROM self_tests`).status, 'FAILED');
+    assert.match(f.row(`SELECT error FROM self_tests`).error, /charged 9900, expected 4900/);
+  });
 });

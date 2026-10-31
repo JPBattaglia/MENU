@@ -3,6 +3,7 @@
 // real Stripe. This one does, in Stripe test mode, through the real routes and webhooks:
 //   Website Package checkout -> pay with a test card ($499, nothing charged for Care) -> Website & App Care subscription
 //   TRIALING with an active entitlement, and the website project created with its intake started
+//   -> the test clock passes the trial end: subscription ACTIVE, first month charged, this month's Care job created
 //   -> cancel the test subscription in Stripe -> the cancel syncs back.
 // Start one by inserting a self_tests row with kind WEBSITE_TRIAL_RUN and status REQUESTED. Only a failure emails the
 // owner. Everything it creates is cancelled at the end (and on failure).
@@ -18,8 +19,8 @@ import { dailyClock } from "./daily-clock.js";
 const KIND = "WEBSITE_TRIAL_RUN";
 // What each kind buys and expects. Same steps, same safety guards.
 const RUNS = {
-  WEBSITE_TRIAL_RUN: { item: "WEBSITE_PACKAGE", plan: "WEBSITE_CARE", cents: 49900, workflow: "WEBSITE_PACKAGE_V1", entitlement: "WEBSITE_CARE", product: "Website Package", care: "Website & App Care", business: "Trial Self-Test Cafe" },
-  STORE_APP_TRIAL_RUN: { item: "STORE_APP_SETUP", plan: "STORE_APP_CARE", cents: 99900, workflow: "STORE_APP_SETUP_V1", entitlement: "STORE_APP_CARE", product: "Store App", care: "Website & App Care (app tier)", business: "Store Trial Self-Test Cafe" }
+  WEBSITE_TRIAL_RUN: { item: "WEBSITE_PACKAGE", plan: "WEBSITE_CARE", cents: 49900, workflow: "WEBSITE_PACKAGE_V1", entitlement: "WEBSITE_CARE", careCents: 4900, product: "Website Package", care: "Website & App Care", business: "Trial Self-Test Cafe" },
+  STORE_APP_TRIAL_RUN: { item: "STORE_APP_SETUP", plan: "STORE_APP_CARE", cents: 99900, workflow: "STORE_APP_SETUP_V1", entitlement: "STORE_APP_CARE", careCents: 9900, product: "Store App", care: "Website & App Care (app tier)", business: "Store Trial Self-Test Cafe" }
 };
 const runOf = (test) => RUNS[test.kind] || RUNS[KIND];
 // Daily (stage 12: every offer's self-test runs daily): the website trial at 1:20pm Pacific, the Store App trial at
@@ -86,9 +87,29 @@ async function stageAwaitTrial(env, app, test) {
   if (care?.status !== "ACTIVE") throw new Error(`${run.care} entitlement is ${care?.status || "missing"}, expected ACTIVE`);
   const intake = await env.DB.prepare(`SELECT status FROM communications WHERE project_id = ? ORDER BY created_at LIMIT 1`).bind(project.id).first();
   if (!intake) return null; // the intake email is sent on the same webhook; give it a tick
-  await stripeTest(env, `/v1/subscriptions/${sub.provider_subscription_id}`, "DELETE");
-  return updateTest(env, test, { stage: "AWAIT_CANCELLED", project_id: project.id, state: { subscription_id: sub.id },
-    log: `${run.care} TRIALING until ${String(trialEnd).slice(0, 10)} (${Math.round(days)} days) with an active entitlement; ${run.product} project created and intake email ${intake.status}; test subscription cancelled in Stripe` });
+  // Stage 12: the trial ends on the test clock, the card is charged for the first month and Care work starts.
+  const target = Math.floor(Date.parse(trialEnd) / 1000) + 3 * 3600;
+  await stripeTest(env, `/v1/test_helpers/test_clocks/${state(test).clock_id}/advance`, "POST", { frozen_time: String(target) });
+  return updateTest(env, test, { stage: "AWAIT_TRIAL_ENDED", project_id: project.id, state: { subscription_id: sub.id, stripe_subscription_id: sub.provider_subscription_id, trial_end: trialEnd },
+    log: `${run.care} TRIALING until ${String(trialEnd).slice(0, 10)} (${Math.round(days)} days) with an active entitlement; ${run.product} project created and intake email ${intake.status}; clock advancing past the trial end` });
+}
+
+async function stageAwaitTrialEnded(env, app, test) {
+  const run = runOf(test); const s = state(test);
+  const clock = await stripeTest(env, `/v1/test_helpers/test_clocks/${s.clock_id}`);
+  if (clock.status === "internal_failure") throw new Error("The Stripe test clock failed to advance");
+  if (clock.status !== "ready") return null;
+  const sub = await env.DB.prepare(`SELECT status FROM subscriptions WHERE id = ?`).bind(s.subscription_id).first();
+  if (sub?.status === "TRIALING") return null;
+  if (sub?.status !== "ACTIVE") throw new Error(`When the trial ended the subscription became ${sub?.status}, expected ACTIVE (first month charged)`);
+  const job = await env.DB.prepare(`
+      SELECT o.total_cents FROM projects p JOIN orders o ON o.id = p.order_id
+      WHERE json_extract(p.metadata_json, '$.subscription_id') = ? AND json_extract(p.metadata_json, '$.plan_code') = ?
+        AND json_extract(p.metadata_json, '$.source') = 'SUBSCRIPTION_PERIOD' LIMIT 1`).bind(s.subscription_id, run.entitlement).first();
+  if (!job) return null; // invoice.paid makes the month's job; give it a tick
+  if (Number(job.total_cents) !== run.careCents) throw new Error(`The first ${run.care} month charged ${job.total_cents}, expected ${run.careCents}`);
+  await stripeTest(env, `/v1/subscriptions/${s.stripe_subscription_id}`, "DELETE");
+  return updateTest(env, test, { stage: "AWAIT_CANCELLED", log: `Trial ended: subscription ACTIVE, first month charged ($${run.careCents / 100}), this month's ${run.care} job created; test subscription cancelled in Stripe` });
 }
 
 async function stageAwaitCancelled(env, app, test) {
@@ -105,12 +126,21 @@ async function cleanUp(env, test) {
     await env.DB.prepare(`UPDATE projects SET status = 'CANCELLED', updated_at = ? WHERE order_id = ? AND status NOT IN ('DELIVERED', 'COMPLETED')`).bind(t, test.order_id).run();
     await env.DB.prepare(`UPDATE orders SET status = 'CANCELLED', updated_at = ? WHERE id = ? AND status NOT IN ('DELIVERED', 'COMPLETED')`).bind(t, test.order_id).run();
   }
+  // The month's Care job after the trial: never produced for the self-test buyer, cancelled here so it doesn't linger.
+  const subscriptionId = state(test).subscription_id;
+  if (subscriptionId) {
+    await env.DB.prepare(`UPDATE workflow_steps SET status = 'CANCELLED', completed_at = ? WHERE status = 'QUEUED' AND workflow_run_id IN (
+        SELECT r.id FROM workflow_runs r JOIN projects p ON p.id = r.project_id WHERE json_extract(p.metadata_json, '$.subscription_id') = ?)`).bind(t, subscriptionId).run();
+    await env.DB.prepare(`UPDATE workflow_runs SET status = 'CANCELLED', completed_at = ? WHERE status = 'QUEUED' AND project_id IN (
+        SELECT id FROM projects WHERE json_extract(metadata_json, '$.subscription_id') = ?)`).bind(t, subscriptionId).run();
+    await env.DB.prepare(`UPDATE projects SET status = 'CANCELLED', updated_at = ? WHERE json_extract(metadata_json, '$.subscription_id') = ? AND status = 'READY'`).bind(t, subscriptionId).run();
+  }
   // Deleting the test clock removes its customer and any subscription still on it.
   const clockId = state(test).clock_id;
   if (clockId) await stripeTest(env, `/v1/test_helpers/test_clocks/${clockId}`, "DELETE").catch(() => null);
 }
 
-const STAGES = { START: stageStart, AWAIT_TRIAL: stageAwaitTrial, AWAIT_CANCELLED: stageAwaitCancelled };
+const STAGES = { START: stageStart, AWAIT_TRIAL: stageAwaitTrial, AWAIT_TRIAL_ENDED: stageAwaitTrialEnded, AWAIT_CANCELLED: stageAwaitCancelled };
 
 async function failTest(env, test, message) {
   test = (await env.DB.prepare(`SELECT * FROM self_tests WHERE id = ?`).bind(test.id).first()) || test;
