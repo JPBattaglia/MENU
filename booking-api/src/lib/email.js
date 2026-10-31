@@ -1,6 +1,7 @@
 import { nowIso } from "./http.js";
 import { noteMailResult } from "./alert-once.js";
 import { withRunbook } from "./runbook.js";
+import { signLinkToken } from "./links.js";
 
 var RESEND_ENDPOINT = "https://api.resend.com/emails";
 
@@ -155,7 +156,14 @@ async function sendTransactionalEmail(env, { to, subject, html, text, idempotenc
   if (purpose === "ORDER_DELIVERY" && isCustomerEmail(to, purpose, env) && !/^delivery_(merch|nino_design)_/.test(String(templateKey || ""))) ({ html, text } = withCrossSell(html, text));
   if (isCustomerEmail(to, purpose, env)) ({ html, text } = withAccountLink(html, text));
   // Stage 13: every owner alert names its runbook entry and the one action to take (lib/runbook.js).
-  if (purpose === "AUTOMATION_ALERT") ({ html, text } = withRunbook(html, text, templateKey));
+  if (purpose === "AUTOMATION_ALERT") {
+    // Stage 13: every alert also carries a 7-day "Pause a service" link to the owner's on/off switches (lib/switches.js).
+    const pauseUrl = env.PRODUCTION_RUNNER_SECRET
+      ? await signLinkToken(env, { kind: "switches", id: "owner", ttlDays: 7 })
+          .then((t) => `${String(env.PUBLIC_BASE_URL || "https://menu-made.com").replace(/\/+$/, "")}/api/switches?t=${encodeURIComponent(t)}`).catch(() => null)
+      : null;
+    ({ html, text } = withRunbook(html, text, templateKey, pauseUrl));
+  }
   const lint = lintEmail({ subject, html, text });
   let ok = false;
   let providerId = null;

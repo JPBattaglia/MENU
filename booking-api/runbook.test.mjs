@@ -43,3 +43,21 @@ test('the alert email carries its entry and one action, once; unknown alerts get
   assert.equal(twice.html.split('Runbook R1').length, 2, 'added once');
   assert.equal(runbookEntry('something_new_v1').code, 'R0');
 });
+
+test('alerts sent by the worker carry a signed 7-day "Pause a service" link to the switch page', async () => {
+  const { sendTransactionalEmail } = await import('./src/lib/email.js');
+  const { verifyLinkToken } = await import('./src/lib/links.js');
+  const sent = [];
+  const real = globalThis.fetch;
+  globalThis.fetch = async (url, init) => { sent.push(JSON.parse(init.body)); return Response.json({ id: 'em_1' }); };
+  try {
+    const env = { RESEND_API_KEY: 're_test', PRODUCTION_RUNNER_SECRET: 'runner-secret' };
+    await sendTransactionalEmail(env, { to: 'info@menu-made.com', subject: 'Automation stopped on an order', html: '<p>x</p>', text: 'x', idempotencyKey: 'k1', purpose: 'AUTOMATION_ALERT', templateKey: 'automation_failure_v1' });
+    const link = /https:\/\/menu-made\.com\/api\/switches\?t=([^\s"]+)/.exec(sent[0].text);
+    assert.ok(link, sent[0].text);
+    assert.ok(await verifyLinkToken(env, decodeURIComponent(link[1]), ['switches'], 'owner'), 'the switch page accepts it');
+    assert.match(sent[0].html, /Pause a service/);
+    await sendTransactionalEmail(env, { to: 'joe@example.com', subject: 'Your menu', html: '<p>x</p>', text: 'x', idempotencyKey: 'k2', purpose: 'ORDER_DELIVERY', templateKey: 'delivery_menu_v1' });
+    assert.doesNotMatch(sent[1].text, /Pause a service|Runbook/, 'only owner alerts');
+  } finally { globalThis.fetch = real; }
+});

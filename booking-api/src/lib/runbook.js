@@ -42,16 +42,18 @@ const RUNBOOK_MARK = "Runbook ";
 const esc = (s) => String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 
 // Adds the entry above the email's dark footer (or at the end), once.
-function withRunbook(html, text, templateKey) {
+// pauseUrl: a signed link to the owner's on/off switches, so a failing service can be paused from the alert itself.
+function withRunbook(html, text, templateKey, pauseUrl = null) {
   const e = runbookEntry(templateKey);
   const label = `${RUNBOOK_MARK}${e.code}: ${e.title}`;
   const marker = '<tr><td style="padding:24px 32px;background-color:#071f2c;">';
-  const block = `<tr><td style="padding:16px 32px;border-top:1px solid #dce8ec;"><p style="margin:0 0 6px;font-size:13px;font-weight:bold;color:#071f2c;">${esc(label)}</p><p style="margin:0 0 6px;font-size:13px;line-height:1.5;color:#26434f;">${esc(e.happened)}</p><p style="margin:0;font-size:13px;line-height:1.5;color:#26434f;"><strong>One action:</strong> ${esc(e.action)}</p></td></tr>`;
+  const pauseHtml = pauseUrl ? `<p style="margin:10px 0 0;font-size:13px;line-height:1.5;color:#26434f;">Keeps failing? <a href="${esc(pauseUrl)}" style="display:inline-block;border:1px solid #071f2c;color:#071f2c;text-decoration:none;font-weight:bold;padding:6px 12px;border-radius:6px;">Pause a service</a> (stops making or selling just that one; link works 7 days)</p>` : "";
+  const block = `<tr><td style="padding:16px 32px;border-top:1px solid #dce8ec;"><p style="margin:0 0 6px;font-size:13px;font-weight:bold;color:#071f2c;">${esc(label)}</p><p style="margin:0 0 6px;font-size:13px;line-height:1.5;color:#26434f;">${esc(e.happened)}</p><p style="margin:0;font-size:13px;line-height:1.5;color:#26434f;"><strong>One action:</strong> ${esc(e.action)}</p>${pauseHtml}</td></tr>`;
   const outHtml = typeof html !== "string" || html.includes(label) ? html
     : html.includes(marker) ? html.replace(marker, block + marker)
-    : html.includes("</body>") ? html.replace("</body>", `<p style="font-family:Arial,Helvetica,sans-serif;font-size:13px;"><strong>${esc(label)}</strong><br>${esc(e.happened)}<br><strong>One action:</strong> ${esc(e.action)}</p></body>`)
-    : `${html}<p><strong>${esc(label)}</strong><br>${esc(e.happened)}<br><strong>One action:</strong> ${esc(e.action)}</p>`;
-  const outText = typeof text !== "string" || text.includes(label) ? text : `${text}\n\n${label}\n${e.happened}\nOne action: ${e.action}`;
+    : html.includes("</body>") ? html.replace("</body>", `<p style="font-family:Arial,Helvetica,sans-serif;font-size:13px;"><strong>${esc(label)}</strong><br>${esc(e.happened)}<br><strong>One action:</strong> ${esc(e.action)}</p>${pauseHtml}</body>`)
+    : `${html}<p><strong>${esc(label)}</strong><br>${esc(e.happened)}<br><strong>One action:</strong> ${esc(e.action)}</p>${pauseHtml}`;
+  const outText = typeof text !== "string" || text.includes(label) ? text : `${text}\n\n${label}\n${e.happened}\nOne action: ${e.action}${pauseUrl ? `\nKeeps failing? Pause a service (link works 7 days): ${pauseUrl}` : ""}`;
   return { html: outHtml, text: outText };
 }
 
