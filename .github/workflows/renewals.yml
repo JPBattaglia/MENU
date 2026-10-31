@@ -36,7 +36,7 @@ jobs:
               echo "::error::$d: couldn't read its renewal date from the registry. Forward this email to Claude."; due=1; continue
             fi
             left=$(days_until "$exp")
-            echo "$d renews ${exp%%T*} ($left days)"
+            echo "::notice::$d renews ${exp%%T*} ($left days)"
             if [ "$left" -le "$WINDOW_DAYS" ]; then
               echo "::error::$d renews on ${exp%%T*} ($left days). Make sure the card on your domain account (Squarespace) is current; nothing else is needed if it auto-renews."; due=1
             fi
@@ -45,7 +45,7 @@ jobs:
             y=$(date -u +%Y); next="$y-${APPLE_RENEWS#*-}"
             [ "$(days_until "$next")" -lt 0 ] && next="$((y+1))-${APPLE_RENEWS#*-}"
             left=$(days_until "$next")
-            echo "Apple Developer Program renews $next ($left days)"
+            echo "::notice::Apple Developer Program renews $next ($left days)"
             if [ "$left" -le "$WINDOW_DAYS" ]; then
               echo "::error::Apple Developer Program renews on $next ($left days). Check the card at developer.apple.com/account (Membership details); if it lapses, Store Apps can't be updated."; due=1
             fi
