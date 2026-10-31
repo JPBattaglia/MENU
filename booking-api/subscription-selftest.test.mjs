@@ -13,8 +13,8 @@ const WEBHOOK_SECRET = 'whsec_test_placeholder';
 const migration = readFileSync(new URL('./migrations/0001_subscription_catalog.sql', import.meta.url), 'utf8');
 const unix = (iso) => Math.floor(Date.parse(iso) / 1000);
 
-function fakeStripe({ renewalCreatesInvoice = true } = {}) {
-  const s = { endpointEvents: ['checkout.session.completed'], clocks: new Map(), customers: new Map(), sessions: new Map(), subs: new Map(), webhooks: [], deletedClocks: [], n: 0 };
+function fakeStripe({ renewalCreatesInvoice = true, portalProration = 'none' } = {}) {
+  const s = { endpointEvents: ['checkout.session.completed'], clocks: new Map(), customers: new Map(), sessions: new Map(), subs: new Map(), webhooks: [], deletedClocks: [], products: new Map(), archived: [], updates: [], n: 0 };
   const id = (p) => `${p}_${++s.n}`;
   const emitInvoice = (sub, startIso) => {
     const endIso = addMonths(startIso, 1);
@@ -53,6 +53,13 @@ function fakeStripe({ renewalCreatesInvoice = true } = {}) {
         for (const sub of s.subs.values()) {
           if (s.customers.get(sub.customer)?.test_clock !== clock.id || sub.status !== 'active') continue;
           while (sub.items.data[0].current_period_end <= to && renewalCreatesInvoice) {
+            if (sub.default_payment_method === 'pm_fail') {
+              // The renewal is declined: Stripe marks the subscription past_due and sends invoice.payment_failed.
+              sub.status = 'past_due';
+              s.webhooks.push({ id: id('evt'), type: 'invoice.payment_failed', data: { object: { id: id('in'), parent: { subscription_details: { subscription: sub.id } } } } });
+              s.webhooks.push({ id: id('evt'), type: 'customer.subscription.updated', data: { object: { ...sub } } });
+              break;
+            }
             emitInvoice(sub, new Date(sub.items.data[0].current_period_end * 1000).toISOString());
           }
         }
@@ -77,7 +84,12 @@ function fakeStripe({ renewalCreatesInvoice = true } = {}) {
     }
     if (method === 'GET' && (m = /^\/v1\/checkout\/sessions\/(.+)$/.exec(u.pathname))) return Response.json(s.sessions.get(m[1]));
     if (method === 'GET' && (m = /^\/v1\/payment_pages\/([^/]+)$/.exec(u.pathname))) return Response.json({ total_summary: { due: s.sessions.get(m[1]).amount_total } });
-    if (method === 'POST' && u.pathname === '/v1/payment_methods') return Response.json({ id: 'pm_visa' });
+    if (method === 'POST' && u.pathname === '/v1/payment_methods') return Response.json({ id: p.get('card[token]') === 'tok_chargeCustomerFail' ? 'pm_fail' : 'pm_visa' });
+    if (method === 'POST' && /^\/v1\/payment_methods\/[^/]+\/attach$/.test(u.pathname)) return Response.json({ id: 'pm_fail', customer: p.get('customer') });
+    if (method === 'POST' && (m = /^\/v1\/customers\/(.+)$/.exec(u.pathname))) return Response.json(s.customers.get(m[1]));
+    if (method === 'GET' && u.pathname === '/v1/billing_portal/configurations') return Response.json({ data: [{ id: 'bpc_1', features: { subscription_update: { enabled: true, proration_behavior: portalProration } } }] });
+    if (method === 'POST' && u.pathname === '/v1/products') { const prod = { id: id('prod'), metadata: { plan_code: p.get('metadata[plan_code]') } }; s.products.set(prod.id, prod); return Response.json(prod); }
+    if (method === 'POST' && (m = /^\/v1\/products\/(.+)$/.exec(u.pathname))) { s.archived.push(m[1]); return Response.json({ id: m[1], active: false }); }
     if (method === 'POST' && (m = /^\/v1\/payment_pages\/([^/]+)\/confirm$/.exec(u.pathname))) {
       const session = s.sessions.get(m[1]);
       const clock = s.clocks.get(s.customers.get(session.customer).test_clock);
@@ -100,6 +112,18 @@ function fakeStripe({ renewalCreatesInvoice = true } = {}) {
         Object.assign(sub, { status: 'canceled', canceled_at: s.clocks.values().next().value.frozen_time, ended_at: s.clocks.values().next().value.frozen_time });
         s.webhooks.push({ id: id('evt'), type: 'customer.subscription.deleted', data: { object: { ...sub } } });
       }
+      if (method === 'POST') {
+        s.updates.push(Object.fromEntries(p));
+        if (p.get('default_payment_method')) sub.default_payment_method = p.get('default_payment_method');
+        if (p.get('items[0][price_data][product]')) {
+          // A plan switch: the item moves to the new price; the period is unchanged.
+          const item = sub.items.data[0];
+          item.price = { id: id('price'), unit_amount: Number(p.get('items[0][price_data][unit_amount]')), recurring: { interval: p.get('items[0][price_data][recurring][interval]') },
+            product: s.products.get(p.get('items[0][price_data][product]')) };
+          sub.metadata.plan_code = p.get('metadata[plan_code]');
+        }
+        s.webhooks.push({ id: id('evt'), type: 'customer.subscription.updated', data: { object: { ...sub } } });
+      }
       return Response.json(sub);
     }
     throw new Error(`Unexpected Stripe call ${method} ${u.pathname}`);
@@ -107,7 +131,7 @@ function fakeStripe({ renewalCreatesInvoice = true } = {}) {
   return s;
 }
 
-function setup(options) {
+function setup(options = {}) {
   const DB = createD1();
   DB.raw.exec(migration);
   const stripe = fakeStripe(options);
@@ -137,7 +161,7 @@ function setup(options) {
   }
   const row = (q, ...a) => { const r = DB.raw.prepare(q).get(...a); return r ? { ...r } : null; };
   const t = new Date().toISOString();
-  DB.raw.prepare(`INSERT INTO self_tests (id, kind, status, requested_by, created_at, updated_at) VALUES ('st', 'SUBSCRIPTION_GROWTH', 'REQUESTED', 'test', ?, ?)`).run(t, t);
+  DB.raw.prepare(`INSERT INTO self_tests (id, kind, status, requested_by, created_at, updated_at) VALUES ('st', ?, 'REQUESTED', 'test', ?, ?)`).run(options.kind || 'SUBSCRIPTION_GROWTH', t, t);
   // The quiet wait after cancel is real time; push the stage start back instead of sleeping.
   const ageStage = () => DB.raw.prepare(`UPDATE self_tests SET stage_started_at = ? WHERE id = 'st'`).run(new Date(Date.now() - 10 * 60000).toISOString());
   return { env, stripe, emails, fetch, deliver, tick, row, ageStage };
@@ -188,4 +212,61 @@ test('subscription self-test fails, alerts the owner and cleans up when a renewa
     assert.equal(f.emails.filter((e) => e.subject === 'Subscription self-test failed').length, 1);
     assert.equal(f.stripe.deletedClocks.length, 1);
   });
+});
+
+async function runToEnd(f, ticks = 14) {
+  let result;
+  for (let i = 0; i < ticks; i++) {
+    await f.tick();
+    await f.deliver();
+    result = f.row(`SELECT * FROM self_tests WHERE id = 'st'`);
+    if (result.stage === 'AWAIT_NO_NEW_JOBS') f.ageStage();
+    if (['PASSED', 'FAILED'].includes(result.status)) break;
+  }
+  return result;
+}
+
+test('subscription self-test: Pro bundle ($299) renews with 6 jobs per month and cancels', async () => {
+  const f = setup({ kind: 'SUBSCRIPTION_PRO' });
+  await withFetch(f.fetch, async () => {
+    const result = await runToEnd(f);
+    assert.equal(result.status, 'PASSED', `${result.stage}: ${result.error}\n${result.log_json}`);
+    const log = JSON.parse(result.log_json).map((l) => l.note).join('\n');
+    assert.match(log, /Pro bundle checkout .* paid/);
+    assert.match(log, /6 entitlements and 6 first-month jobs/);
+    assert.match(log, /Renewal created exactly 6 jobs/);
+    assert.equal(f.row(`SELECT COUNT(*) AS n FROM projects WHERE status = 'CANCELLED'`).n, 12);
+  });
+});
+
+test('subscription lifecycle (Starter): portal-style switch to Growth, declined renewal -> past due with services paused, cancel', async () => {
+  const f = setup({ kind: 'SUBSCRIPTION_STARTER', portalProration: 'always_invoice' });
+  await withFetch(f.fetch, async () => {
+    const result = await runToEnd(f);
+    assert.equal(result.status, 'PASSED', `${result.stage}: ${result.error}\n${result.log_json}`);
+    const log = JSON.parse(result.log_json).map((l) => l.note).join('\n');
+    assert.match(log, /Starter bundle checkout .* paid/);
+    assert.match(log, /3 entitlements and 3 first-month jobs/);
+    assert.match(log, /Switched to BUNDLE_GROWTH as the portal would .*proration always_invoice/);
+    assert.match(log, /Renewal declined: subscription PAST_DUE, entitlements SUSPENDED, no renewal jobs/);
+    const sw = f.stripe.updates.find((u) => u['items[0][price_data][product]']);
+    assert.equal(sw.proration_behavior, 'always_invoice', "the portal's own proration setting is used");
+    assert.equal(sw['items[0][price_data][unit_amount]'], '17900');
+    assert.equal(f.row(`SELECT o.code FROM subscriptions s JOIN offers o ON o.id = s.offer_id`).code, 'BUNDLE_GROWTH');
+    assert.equal(f.row(`SELECT status FROM subscriptions`).status, 'CANCELLED');
+    assert.equal(f.row(`SELECT COUNT(*) AS n FROM entitlements WHERE status != 'EXPIRED'`).n, 0);
+    assert.equal(f.row(`SELECT COUNT(*) AS n FROM workflow_runs WHERE trigger_type = 'SUBSCRIPTION_PERIOD' AND status != 'CANCELLED'`).n, 0, 'test jobs never reach a producer');
+    assert.equal(f.stripe.deletedClocks.length, 1);
+    assert.equal(f.stripe.archived.length, 1, 'the switch product is archived');
+  });
+});
+
+test('subscription self-tests are scheduled daily, one slot per bundle', async () => {
+  const { maybeScheduleDaily } = await import('./src/selftest/subscription-selftest.js');
+  const f = setup();
+  f.env.DB.raw.exec(`DELETE FROM self_tests`);
+  const at = (m) => new Date(Date.UTC(2026, 10, 2, 15, m));
+  for (const m of [29, 30, 35, 40, 45, 50, 55, 59]) await maybeScheduleDaily(f.env, at(m));
+  const kinds = f.env.DB.raw.prepare(`SELECT kind FROM self_tests ORDER BY kind`).all().map((r) => r.kind);
+  assert.deepEqual(kinds, ['SUBSCRIPTION_GROWTH', 'SUBSCRIPTION_PRO', 'SUBSCRIPTION_STARTER']);
 });
