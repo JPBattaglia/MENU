@@ -79,7 +79,7 @@ async function alertOwnerOfPostFailures(env, context, failed, runId) {
     html: brandedEmailHtml({ preheader: "Google refused some review replies.", eyebrow: "AUTOMATION ALERT", heading: "Google refused some review replies",
       paragraphs: ["The rest of this week's replies were posted. These were not:"],
       rows: failed.slice(0, 10).map((f) => [`${f.row.star_rating || "?"} stars`, clip(f.error, 200)]) }),
-    text: `Google refused ${failed.length} review repl(ies) for ${context.business_name}:\n${failed.map((f) => `- ${f.row.review_name}: ${f.error}`).join("\n")}`,
+    text: `Google refused ${failed.length} review repl(ies) for ${context.business_name || "a customer"}:\n${failed.map((f) => `- ${f.row.review_name}: ${f.error}`).join("\n")}`,
     idempotencyKey: `review-post-failed/${runId}`, purpose: "AUTOMATION_ALERT", templateKey: "review_post_failed_v1"
   }).catch(() => null);
 }

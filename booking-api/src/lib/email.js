@@ -117,9 +117,25 @@ function withCrossSell(html, text) {
   return { html: outHtml, text: outText };
 }
 
+// Render check on every message (Stage 12, task 6): leftovers that mean a template was filled with missing data.
+// Findings go on the communications row (metadata_json.lint); the daily EMAIL_HEALTH check reports them.
+function lintEmail({ subject, html, text }) {
+  const found = new Set();
+  if (!String(subject || "").trim()) found.add("empty subject");
+  const visible = [subject, text, String(html || "").replace(/<style[\s\S]*?<\/style>/gi, "").replace(/<[^>]+>/g, " ")].map((v) => String(v ?? "")).join("\n");
+  if (/\bundefined\b/.test(visible)) found.add("undefined");
+  if (/\bNaN\b/.test(visible)) found.add("NaN");
+  if (/\[object Object\]/.test(visible)) found.add("[object Object]");
+  if (/\$\{[^}]*\}/.test(visible)) found.add("unfilled ${...}");
+  if (/\{\{[^}]*\}\}/.test(visible)) found.add("unfilled {{...}}");
+  if (/(^|[\s:>])null([\s.,<]|$)/.test(visible)) found.add("null");
+  return [...found];
+}
+
 async function sendTransactionalEmail(env, { to, subject, html, text, idempotencyKey, purpose, templateKey, context = {}, bccInternal = false }) {
   if (purpose === "ORDER_DELIVERY" && isCustomerEmail(to, purpose, env) && !/^delivery_(merch|nino_design)_/.test(String(templateKey || ""))) ({ html, text } = withCrossSell(html, text));
   if (isCustomerEmail(to, purpose, env)) ({ html, text } = withAccountLink(html, text));
+  const lint = lintEmail({ subject, html, text });
   let ok = false;
   let providerId = null;
   let error = null;
@@ -184,7 +200,7 @@ async function sendTransactionalEmail(env, { to, subject, html, text, idempotenc
       providerId,
       ok ? timestamp : null,
       ok ? null : String(error).slice(0, 500),
-      JSON.stringify({ idempotency_key: idempotencyKey })
+      JSON.stringify({ idempotency_key: idempotencyKey, ...lint.length ? { lint } : {} })
     ).run();
   } catch (logError) {
     console.error("Communication log failed:", logError instanceof Error ? logError.message : String(logError));
@@ -193,6 +209,7 @@ async function sendTransactionalEmail(env, { to, subject, html, text, idempotenc
 }
 
 export {
+  lintEmail,
   isCustomerEmail,
   withAccountLink,
   SELF_TEST_EMAIL,
