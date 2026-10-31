@@ -26,6 +26,7 @@ import { handleGoogleKeys } from "./store-app/google-keys.js";
 import { handleSwitches } from "./lib/switches.js";
 import { dailyCoverageReport, handleCoverage } from "./selftest/coverage.js";
 import { handleSiteCheckResult } from "./selftest/site-check.js";
+import { advanceMoneyPathsSelfTests } from "./selftest/money-paths.js";
 import { advanceStoreApps, handleStoreAppDone } from "./store-app/store-flow.js";
 import { advanceGuestAppPushSelfTests } from "./selftest/guest-app-push-selftest.js";
 import { advanceStoreAppSelfTests } from "./selftest/store-app-selftest.js";
@@ -393,6 +394,7 @@ const mmWorkerWithBooking = {
       await advanceMenuHostingSelfTests(env).catch((error) => console.error("Menu hosting self-test failed:", error instanceof Error ? error.message : String(error)));
       await advanceNinoDesignSelfTests(env, app).catch((error) => console.error("Nino design self-test failed:", error instanceof Error ? error.message : String(error)));
       await advanceStaffMerchSelfTests(env, app).catch((error) => console.error("Staff merch self-test failed:", error instanceof Error ? error.message : String(error)));
+      await advanceMoneyPathsSelfTests(env).catch((error) => console.error("Money paths check failed:", error instanceof Error ? error.message : String(error)));
       await dailyCoverageReport(env).catch((error) => console.error("Daily coverage report failed:", error instanceof Error ? error.message : String(error)));
       // Once an hour: design-brief reminders and staff merch tracking emails.
       await remindDesignBriefs(env).catch((error) => console.error("Design brief reminders failed:", error instanceof Error ? error.message : String(error)));

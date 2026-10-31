@@ -60,6 +60,7 @@ const SYSTEMS = [
   ["Unfinished-checkout email", "ABANDONED_CHECKOUT", "reminder email and resumed checkout"],
   ["Custom domains", "CUSTOM_DOMAIN_SETUP", "Cloudflare for SaaS settings, token, fallback origin"],
   ["Google connection", "GOOGLE_API_HEALTH", "OAuth token refresh and the three Google APIs"],
+  ["Payments (live, read-only)", "MONEY_PATHS", "every live Stripe price matches the catalog, a live checkout opens, the webhook is set up and nothing failed to arrive"],
   ["Website checks (both sites)", "SITE_CHECK", "every page loads, no broken links or files, no JavaScript errors, no arrows on buttons or links, accessibility, speed (GitHub Actions, daily)"]
 ];
 
