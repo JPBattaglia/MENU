@@ -37,7 +37,9 @@ async function head(context, url) {
   let code = 0;
   try {
     let res = await context.request.fetch(url, { method: "HEAD", maxRedirects: 5, timeout: 20000, failOnStatusCode: false });
-    if (res.status() === 405 || res.status() === 403 || res.status() === 501) res = await context.request.get(url, { maxRedirects: 5, timeout: 20000, failOnStatusCode: false });
+    // Some servers don't answer HEAD the way they answer a browser (the Nino shop's model photos 404 on HEAD and
+    // load fine on GET), so anything that isn't OK is asked again the way a browser asks before it's called broken.
+    if (res.status() >= 400) res = await context.request.get(url, { maxRedirects: 5, timeout: 20000, failOnStatusCode: false });
     code = res.status();
   } catch { code = 0; }
   status.set(url, code);
