@@ -118,6 +118,23 @@ function withCrossSell(html, text) {
   return { html: outHtml, text: outText };
 }
 
+// Owner decision (Oct 30, 2026, stage 12 task 8): self-test emails (to delivered@resend.dev) count against Resend's
+// free quota of 100 a day, and the daily self-tests sent about 55. Now only the first self-test email of each UTC day
+// goes to Resend (proving the real send path daily); the rest are rendered, checked and logged as SENT with a
+// "dry-" id, without calling Resend. Real customer and owner emails are never affected.
+async function skipSelfTestSend(env, to, now = Date.now()) {
+  if (to !== SELF_TEST_EMAIL || !env.DB) return false;
+  const day = new Date(now).toISOString().slice(0, 10);
+  try {
+    const r = await env.DB.prepare(`INSERT INTO worker_settings (key, value, updated_at) VALUES ('mail:selftest-real', ?, ?)
+        ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated_at = excluded.updated_at WHERE worker_settings.value != excluded.value`)
+      .bind(day, new Date(now).toISOString()).run();
+    return !(Number(r?.meta?.changes || 0) > 0);
+  } catch {
+    return false;
+  }
+}
+
 // Render check on every message (Stage 12, task 6): leftovers that mean a template was filled with missing data.
 // Findings go on the communications row (metadata_json.lint); the daily EMAIL_HEALTH check reports them.
 function lintEmail({ subject, html, text }) {
@@ -140,7 +157,11 @@ async function sendTransactionalEmail(env, { to, subject, html, text, idempotenc
   let ok = false;
   let providerId = null;
   let error = null;
-  if (!env.RESEND_API_KEY) {
+  const dry = env.RESEND_API_KEY ? await skipSelfTestSend(env, to) : false;
+  if (dry) {
+    ok = true;
+    providerId = `dry-${crypto.randomUUID()}`;
+  } else if (!env.RESEND_API_KEY) {
     error = "RESEND_API_KEY is not configured";
   } else {
     try {
@@ -178,7 +199,7 @@ async function sendTransactionalEmail(env, { to, subject, html, text, idempotenc
     }
   }
   // Stage 12, task 7: a failed owner alert, or three failed sends in a row, reaches the owner through GitHub instead.
-  if (env.RESEND_API_KEY) await noteMailResult(env, { ok, toOwner: to === (env.OWNER_EMAIL || REPLY_TO_ADDRESS), error }).catch(() => null);
+  if (env.RESEND_API_KEY && !dry) await noteMailResult(env, { ok, toOwner: to === (env.OWNER_EMAIL || REPLY_TO_ADDRESS), error }).catch(() => null);
   try {
     const timestamp = nowIso();
     await env.DB.prepare(`
@@ -203,7 +224,7 @@ async function sendTransactionalEmail(env, { to, subject, html, text, idempotenc
       providerId,
       ok ? timestamp : null,
       ok ? null : String(error).slice(0, 500),
-      JSON.stringify({ idempotency_key: idempotencyKey, ...lint.length ? { lint } : {} })
+      JSON.stringify({ idempotency_key: idempotencyKey, ...lint.length ? { lint } : {}, ...dry ? { dry: true } : {} })
     ).run();
   } catch (logError) {
     console.error("Communication log failed:", logError instanceof Error ? logError.message : String(logError));
@@ -213,6 +234,7 @@ async function sendTransactionalEmail(env, { to, subject, html, text, idempotenc
 
 export {
   lintEmail,
+  skipSelfTestSend,
   isCustomerEmail,
   withAccountLink,
   SELF_TEST_EMAIL,

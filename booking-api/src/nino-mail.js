@@ -5,6 +5,8 @@
 // RESEND_API_KEY under Nino's name, so the shop needs no email key of its own. The shop builds the message
 // (its own branding); this only fixes the sender and reply-to and checks the shape.
 
+import { skipSelfTestSend } from "./lib/email.js";
+
 const RESEND_ENDPOINT = "https://api.resend.com/emails";
 export const NINO_FROM = "Nino Battaglia <orders@updates.menu-made.com>";
 export const NINO_REPLY_TO = "hello@ninobattaglia.com";
@@ -17,6 +19,8 @@ export async function sendNinoMail(env, message, fetcher = fetch) {
   if (typeof subject !== "string" || !subject || subject.length > 200) throw new Error("nino_mail_invalid_subject");
   if (typeof html !== "string" || html.length > 200000 || (text != null && (typeof text !== "string" || text.length > 50000))) throw new Error("nino_mail_invalid_body");
   if (!env.RESEND_API_KEY) throw new Error("nino_mail_not_configured");
+  // The shop's self-test buyer skips Resend after the day's first real self-test send (owner decision, Oct 30, 2026).
+  if (await skipSelfTestSend(env, to)) return { id: `dry-${crypto.randomUUID()}` };
   const response = await fetcher(RESEND_ENDPOINT, {
     method: "POST",
     headers: { Authorization: `Bearer ${env.RESEND_API_KEY}`, "Content-Type": "application/json" },

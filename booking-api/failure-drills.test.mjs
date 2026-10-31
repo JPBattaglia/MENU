@@ -138,3 +138,12 @@ test('usage row shows the last tick\'s query count and fails when queries were r
   try { assert.equal((await d1.recordUsage(f.env, body, Date.parse('2026-11-01T13:00:00Z'))).status, 'FAILED'); } finally { globalThis.fetch = o; }
   assert.match({ ...f.DB.raw.prepare(`SELECT error FROM self_tests`).get() }.error, /hit the 50-query limit \(7 queries refused\)/);
 });
+
+test('self-test emails: the first of each UTC day goes to Resend, the rest are logged without sending (owner decision)', async () => {
+  const f = setup({ resend: 200 });
+  for (let i = 0; i < 4; i++) await f.mail('delivered@resend.dev', `st-${i}`);
+  await f.mail('owner@restaurant.example', 'real-1');
+  assert.equal(f.sent.length, 2, 'one self-test send plus the real customer email');
+  assert.equal(f.n(`SELECT COUNT(*) AS n FROM communications WHERE status = 'SENT' AND provider_message_id LIKE 'dry-%'`), 3);
+  assert.equal(f.n(`SELECT COUNT(*) AS n FROM communications WHERE metadata_json LIKE '%"dry":true%'`), 3);
+});

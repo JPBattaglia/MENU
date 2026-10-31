@@ -1,4 +1,4 @@
-import { FROM_ADDRESS, INTERNAL_BCC, REPLY_TO_ADDRESS, RESEND_ENDPOINT, SELF_TEST_EMAIL, escapeHtml, logEmailEvent } from "../lib/email.js";
+import { FROM_ADDRESS, INTERNAL_BCC, REPLY_TO_ADDRESS, RESEND_ENDPOINT, SELF_TEST_EMAIL, escapeHtml, logEmailEvent, skipSelfTestSend } from "../lib/email.js";
 
 function formatCustomerName(firstName, lastName) {
   return [
@@ -421,7 +421,8 @@ async function sendOnboardingConfirmationEmail({
   const idempotencyKey = `onboarding-ready/${projectId}`;
   let response;
   try {
-    response = await fetch(
+    // Self-test confirmations skip Resend after the day's first real send (owner decision, Oct 30, 2026).
+    response = await skipSelfTestSend(env, recipient) ? Response.json({ id: `dry-${crypto.randomUUID()}` }) : await fetch(
       RESEND_ENDPOINT,
       {
         method: "POST",
