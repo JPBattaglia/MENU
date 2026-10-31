@@ -93,6 +93,7 @@ function fakeStripe({ renewalCreatesInvoice = true, portalProration = 'none' } =
     if (method === 'POST' && u.pathname === '/v1/payment_methods') return Response.json({ id: p.get('card[token]') === 'tok_chargeCustomerFail' ? 'pm_fail' : 'pm_visa' });
     if (method === 'POST' && /^\/v1\/payment_methods\/[^/]+\/attach$/.test(u.pathname)) return Response.json({ id: 'pm_fail', customer: p.get('customer') });
     if (method === 'POST' && (m = /^\/v1\/customers\/(.+)$/.exec(u.pathname))) return Response.json(s.customers.get(m[1]));
+    if (method === 'POST' && u.pathname === '/v1/billing_portal/sessions') { s.portalSessions = (s.portalSessions || 0) + 1; return Response.json({ id: 'bps_1', url: 'https://billing.stripe.com/p/session/test_1' }); }
     if (method === 'GET' && u.pathname === '/v1/billing_portal/configurations') return Response.json({ data: [{ id: 'bpc_1', features: { subscription_update: { enabled: true, proration_behavior: portalProration } } }] });
     if (method === 'POST' && u.pathname === '/v1/products') { const prod = { id: id('prod'), metadata: { plan_code: p.get('metadata[plan_code]') } }; s.products.set(prod.id, prod); return Response.json(prod); }
     if (method === 'POST' && (m = /^\/v1\/products\/(.+)$/.exec(u.pathname))) { s.archived.push(m[1]); return Response.json({ id: m[1], active: false }); }
@@ -194,6 +195,8 @@ test('subscription self-test: Growth renews on a test clock with 4 new jobs, and
     assert.equal(result.status, 'PASSED', `${result.stage}: ${result.error}\n${result.log_json}`);
     const log = JSON.parse(result.log_json).map((l) => l.note);
     assert.ok(log.some((l) => /4 entitlements and 4 first-month jobs/.test(l)), log.join('\n'));
+    assert.ok(log.some((l) => /billing portal link opens a portal session/.test(l)));
+    assert.equal(f.stripe.portalSessions, 1);
     assert.ok(log.some((l) => /Renewal created exactly 4 jobs/.test(l)));
     assert.ok(log.some((l) => /No jobs after cancel/.test(l)));
     assert.ok(log.some((l) => /Cancel scheduled: still ACTIVE with every service until the period ends/.test(l)), 'Growth cancels the way the billing portal does');

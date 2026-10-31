@@ -15,6 +15,7 @@ import { SELF_TEST_EMAIL, brandedEmailHtml, sendTransactionalEmail } from "../li
 import { nowIso, parseJsonOrNull } from "../lib/http.js";
 import { payTestCheckout, stripeTest, updateTest } from "./menu-qr-selftest.js";
 import { dailyClock } from "./daily-clock.js";
+import { billingPortalLink } from "../subscriptions/portal.js";
 
 const KIND = "SUBSCRIPTION_GROWTH";
 const GROWTH_PLANS = ["ACCESSIBILITY_MONITORING", "GOOGLE_PROFILE_CARE", "MENU_CARE", "REVIEW_REPLIES"];
@@ -169,13 +170,17 @@ async function stageAwaitActive(env, app, test) {
   const welcome = await env.DB.prepare(`SELECT status FROM communications WHERE template_key = 'subscription_welcome_v1' AND customer_id = ? ORDER BY created_at DESC LIMIT 1`)
     .bind(sub.customer_id).first();
   if (welcome?.status !== "SENT") throw new Error(`Welcome email with the billing-portal link was not sent (${welcome?.status || "none"})`);
+  // The "Manage your plan" link (welcome email and account page) must open a Stripe billing portal session.
+  const link = new URL(await billingPortalLink(env, sub.id));
+  const portal = await json(await app(new Request(`${publicBaseUrl(env)}${link.pathname}`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ token: link.searchParams.get("t") }) })));
+  if (!portal.body?.ok || !/^https:\/\/billing\.stripe\.com\//.test(String(portal.body.url || ""))) throw new Error(`The billing portal link didn't open a portal session (HTTP ${portal.status}: ${JSON.stringify(portal.body).slice(0, 200)})`);
   const base = { subscription_id: sub.id, stripe_subscription_id: sub.provider_subscription_id, first_period: jobs[0].period_start, period_end: sub.current_period_end };
   if (run.lifecycle) return switchPlan(env, test, run, base, n);
   // Fast-forward past the end of the first month: Stripe bills the renewal and sends invoice.paid.
   const target = Math.floor(Date.parse(sub.current_period_end) / 1000) + 3 * 3600; // renewal invoices finalize about an hour after they're created
   await advanceClock(env, state(test).clock_id, target);
   return updateTest(env, test, { stage: "AWAIT_RENEWAL", state: { ...base, renew_to: target },
-    log: `Subscription ACTIVE with ${n} entitlements and ${n} first-month jobs; welcome email sent; clock advancing to ${new Date(target * 1000).toISOString()}` });
+    log: `Subscription ACTIVE with ${n} entitlements and ${n} first-month jobs; welcome email sent; billing portal link opens a portal session; clock advancing to ${new Date(target * 1000).toISOString()}` });
 }
 
 // ---------- The lifecycle (SUBSCRIPTION_STARTER) ----------
@@ -196,7 +201,7 @@ async function switchPlan(env, test, run, base, n) {
     proration_behavior: proration, "metadata[plan_code]": run.lifecycle.switchTo
   });
   return updateTest(env, test, { stage: "AWAIT_SWITCHED", state: { ...base, product_id: product.id, proration },
-    log: `ACTIVE with ${n} entitlements and ${n} first-month jobs; welcome email sent. Switched to ${run.lifecycle.switchTo} as the portal would (portal ${update.enabled ? "allows plan switching" : "has plan switching OFF"}; proration ${proration})` });
+    log: `ACTIVE with ${n} entitlements and ${n} first-month jobs; welcome email sent; billing portal link opens a portal session. Switched to ${run.lifecycle.switchTo} as the portal would (portal ${update.enabled ? "allows plan switching" : "has plan switching OFF"}; proration ${proration})` });
 }
 
 async function stageAwaitSwitched(env, app, test) {
