@@ -3,6 +3,7 @@
 import { WorkerEntrypoint } from "cloudflare:workers";
 import mmWorkerWithBooking from "./worker.js";
 import { sendNinoMail } from "./nino-mail.js";
+import { writeNinoNewsletter } from "./nino-write.js";
 
 export * from "./worker.js";
 export default mmWorkerWithBooking;
@@ -11,5 +12,12 @@ export default mmWorkerWithBooking;
 export class NinoMail extends WorkerEntrypoint {
   async send(message) {
     return sendNinoMail(this.env, message);
+  }
+}
+
+// Private newsletter copywriter for the Nino shop; reachable only through its service binding (see nino-write.js).
+export class NinoWrite extends WorkerEntrypoint {
+  async draft(brief) {
+    return writeNinoNewsletter(this.env, brief);
   }
 }
