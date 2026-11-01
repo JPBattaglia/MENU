@@ -3,6 +3,9 @@
 //   FAIL: a page that doesn't answer 200; a broken same-site link, image, script or stylesheet; a JavaScript error;
 //         an arrow on a button or link (house rule, Oct 29, 2026: no arrows on any button or link, including CSS
 //         ::before/::after); a critical accessibility violation (axe); a page taking over 8 s to load.
+//         Nov 1, 2026 (marketing readiness): a page that scrolls sideways on a phone (390 px wide); on
+//         ninobattaglia.com, a shopper who can't open a design, pick its options, add it to the cart and reach an
+//         enabled "Continue to checkout" (stops there: no checkout is started).
 //   WARN (listed, not failing): serious accessibility violations, pages over 4 s, broken links to other sites
 //         (many sites refuse robots), forms with no action and no script handler.
 // Forms are not submitted: every form on both sites either sends a real email or opens a real checkout, and the
@@ -145,14 +148,67 @@ for (const site of sites) {
       await page.screenshot({ path: `${OUT}/${name}-desktop.png`, fullPage: true }).catch(() => null);
       await page.setViewportSize({ width: 390, height: 844 });
       await page.waitForTimeout(300);
+      // Most marketing traffic is on phones: nothing may push the page wider than the screen.
+      const wide = await page.evaluate(() => {
+        const vw = document.documentElement.clientWidth;
+        if (document.documentElement.scrollWidth <= vw + 1) return null;
+        let worst = null;
+        for (const el of document.body.querySelectorAll("*")) {
+          const r = el.getBoundingClientRect();
+          if (r.width && r.right > vw + 1 && (!worst || r.right > worst.right)) worst = { right: Math.round(r.right), what: `${el.tagName.toLowerCase()}${el.id ? "#" + el.id : ""}${typeof el.className === "string" && el.className ? "." + el.className.trim().split(/\s+/).slice(0, 2).join(".") : ""}` };
+        }
+        return { width: document.documentElement.scrollWidth, vw, worst };
+      }).catch(() => null);
+      if (wide) fail(path, `scrolls sideways on a phone (${wide.width} px wide on a ${wide.vw} px screen${wide.worst ? `; widest: ${wide.worst.what} to ${wide.worst.right} px` : ""})`);
       await page.screenshot({ path: `${OUT}/${name}-phone.png`, fullPage: true }).catch(() => null);
     }
     await page.close();
   }
   if (queue.length > MAX_PAGES) warn("(crawl)", `stopped at ${MAX_PAGES} pages of ${queue.length} found`);
   await context.close();
+  if (host === "ninobattaglia.com") await shopperJourney(browser, origin, sitemap, (what) => fail("(shopper on a phone)", what));
 }
 await browser.close();
+
+// A phone shopper on ninobattaglia.com: shirt page, "See sizes, colors & price", choose options, Add to cart, cart page
+// with the line and an enabled "Continue to checkout". Stops before checkout (no Stripe session, no order).
+async function shopperJourney(browser, origin, sitemap, fail) {
+  const context = await browser.newContext({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true, userAgent: "Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) MenuMadeSiteCheck/1.0 Mobile Safari/604.1" });
+  const page = await context.newPage();
+  const errors = [];
+  page.on("pageerror", (e) => errors.push(String(e.message || e).slice(0, 200)));
+  try {
+    const shirt = sitemap.find((u) => /\/shirts\/[^/]+\.html$/.test(u));
+    if (!shirt) { fail("no shirt page in the sitemap"); return; }
+    await page.goto(shirt, { waitUntil: "load", timeout: 30000 });
+    const buy = page.locator('a[href*="shop.html?product="]').first();
+    if (!(await buy.count())) { fail(`${new URL(shirt).pathname}: no "See sizes, colors & price" button`); return; }
+    await buy.click();
+    const form = page.locator("form.variant-picker").first();
+    try { await form.waitFor({ state: "visible", timeout: 20000 }); } catch { fail(`${new URL(page.url()).pathname}${new URL(page.url()).search}: the buy options never appeared (product list or checkout not ready)`); return; }
+    // Choose the first available value of every option (hidden selects back the color dots).
+    await form.evaluate((f) => {
+      for (const select of f.querySelectorAll("select")) {
+        if (select.value) continue;
+        const option = [...select.options].slice(1).find((o) => !o.disabled);
+        if (option) { select.value = option.value; select.dispatchEvent(new Event("change")); }
+      }
+    });
+    const add = form.locator('button[type="submit"]');
+    if (await add.isDisabled()) { fail("Add to cart stayed disabled after choosing options"); return; }
+    await add.click();
+    await page.goto(`${origin}/cart.html`, { waitUntil: "load", timeout: 30000 });
+    const checkout = page.locator("[data-cart-checkout]");
+    try { await page.waitForFunction(() => { const b = document.querySelector("[data-cart-checkout]"); return b && !b.disabled && document.querySelector("[data-cart-lines]")?.children.length > 0; }, null, { timeout: 20000 }); }
+    catch { fail(`cart.html: the item${(await page.locator("[data-cart-lines] > *").count()) ? " is there but Continue to checkout stayed disabled" : " never showed in the cart"}`); return; }
+    if (!(await checkout.isVisible())) fail("cart.html: Continue to checkout is not visible");
+    await page.screenshot({ path: `${OUT}/ninobattaglia.com-shopper-cart-phone.png`, fullPage: true }).catch(() => null);
+  } catch (e) { fail(`stopped: ${String(e.message).split("\n")[0].slice(0, 160)}`); }
+  finally {
+    for (const e of [...new Set(errors)]) fail(`JavaScript error: ${e}`);
+    await context.close();
+  }
+}
 
 result.ok = result.sites.every((s) => s.failures.length === 0);
 writeFileSync(`${OUT}/result.json`, JSON.stringify(result, null, 2));
