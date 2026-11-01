@@ -197,6 +197,11 @@ async function shopperJourney(browser, origin, sitemap, fail) {
     const add = form.locator('button[type="submit"]');
     if (await add.isDisabled()) { fail("Add to cart stayed disabled after choosing options"); return; }
     await add.click();
+    // Add to cart closes the product view like Back and confirms with an "Added to cart" toast; let that settle.
+    try { await page.getByText(/Added to (your )?cart/i).first().waitFor({ state: "visible", timeout: 10000 }); }
+    catch { fail("no \"Added to cart\" confirmation after tapping Add to cart"); return; }
+    await page.waitForLoadState("load").catch(() => null);
+    await page.waitForTimeout(1000);
     await page.goto(`${origin}/cart.html`, { waitUntil: "load", timeout: 30000 });
     const checkout = page.locator("[data-cart-checkout]");
     try { await page.waitForFunction(() => { const b = document.querySelector("[data-cart-checkout]"); return b && !b.disabled && document.querySelector("[data-cart-lines]")?.children.length > 0; }, null, { timeout: 20000 }); }
