@@ -15,7 +15,8 @@ function countingDb(db) {
   });
   const counted = Object.create(db);
   counted.prepare = (sql) => wrap(db.prepare(sql));
-  counted.batch = (statements) => { stats.queries += statements.length; return db.batch(statements.map((s) => s?._inner || s)).catch(note); };
+  // A db.batch() counts as one query against the per-invocation limit (D1 limits page), however many statements it holds.
+  counted.batch = (statements) => { stats.queries += 1; return db.batch(statements.map((s) => s?._inner || s)).catch(note); };
   return { db: counted, stats };
 }
 
