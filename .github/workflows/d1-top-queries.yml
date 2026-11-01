@@ -1,0 +1,28 @@
+# On demand: the queries that read the most D1 rows today, per database (for fixing free-plan read overruns).
+# Read-only; uses the same deploy token as d1-usage (account analytics).
+name: d1-top-queries
+on:
+  workflow_dispatch:
+    inputs:
+      since:
+        description: ISO start time (UTC), default today 00:00
+        required: false
+permissions:
+  contents: read
+jobs:
+  top:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    env:
+      CF: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      ACC: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      SINCE: ${{ inputs.since }}
+    steps:
+      - name: Top queries by rows read
+        run: |
+          set -eu
+          acc="$ACC"; [ -n "$acc" ] || acc=$(curl -sSf -H "Authorization: Bearer $CF" https://api.cloudflare.com/client/v4/accounts | jq -r '.result[0].id')
+          since="${SINCE:-$(date -u +%FT00:00:00Z)}"; until=$(date -u +%FT%TZ)
+          q=$(jq -nc --arg a "$acc" --arg s "$since" --arg u "$until" '{query:"query($a:String!,$s:Time!,$u:Time!){viewer{accounts(filter:{accountTag:$a}){d1QueriesAdaptiveGroups(limit:40,filter:{datetime_geq:$s,datetime_leq:$u},orderBy:[sum_rowsRead_DESC]){sum{rowsRead rowsWritten} count dimensions{databaseId query}}}}}",variables:{a:$a,s:$s,u:$u}}')
+          curl -sS -H "Authorization: Bearer $CF" -H "Content-Type: application/json" https://api.cloudflare.com/client/v4/graphql --data "$q" \
+            | jq -r '.errors // empty, (.data.viewer.accounts[0].d1QueriesAdaptiveGroups[]? | "\(.sum.rowsRead)\t\(.count)\t\(.dimensions.databaseId[0:4])\t\(.dimensions.query[0:400])")'
