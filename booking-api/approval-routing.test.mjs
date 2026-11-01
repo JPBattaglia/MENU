@@ -266,3 +266,28 @@ test('the test-only deliver step never runs for a real product run', async () =>
     assert.equal(f.row(`SELECT status FROM workflow_steps WHERE workflow_run_id = (SELECT id FROM workflow_runs WHERE project_id = ?) AND step_key = 'SELFTEST_PRODUCE'`, a.projectId).status, 'QUEUED');
   });
 });
+
+test('a passing Cloudflare storage error is retried on the next tick; a real error, or three in a row, still stops the order', async () => {
+  assert.ok(api.isTransientPlatformError('put: We encountered an internal error. Please try again. (10001)'));
+  assert.ok(!api.isTransientPlatformError('Menu file has no pages'));
+  const f = await setup();
+  await withFetch(f.fetch, async () => {
+    const put = f.ASSETS.put.bind(f.ASSETS);
+    let failures = 1;
+    f.ASSETS.put = async (...args) => { if (failures-- > 0) throw new Error('put: We encountered an internal error. Please try again. (10001)'); return put(...args); };
+    const a = await f.order('AUTO');
+    const runId = f.row(`SELECT id FROM workflow_runs WHERE project_id = ?`, a.projectId).id;
+    const first = await api.runNextProductionStep(api.internalRunnerRequest(f.env, { workflow_run_id: runId, step_key: 'SELFTEST_PRODUCE' }), f.env);
+    assert.equal((await first.json()).status, 'RETRY_SCHEDULED');
+    assert.equal(f.row(`SELECT status FROM workflow_steps WHERE workflow_run_id = ? AND step_key = 'SELFTEST_PRODUCE'`, runId).status, 'QUEUED');
+    assert.notEqual(f.row(`SELECT status FROM workflow_runs WHERE id = ?`, runId).status, 'FAILED');
+    await f.tick();
+    assert.equal(f.row(`SELECT status FROM projects WHERE id = ?`, a.projectId).status, 'DELIVERED');
+
+    failures = 99;
+    const b = await f.order('AUTO');
+    const runB = f.row(`SELECT id FROM workflow_runs WHERE project_id = ?`, b.projectId).id;
+    for (let i = 0; i < api.TRANSIENT_MAX_ATTEMPTS + 1; i++) await api.runNextProductionStep(api.internalRunnerRequest(f.env, { workflow_run_id: runB, step_key: 'SELFTEST_PRODUCE' }), f.env);
+    assert.equal(f.row(`SELECT status FROM workflow_runs WHERE id = ?`, runB).status, 'FAILED');
+  });
+});

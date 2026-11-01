@@ -449,6 +449,31 @@ async function runNextProductionStep(request, env, options = {}) {
     });
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : String(error);
+    // A passing Cloudflare platform hiccup (an R2/KV/D1 internal error such as "(10001)") is not the order's fault:
+    // the step goes back in the queue and the next runner tick tries it again, up to TRANSIENT_MAX_ATTEMPTS
+    // (Nov 1, 2026: one R2 put error stopped the routing self-test for good).
+    if (targetStep && isTransientPlatformError(errorMessage)) {
+      try {
+        if (await currentStepAttempts(targetStep, env) < TRANSIENT_MAX_ATTEMPTS) {
+          const requeued = await env.DB.prepare(`
+              UPDATE workflow_steps SET status = 'QUEUED', error_message = ? WHERE id = ? AND status = 'RUNNING'
+            `).bind(`retrying after: ${errorMessage}`.slice(0, 500), targetStep.workflow_step_id).run();
+          if (requeued?.meta?.changes) {
+            return jsonResponse({
+              ok: false,
+              processed: true,
+              status: "RETRY_SCHEDULED",
+              workflow_run_id: targetStep.workflow_run_id,
+              workflow_step_id: targetStep.workflow_step_id,
+              step_key: targetStep.step_key,
+              error: errorMessage
+            }, 503);
+          }
+        }
+      } catch {
+        // could not requeue: fall through and stop the order as before
+      }
+    }
     if (targetStep) {
       const failedAt = nowIso();
       try {
@@ -505,6 +530,12 @@ async function runNextProductionStep(request, env, options = {}) {
       500
     );
   }
+}
+
+export const TRANSIENT_MAX_ATTEMPTS = 3;
+// Cloudflare's own temporary failures (storage, database, network), never the order's data.
+export function isTransientPlatformError(message) {
+  return /\(10001\)|We encountered an internal error|Network connection lost|internal error; reference|D1_ERROR: .*(?:reset|overloaded|try again)/i.test(String(message || ""));
 }
 
 async function currentStepAttempts(targetStep, env) {
