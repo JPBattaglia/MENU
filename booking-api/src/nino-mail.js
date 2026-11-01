@@ -10,11 +10,18 @@ import { skipSelfTestSend } from "./lib/email.js";
 const RESEND_ENDPOINT = "https://api.resend.com/emails";
 export const NINO_FROM = "Nino Battaglia <orders@updates.menu-made.com>";
 export const NINO_REPLY_TO = "hello@ninobattaglia.com";
+// Newsletter issues (the shop's newsletter.mjs) go out from a separate address and must carry a one-click
+// unsubscribe (RFC 8058). Only the shop's own unsubscribe route is accepted, so a caller can't point it elsewhere.
+export const NINO_NEWS_FROM = "Nino Battaglia <news@updates.menu-made.com>";
+const UNSUBSCRIBE = /^https:\/\/nino-printful-commerce-api\.ijpbattaglia\.workers\.dev\/api\/unsubscribe\?t=[a-f0-9]{48}$/;
 
 const looksLikeEmail = (value) => typeof value === "string" && value.length <= 254 && /^[^\s@<>"]+@[^\s@<>"]+\.[^\s@<>"]+$/.test(value);
 
 export async function sendNinoMail(env, message, fetcher = fetch) {
-  const { to, subject, html, text } = message || {};
+  const { to, subject, html, text, kind, unsubscribe } = message || {};
+  const news = kind === "news";
+  if (kind != null && !news) throw new Error("nino_mail_invalid_kind");
+  if (news && !UNSUBSCRIBE.test(String(unsubscribe || ""))) throw new Error("nino_mail_news_needs_unsubscribe");
   if (!looksLikeEmail(to)) throw new Error("nino_mail_invalid_recipient");
   if (typeof subject !== "string" || !subject || subject.length > 200) throw new Error("nino_mail_invalid_subject");
   if (typeof html !== "string" || html.length > 200000 || (text != null && (typeof text !== "string" || text.length > 50000))) throw new Error("nino_mail_invalid_body");
@@ -24,7 +31,8 @@ export async function sendNinoMail(env, message, fetcher = fetch) {
   const response = await fetcher(RESEND_ENDPOINT, {
     method: "POST",
     headers: { Authorization: `Bearer ${env.RESEND_API_KEY}`, "Content-Type": "application/json" },
-    body: JSON.stringify({ from: NINO_FROM, to: [to], reply_to: NINO_REPLY_TO, subject, html, ...(text ? { text } : {}) })
+    body: JSON.stringify({ from: news ? NINO_NEWS_FROM : NINO_FROM, to: [to], reply_to: NINO_REPLY_TO, subject, html, ...(text ? { text } : {}),
+      ...(news ? { headers: { "List-Unsubscribe": `<${unsubscribe}>`, "List-Unsubscribe-Post": "List-Unsubscribe=One-Click" } } : {}) })
   });
   const body = await response.json().catch(() => ({}));
   if (!response.ok) throw new Error(`nino_mail_resend_${response.status}: ${String(body?.message || "").slice(0, 160)}`);

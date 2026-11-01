@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { sendNinoMail, NINO_FROM, NINO_REPLY_TO } from "./src/nino-mail.js";
+import { sendNinoMail, NINO_FROM, NINO_REPLY_TO, NINO_NEWS_FROM } from "./src/nino-mail.js";
 
 const env = { RESEND_API_KEY: "re_fixture_not_a_key" };
 const ok = { to: "buyer@example.com", subject: "Your order", html: "<p>Hi</p>", text: "Hi" };
@@ -28,4 +28,18 @@ test("the caller cannot change the sender, and bad messages are refused before R
 
 test("a Resend error is reported", async () => {
   await assert.rejects(sendNinoMail(env, ok, async () => Response.json({ message: "domain not verified" }, { status: 403 })), /nino_mail_resend_403: domain not verified/);
+});
+
+test("newsletter mail comes from the news address with a one-click unsubscribe, and only the shop's unsubscribe link is accepted", async () => {
+  const link = `https://nino-printful-commerce-api.ijpbattaglia.workers.dev/api/unsubscribe?t=${"a".repeat(48)}`;
+  let body;
+  await sendNinoMail(env, { ...ok, kind: "news", unsubscribe: link }, async (u, i) => { body = JSON.parse(i.body); return Response.json({ id: "n1" }); });
+  assert.equal(body.from, NINO_NEWS_FROM);
+  assert.deepEqual(body.headers, { "List-Unsubscribe": `<${link}>`, "List-Unsubscribe-Post": "List-Unsubscribe=One-Click" });
+  const never = async () => { throw new Error("should not send"); };
+  await assert.rejects(sendNinoMail(env, { ...ok, kind: "news" }, never), /needs_unsubscribe/);
+  await assert.rejects(sendNinoMail(env, { ...ok, kind: "news", unsubscribe: "https://evil.example/api/unsubscribe?t=" + "a".repeat(48) }, never), /needs_unsubscribe/);
+  await assert.rejects(sendNinoMail(env, { ...ok, kind: "promo" }, never), /invalid_kind/);
+  let plain; await sendNinoMail(env, ok, async (u, i) => { plain = JSON.parse(i.body); return Response.json({}); });
+  assert.equal(plain.from, NINO_FROM); assert.equal(plain.headers, undefined);
 });
