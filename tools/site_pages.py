@@ -135,7 +135,7 @@ def foot(scripts=""):
     return f"""</main>
 <footer class="footer">
   <div class="container footer-inner">
-    <div class="footer-copy">© 2019–2026 MENU-MADE</div>
+    <div class="footer-copy">© 2019–2026 MENU-MADE<br><span class="footer-address">706 Kearny St, San Francisco, CA 94108</span></div>
     <a class="footer-logo" href="index.html" aria-label="Home">
       <img src="MENU1.png" alt="MENU-MADE">
     </a>
@@ -799,7 +799,7 @@ def page_privacy():
     body = """<section class="hero mm-page-hero"><div class="container"><span class="pill">Privacy</span><h1>Privacy Policy</h1><p class="hero-intro">Last updated October 31, 2026. This policy explains what MENU-MADE (“we”, “us”) collects when you use menu-made.com and our services, why, and the choices you have.</p></div></section>
 <section class="section"><div class="container mm-legal">
 <h2>Who we are</h2>
-<p>MENU-MADE provides menus, websites, Google Business Profile care and related services to businesses. Contact us at <a href="mailto:info@menu-made.com">info@menu-made.com</a>.</p>
+<p>MENU-MADE provides menus, websites, Google Business Profile care and related services to businesses. Contact us at <a href="mailto:info@menu-made.com">info@menu-made.com</a> or by mail at MENU-MADE, 706 Kearny St, San Francisco, CA 94108.</p>
 
 <h2>What we collect</h2>
 <ul>
@@ -1139,7 +1139,7 @@ def page_terms():
 <p>We work to keep everything running but can’t promise it never breaks, and we’re not responsible for outages at Stripe, Cloudflare, Google, Apple or other providers. Our total liability for any claim is limited to what you paid us in the 12 months before it.</p>
 
 <h2>Changes and contact</h2>
-<p>We may update these terms; we’ll change the date and email active customers about important changes. Questions: <a href="mailto:info@menu-made.com">info@menu-made.com</a>, answered within one business day. These terms are governed by California law.</p>
+<p>We may update these terms; we’ll change the date and email active customers about important changes. Questions: <a href="mailto:info@menu-made.com">info@menu-made.com</a>, answered within one business day, or by mail at MENU-MADE, 706 Kearny St, San Francisco, CA 94108. These terms are governed by California law.</p>
 </div></section>
 """
     return head(title, desc, "terms.html", "legal-page") + body + foot()
