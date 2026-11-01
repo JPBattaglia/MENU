@@ -33,3 +33,10 @@ jobs:
           q=$(jq -nc --arg a "$acc" --arg d "$(date -u +%F)" '{query:"query($a:String!,$d:Date!){viewer{accounts(filter:{accountTag:$a}){kvOperationsAdaptiveGroups(limit:20,filter:{date:$d}){sum{requests} dimensions{actionType namespaceId result}}}}}",variables:{a:$a,d:$d}}')
           curl -sS -H "Authorization: Bearer $CF" -H "Content-Type: application/json" https://api.cloudflare.com/client/v4/graphql --data "$q" \
             | jq -r '.errors // empty, (.data.viewer.accounts[0].kvOperationsAdaptiveGroups[]? | "\(.sum.requests)\t\(.dimensions.actionType)\t\(.dimensions.result)\t\(.dimensions.namespaceId[0:6])")'
+      - name: D1 rows read per hour today, per database
+        run: |
+          set -eu
+          acc="$ACC"; [ -n "$acc" ] || acc=$(curl -sSf -H "Authorization: Bearer $CF" https://api.cloudflare.com/client/v4/accounts | jq -r '.result[0].id')
+          q=$(jq -nc --arg a "$acc" --arg d "$(date -u +%F)" '{query:"query($a:String!,$d:Date!){viewer{accounts(filter:{accountTag:$a}){d1AnalyticsAdaptiveGroups(limit:100,filter:{date:$d},orderBy:[datetimeHour_ASC]){sum{readQueries rowsRead rowsWritten} dimensions{datetimeHour databaseId}}}}}",variables:{a:$a,d:$d}}')
+          curl -sS -H "Authorization: Bearer $CF" -H "Content-Type: application/json" https://api.cloudflare.com/client/v4/graphql --data "$q" \
+            | jq -r '.errors // empty, (.data.viewer.accounts[0].d1AnalyticsAdaptiveGroups[]? | "HOUR \(.dimensions.datetimeHour[11:13])\t\(.dimensions.databaseId[0:4])\t\(.sum.rowsRead)\t\(.sum.readQueries)")'
