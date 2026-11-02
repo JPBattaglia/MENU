@@ -2,46 +2,48 @@
 // build(prospect) -> { subject, html, text }. The logo is attached inline as cid:logo@menu-made.
 
 const SERVICES = "https://menu-made.com/services.html";
+const SAMPLES = "https://menu-made.com/api/samples";
+// Copy revised Nov 1, 2026 (owner): plain wording, accurate to each offer as services.html describes it.
 const OFFERS = {
-  ONLINE_MENU_QR: { name: "Online Menu + QR", price: "$129 one time", url: `${SERVICES}#online-menu`,
-    what: "We turn the menu you already have (PDF or photos is fine) into a fast menu page that reads well on any phone, plus a QR code for your tables and windows. First year of hosting included.",
-    sample: ["See a sample menu", "https://menu-made.com/sample-menu.html"] },
-  WEBSITE_PACKAGE: { name: "Website Package", price: "$499 one time, with 3 months of upkeep included", url: `${SERVICES}#website-package`,
-    what: "We build a clean, phone-first website with your menu, hours, map, photos and tap-to-call, on your own domain." },
-  CONVERSION_FIX: { name: "Conversion Fix", price: "$299 one time", url: `${SERVICES}#conversion-fix`,
-    what: "We fix the spots on your current site where guests drop off: tap-to-call, directions, hours and the menu, all one tap away on a phone." }
+  ONLINE_MENU_QR: { name: "Online Menu + QR", url: `${SERVICES}#online-menu`, sample: ["See a real example", `${SAMPLES}/menu`],
+    offer: "Menu-made can turn the menu you already have into a clean, mobile-friendly menu page that Google can read, along with a printable QR code for your tables and front window. It's $129 one time, and that includes the first year of hosting and two rounds of changes.",
+    how: "All we need is your current menu as a PDF or photos. We build the page, check it, and email you the link and QR code." },
+  WEBSITE_PACKAGE: { name: "Website Package", url: `${SERVICES}#website-package`, sample: ["See a real example", `${SAMPLES}/website/`],
+    offer: "Menu-made builds simple, mobile-friendly restaurant websites: up to five pages with your menu, hours, map, photos and contact details, on your own domain. It's $499 one time, and the first three months of updates are included.",
+    how: "After checkout you fill out one short form with your details and photos. We write and build the site from there." },
+  CONVERSION_FIX: { name: "Conversion Fix", url: `${SERVICES}#conversion-fix`, sample: ["See a real example", `${SAMPLES}/conversion`],
+    offer: "Menu-made's Conversion Fix reviews your current site the way a guest on a phone uses it and gives you a clear, prioritized list of fixes, like tap-to-call, directions, hours and getting to your menu in one tap. It's $299 one time.",
+    how: "There's nothing to prepare. We review the site you already have and email you the list." }
 };
-const FOOTER = "You're getting this one-time note because your business is listed publicly online. Reply \"no thanks\" and you won't hear from us again. Menu-made, 706 Kearny St, San Francisco, CA 94108.";
+const FOOTER = "You're receiving this one-time note because your business is listed publicly online. Reply \"no thanks\" and we won't contact you again. Menu-made, 706 Kearny St, San Francisco, CA 94108.";
 const esc = (s) => String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
 
 function finding(p) {
   const gaps = JSON.parse(p.gaps_json || "[]");
   const name = p.name;
-  const site = String(p.website || "").replace(/^https?:\/\//, "").replace(/\/$/, "");
-  if (gaps.includes("menu_pdf")) return [`${name}'s menu opens as a PDF on phones`,
-    `I was looking at ${site} and the menu opens as a PDF. On a phone that means pinching and zooming, and Google can't read what's in it, so people searching for a dish near you don't see that you serve it.`];
-  if (gaps.includes("menu_image")) return [`${name}'s menu is a photo Google can't read`,
-    `I was looking at ${site} and the menu is shown as images. They're hard to read on a phone, and Google can't read text inside a picture, so people searching for a dish near you don't see that you serve it.`];
+  const site = String(p.website || "").replace(/^https?:\/\//, "").replace(/^www\./, "").replace(/\/$/, "");
+  if (gaps.includes("menu_pdf")) return [`${name}'s menu opens as a PDF`,
+    `I came across ${site} and noticed your menu opens as a PDF. PDFs are difficult to read on phone screens, and Google can't read the dishes inside them, so people nearby searching for food you serve may never find you.`];
+  if (gaps.includes("menu_image")) return [`${name}'s menu is posted as images`,
+    `I came across ${site} and noticed your menu is posted as images. They're difficult to read on phone screens, and Google can't read the text inside them, so people nearby searching for food you serve may never find you.`];
   if (gaps.includes("menu_missing")) return [`Guests can't find ${name}'s menu online`,
-    `I was looking at ${site} and couldn't find a menu. The menu is the first thing most guests look for before they visit, and when it isn't there many pick a place where it is.`];
+    `I came across ${site} and couldn't find your menu. It's the first thing most guests look for when deciding where to eat, and when it's missing, many of them choose somewhere else.`];
   if (gaps.includes("no_website")) return [`A website for ${name}`,
-    `I couldn't find a website for ${name}. Most guests look a place up on their phone before they go, and without a site they only see what others have posted.`];
+    `I couldn't find a website for ${name}. Most guests look a place up on their phone before visiting, and without a site, all they see is what other people have posted.`];
   if (gaps.includes("site_down")) return [`${name}'s website isn't loading`,
-    `I tried to open ${site} and it didn't load. Anyone who taps your website link on Google or Yelp right now gets an error page.`];
-  if (gaps.includes("no_phone_layout")) return [`${name}'s website on a phone`,
-    `I opened ${site} on a phone and it shows the desktop layout, shrunk down. Most of your visitors are on phones, and tiny text and buttons send them back to search.`];
-  return [`One tap to call ${name}`,
-    `I was looking at ${site} on a phone and there's no tap-to-call button, so a guest who wants to book or order has to copy your number by hand.`];
+    `I tried to visit ${site} and it didn't load. Anyone tapping your website link on Google or Yelp right now lands on an error page.`];
+  if (gaps.includes("no_phone_layout")) return [`${name}'s website on phone screens`,
+    `I opened ${site} on my phone and it shows the full desktop page, shrunk down. Most of your visitors are on phones, and small text and tiny buttons send many of them back to their search results.`];
+  return [`${name}'s website has no call button`,
+    `I came across ${site} and noticed there's no tap-to-call button on phone screens. A guest who wants to call ahead or place an order has to copy your number by hand, and some won't bother.`];
 }
 
 export function build(p) {
   const offer = OFFERS[p.offer_code];
   if (!offer) return null;
   const [subject, observed] = finding(p);
-  const paras = ["Hi there,", observed,
-    `${offer.what} It's ${offer.price}, and the whole thing is done for you: you send what you have and approve it before it goes live.`,
-    "If it's useful, the link below has the details. If not, no problem at all."];
-  const buttons = [[`See ${offer.name}`, offer.url, true], ...(offer.sample ? [[offer.sample[0], offer.sample[1], false]] : [])];
+  const paras = ["Hi there,", observed, offer.offer, offer.how, "If it would help, the details and a real example are below. If not, no problem at all."];
+  const buttons = [[`See ${offer.name}`, offer.url, true], [offer.sample[0], offer.sample[1], false]];
   const pHtml = paras.map((x) => `<p style="margin:0 0 16px;font-size:16px;line-height:1.6;color:#26434f;">${esc(x)}</p>`).join("");
   const bHtml = buttons.map(([l, u, prim]) => `<tr><td style="padding:0 0 12px;"><a href="${esc(u)}" style="display:inline-block;background-color:${prim ? "#00a7b5" : "#071f2c"};color:#ffffff;text-decoration:none;font-size:15px;font-weight:bold;padding:13px 22px;border-radius:6px;">${esc(l)}</a></td></tr>`).join("");
   const html = `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${esc(subject)}</title></head>
