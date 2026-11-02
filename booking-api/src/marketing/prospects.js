@@ -70,4 +70,49 @@ async function handleProspects(request, env) {
   return json({ ok: true, stored: rows.length, rejected: input.length - rows.length });
 }
 
-export { AUDIENCE as PROSPECTS_AUDIENCE, WORKFLOW as PROSPECTS_WORKFLOW, handleProspects, prospectRow };
+// ---------- Weekly drafts (.github/workflows/prospect-drafts.yml) ----------
+// The job takes the week's batch, places branded drafts in the Drafts folder of info@menu-made.com (iCloud Mail, the
+// owner reviews and taps Send), then reports what it did and what it saw in Sent and the inbox:
+//   POST /api/system/prospects/batch   { limit }  -> NEW prospects with an email, best first, one per email address,
+//                                                    never an address already drafted, sent, replied or opted out
+//   POST /api/system/prospects/status  { updates: [{ id?, email?, status }] }  DRAFTED | SENT | REPLIED | OPTED_OUT
+const DRAFTS_AUDIENCE = "menu-made-prospect-drafts";
+const DRAFTS_WORKFLOW = "JPBattaglia/MENU/.github/workflows/prospect-drafts.yml@refs/heads/master";
+const NEXT = { DRAFTED: ["NEW"], SENT: ["NEW", "DRAFTED"], REPLIED: ["NEW", "DRAFTED", "SENT"], OPTED_OUT: ["NEW", "DRAFTED", "SENT", "REPLIED", "SKIPPED"] };
+
+async function handleProspectBatch(request, env) {
+  const auth = await verifyRenderer(request, env, { audience: DRAFTS_AUDIENCE, workflow: DRAFTS_WORKFLOW, events: ["schedule", "workflow_dispatch"] });
+  if (!auth.ok) return json({ ok: false, error: auth.error }, auth.status);
+  const body = await request.json().catch(() => ({}));
+  const limit = Math.max(1, Math.min(50, Number(body?.limit) || 25));
+  const rows = (await env.DB.prepare(`
+      SELECT id, name, kind, cuisine, city, website, email, gaps_json, menu_url, offer_code, score FROM prospects p
+      WHERE status = 'NEW' AND email IS NOT NULL AND offer_code IS NOT NULL
+        AND NOT EXISTS (SELECT 1 FROM prospects q WHERE q.email = p.email AND q.status != 'NEW')
+      ORDER BY score DESC, id LIMIT ?`).bind(limit * 3).all()).results || [];
+  const seen = new Set(); const batch = [];
+  for (const r of rows) { if (seen.has(r.email)) continue; seen.add(r.email); batch.push(r); if (batch.length === limit) break; }
+  return json({ ok: true, prospects: batch });
+}
+
+async function handleProspectStatus(request, env) {
+  const auth = await verifyRenderer(request, env, { audience: DRAFTS_AUDIENCE, workflow: DRAFTS_WORKFLOW, events: ["schedule", "workflow_dispatch"] });
+  if (!auth.ok) return json({ ok: false, error: auth.error }, auth.status);
+  const body = await request.json().catch(() => null);
+  const updates = Array.isArray(body?.updates) ? body.updates.slice(0, 500) : null;
+  if (!updates) return json({ ok: false, error: "Expected { updates: [...] }" }, 400);
+  const t = nowIso(); const statements = [];
+  for (const u of updates) {
+    const from = NEXT[u?.status]; if (!from) continue;
+    const stamp = u.status === "DRAFTED" ? ", drafted_at = ?" : u.status === "SENT" ? ", sent_at = ?" : "";
+    const where = typeof u.id === "string" ? "id = ?" : typeof u.email === "string" ? "email = ?" : null; if (!where) continue;
+    const key = u.id || String(u.email).toLowerCase();
+    statements.push(env.DB.prepare(`UPDATE prospects SET status = ?, updated_at = ?${stamp} WHERE ${where} AND status IN (${from.map(() => "?").join(",")})`)
+      .bind(u.status, t, ...(stamp ? [t] : []), key, ...from));
+  }
+  let changed = 0;
+  if (statements.length) for (const r of await env.DB.batch(statements)) changed += r?.meta?.changes || 0;
+  return json({ ok: true, changed });
+}
+
+export { AUDIENCE as PROSPECTS_AUDIENCE, WORKFLOW as PROSPECTS_WORKFLOW, DRAFTS_AUDIENCE, DRAFTS_WORKFLOW, handleProspects, handleProspectBatch, handleProspectStatus, prospectRow };

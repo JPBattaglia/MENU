@@ -15,3 +15,5 @@ node_modules/
 
 # Local Claude instructions (private pointer)
 CLAUDE.md
+tools/prospects/node_modules/
+tools/prospects/package*.json
