@@ -521,3 +521,29 @@ CREATE TABLE entitlements (
     CHECK (subscription_id IS NOT NULL OR order_item_id IS NOT NULL)
 );
 CREATE UNIQUE INDEX IF NOT EXISTS ux_offers_public_slug ON offers(public_slug) WHERE public_slug IS NOT NULL;
+
+CREATE TABLE IF NOT EXISTS prospects (
+  id TEXT PRIMARY KEY,
+  name TEXT NOT NULL,
+  kind TEXT,
+  cuisine TEXT,
+  city TEXT,
+  address TEXT,
+  phone TEXT,
+  website TEXT,
+  email TEXT,
+  email_source TEXT,
+  gaps_json TEXT NOT NULL DEFAULT '[]',
+  menu_url TEXT,
+  offer_code TEXT,
+  score INTEGER NOT NULL DEFAULT 0,
+  status TEXT NOT NULL DEFAULT 'NEW',
+  notes TEXT,
+  found_at TEXT NOT NULL,
+  checked_at TEXT NOT NULL,
+  drafted_at TEXT,
+  sent_at TEXT,
+  updated_at TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS prospects_status_score ON prospects (status, score DESC);
+CREATE INDEX IF NOT EXISTS prospects_email ON prospects (email);
