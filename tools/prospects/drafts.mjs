@@ -21,6 +21,8 @@ const FROM = { name: "JP Battaglia", address: "info@menu-made.com" };
 const LIMIT = Number(process.env.BATCH_SIZE || 25);
 // PREVIEW=1: browser checks only (no iCloud Mail): confirmed gaps are saved on the prospect, the rest are SKIPPED.
 const PREVIEW = process.env.PREVIEW === "1" || process.env.PREVIEW === "true";
+// REFRESH=1: rebuild the drafts still in Drafts (after a design or wording change). Sent emails are never touched.
+const REFRESH = process.env.REFRESH === "1" || process.env.REFRESH === "true";
 const OPT_OUT = /\b(no thanks|no thank you|unsubscribe|remove me|take me off|stop emailing|not interested|do not (contact|email))\b/i;
 const logo = readFileSync(new URL("./assets/email-logo.png", import.meta.url));
 
@@ -80,6 +82,34 @@ for (let k = 0; k < updates.length; k += 400) {
   console.log(`Status sync: ${r.changed} prospect rows updated`);
 }
 
+if (REFRESH) {
+  const lock = await client.getMailboxLock(draftsBox);
+  const old = [];
+  try {
+    for await (const m of client.fetch("1:*", { uid: true, headers: ["x-menu-made-prospect"] })) {
+      const id = /x-menu-made-prospect:\s*(\S+)/i.exec(m.headers?.toString() || "")?.[1];
+      if (id) old.push({ uid: m.uid, id });
+    }
+  } finally { lock.release(); }
+  const { prospects: rows } = await api("batch", { ids: [...new Set(old.map((o) => o.id))] });
+  let rebuilt = 0;
+  for (const p of rows) {
+    const email = build(p);
+    if (!email) continue;
+    const message = await raw({ from: FROM, to: p.email, subject: email.subject, text: email.text, html: email.html,
+      attachments: [{ filename: "menu-made.png", content: logo, cid: "logo@menu-made", contentDisposition: "inline" }],
+      headers: { "X-Menu-Made-Prospect": p.id } });
+    await client.append(draftsBox, message, ["\\Draft", "\\Seen"]);
+    const uids = old.filter((o) => o.id === p.id).map((o) => o.uid);
+    const l2 = await client.getMailboxLock(draftsBox);
+    try { await client.messageDelete(uids.join(","), { uid: true }); } finally { l2.release(); }
+    rebuilt++;
+  }
+  await client.logout();
+  console.log(`Refreshed ${rebuilt} drafts still in Drafts (${old.length} found).`);
+  process.exit(0);
+}
+
 // 2. This week's drafts. Every claim is re-checked in a phone-size browser first (verify.mjs); a prospect whose gaps
 // don't hold up is SKIPPED and never emailed. Candidates are taken three times over so the week still gets LIMIT.
 const { prospects } = await api("batch", { limit: Math.min(50, LIMIT * 3) });
@@ -91,13 +121,14 @@ for (const candidate of prospects) {
   if (!checked) { skipped.push({ id: candidate.id, status: "SKIPPED" }); continue; }
   const p = { ...candidate, gaps_json: JSON.stringify(checked.gaps), offer_code: checked.offer_code, email: checked.email };
   if (PREVIEW) { drafted.push({ id: p.id, status: "NEW", gaps: checked.gaps, offer_code: checked.offer_code }); continue; }
+  const confirmed = { gaps: checked.gaps, offer_code: checked.offer_code };
   const email = build(p);
   if (!email) continue;
   const message = await raw({ from: FROM, to: p.email, subject: email.subject, text: email.text, html: email.html,
     attachments: [{ filename: "menu-made.png", content: logo, cid: "logo@menu-made", contentDisposition: "inline" }],
     headers: { "X-Menu-Made-Prospect": p.id } });
   await client.append(draftsBox, message, ["\\Draft", "\\Seen"]);
-  drafted.push({ id: p.id, status: "DRAFTED" });
+  drafted.push({ id: p.id, status: "DRAFTED", ...confirmed });
 }
 await browser.close();
 if (PREVIEW) {
