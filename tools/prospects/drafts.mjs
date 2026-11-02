@@ -10,6 +10,7 @@
 // Secrets: ICLOUD_USER (the Apple ID email used for iCloud Mail), ICLOUD_APP_PASSWORD (an app-specific password).
 // The repository is public: the log shows counts only.
 import { readFileSync } from "node:fs";
+import { resolveMx } from "node:dns/promises";
 import { ImapFlow } from "imapflow";
 import MailComposer from "nodemailer/lib/mail-composer/index.js";
 import { build } from "./email.mjs";
@@ -23,6 +24,8 @@ const LIMIT = Number(process.env.BATCH_SIZE || 25);
 const PREVIEW = process.env.PREVIEW === "1" || process.env.PREVIEW === "true";
 // REFRESH=1: rebuild the drafts still in Drafts (after a design or wording change). Sent emails are never touched.
 const REFRESH = process.env.REFRESH === "1" || process.env.REFRESH === "true";
+// SYNC_ONLY=1: record sent mail, replies, opt-outs and bounces; add no drafts.
+const SYNC_ONLY = process.env.SYNC_ONLY === "1" || process.env.SYNC_ONLY === "true";
 const OPT_OUT = /\b(no thanks|no thank you|unsubscribe|remove me|take me off|stop emailing|not interested|do not (contact|email))\b/i;
 const logo = readFileSync(new URL("./assets/email-logo.png", import.meta.url));
 
@@ -61,7 +64,7 @@ if (sentBox) {
     }
   } finally { lock.release(); }
 }
-let replies = 0, optOuts = 0;
+let replies = 0, optOuts = 0, bounces = 0;
 if (!PREVIEW) {
   const lock = await client.getMailboxLock("INBOX");
   try {
@@ -69,6 +72,17 @@ if (!PREVIEW) {
       const from = m.envelope?.from?.[0]?.address?.toLowerCase();
       if (!from || from.endsWith("@menu-made.com")) continue;
       const text = m.source ? m.source.toString("utf8") : "";
+      // Delivery failures (Nov 1, 2026: the first sends bounced 3): the failed address is in the report.
+      if (/^(mailer-daemon|postmaster)@/i.test(from) || /undeliver|delivery (status notification|has failed|failure)|returned mail|failure notice|could not be delivered/i.test(m.envelope?.subject || "")) {
+        const failed = new Set();
+        for (const r of text.matchAll(/(?:final|original)-recipient:\s*rfc822;\s*<?([^\s>]+@[^\s>]+)/gi)) failed.add(r[1].toLowerCase());
+        if (!failed.size) for (const r of text.matchAll(/(?:^|[\s<:])([a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,24})/gim)) {
+          const a = r[1].toLowerCase(); if (!/menu-made\.com$|icloud\.com$|me\.com$|mac\.com$|apple\.com$/.test(a)) failed.add(a);
+        }
+        for (const a of failed) updates.push({ email: a, status: "BOUNCED" });
+        bounces += failed.size;
+        continue;
+      }
       const out = OPT_OUT.test(`${m.envelope?.subject || ""}\n${text.split(/\r?\n\r?\n/).slice(1).join("\n").slice(0, 4000)}`);
       updates.push({ email: from, status: out ? "OPTED_OUT" : "REPLIED" });
     }
@@ -79,9 +93,10 @@ for (let k = 0; k < updates.length; k += 400) {
   const r = await api("status", { updates: updates.slice(k, k + 400) });
   const part = updates.slice(k, k + 400);
   replies += part.filter((u) => u.status === "REPLIED").length; optOuts += part.filter((u) => u.status === "OPTED_OUT").length;
-  console.log(`Status sync: ${r.changed} prospect rows updated`);
+  console.log(`Status sync: ${r.changed} prospect rows updated (delivery failures found: ${bounces})`);
 }
 
+if (SYNC_ONLY) { await client.logout(); console.log("Sync only: no drafts added."); process.exit(0); }
 if (REFRESH) {
   const lock = await client.getMailboxLock(draftsBox);
   const old = [];
@@ -117,6 +132,9 @@ const browser = await chromium.launch();
 const drafted = [], skipped = [];
 for (const candidate of prospects) {
   if (drafted.length >= LIMIT) break;
+  // The address's domain must accept mail at all (no mail server = a sure bounce).
+  const mx = await resolveMx(String(candidate.email).split("@")[1]).catch(() => []);
+  if (!mx.length) { skipped.push({ id: candidate.id, status: "SKIPPED" }); continue; }
   const checked = await verify(browser, candidate).catch(() => null);
   if (!checked) { skipped.push({ id: candidate.id, status: "SKIPPED" }); continue; }
   const p = { ...candidate, gaps_json: JSON.stringify(checked.gaps), offer_code: checked.offer_code, email: checked.email };
