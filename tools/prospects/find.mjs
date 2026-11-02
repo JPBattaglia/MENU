@@ -23,7 +23,7 @@
 
 const UA = "Mozilla/5.0 (compatible; MenuMadeCheck/1.0; +https://menu-made.com)";
 const CITIES = ["San Francisco", "Oakland", "Berkeley", "Emeryville", "Alameda", "Daly City", "South San Francisco", "San Bruno", "Sausalito"];
-const OVERPASS = ["https://overpass-api.de/api/interpreter", "https://overpass.kumi.systems/api/interpreter"];
+const OVERPASS = ["https://overpass-api.de/api/interpreter", "https://overpass.private.coffee/api/interpreter", "https://maps.mail.ru/osm/tools/overpass/api/interpreter", "https://overpass.kumi.systems/api/interpreter"];
 const PLATFORMS = /(^|\.)(toasttab\.com|squareup\.com|square\.site|chownow\.com|clover\.com|popmenu\.com|bentobox\.com|spothopper\.com|olo\.com|doordash\.com|ubereats\.com|grubhub\.com|menufy\.com|order\.online|slicelife\.com|beyondmenu\.com|menusifu\.com|owner\.com|getbento\.com|resy\.com|opentable\.com|sevenrooms\.com|tock\.com|exploretock\.com)$/i;
 const BAD_EMAIL_DOMAINS = /(sentry|wixpress|example\.|domain\.com|email\.com|yourdomain|godaddy|squarespace|schema\.org|sentry\.io|wix\.com|mysite\.com|company\.com|test\.com|placeholder)/i;
 const FREE_MAIL = /@(gmail|yahoo|hotmail|outlook|aol|icloud|me|msn|comcast|sbcglobal|att|live)\.(com|net)$/i;
@@ -34,13 +34,15 @@ async function overpass(city) {
   const q = `[out:json][timeout:180];area["name"="${city}"]["boundary"="administrative"]["admin_level"="8"]->.c;
 (nwr(area.c)["amenity"~"^(restaurant|cafe|bar|pub|fast_food|ice_cream|biergarten)$"];
  nwr(area.c)["shop"~"^(bakery|deli|pastry|coffee|tea|confectionery)$"];);out center tags;`;
-  for (let attempt = 0; attempt < 4; attempt++) {
+  for (let attempt = 0; attempt < 8; attempt++) {
     const url = OVERPASS[attempt % OVERPASS.length];
     try {
-      const res = await fetch(url, { method: "POST", body: new URLSearchParams({ data: q }), headers: { "User-Agent": UA }, signal: AbortSignal.timeout(200000) });
-      if (res.ok) return (await res.json()).elements || [];
-    } catch { /* retry */ }
-    await sleep(15000);
+      const res = await fetch(url, { method: "POST", body: new URLSearchParams({ data: q }), headers: { "User-Agent": UA, Accept: "application/json" }, signal: AbortSignal.timeout(200000) });
+      const body = await res.text();
+      if (res.ok && body.trim().startsWith("{")) return JSON.parse(body).elements || [];
+      console.log(`  ${new URL(url).hostname}: ${res.status} ${body.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").slice(0, 160)}`);
+    } catch (e) { console.log(`  ${new URL(url).hostname}: ${String(e?.cause?.code || e?.name || e).slice(0, 120)}`); }
+    await sleep(attempt < 3 ? 5000 : 20000);
   }
   throw new Error(`Overpass failed for ${city}`);
 }
