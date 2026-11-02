@@ -51,6 +51,7 @@ if (!PREVIEW) {
   draftsBox = special("\\Drafts", /^drafts$/i);
   sentBox = special("\\Sent", /^sent( messages)?$/i);
   if (!draftsBox) throw new Error("No Drafts folder found in iCloud Mail");
+  console.log(`Folders: ${boxes.map((b) => `${b.path}${b.specialUse ? ` (${b.specialUse})` : ""}`).join(", ")}`);
 }
 
 // 1. Status sync.
@@ -59,16 +60,21 @@ const updates = [];
 if (sentBox) {
   const lock = await client.getMailboxLock(sentBox);
   try {
+    let n = 0;
     for await (const m of client.fetch({ since }, { envelope: true })) {
+      n++;
       for (const to of m.envelope?.to || []) if (to.address) updates.push({ email: to.address.toLowerCase(), status: "SENT" });
     }
+    console.log(`Sent folder "${sentBox}": ${n} messages in the last 45 days`);
   } finally { lock.release(); }
 }
 let replies = 0, optOuts = 0, bounces = 0;
 if (!PREVIEW) {
   const lock = await client.getMailboxLock("INBOX");
   try {
+    let n = 0;
     for await (const m of client.fetch({ since }, { envelope: true, source: { maxLength: 20000 } })) {
+      n++;
       const from = m.envelope?.from?.[0]?.address?.toLowerCase();
       if (!from || from.endsWith("@menu-made.com")) continue;
       const text = m.source ? m.source.toString("utf8") : "";
@@ -86,6 +92,7 @@ if (!PREVIEW) {
       const out = OPT_OUT.test(`${m.envelope?.subject || ""}\n${text.split(/\r?\n\r?\n/).slice(1).join("\n").slice(0, 4000)}`);
       updates.push({ email: from, status: out ? "OPTED_OUT" : "REPLIED" });
     }
+    console.log(`Inbox: ${n} messages in the last 45 days`);
   } finally { lock.release(); }
 }
 // The worker only moves rows that are prospects, and only forward (an opt-out is final).
