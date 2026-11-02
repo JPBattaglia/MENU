@@ -6,7 +6,7 @@
 name: Site check
 on:
   schedule:
-    - cron: "10 20 * * *"   # 1:10 pm Pacific, before the 22:00 UTC daily report
+    - cron: "40 16 * * *"   # 8:40 am PST; GitHub has started it 3+ hours late (Nov 1), so it stays well ahead of the 22:00 UTC daily report
   workflow_dispatch:
 permissions:
   contents: read
