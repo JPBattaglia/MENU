@@ -79,7 +79,7 @@ for (const site of sites) {
     page.on("pageerror", (e) => jsErrors.push(String(e.message || e).slice(0, 200)));
     page.on("response", (r) => {
       const u = r.url();
-      if (r.status() >= 400 && new URL(u).hostname === host && ["image", "script", "stylesheet", "font"].includes(r.request().resourceType())) badResources.push(`${r.status()} ${new URL(u).pathname}`);
+      if (r.status() >= 400 && new URL(u).hostname === host && ["image", "script", "stylesheet", "font"].includes(r.request().resourceType())) badResources.push({ code: r.status(), url: u });
     });
     const t0 = Date.now();
     let response = null;
@@ -92,7 +92,13 @@ for (const site of sites) {
     if (ms > SLOW_FAIL_MS) fail(path, `took ${(ms / 1000).toFixed(1)} s to load`);
     else if (ms > SLOW_WARN_MS) warn(path, `took ${(ms / 1000).toFixed(1)} s to load`);
     await page.waitForTimeout(800); // scripts that fill the page (catalog, cart) settle
-    for (const r of [...new Set(badResources)]) fail(path, `broken file ${r}`);
+    // A 5xx can be a passing host hiccup (GitHub Pages answered 503 for an existing image during a deploy, Nov 1):
+    // ask once more before calling the file broken.
+    for (const r of [...new Map(badResources.map((b) => [b.url, b])).values()]) {
+      let code = r.code;
+      if (code >= 500) { await page.waitForTimeout(2000); code = await context.request.get(r.url, { timeout: 20000 }).then((x) => x.status()).catch(() => 0); }
+      if (code === 0 || code >= 400) fail(path, `broken file ${code || r.code} ${new URL(r.url).pathname}`);
+    }
     for (const e of [...new Set(jsErrors)]) fail(path, `JavaScript error: ${e}`);
 
     // Links, images, arrows and forms, read from the rendered page.
