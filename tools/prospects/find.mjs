@@ -21,8 +21,13 @@
 //
 //   node tools/prospects/find.mjs            (in GitHub Actions; DRY_RUN=1 prints counts without posting)
 
-const UA = "Mozilla/5.0 (compatible; MenuMadeCheck/1.0; +https://menu-made.com)";
-const CITIES = ["San Francisco", "Oakland", "Berkeley", "Emeryville", "Alameda", "Daly City", "South San Francisco", "San Bruno", "Sausalito"];
+const UA = "MenuMadeProspects/1.0 (+https://menu-made.com; info@menu-made.com)";
+// Small map tiles (south, west, north, east): whole-city area queries time out on the public Overpass servers.
+const TILES = [];
+for (const [la, lb] of [[37.70, 37.745], [37.745, 37.79], [37.79, 37.835]]) for (const [wa, wb] of [[-122.52, -122.465], [-122.465, -122.42], [-122.42, -122.35]]) TILES.push(["San Francisco", [la, wa, lb, wb]]);
+TILES.push(["Oakland", [37.73, -122.33, 37.80, -122.20]], ["Oakland", [37.80, -122.33, 37.86, -122.20]], ["Oakland", [37.73, -122.20, 37.86, -122.11]],
+  ["Berkeley", [37.84, -122.32, 37.91, -122.23]], ["Alameda", [37.75, -122.34, 37.80, -122.22]],
+  ["Daly City", [37.65, -122.50, 37.71, -122.38]], ["South San Francisco", [37.60, -122.48, 37.65, -122.38]], ["Sausalito", [37.84, -122.51, 37.87, -122.47]]);
 const OVERPASS = ["https://overpass-api.de/api/interpreter", "https://overpass.private.coffee/api/interpreter", "https://maps.mail.ru/osm/tools/overpass/api/interpreter", "https://overpass.kumi.systems/api/interpreter"];
 const PLATFORMS = /(^|\.)(toasttab\.com|squareup\.com|square\.site|chownow\.com|clover\.com|popmenu\.com|bentobox\.com|spothopper\.com|olo\.com|doordash\.com|ubereats\.com|grubhub\.com|menufy\.com|order\.online|slicelife\.com|beyondmenu\.com|menusifu\.com|owner\.com|getbento\.com|resy\.com|opentable\.com|sevenrooms\.com|tock\.com|exploretock\.com)$/i;
 const BAD_EMAIL_DOMAINS = /(sentry|wixpress|example\.|domain\.com|email\.com|yourdomain|godaddy|squarespace|schema\.org|sentry\.io|wix\.com|mysite\.com|company\.com|test\.com|placeholder)/i;
@@ -30,21 +35,20 @@ const FREE_MAIL = /@(gmail|yahoo|hotmail|outlook|aol|icloud|me|msn|comcast|sbcgl
 const WEIGHTS = { menu_pdf: 5, menu_image: 5, menu_missing: 3, no_phone_layout: 4, site_down: 2, no_https: 1, no_tap_to_call: 2, no_website: 3 };
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
-async function overpass(city) {
-  const q = `[out:json][timeout:180];area["name"="${city}"]["boundary"="administrative"]["admin_level"="8"]->.c;
-(nwr(area.c)["amenity"~"^(restaurant|cafe|bar|pub|fast_food|ice_cream|biergarten)$"];
- nwr(area.c)["shop"~"^(bakery|deli|pastry|coffee|tea|confectionery)$"];);out center tags;`;
+async function overpass([s, w, n, e]) {
+  const b = `${s},${w},${n},${e}`;
+  const q = `[out:json][timeout:90];(nwr["amenity"~"^(restaurant|cafe|bar|pub|fast_food|ice_cream|biergarten)$"](${b});nwr["shop"~"^(bakery|deli|pastry|coffee|tea|confectionery)$"](${b}););out center tags;`;
   for (let attempt = 0; attempt < 8; attempt++) {
     const url = OVERPASS[attempt % OVERPASS.length];
     try {
-      const res = await fetch(url, { method: "POST", body: new URLSearchParams({ data: q }), headers: { "User-Agent": UA, Accept: "application/json" }, signal: AbortSignal.timeout(200000) });
+      const res = await fetch(`${url}?data=${encodeURIComponent(q)}`, { headers: { "User-Agent": UA }, signal: AbortSignal.timeout(120000) });
       const body = await res.text();
       if (res.ok && body.trim().startsWith("{")) return JSON.parse(body).elements || [];
       console.log(`  ${new URL(url).hostname}: ${res.status} ${body.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").slice(0, 160)}`);
     } catch (e) { console.log(`  ${new URL(url).hostname}: ${String(e?.cause?.code || e?.name || e).slice(0, 120)}`); }
     await sleep(attempt < 3 ? 5000 : 20000);
   }
-  throw new Error(`Overpass failed for ${city}`);
+  return null;
 }
 
 async function get(url, ms = 12000) {
@@ -158,8 +162,10 @@ async function oidcToken() {
 }
 
 const businesses = new Map();
-for (const city of CITIES) {
-  const elements = await overpass(city);
+let failedTiles = 0;
+for (const [city, box] of TILES) {
+  const elements = await overpass(box);
+  if (!elements) { failedTiles++; console.log(`${city} tile ${box.join(",")}: map server unavailable, skipped`); continue; }
   let kept = 0;
   for (const el of elements) {
     const t = el.tags || {};
@@ -175,8 +181,9 @@ for (const city of CITIES) {
     kept++;
   }
   console.log(`${city}: ${elements.length} places, ${kept} independent`);
-  await sleep(5000);
+  await sleep(3000);
 }
+if (failedTiles === TILES.length) { console.log("Every map tile failed; nothing to check."); process.exit(1); }
 
 const list = [...businesses.values()];
 const stats = { checked: 0, blocked: 0, platform: 0, withEmail: 0, withOffer: 0, gaps: {} };
