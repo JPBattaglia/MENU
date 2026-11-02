@@ -24,7 +24,7 @@ async function setup() {
     return `${h}.${b}.${b64u(new Uint8Array(await crypto.subtle.sign('RSASSA-PKCS1-v1_5', pair.privateKey, new TextEncoder().encode(`${h}.${b}`))))}`; };
   const post = async (body, claims = good) => worker.fetch(new Request('https://menu-made.com/api/system/prospects', { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${await sign(claims)}` }, body: JSON.stringify(body) }), env, { waitUntil() {} });
   const rows = () => env.DB.raw.prepare(`SELECT * FROM prospects ORDER BY id`).all().map((r) => ({ ...r }));
-  return { env, post, rows, good };
+  return { env, post, rows, good, sign };
 }
 
 test('rows are cleaned: unknown gaps dropped, email lowercased, clients and bad ids refused', () => {
@@ -61,4 +61,28 @@ test('only the prospects workflow on master may post', async () => {
   const res = await worker.fetch(new Request('https://menu-made.com/api/system/prospects', { method: 'POST', body: '{}' }), f.env, { waitUntil() {} });
   assert.equal(res.status, 401);
   assert.equal(f.rows().length, 0);
+});
+
+test('the drafts job gets the best NEW prospects with an email, one per address, and moves them through outreach statuses', async () => {
+  const f = await setup();
+  await f.post({ prospects: [CAFE, { ...CAFE, id: 'node/102', name: 'Same Owner', score: 9 }, { ...CAFE, id: 'node/103', name: 'No Email', email: null, score: 20 },
+    { ...CAFE, id: 'node/104', name: 'Other Spot', email: 'owner@other.example', score: 3 }] });
+  const drafts = { ...f.good, aud: 'menu-made-prospect-drafts', job_workflow_ref: 'JPBattaglia/MENU/.github/workflows/prospect-drafts.yml@refs/heads/master' };
+  const call = async (path, body, claims = drafts) => {
+    const req = new Request(`https://menu-made.com/api/system/prospects/${path}`, { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${await f.sign(claims)}` }, body: JSON.stringify(body) });
+    return worker.fetch(req, f.env, { waitUntil() {} });
+  };
+  assert.equal((await call('batch', { limit: 25 }, f.good)).status, 403, 'the finder job may not take batches');
+  let batch = (await (await call('batch', { limit: 25 })).json()).prospects;
+  assert.deepEqual(batch.map((p) => p.id), ['node/102', 'node/104'], 'best first, one per email, none without an email');
+  let res = await (await call('status', { updates: [{ id: 'node/102', status: 'DRAFTED' }, { id: 'node/104', status: 'BOGUS' }] })).json();
+  assert.equal(res.changed, 1);
+  batch = (await (await call('batch', { limit: 25 })).json()).prospects;
+  assert.deepEqual(batch.map((p) => p.id), ['node/104'], 'an address already drafted is never offered again, even under another listing');
+  res = await (await call('status', { updates: [{ email: 'hello@samplecafe.example', status: 'OPTED_OUT' }] })).json();
+  assert.equal(res.changed, 2, 'an opt-out covers every listing with that address');
+  const rows = Object.fromEntries(f.rows().map((r) => [r.id, r]));
+  assert.equal(rows['node/102'].status, 'OPTED_OUT'); assert.ok(rows['node/102'].drafted_at);
+  res = await (await call('status', { updates: [{ id: 'node/102', status: 'SENT' }] })).json();
+  assert.equal(res.changed, 0, 'an opted-out prospect never goes back');
 });
