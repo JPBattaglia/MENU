@@ -43,7 +43,7 @@ const raw = (mail) => new Promise((resolve, reject) => new MailComposer(mail).co
 
 const client = PREVIEW ? null : new ImapFlow({ host: "imap.mail.me.com", port: 993, secure: true, logger: false,
   auth: { user: process.env.ICLOUD_USER, pass: process.env.ICLOUD_APP_PASSWORD } });
-let draftsBox = null, sentBox = null;
+let draftsBox = null, sentBox = null, sentBoxes = [], inboxBoxes = ["INBOX"];
 if (!PREVIEW) {
   await client.connect();
   const boxes = await client.list();
@@ -51,13 +51,16 @@ if (!PREVIEW) {
   draftsBox = special("\\Drafts", /^drafts$/i);
   sentBox = special("\\Sent", /^sent( messages)?$/i);
   if (!draftsBox) throw new Error("No Drafts folder found in iCloud Mail");
+  // iCloud keeps two Sent folders (Apple Mail saves to "Sent Messages") and several junk folders; read them all.
+  sentBoxes = boxes.filter((b) => b.specialUse === "\\Sent" || /^sent( messages| items)?$/i.test(b.path)).map((b) => b.path);
+  inboxBoxes = ["INBOX", ...boxes.filter((b) => b.specialUse === "\\Junk" || /^junk( e-?mail)?$/i.test(b.path)).map((b) => b.path)];
   console.log(`Folders: ${boxes.map((b) => `${b.path}${b.specialUse ? ` (${b.specialUse})` : ""}`).join(", ")}`);
 }
 
 // 1. Status sync.
 const since = new Date(Date.now() - 45 * 86400000);
 const updates = [];
-if (sentBox) {
+for (const sentBox of sentBoxes) {
   const lock = await client.getMailboxLock(sentBox);
   try {
     let n = 0;
@@ -69,11 +72,11 @@ if (sentBox) {
   } finally { lock.release(); }
 }
 let replies = 0, optOuts = 0, bounces = 0;
-if (!PREVIEW) {
-  const lock = await client.getMailboxLock("INBOX");
+if (!PREVIEW) for (const inboxBox of inboxBoxes) {
+  const lock = await client.getMailboxLock(inboxBox);
   try {
     let n = 0;
-    for await (const m of client.fetch({ since }, { envelope: true, source: { maxLength: 20000 } })) {
+    for await (const m of client.fetch({ since }, { envelope: true, source: { maxLength: 60000 } })) {
       n++;
       const from = m.envelope?.from?.[0]?.address?.toLowerCase();
       if (!from || from.endsWith("@menu-made.com")) continue;
@@ -92,7 +95,7 @@ if (!PREVIEW) {
       const out = OPT_OUT.test(`${m.envelope?.subject || ""}\n${text.split(/\r?\n\r?\n/).slice(1).join("\n").slice(0, 4000)}`);
       updates.push({ email: from, status: out ? "OPTED_OUT" : "REPLIED" });
     }
-    console.log(`Inbox: ${n} messages in the last 45 days`);
+    console.log(`${inboxBox}: ${n} messages in the last 45 days`);
   } finally { lock.release(); }
 }
 // The worker only moves rows that are prospects, and only forward (an opt-out is final).
