@@ -75,10 +75,10 @@ async function handleProspects(request, env) {
 // owner reviews and taps Send), then reports what it did and what it saw in Sent and the inbox:
 //   POST /api/system/prospects/batch   { limit }  -> NEW prospects with an email, best first, one per email address,
 //                                                    never an address already drafted, sent, replied or opted out
-//   POST /api/system/prospects/status  { updates: [{ id?, email?, status }] }  SKIPPED | DRAFTED | SENT | REPLIED | OPTED_OUT
+//   POST /api/system/prospects/status  { updates: [{ id?, email?, status }] }  SKIPPED | BOUNCED | DRAFTED | SENT | REPLIED | OPTED_OUT
 const DRAFTS_AUDIENCE = "menu-made-prospect-drafts";
 const DRAFTS_WORKFLOW = "JPBattaglia/MENU/.github/workflows/prospect-drafts.yml@refs/heads/master";
-const NEXT = { NEW: ["NEW"], SKIPPED: ["NEW"], DRAFTED: ["NEW", "DRAFTED"], SENT: ["NEW", "DRAFTED"], REPLIED: ["NEW", "DRAFTED", "SENT"], OPTED_OUT: ["NEW", "DRAFTED", "SENT", "REPLIED", "SKIPPED"] };
+const NEXT = { NEW: ["NEW"], SKIPPED: ["NEW"], BOUNCED: ["NEW", "DRAFTED", "SENT"], DRAFTED: ["NEW", "DRAFTED"], SENT: ["NEW", "DRAFTED"], REPLIED: ["NEW", "DRAFTED", "SENT"], OPTED_OUT: ["NEW", "DRAFTED", "SENT", "REPLIED", "SKIPPED"] };
 
 async function handleProspectBatch(request, env) {
   const auth = await verifyRenderer(request, env, { audience: DRAFTS_AUDIENCE, workflow: DRAFTS_WORKFLOW, events: ["schedule", "workflow_dispatch"] });
