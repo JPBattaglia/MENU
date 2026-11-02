@@ -86,3 +86,15 @@ test('the drafts job gets the best NEW prospects with an email, one per address,
   res = await (await call('status', { updates: [{ id: 'node/102', status: 'SENT' }] })).json();
   assert.equal(res.changed, 0, 'an opted-out prospect never goes back');
 });
+
+test('browser-confirmed gaps replace the finder guesses; failed checks are skipped', async () => {
+  const f = await setup();
+  await f.post({ prospects: [CAFE, { ...CAFE, id: 'node/105', email: 'b@other.example' }] });
+  const drafts = { ...f.good, aud: 'menu-made-prospect-drafts', job_workflow_ref: 'JPBattaglia/MENU/.github/workflows/prospect-drafts.yml@refs/heads/master' };
+  const req = new Request('https://menu-made.com/api/system/prospects/status', { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${await f.sign(drafts)}` },
+    body: JSON.stringify({ updates: [{ id: 'node/101', status: 'NEW', gaps: ['no_tap_to_call'], offer_code: 'CONVERSION_FIX' }, { id: 'node/105', status: 'SKIPPED' }, { id: 'node/101', status: 'NEW' }] }) });
+  assert.equal((await (await worker.fetch(req, f.env, { waitUntil() {} })).json()).changed, 2);
+  const rows = Object.fromEntries(f.rows().map((r) => [r.id, r]));
+  assert.equal(rows['node/101'].gaps_json, '["no_tap_to_call"]'); assert.equal(rows['node/101'].offer_code, 'CONVERSION_FIX'); assert.match(rows['node/101'].notes, /browser-checked/);
+  assert.equal(rows['node/105'].status, 'SKIPPED');
+});
