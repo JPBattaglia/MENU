@@ -75,10 +75,10 @@ async function handleProspects(request, env) {
 // owner reviews and taps Send), then reports what it did and what it saw in Sent and the inbox:
 //   POST /api/system/prospects/batch   { limit }  -> NEW prospects with an email, best first, one per email address,
 //                                                    never an address already drafted, sent, replied or opted out
-//   POST /api/system/prospects/status  { updates: [{ id?, email?, status }] }  DRAFTED | SENT | REPLIED | OPTED_OUT
+//   POST /api/system/prospects/status  { updates: [{ id?, email?, status }] }  SKIPPED | DRAFTED | SENT | REPLIED | OPTED_OUT
 const DRAFTS_AUDIENCE = "menu-made-prospect-drafts";
 const DRAFTS_WORKFLOW = "JPBattaglia/MENU/.github/workflows/prospect-drafts.yml@refs/heads/master";
-const NEXT = { DRAFTED: ["NEW"], SENT: ["NEW", "DRAFTED"], REPLIED: ["NEW", "DRAFTED", "SENT"], OPTED_OUT: ["NEW", "DRAFTED", "SENT", "REPLIED", "SKIPPED"] };
+const NEXT = { NEW: ["NEW"], SKIPPED: ["NEW"], DRAFTED: ["NEW"], SENT: ["NEW", "DRAFTED"], REPLIED: ["NEW", "DRAFTED", "SENT"], OPTED_OUT: ["NEW", "DRAFTED", "SENT", "REPLIED", "SKIPPED"] };
 
 async function handleProspectBatch(request, env) {
   const auth = await verifyRenderer(request, env, { audience: DRAFTS_AUDIENCE, workflow: DRAFTS_WORKFLOW, events: ["schedule", "workflow_dispatch"] });
@@ -107,8 +107,14 @@ async function handleProspectStatus(request, env) {
     const stamp = u.status === "DRAFTED" ? ", drafted_at = ?" : u.status === "SENT" ? ", sent_at = ?" : "";
     const where = typeof u.id === "string" ? "id = ?" : typeof u.email === "string" ? "email = ?" : null; if (!where) continue;
     const key = u.id || String(u.email).toLowerCase();
-    statements.push(env.DB.prepare(`UPDATE prospects SET status = ?, updated_at = ?${stamp} WHERE ${where} AND status IN (${from.map(() => "?").join(",")})`)
-      .bind(u.status, t, ...(stamp ? [t] : []), key, ...from));
+    // Browser-confirmed gaps (verify.mjs) replace the finder's, so the email states only what was confirmed.
+    const gaps = Array.isArray(u.gaps) ? u.gaps.filter((g) => GAPS.has(g)).slice(0, 8) : null;
+    const offer = OFFERS.has(u.offer_code) ? u.offer_code : null;
+    const extra = gaps && offer ? ", gaps_json = ?, offer_code = ?, notes = ?" : "";
+    const extraValues = gaps && offer ? [JSON.stringify(gaps), offer, `browser-checked ${t.slice(0, 10)}`] : [];
+    if (u.status === "NEW" && !extra) continue;
+    statements.push(env.DB.prepare(`UPDATE prospects SET status = ?, updated_at = ?${stamp}${extra} WHERE ${where} AND status IN (${from.map(() => "?").join(",")})`)
+      .bind(u.status, t, ...(stamp ? [t] : []), ...extraValues, key, ...from));
   }
   let changed = 0;
   if (statements.length) for (const r of await env.DB.batch(statements)) changed += r?.meta?.changes || 0;

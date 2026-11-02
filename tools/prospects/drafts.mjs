@@ -13,10 +13,14 @@ import { readFileSync } from "node:fs";
 import { ImapFlow } from "imapflow";
 import MailComposer from "nodemailer/lib/mail-composer/index.js";
 import { build } from "./email.mjs";
+import { verify } from "./verify.mjs";
+import { chromium } from "playwright";
 
 const API = "https://menu-made.com/api/system/prospects";
 const FROM = { name: "JP Battaglia", address: "info@menu-made.com" };
 const LIMIT = Number(process.env.BATCH_SIZE || 25);
+// PREVIEW=1: browser checks only (no iCloud Mail): confirmed gaps are saved on the prospect, the rest are SKIPPED.
+const PREVIEW = process.env.PREVIEW === "1" || process.env.PREVIEW === "true";
 const OPT_OUT = /\b(no thanks|no thank you|unsubscribe|remove me|take me off|stop emailing|not interested|do not (contact|email))\b/i;
 const logo = readFileSync(new URL("./assets/email-logo.png", import.meta.url));
 
@@ -32,14 +36,17 @@ async function api(path, body) {
 }
 const raw = (mail) => new Promise((resolve, reject) => new MailComposer(mail).compile().build((e, m) => (e ? reject(e) : resolve(m))));
 
-const client = new ImapFlow({ host: "imap.mail.me.com", port: 993, secure: true, logger: false,
+const client = PREVIEW ? null : new ImapFlow({ host: "imap.mail.me.com", port: 993, secure: true, logger: false,
   auth: { user: process.env.ICLOUD_USER, pass: process.env.ICLOUD_APP_PASSWORD } });
-await client.connect();
-const boxes = await client.list();
-const special = (use, fallback) => boxes.find((b) => b.specialUse === use)?.path || boxes.find((b) => fallback.test(b.path))?.path;
-const draftsBox = special("\\Drafts", /^drafts$/i);
-const sentBox = special("\\Sent", /^sent( messages)?$/i);
-if (!draftsBox) throw new Error("No Drafts folder found in iCloud Mail");
+let draftsBox = null, sentBox = null;
+if (!PREVIEW) {
+  await client.connect();
+  const boxes = await client.list();
+  const special = (use, fallback) => boxes.find((b) => b.specialUse === use)?.path || boxes.find((b) => fallback.test(b.path))?.path;
+  draftsBox = special("\\Drafts", /^drafts$/i);
+  sentBox = special("\\Sent", /^sent( messages)?$/i);
+  if (!draftsBox) throw new Error("No Drafts folder found in iCloud Mail");
+}
 
 // 1. Status sync.
 const since = new Date(Date.now() - 45 * 86400000);
@@ -53,7 +60,7 @@ if (sentBox) {
   } finally { lock.release(); }
 }
 let replies = 0, optOuts = 0;
-{
+if (!PREVIEW) {
   const lock = await client.getMailboxLock("INBOX");
   try {
     for await (const m of client.fetch({ since }, { envelope: true, source: { maxLength: 20000 } })) {
@@ -73,10 +80,17 @@ for (let k = 0; k < updates.length; k += 400) {
   console.log(`Status sync: ${r.changed} prospect rows updated`);
 }
 
-// 2. This week's drafts.
-const { prospects } = await api("batch", { limit: LIMIT });
-const drafted = [];
-for (const p of prospects) {
+// 2. This week's drafts. Every claim is re-checked in a phone-size browser first (verify.mjs); a prospect whose gaps
+// don't hold up is SKIPPED and never emailed. Candidates are taken three times over so the week still gets LIMIT.
+const { prospects } = await api("batch", { limit: Math.min(50, LIMIT * 3) });
+const browser = await chromium.launch();
+const drafted = [], skipped = [];
+for (const candidate of prospects) {
+  if (drafted.length >= LIMIT) break;
+  const checked = await verify(browser, candidate).catch(() => null);
+  if (!checked) { skipped.push({ id: candidate.id, status: "SKIPPED" }); continue; }
+  const p = { ...candidate, gaps_json: JSON.stringify(checked.gaps), offer_code: checked.offer_code, email: checked.email };
+  if (PREVIEW) { drafted.push({ id: p.id, status: "NEW", gaps: checked.gaps, offer_code: checked.offer_code }); continue; }
   const email = build(p);
   if (!email) continue;
   const message = await raw({ from: FROM, to: p.email, subject: email.subject, text: email.text, html: email.html,
@@ -85,6 +99,12 @@ for (const p of prospects) {
   await client.append(draftsBox, message, ["\\Draft", "\\Seen"]);
   drafted.push({ id: p.id, status: "DRAFTED" });
 }
-if (drafted.length) await api("status", { updates: drafted });
+await browser.close();
+if (PREVIEW) {
+  if (drafted.length || skipped.length) await api("status", { updates: [...drafted, ...skipped] });
+  console.log(`Preview: ${drafted.length} prospects confirmed in a browser, ${skipped.length} skipped. Nothing was drafted or sent.`);
+  process.exit(0);
+}
+if (drafted.length || skipped.length) await api("status", { updates: [...drafted, ...skipped] });
 await client.logout();
-console.log(`Drafts added to iCloud Mail: ${drafted.length} (asked for ${LIMIT}; ${prospects.length} available).`);
+console.log(`Drafts added to iCloud Mail: ${drafted.length} (asked for ${LIMIT}); ${skipped.length} candidates skipped because their gaps didn't hold up in a browser.`);
