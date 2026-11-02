@@ -171,7 +171,8 @@ for (const site of sites) {
 await browser.close();
 
 // A phone shopper on ninobattaglia.com: shirt page, "See sizes, colors & price", choose options, Add to cart, cart page
-// with the line and an enabled "Continue to checkout". Stops before checkout (no Stripe session, no order).
+// with the line, delivery rates for the Menu-made business address, and an enabled "Continue to checkout". Stops before
+// checkout (no Stripe session, no order).
 async function shopperJourney(browser, origin, sitemap, fail) {
   const context = await browser.newContext({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true, userAgent: "Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) MenuMadeSiteCheck/1.0 Mobile Safari/604.1" });
   const page = await context.newPage();
@@ -204,8 +205,22 @@ async function shopperJourney(browser, origin, sitemap, fail) {
     await page.waitForTimeout(1000);
     await page.goto(`${origin}/cart.html`, { waitUntil: "load", timeout: 30000 });
     const checkout = page.locator("[data-cart-checkout]");
+    try { await page.locator("[data-cart-lines] > *").first().waitFor({ state: "visible", timeout: 20000 }); }
+    catch { fail("cart.html: the item never showed in the cart"); return; }
+    // Delivery: the cart needs an address and a chosen rate (a live Printful quote, no order) before checkout opens.
+    const ship = page.locator("form.shipping-address-form");
+    if (await ship.count() && await ship.isVisible()) {
+      const address = { name: "Site Check", address1: "706 Kearny St", city: "San Francisco", state_code: "CA", zip: "94108" };
+      await ship.locator('select[name="country_code"]').selectOption("US");
+      for (const [name, value] of Object.entries(address)) { const f = ship.locator(`[name="${name}"]`); if (await f.count()) await f.fill(value); }
+      await ship.locator('button[type="submit"]').click();
+      try { await page.locator('input[name="shipping_rate"]').first().waitFor({ state: "attached", timeout: 25000 }); }
+      catch { fail(`cart.html: no delivery rates came back (${(await page.locator(".shipping-status").textContent().catch(() => "")) || "no message"})`); return; }
+      const rate = page.locator('input[name="shipping_rate"]').first();
+      if (!(await rate.isChecked())) await rate.check({ force: true });
+    }
     try { await page.waitForFunction(() => { const b = document.querySelector("[data-cart-checkout]"); return b && !b.disabled && document.querySelector("[data-cart-lines]")?.children.length > 0; }, null, { timeout: 20000 }); }
-    catch { fail(`cart.html: the item${(await page.locator("[data-cart-lines] > *").count()) ? " is there but Continue to checkout stayed disabled" : " never showed in the cart"}`); return; }
+    catch { fail("cart.html: Continue to checkout stayed disabled after choosing a delivery rate"); return; }
     if (!(await checkout.isVisible())) fail("cart.html: Continue to checkout is not visible");
     await page.screenshot({ path: `${OUT}/ninobattaglia.com-shopper-cart-phone.png`, fullPage: true }).catch(() => null);
   } catch (e) { fail(`stopped: ${String(e.message).split("\n")[0].slice(0, 160)}`); }
