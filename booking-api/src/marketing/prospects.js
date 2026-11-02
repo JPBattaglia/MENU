@@ -78,12 +78,20 @@ async function handleProspects(request, env) {
 //   POST /api/system/prospects/status  { updates: [{ id?, email?, status }] }  SKIPPED | DRAFTED | SENT | REPLIED | OPTED_OUT
 const DRAFTS_AUDIENCE = "menu-made-prospect-drafts";
 const DRAFTS_WORKFLOW = "JPBattaglia/MENU/.github/workflows/prospect-drafts.yml@refs/heads/master";
-const NEXT = { NEW: ["NEW"], SKIPPED: ["NEW"], DRAFTED: ["NEW"], SENT: ["NEW", "DRAFTED"], REPLIED: ["NEW", "DRAFTED", "SENT"], OPTED_OUT: ["NEW", "DRAFTED", "SENT", "REPLIED", "SKIPPED"] };
+const NEXT = { NEW: ["NEW"], SKIPPED: ["NEW"], DRAFTED: ["NEW", "DRAFTED"], SENT: ["NEW", "DRAFTED"], REPLIED: ["NEW", "DRAFTED", "SENT"], OPTED_OUT: ["NEW", "DRAFTED", "SENT", "REPLIED", "SKIPPED"] };
 
 async function handleProspectBatch(request, env) {
   const auth = await verifyRenderer(request, env, { audience: DRAFTS_AUDIENCE, workflow: DRAFTS_WORKFLOW, events: ["schedule", "workflow_dispatch"] });
   if (!auth.ok) return json({ ok: false, error: auth.error }, auth.status);
   const body = await request.json().catch(() => ({}));
+  // { ids }: rows already DRAFTED, to rebuild drafts still in the owner's Drafts folder.
+  if (Array.isArray(body?.ids)) {
+    const ids = body.ids.filter((id) => typeof id === "string").slice(0, 50);
+    if (!ids.length) return json({ ok: true, prospects: [] });
+    const rows = (await env.DB.prepare(`SELECT id, name, kind, cuisine, city, website, email, gaps_json, menu_url, offer_code, score FROM prospects
+        WHERE status = 'DRAFTED' AND id IN (${ids.map(() => "?").join(",")})`).bind(...ids).all()).results || [];
+    return json({ ok: true, prospects: rows });
+  }
   const limit = Math.max(1, Math.min(50, Number(body?.limit) || 25));
   const rows = (await env.DB.prepare(`
       SELECT id, name, kind, cuisine, city, website, email, gaps_json, menu_url, offer_code, score FROM prospects p
@@ -104,7 +112,7 @@ async function handleProspectStatus(request, env) {
   const t = nowIso(); const statements = [];
   for (const u of updates) {
     const from = NEXT[u?.status]; if (!from) continue;
-    const stamp = u.status === "DRAFTED" ? ", drafted_at = ?" : u.status === "SENT" ? ", sent_at = ?" : "";
+    const stamp = u.status === "DRAFTED" ? ", drafted_at = COALESCE(drafted_at, ?)" : u.status === "SENT" ? ", sent_at = ?" : "";
     const where = typeof u.id === "string" ? "id = ?" : typeof u.email === "string" ? "email = ?" : null; if (!where) continue;
     const key = u.id || String(u.email).toLowerCase();
     // Browser-confirmed gaps (verify.mjs) replace the finder's, so the email states only what was confirmed.

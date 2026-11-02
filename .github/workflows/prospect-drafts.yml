@@ -13,6 +13,9 @@ on:
       preview:
         description: Browser checks only, no iCloud Mail (true/false)
         required: false
+      refresh:
+        description: Rebuild the drafts still in Drafts after a design change (true/false)
+        required: false
 permissions:
   contents: read
   id-token: write
@@ -36,6 +39,7 @@ jobs:
           ICLOUD_APP_PASSWORD: ${{ secrets.ICLOUD_APP_PASSWORD }}
           BATCH_SIZE: ${{ inputs.batch_size }}
           PREVIEW: ${{ inputs.preview }}
+          REFRESH: ${{ inputs.refresh }}
         run: |
           if [ "$PREVIEW" != "true" ] && { [ -z "$ICLOUD_USER" ] || [ -z "$ICLOUD_APP_PASSWORD" ]; }; then echo "iCloud Mail is not connected yet (ICLOUD_USER / ICLOUD_APP_PASSWORD secrets)."; exit 1; fi
           node tools/prospects/drafts.mjs
