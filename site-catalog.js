@@ -96,7 +96,8 @@
     })
     .catch(error => {
       document.documentElement.classList.add('catalog-failed');
-      document.querySelectorAll('[data-price-for]').forEach(el => { el.textContent = 'Shown at checkout'; });
+      // Prices written into the page when it was built stay; only empty ones say where the price is shown.
+      document.querySelectorAll('[data-price-for]').forEach(el => { if (!/\$/.test(el.textContent)) el.textContent = 'Shown at checkout'; });
       throw error;
     });
 

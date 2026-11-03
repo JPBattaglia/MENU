@@ -3,8 +3,10 @@
 
 Writes the revamped pages (home, plans, services, Start, privacy and the product pages) from one
 shared head, header and footer, and refreshes the header navigation and footer links on every other
-page. Prices are never written here: every price is a <span data-price-for="CODE"> that
-site-catalog.js fills from /api/catalog.
+page. Prices are never typed here: every price is a <span data-price-for="CODE"> that site-catalog.js
+fills from /api/catalog. Since Nov 3, 2026 the span also starts with the price from
+tools/catalog-snapshot.json (a copy of /api/catalog the "Site prices" workflow refreshes daily), so
+visitors see a price even before or without the live call.
 
 Run from the repo root:  python3 tools/site_pages.py
 """
@@ -14,7 +16,7 @@ import re
 
 ROOT = Path(__file__).resolve().parent.parent
 CSS_VERSION = "20261029-noarrows"
-CATALOG_JS = '<script src="site-catalog.js?v=20261028-stage9" defer></script>'
+CATALOG_JS = '<script src="site-catalog.js?v=20261103-prices" defer></script>'
 
 NAV = [
     ("index.html", "Home"),
@@ -40,7 +42,7 @@ FOOTER_LINKS = (
     '<a href="privacy.html">Privacy</a>'
     '<a href="terms.html">Terms</a>'
     '<a href="refunds.html">Refunds &amp; Support</a>'
-    '<a href="accessability.html">Site Accessibility</a>'
+    '<a href="accessibility.html">Site Accessibility</a>'
     '</nav>'
 )
 
@@ -57,13 +59,49 @@ SOCIAL = """    <div class="footer-social" aria-label="Social links">
     </div>"""
 
 
+def _load_snapshot():
+    import json
+    path = ROOT / "tools" / "catalog-snapshot.json"
+    try:
+        return {o["code"]: o for o in json.loads(path.read_text()).get("offers", [])}
+    except (OSError, ValueError, KeyError):
+        return {}
+
+
+SNAPSHOT = _load_snapshot()
+
+
+def _money(cents):
+    value = cents / 100
+    return f"${value:,.2f}" if value % 1 else f"${value:,.0f}"
+
+
+def _price_text(code, interval, bare):
+    """Same result as site-catalog.js label() / priceOf(), from the snapshot. '…' if unknown."""
+    offer = SNAPSHOT.get(code)
+    if not offer:
+        return "…"
+    pkg = offer.get("menu_package")
+    if pkg:
+        cents = pkg["setup_cents"] + pkg["hosting_first_year_cents"]
+    elif offer.get("prices") is not None:
+        cents = offer["prices"].get(interval or "month")
+    else:
+        cents = offer.get("price_cents")
+    if cents is None:
+        return "…"
+    if bare or offer.get("prices") is None:
+        return _money(cents)
+    return _money(cents) + ("/yr" if interval == "year" else "/mo")
+
+
 def price(code, interval=None, bare=False):
     attrs = f' data-price-for="{code}"'
     if interval:
         attrs += f' data-price-interval="{interval}"'
     if bare:
         attrs += " data-price-bare"
-    return f'<span class="mm-price"{attrs}>…</span>'
+    return f'<span class="mm-price"{attrs}>{_price_text(code, interval, bare)}</span>'
 
 
 def nav_html(active):
@@ -76,8 +114,19 @@ def nav_html(active):
     return '<nav class="nav" id="primaryNav" aria-label="Primary">\n      ' + "\n      ".join(links) + "\n    </nav>"
 
 
+# Link preview image per page (owner, Nov 3, 2026), drawn by the page's headline and a picture from the page.
+# Pages not listed use the general one. Files in assets/social/ (1200x630).
+SOCIAL_IMAGES = {
+    "plans.html": "plans", "services.html": "services", "store-app.html": "mobile-app",
+    "website-design.html": "website", "google-visibility.html": "google",
+    "accessibility-services.html": "accessibility", "staff-merch.html": "staff-merch",
+}
+
+
 def head(title, description, path, body_class, extra=""):
     url = "https://menu-made.com/" + ("" if path == "index.html" else path[:-5])
+    social = f"https://menu-made.com/assets/social/{SOCIAL_IMAGES[path]}.jpg" if path in SOCIAL_IMAGES else "https://menu-made.com/assets/social-preview.png"
+    social_alt = html.escape(html.unescape(re.sub(r"\s+—\s+MENU-MADE$", "", html.unescape(title))), quote=True) if path in SOCIAL_IMAGES else "MENU-MADE — Menus, websites and Google care for Food &amp; Bev businesses"
     return f"""<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -102,14 +151,14 @@ def head(title, description, path, body_class, extra=""):
   <meta property="og:title" content="{title}">
   <meta property="og:description" content="{description}">
   <meta property="og:url" content="{url}">
-  <meta property="og:image" content="https://menu-made.com/assets/social-preview.png">
+  <meta property="og:image" content="{social}">
   <meta property="og:image:width" content="1200">
   <meta property="og:image:height" content="630">
-  <meta property="og:image:alt" content="MENU-MADE — Menus, websites and Google care for local businesses">
+  <meta property="og:image:alt" content="{social_alt}">
   <meta name="twitter:card" content="summary_large_image">
   <meta name="twitter:title" content="{title}">
   <meta name="twitter:description" content="{description}">
-  <meta name="twitter:image" content="https://menu-made.com/assets/social-preview.png">
+  <meta name="twitter:image" content="{social}">
 {extra}</head>
 <body class="{body_class}">
 <a class="site-skip" href="#main-content">Skip to content</a>
@@ -479,12 +528,12 @@ def mobile_app_premium(head_id, details=False):
 
 # ---------------------------------------------------------------- pages
 def page_index():
-    title = "MENU-MADE — Menus, Google and Websites for Local Restaurants"
-    desc = "Monthly plans that keep your menu current, answer your Google reviews and keep your profile active. Built for independent restaurants and local businesses."
+    title = "MENU-MADE — Menus, Websites and Google for Food &amp; Bev Businesses"
+    desc = "Monthly plans that keep your menu current, answer your Google reviews and keep your profile active. Built for Food &amp; Bev businesses."
     body = f"""<section class="hero">
   <div class="container hero-grid">
     <div class="hero-copy">
-      <span class="pill">For independent restaurants and local businesses</span>
+      <span class="pill">For Food &amp; Bev businesses</span>
       <h1>Your menu, website and Google profile, kept up to date</h1>
       <p class="hero-intro">Pick a monthly plan. We keep your menu current, answer your Google reviews, post for you every week and send you a report, with a person approving anything creative before it goes out.</p>
       <div class="hero-actions">
@@ -818,7 +867,7 @@ def page_services():
 
 <section class="section" aria-label="Call to action">
   <div class="container cta">
-    <div><h2>Not sure which one?</h2><p>Most restaurants start with Growth, or with Online Menu + QR if they don’t have a mobile menu yet.</p></div>
+    <div><h2>Not sure which one?</h2><p>Most Food &amp; Bev businesses start with Growth, or with Online Menu + QR if they don’t have a mobile menu yet.</p></div>
     <div class="cta-actions"><a class="btn primary" href="plans.html">Compare plans</a><a class="btn ghost" href="contact.html#inquiry">Ask us</a></div>
   </div>
 </section>
@@ -848,7 +897,7 @@ def detail_page(path, code, kind, title, desc, eyebrow, h1, intro, checklist_tit
 def page_website():
     extra = """<section class="section"><div class="container service-preparation"><div><h2>What we’ll ask after checkout</h2><ul class="service-preparation-list"><li>Your business story in a few sentences, and anything you want on the About page.</li><li>Your menu or list of services, hours, phone, address and email.</li><li>Your logo and up to 6 photos (PNG, JPEG or WebP).</li><li>Your favourite of the 9 styles and a brand colour, or let us pick.</li><li>The name you want before .menu-made.com, and your own domain if you have one.</li></ul></div><aside class="service-scope-note"><h3>What it isn’t</h3><p>The package is a fixed-scope site of up to 5 pages. Online ordering, booking systems, member areas and custom integrations aren’t included.</p><p>After the 3 included months, Website &amp; App Care continues at its monthly price unless you cancel. It covers hosting and changes on request.</p><a href="services.html#website-care">How Website &amp; App Care works</a></aside></div></section>"""
     return detail_page("website-design.html", "WEBSITE_PACKAGE", "once",
-                       "Website Package for Restaurants &amp; Local Businesses — MENU-MADE",
+                       "Website Package for Food &amp; Bev Businesses — MENU-MADE",
                        "A finished website of up to 5 pages in your choice of 9 styles, live on a menu-made.com address once approved and on your own domain when you point it. Includes 3 months of Website &amp; App Care.",
                        "Website Package", "A finished website, without the back-and-forth",
                        "Tell us about your business in one short form. We build a site of up to 5 pages in the style you choose, check it, approve it and put it live, then keep it hosted and updated with Website &amp; App Care.",
@@ -1052,7 +1101,7 @@ def page_start():
 
 <section class="section section-image" id="checkout" aria-label="Checkout">
   <div class="container">
-    <header class="section-head"><h2>Your order</h2><p>One plan per order. Add one-time services alongside it.</p></header>
+    <header class="section-head"><h2>Your order</h2><p>One plan per order. Add one-time services alongside it. The Mobile App and staff merch are checked out on their own.</p></header>
     <div class="start-grid">
       <details class="optional-services" id="optionalServices">
         <summary class="service-picker-summary" id="serviceChoicesSummary">

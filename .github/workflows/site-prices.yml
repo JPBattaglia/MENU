@@ -1,0 +1,42 @@
+# Site prices (Nov 3, 2026): keeps the prices written into menu-made.com's pages in step with the catalog.
+# Daily and on demand: copies https://menu-made.com/api/catalog to tools/catalog-snapshot.json, rebuilds the pages
+# with tools/site_pages.py and commits only when something changed (Cloudflare then deploys the site as for any push).
+# Pages still refresh prices live in the browser; this only makes sure a price shows even before that call answers.
+name: Site prices
+
+on:
+  schedule:
+    - cron: "17 13 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: site-prices
+  cancel-in-progress: false
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: Copy the live catalog
+        run: |
+          curl -sSf --retry 3 --retry-delay 10 https://menu-made.com/api/catalog -o catalog.json
+          jq -e '.offers | length > 0' catalog.json >/dev/null
+          jq -S '{offers: [.offers[] | {code, kind, on_sale, prices, price_cents, menu_package}] | sort_by(.code)}' catalog.json > tools/catalog-snapshot.json
+          rm catalog.json
+          echo "offers: $(jq '.offers | length' tools/catalog-snapshot.json)"
+      - name: Rebuild the pages
+        run: python3 tools/site_pages.py
+      - name: Commit if anything changed
+        run: |
+          if git diff --quiet; then echo "Prices unchanged"; exit 0; fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A tools/catalog-snapshot.json *.html
+          git commit -m "Site prices: refresh from the catalog"
+          git push
+          echo "Pages updated with the current prices" >> "$GITHUB_STEP_SUMMARY"

@@ -42,7 +42,11 @@ test('public pages have canonical addresses and branded sharing metadata; paymen
   assert.equal(canonical.length,1,page);assert.equal(canonical[0].href,expected,page);
   const metas=[...source.matchAll(/<meta\b[^>]*>/g)].map(m=>attrs(m[0]));
   assert.equal(metas.find(a=>a.property==='og:url')?.content,expected,page);
-  assert.equal(metas.find(a=>a.property==='og:image')?.content,'https://menu-made.com/assets/social-preview.png',page);
+  // Link preview: the general image or the page's own (Nov 3, 2026), and the file must exist.
+  const og=metas.find(a=>a.property==='og:image')?.content||'';
+  assert.match(og,/^https:\/\/menu-made\.com\/assets\/(social-preview\.png|social\/[a-z-]+\.jpg)$/,page);
+  assert.ok(existsSync(new URL('./'+og.replace('https://menu-made.com/',''),import.meta.url)),`${page}: ${og} missing`);
+  assert.equal(metas.find(a=>a.name==='twitter:image')?.content,og,page);
   assert.equal(metas.find(a=>a.name==='twitter:card')?.content,'summary_large_image',page);
  }
 });

@@ -2874,20 +2874,22 @@ body.mm-services-page #monthly{padding-top:40px}
 
 /* Text links in page content become transparent buttons with a cyan border (owner, Nov 3, 2026). Menus, the footer,
    image links and existing buttons are left alone. In a sentence the button stays inline and compact. */
-body:not(.sample-menu-page) main a:not(.btn):not(.cta-pill):not(.site-skip):not(.link-btn):not(:has(img, picture, svg, h2, h3, h4, p, div)):not([class*="card"]){
+body:not(.sample-menu-page):not(.legal-page) main a:not(.btn):not(.cta-pill):not(.site-skip):not(.link-btn):not(:has(img, picture, svg, h2, h3, h4, p, div)):not([class*="card"]){
   display:inline-block;padding:2px 12px;margin:2px 0;border:1.5px solid var(--cyan);border-radius:999px;background:transparent;
   color:var(--brand-soft);text-decoration:none;line-height:1.5;font-weight:700;transition:background .15s,color .15s,box-shadow .15s}
-body:not(.sample-menu-page) main a:not(.btn):not(.cta-pill):not(.site-skip):not(.link-btn):not(:has(img, picture, svg, h2, h3, h4, p, div)):not([class*="card"]):hover{
+body:not(.sample-menu-page):not(.legal-page) main a:not(.btn):not(.cta-pill):not(.site-skip):not(.link-btn):not(:has(img, picture, svg, h2, h3, h4, p, div)):not([class*="card"]):hover{
   background:rgba(0,214,230,.14);color:#fff;box-shadow:0 0 0 1px rgba(0,214,230,.35)}
-body:not(.sample-menu-page) main a:not(.btn):not(.cta-pill):not(.site-skip):not(.link-btn):not(:has(img, picture, svg, h2, h3, h4, p, div)):not([class*="card"]):focus-visible{
+body:not(.sample-menu-page):not(.legal-page) main a:not(.btn):not(.cta-pill):not(.site-skip):not(.link-btn):not(:has(img, picture, svg, h2, h3, h4, p, div)):not([class*="card"]):focus-visible{
   outline:3px solid var(--gold);outline-offset:2px}
-body:not(.sample-menu-page) main p > a:not(.btn):not(.cta-pill):not(:has(img, picture, svg)), body:not(.sample-menu-page) main li > a:not(.btn):not(.cta-pill):not(:has(img, picture, svg)){padding:0 10px;margin:1px 0}
+body:not(.sample-menu-page):not(.legal-page) main p > a:not(.btn):not(.cta-pill):not(:has(img, picture, svg)), body:not(.sample-menu-page):not(.legal-page) main li > a:not(.btn):not(.cta-pill):not(:has(img, picture, svg)){padding:0 10px;margin:1px 0}
 
 /* "Details" and similar secondary buttons: transparent, border kept (owner, Nov 3, 2026). Buy buttons keep their fill. */
 body:not(.sample-menu-page) .cta-pill:not([href^="contact.html"]){background:transparent;color:var(--brand-soft)}
 body:not(.sample-menu-page) .cta-pill:not([href^="contact.html"]):hover{background:rgba(0,214,230,.14);color:#fff}
 /* Link buttons size to their text, also inside cards that stretch their contents (owner, Nov 3, 2026) */
-body:not(.sample-menu-page) main a:not(.btn):not(.cta-pill):not(.site-skip):not(.link-btn):not(:has(img, picture, svg, h2, h3, h4, p, div)):not([class*="card"]){align-self:flex-start;justify-self:start;width:fit-content;max-width:100%}
+body:not(.sample-menu-page):not(.legal-page) main a:not(.btn):not(.cta-pill):not(.site-skip):not(.link-btn):not(:has(img, picture, svg, h2, h3, h4, p, div)):not([class*="card"]){align-self:flex-start;justify-self:start;width:fit-content;max-width:100%}
 /* About page: the two team buttons stay on one line at every screen size (owner, Nov 3, 2026) */
 body.about-page .team-profile{container-type:inline-size}
 body.about-page .team-profile a{white-space:nowrap;font-size:clamp(11px,calc((100cqi - 32px) / 17),16px);padding-inline:12px}
+/* Portfolio: Pinecrest's tall menu fills its featured card like the website screenshots (owner, Nov 3, 2026) */
+.website-work-grid .work-visual.fill-card img{object-fit:cover;object-position:center 60%}
