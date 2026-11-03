@@ -148,7 +148,10 @@ test('site: the Mobile App page is public (owner, Nov 3), paired with the Guest 
   assert.match(page, /data-plan-cta="STORE_APP_SETUP"/);
   assert.match(page, /isn’t guaranteed/);
   assert.match(page, /href="services.html#guest-app"/, 'links down to the Guest App');
-  assert.doesNotMatch(page, /\$(999|99\/mo|990)/, 'no hard-coded Menu-made prices (Apple and Google fees are theirs)');
+  // Prices are written in from tools/catalog-snapshot.json (Site prices workflow) and refreshed live; never typed in.
+  // So every Menu-made amount on the page sits inside a catalog price span.
+  const outside = page.replace(/<span class="mm-price"[^>]*>[^<]*<\/span>/g, '');
+  assert.doesNotMatch(outside, /\$(999|99\/mo|990)/, 'no Menu-made price outside a catalog price span (Apple and Google fees are theirs)');
   for (const f of ['index.html', 'plans.html', 'services.html']) {
     const html = readFileSync(new URL(f, root), 'utf8');
     assert.match(html, /id="mobile-app"/, `${f} has the apps section`);

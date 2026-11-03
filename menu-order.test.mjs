@@ -102,7 +102,8 @@ test('an empty Start page charges nothing and sends nothing', async () => {
 test('every card on the page is a catalog offer, and no price is typed into the markup', () => {
   const codes = new Set(OFFERS.map(o => o.code));
   for (const m of markup.matchAll(/data-code="([A-Z_]+)"/g)) assert(codes.has(m[1]), m[1]);
-  const visible = markup.replace(/<script[\s\S]*?<\/script>/g, '');
+  // Catalog price spans start with the price from tools/catalog-snapshot.json (Site prices workflow); any other $ is typed in.
+  const visible = markup.replace(/<script[\s\S]*?<\/script>/g, '').replace(/<span class="mm-price"[^>]*>[^<]*<\/span>/g, '');
   assert.doesNotMatch(visible, /\$\d/, 'prices come from the catalog');
 });
 
