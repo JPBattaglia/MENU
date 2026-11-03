@@ -2867,3 +2867,7 @@ details.merch-panel summary::before{content:"▸ ";font-size:1.3em}details.merch
 .mm-app-tiers .mm-premium-card{padding:32px;align-items:stretch}
 .mm-app-tiers .mm-app-tier li{margin:6px 0}
 @media (max-width:820px){.mm-premium-card{grid-template-columns:1fr;padding:26px;gap:20px}.mm-app-tiers{grid-template-columns:1fr}}
+
+/* Services page: tighter gap between the intro and Monthly services (owner, Nov 3, 2026) */
+body.mm-services-page .mm-page-hero{padding-bottom:24px}
+body.mm-services-page #monthly{padding-top:40px}
