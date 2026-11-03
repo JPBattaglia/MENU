@@ -536,7 +536,7 @@ def page_index():
   <div class="container">
     <header class="section-head"><h2 id="restaurant-work-title">Design work from JP and Nino</h2><p>A donut shop’s website, an artist’s portfolio and a diner’s menu from our project archive.</p></header>
     <div class="restaurant-work-grid">
-      <a class="restaurant-work-card" href="work-happy-donut.html"><img src="assets/work/happy-donut-website.webp" width="1000" height="625" loading="lazy" alt="My Happy Donut website design" class="work-preview-top"><span>My Happy Donut <small>Website and menu design</small></span></a>
+      <a class="restaurant-work-card" href="work-happy-donut.html"><img src="assets/work/happy-donut-website.webp?v=20261103" width="1000" height="540" loading="lazy" alt="My Happy Donut website design" class="work-preview-top"><span>My Happy Donut <small>Website and menu design</small></span></a>
       <a class="restaurant-work-card" href="work-nino.html"><img src="assets/work/nino-website.webp?v=20261027" width="1000" height="544" loading="lazy" alt="Nino Battaglia graphic design and branding website, with the headline A Point of View and a collage of his artwork" class="work-preview-top"><span>Nino Battaglia <small>Portfolio website design</small></span></a>
       <a class="restaurant-work-card" href="work-pinecrest.html"><img src="assets/work/pinecrest-dinner-preview.webp" width="760" height="1425" loading="lazy" alt="Pinecrest Diner’s dinner and pasta menu design" class="work-preview-lower"><span>Pinecrest Diner <small>Digital menu render</small></span></a>
     </div>
