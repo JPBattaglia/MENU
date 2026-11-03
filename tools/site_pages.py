@@ -226,7 +226,7 @@ PLANS = {
               "Its own QR code for table tents and windows",
               "Update specials and your menu any time from your update link"],
         provide="Your logo and details, and the reward if you want a rewards card. If Menu-Made built your website, the form arrives pre-filled.",
-        delivery="Setup builds the app and we approve it before it goes live; the monthly plan keeps it hosted and updatable. This is an app installed from the browser, not an App Store download.",
+        delivery="Setup builds the app and we approve it before it goes live; the monthly plan keeps it hosted and updatable. This is an app installed from the browser, not an App Store download: for your own listing in the App Store and Google Play, see the <a href=\"store-app.html\">Store App</a>.",
     ),
 }
 
@@ -492,6 +492,11 @@ def page_plans():
   <p class="mm-single-price">{price(code)}{' <span class="mm-plus">first year</span>' if code == 'ONLINE_MENU_QR' else ''}</p>
   <div class="mm-single-actions"><a class="cta-pill" href="services.html#{p['anchor']}">Details</a><a class="btn primary" data-plan-cta="{code}" data-cta-label="Start" href="contact.html?service={p['service']}">Start</a></div>
 </article>""" for code, p in ONCE.items()) + """
+<article class="mm-single">
+  <h3>Store App</h3><p>Your own app in the App Store and Google Play, with notifications and a rewards card.</p>
+  <p class="mm-single-price">""" + price("STORE_APP_SETUP") + """ <span class="mm-plus">then Website &amp; App Care</span></p>
+  <div class="mm-single-actions"><a class="cta-pill" href="store-app.html">Details</a><a class="btn primary" data-plan-cta="STORE_APP_SETUP" data-cta-label="Start" href="contact.html?plan=STORE_APP_SETUP">Start</a></div>
+</article>
 <article class="mm-single">
   <h3>Staff merch</h3><p>Your logo on staff shirts, aprons, caps, mugs and more, with mockups as you order.</p>
   <p class="mm-single-price">10% off 12+ items <span class="mm-plus">15% off 24+</span></p>
@@ -996,6 +1001,10 @@ def page_start():
           <section class="service-choice-group" aria-labelledby="onceChoiceTitle">
             <h3 id="onceChoiceTitle">One-time services and staff merch</h3>
             {once_cards}
+            <article class="service-card mm-choice mm-choice-link" data-name="Store App">
+              <h3>Store App</h3><p>Your own app in the App Store and Google Play, with notifications and a rewards card. Checked out on its own.</p>
+              <div class="service-bottom"><span class="price">{price("STORE_APP_SETUP")}</span><a class="btn primary" href="store-app.html">See the Store App</a></div>
+            </article>
             <article class="service-card mm-choice mm-choice-link" data-name="Staff merch">
               <h3>Staff merch</h3><p>Your logo on shirts, aprons, caps, mugs and more. Ordered on its own page, with mockups of your logo.</p>
               <div class="service-bottom"><span class="price">10% off 12+ items</span><a class="btn primary" href="staff-merch.html">Order staff merch</a></div>
@@ -1146,11 +1155,12 @@ def page_terms():
 
 
 def page_store_app():
-    """Stage 11 part 2: the Store App product page. Hidden until the stage 11 exit passes: not in the nav, footer,
-    sitemap or Start page, and noindex. Prices come from the catalog (STORE_APP_SETUP, STORE_APP_CARE); while the
-    offers are not on sale, site-catalog.js turns the buttons into "Opening soon · ask us" by itself."""
+    """Stage 11 part 2: the Store App product page. Public since Nov 3, 2026 (owner approved the page; stage 11 exit
+    met): in the sitemap and linked from the plans page, the Start page and the Guest App details. Prices come from the
+    catalog (STORE_APP_SETUP, STORE_APP_CARE); if the offers are ever taken off sale, site-catalog.js turns the buttons
+    into "Opening soon · ask us" by itself."""
     path = "store-app.html"
-    title = "Your Restaurant App in the App Store and Google Play — MENU-MADE"
+    title = "Your Business App in the App Store and Google Play — MENU-MADE"
     desc = "Your business's own app in the App Store and Google Play: menu, specials, hours, notifications and a rewards card, built from your details and kept current with Website &amp; App Care."
     checklist = ["Your own listing in the App Store and Google Play", "Menu, specials, hours, call, directions and your ordering link",
                  "Notifications to every guest who turns them on", "A rewards card: guests collect a visit with the code at your counter",
@@ -1170,7 +1180,7 @@ def page_store_app():
 </ul></div><aside class="service-scope-note"><h3>Good to know</h3><p>Approval is decided by Apple and Google and isn’t guaranteed. If a store asks for changes, we make them and resubmit.</p><p>The app lives in your own developer accounts, so it stays yours. If you cancel Website &amp; App Care, the apps stay in your accounts but notifications and rewards stop, and the app shows your web menu.</p><p>Online ordering inside the app isn’t included: the app links to the ordering you already use.</p><p>Want something simpler? The <a href="services.html#guest-app">Guest App</a> installs from your link or QR code, with notifications and rewards too, and needs no store accounts.</p></aside></div></section>
 <section class="section"><div class="container cta"><div><h2>Ready for your own app?</h2><p>Checkout asks only what we need. Your next step arrives by email right after payment.</p></div><div class="cta-actions"><a class="btn primary" data-plan-cta="STORE_APP_SETUP" data-cta-label="Start the Store App" href="contact.html?plan=STORE_APP_SETUP">Start the Store App</a><a class="btn ghost" href="plans.html">See all plans</a></div></div></section>
 """
-    return head(title, desc, path, "service-detail-page", '<meta name="robots" content="noindex">') + body + foot()
+    return head(title, desc, path, "service-detail-page") + body + foot()
 
 
 def main():
@@ -1187,7 +1197,7 @@ def main():
         "google-visibility.html": page_google(),
         "accessibility-services.html": page_accessibility(),
         "staff-merch.html": page_staff_merch(),
-        "store-app.html": page_store_app(),  # hidden until the stage 11 exit (noindex, not linked)
+        "store-app.html": page_store_app(),
     }
     for path, html in pages.items():
         (ROOT / path).write_text(html)
