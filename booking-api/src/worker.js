@@ -59,7 +59,7 @@ import { handleStoreKeys } from "./store-app/keys.js";
 import { handleRestaurantKeys } from "./store-app/restaurant-keys.js";
 import { advanceStoreBuilds, scheduleYearlyRebuilds, handleBuildConfig, handleBuildResult, handleRebuild } from "./store-app/store-build.js";
 import { advanceStoreListings, handleListingImage, handleListingImageView, handleListingPage } from "./store-app/store-listing.js";
-import { handleAndroidBundle, handleAndroidKey, handleBuildCredentials, handleBundleDownload } from "./store-app/build-credentials.js";
+import { handleAndroidBundle, handleAndroidKey, handleAndroidPushTest, handleBuildCredentials, handleBundleDownload } from "./store-app/build-credentials.js";
 import { advanceAccessibilitySelfTests } from "./selftest/accessibility-selftest.js";
 import { advanceSocialPostsSelfTests } from "./selftest/social-posts-selftest.js";
 import { advanceRoutingSelfTests } from "./selftest/routing-selftest.js";
@@ -105,6 +105,7 @@ var worker_default = {
     if (listingMatch && listingMatch[2] && request.method === "GET") return handleListingImageView(request, env, listingMatch[1].toLowerCase(), listingMatch[2]);
     if (listingMatch && !listingMatch[2] && (request.method === "GET" || request.method === "POST")) return handleListingPage(request, env, listingMatch[1].toLowerCase());
     if (url.pathname === "/api/store-build/android-key" && request.method === "POST") return handleAndroidKey(request, env);
+    if (url.pathname === "/api/store-build/android-push-test" && request.method === "POST") return handleAndroidPushTest(request, env);
     if (url.pathname === "/api/store-build/android-bundle" && request.method === "POST") return handleAndroidBundle(request, env);
     const bundleMatch = url.pathname.match(/^\/api\/store-build\/bundle\/(\d{1,9})$/);
     if (bundleMatch && request.method === "GET") return handleBundleDownload(request, env, bundleMatch[1]);
