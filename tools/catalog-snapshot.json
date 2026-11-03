@@ -1,0 +1,227 @@
+{
+  "offers": [
+    {
+      "code": "ACCESSIBILITY_MONITORING",
+      "kind": "PLAN",
+      "menu_package": null,
+      "on_sale": true,
+      "price_cents": null,
+      "prices": {
+        "month": 3900,
+        "year": 39000
+      }
+    },
+    {
+      "code": "ACCESSIBILITY_UPGRADE",
+      "kind": "ONE_TIME",
+      "menu_package": null,
+      "on_sale": false,
+      "price_cents": 25000,
+      "prices": null
+    },
+    {
+      "code": "BUNDLE_GROWTH",
+      "kind": "BUNDLE",
+      "menu_package": null,
+      "on_sale": true,
+      "price_cents": null,
+      "prices": {
+        "month": 17900,
+        "year": 179000
+      }
+    },
+    {
+      "code": "BUNDLE_PRO",
+      "kind": "BUNDLE",
+      "menu_package": null,
+      "on_sale": true,
+      "price_cents": null,
+      "prices": {
+        "month": 29900,
+        "year": 299000
+      }
+    },
+    {
+      "code": "BUNDLE_STARTER",
+      "kind": "BUNDLE",
+      "menu_package": null,
+      "on_sale": true,
+      "price_cents": null,
+      "prices": {
+        "month": 7900,
+        "year": 79000
+      }
+    },
+    {
+      "code": "CONVERSION_FIX",
+      "kind": "ONE_TIME",
+      "menu_package": null,
+      "on_sale": true,
+      "price_cents": 29900,
+      "prices": null
+    },
+    {
+      "code": "GOOGLE_PROFILE_CARE",
+      "kind": "PLAN",
+      "menu_package": null,
+      "on_sale": true,
+      "price_cents": null,
+      "prices": {
+        "month": 14900,
+        "year": 149000
+      }
+    },
+    {
+      "code": "GOOGLE_VISIBILITY",
+      "kind": "ONE_TIME",
+      "menu_package": null,
+      "on_sale": true,
+      "price_cents": 14900,
+      "prices": null
+    },
+    {
+      "code": "GUEST_APP",
+      "kind": "PLAN",
+      "menu_package": null,
+      "on_sale": true,
+      "price_cents": null,
+      "prices": {
+        "month": 2900,
+        "year": 29000
+      }
+    },
+    {
+      "code": "GUEST_APP_SETUP",
+      "kind": "ONE_TIME",
+      "menu_package": null,
+      "on_sale": true,
+      "price_cents": 29900,
+      "prices": null
+    },
+    {
+      "code": "MENU_CARE",
+      "kind": "PLAN",
+      "menu_package": null,
+      "on_sale": true,
+      "price_cents": null,
+      "prices": {
+        "month": 2900,
+        "year": 29000
+      }
+    },
+    {
+      "code": "NINO_FLYER",
+      "kind": "ONE_TIME",
+      "menu_package": null,
+      "on_sale": true,
+      "price_cents": 7900,
+      "prices": null
+    },
+    {
+      "code": "NINO_LOGO",
+      "kind": "ONE_TIME",
+      "menu_package": null,
+      "on_sale": true,
+      "price_cents": 24900,
+      "prices": null
+    },
+    {
+      "code": "NINO_MENU_DESIGN",
+      "kind": "ONE_TIME",
+      "menu_package": null,
+      "on_sale": true,
+      "price_cents": 19900,
+      "prices": null
+    },
+    {
+      "code": "NINO_SOCIAL_PACK",
+      "kind": "ONE_TIME",
+      "menu_package": null,
+      "on_sale": true,
+      "price_cents": 14900,
+      "prices": null
+    },
+    {
+      "code": "ONLINE_MENU_QR",
+      "kind": "ONE_TIME",
+      "menu_package": {
+        "additional_page_cents": 2000,
+        "hosting_first_year_cents": 1500,
+        "included_pages": 3,
+        "max_pages": 50,
+        "setup_cents": 12900
+      },
+      "on_sale": true,
+      "price_cents": 12900,
+      "prices": null
+    },
+    {
+      "code": "REVIEW_REPLIES",
+      "kind": "PLAN",
+      "menu_package": null,
+      "on_sale": true,
+      "price_cents": null,
+      "prices": {
+        "month": 4900,
+        "year": 49000
+      }
+    },
+    {
+      "code": "SOCIAL_POSTS",
+      "kind": "PLAN",
+      "menu_package": null,
+      "on_sale": true,
+      "price_cents": null,
+      "prices": {
+        "month": 12900,
+        "year": 129000
+      }
+    },
+    {
+      "code": "STAFF_MERCH",
+      "kind": "ONE_TIME",
+      "menu_package": null,
+      "on_sale": true,
+      "price_cents": 0,
+      "prices": null
+    },
+    {
+      "code": "STORE_APP_CARE",
+      "kind": "PLAN",
+      "menu_package": null,
+      "on_sale": true,
+      "price_cents": null,
+      "prices": {
+        "month": 9900,
+        "year": 99000
+      }
+    },
+    {
+      "code": "STORE_APP_SETUP",
+      "kind": "ONE_TIME",
+      "menu_package": null,
+      "on_sale": true,
+      "price_cents": 99900,
+      "prices": null
+    },
+    {
+      "code": "WEBSITE_CARE",
+      "kind": "PLAN",
+      "menu_package": null,
+      "on_sale": true,
+      "price_cents": null,
+      "prices": {
+        "month": 4900,
+        "year": 49000
+      }
+    },
+    {
+      "code": "WEBSITE_PACKAGE",
+      "kind": "ONE_TIME",
+      "menu_package": null,
+      "on_sale": true,
+      "price_cents": 49900,
+      "prices": null
+    }
+  ]
+}
