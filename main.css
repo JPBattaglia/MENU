@@ -2689,6 +2689,8 @@ a.is-soon{opacity:.85;background:transparent!important;color:var(--gold)!importa
 .mm-page-hero .container{max-width:880px}
 .mm-page-hero h1{margin:14px 0 12px}
 .mm-jump{display:flex;flex-wrap:wrap;gap:6px 14px;margin:18px 0 0;font-size:15px}
+/* Hidden from view, still read by screen readers; shows when a keyboard user tabs into it (owner, Nov 3, 2026) */
+.mm-jump:not(:focus-within){position:absolute;width:1px;height:1px;margin:0;padding:0;overflow:hidden;clip:rect(0 0 0 0);clip-path:inset(50%);white-space:nowrap;border:0}
 .mm-table-wrap{overflow-x:auto;border-radius:var(--radius);border:1px solid rgba(0,214,230,.35)}
 .mm-compare{width:100%;border-collapse:collapse;min-width:560px;background:rgba(1,47,52,.6)}
 .mm-compare th,.mm-compare td{padding:14px 16px;border-bottom:1px solid rgba(0,214,230,.2);text-align:center}

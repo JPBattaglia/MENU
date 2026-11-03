@@ -748,7 +748,7 @@ def page_services():
     <span class="pill">Services</span>
     <h1>What each service does</h1>
     <p class="hero-intro">Exactly what you get, what we need from you and how it’s delivered. Every service runs on schedule; anything creative is approved by a person before it goes out.</p>
-    <p class="mm-jump">{jump}</p>
+    <nav class="mm-jump" aria-label="Jump to a service">{jump}</nav>
     <div class="hero-actions">{toggle("billing-services")}</div>
   </div>
 </section>
