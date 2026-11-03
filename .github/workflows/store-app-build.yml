@@ -282,7 +282,7 @@ jobs:
           token=$(curl -sSf -H "Authorization: Bearer $ACTIONS_ID_TOKEN_REQUEST_TOKEN" "$ACTIONS_ID_TOKEN_REQUEST_URL&audience=menu-made-store-build" | jq -r .value)
           echo "::add-mask::$token"
           curl -sSf -H "Authorization: Bearer $token" "https://menu-made.com/api/store-build/credentials?$TARGET" -o "$RUNNER_TEMP/creds.json"
-          jq -r .apple.p8 "$RUNNER_TEMP/creds.json" | while IFS= read -r line; do [ -n "$line" ] && echo "::add-mask::$line"; done
+          jq -r .apple.p8 "$RUNNER_TEMP/creds.json" | while IFS= read -r line; do if [ -n "$line" ]; then echo "::add-mask::$line"; fi; done
           jq -r .apple.p8 "$RUNNER_TEMP/creds.json" > "$RUNNER_TEMP/AuthKey.p8"
           {
             echo "ASC_KEY_ID=$(jq -r .apple.key_id "$RUNNER_TEMP/creds.json")"
@@ -394,7 +394,7 @@ jobs:
           curl -sSf -H "Authorization: Bearer $token" "https://menu-made.com/api/store-build/credentials?$TARGET&platform=android" -o "$RUNNER_TEMP/creds.json"
           if jq -e '.android.play_account != null' "$RUNNER_TEMP/creds.json" >/dev/null; then
             jq -r .android.play_account "$RUNNER_TEMP/creds.json" > "$RUNNER_TEMP/play.json"
-            jq -r .private_key "$RUNNER_TEMP/play.json" | while IFS= read -r line; do [ -n "$line" ] && echo "::add-mask::$line"; done
+            jq -r .private_key "$RUNNER_TEMP/play.json" | while IFS= read -r line; do if [ -n "$line" ]; then echo "::add-mask::$line"; fi; done
             echo "PLAY_ACCOUNT_FILE=$RUNNER_TEMP/play.json" >> "$GITHUB_ENV"
           fi
           jq -r .android.google_services "$RUNNER_TEMP/creds.json" > "$RUNNER_TEMP/google-services.json"
