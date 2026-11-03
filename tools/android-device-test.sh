@@ -13,6 +13,11 @@ adb wait-for-device
 adb install -r "$APK" >/dev/null || { say "FAIL: the app didn't install"; exit 1; }
 say "Installed: yes"
 adb shell pm grant "$PKG" android.permission.POST_NOTIFICATIONS || true
+# A fresh virtual phone's Google Play services needs a few minutes to finish its first check-in with Google; a
+# Firebase token asked for before then fails with AUTHENTICATION_FAILED and isn't retried until the app restarts.
+# So wait, and below reopen the app until it registers.
+sleep 120
+open_app() { adb shell am force-stop "$PKG"; adb shell monkey -p "$PKG" -c android.intent.category.LAUNCHER 1 >/dev/null 2>&1; }
 adb shell monkey -p "$PKG" -c android.intent.category.LAUNCHER 1 >/dev/null 2>&1
 sleep 20
 adb shell pidof "$PKG" >/dev/null || { shot app-crashed; say "FAIL: the app isn't running after opening it"; adb logcat -d -s AndroidRuntime:E | tail -20; exit 1; }
@@ -45,6 +50,8 @@ for i in $(seq 1 32); do
   echo "worker answered $code: $(jq -r '.error // "?"' "$RUNNER_TEMP/push.json") ($i/32)"
   [ "$code" = "404" ] || break
   sleep 15
+  # No registration yet: reopen the app (new Firebase token attempt) every 2 minutes, then leave it again.
+  if [ $((i % 8)) -eq 0 ]; then open_app; sleep 30; adb shell input keyevent KEYCODE_HOME; fi
 done
 if [ "$sent" != yes ]; then
   shot no-registration
