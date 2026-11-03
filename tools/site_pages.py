@@ -504,7 +504,7 @@ def page_index():
   <div class="container">
     <header class="section-head"><h2 id="plans-title">Three plans. Cancel any time.</h2><p>Each plan combines services that would cost more on their own. All prices in USD.</p></header>
     {bundles_block("billing-home")}
-    <p class="conversion-help"><a href="plans.html">Compare every plan and service</a> · <a href="services.html">What each service does</a></p>
+    <p class="conversion-help"><a href="plans.html">Compare every plan and service</a> <a href="services.html">What each service does</a></p>
   </div>
 </section>
 
@@ -540,7 +540,7 @@ def page_index():
       <a class="restaurant-work-card" href="work-nino.html"><img src="assets/work/nino-website.webp?v=20261027" width="1000" height="544" loading="lazy" alt="Nino Battaglia graphic design and branding website, with the headline A Point of View and a collage of his artwork" class="work-preview-top"><span>Nino Battaglia <small>Portfolio website design</small></span></a>
       <a class="restaurant-work-card" href="work-pinecrest.html"><img src="assets/work/pinecrest-dinner-preview.webp" width="760" height="1425" loading="lazy" alt="Pinecrest Diner’s dinner and pasta menu design" class="work-preview-lower"><span>Pinecrest Diner <small>Digital menu render</small></span></a>
     </div>
-    <p class="conversion-help"><a href="portfolio.html">Explore our work</a> · <a href="sample-menu.html">Try a sample online menu</a></p>
+    <p class="conversion-help"><a href="portfolio.html">Explore our work</a> <a href="sample-menu.html">Try a sample online menu</a></p>
   </div>
 </section>
 
@@ -784,7 +784,7 @@ def page_services():
     desc = "Menu Care, Review Replies, Google Profile Care, Social Posts, Website &amp; App Care, Accessibility Monitoring, Guest App and one-time setups: what you get, what you provide and how it's delivered."
     monthly = "\n".join(product_section(c, p, "plan") for c, p in PLANS.items() if c != "GUEST_APP")
     once = "\n".join(product_section(c, p, "once") for c, p in ONCE.items())
-    jump = " · ".join(f'<a href="#{p["anchor"]}">{p["name"]}</a>' for p in list(PLANS.values()) + list(ONCE.values())) + ' · <a href="#staff-merch">Staff merch</a> · <a href="#mobile-app">Mobile App</a>'
+    jump = " ".join(f'<a href="#{p["anchor"]}">{p["name"]}</a>' for p in list(PLANS.values()) + list(ONCE.values())) + ' <a href="#staff-merch">Staff merch</a> <a href="#mobile-app">Mobile App</a>'
     body = f"""<section class="hero mm-page-hero">
   <div class="container">
     <span class="pill">Services</span>
@@ -1040,7 +1040,7 @@ def page_start():
         <a class="btn primary" href="#optionalServices" data-choose-services>Choose a plan or service</a>
         <a class="btn ghost" href="#inquiry">Questions first?</a>
       </div>
-      <p class="conversion-help"><a href="plans.html">Compare plans</a> · <a href="services.html">What each service does</a></p>
+      <p class="conversion-help"><a href="plans.html">Compare plans</a> <a href="services.html">What each service does</a></p>
     </div>
     <div class="hero-visual">
       <div class="media-frame">
@@ -1161,7 +1161,7 @@ def page_start():
               <button class="btn primary" id="checkoutBtn" type="button">Proceed to secure checkout</button>
               <button class="btn secondary" id="backBtn" type="button">Hide details</button>
             </div>
-            <div class="mini checkout-privacy-note">Your details are used to start and deliver your order. <a href="privacy.html">Privacy policy</a> · <a href="terms.html">Terms</a> · <a href="refunds.html">Refunds &amp; support</a>.</div>
+            <div class="mini checkout-privacy-note">Your details are used to start and deliver your order. <a href="privacy.html">Privacy policy</a> <a href="terms.html">Terms</a> <a href="refunds.html">Refunds &amp; support</a>.</div>
           </div>
 
           <p class="mini order-security" id="orderSecurity" hidden>Payment is handled by Stripe. MENU-MADE never sees your card details.</p>
