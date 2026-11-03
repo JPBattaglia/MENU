@@ -1151,13 +1151,13 @@ def page_store_app():
     offers are not on sale, site-catalog.js turns the buttons into "Opening soon · ask us" by itself."""
     path = "store-app.html"
     title = "Your Restaurant App in the App Store and Google Play — MENU-MADE"
-    desc = "Your restaurant's own app in the App Store and Google Play: menu, specials, hours, notifications and a rewards card, built from your details and kept current with Website &amp; App Care."
+    desc = "Your business's own app in the App Store and Google Play: menu, specials, hours, notifications and a rewards card, built from your details and kept current with Website &amp; App Care."
     checklist = ["Your own listing in the App Store and Google Play", "Menu, specials, hours, call, directions and your ordering link",
                  "Notifications to every guest who turns them on", "A rewards card: guests collect a visit with the code at your counter",
                  "Menu and specials changes reach the app with no store update"]
     body = f"""<section class="hero"><div class="container service-detail-hero"><div class="service-lead-copy">
-<span class="pill">Store App · premium</span><h1>Your restaurant in the App Store and Google Play</h1>
-<p class="service-lead-intro">Your own app, under your restaurant’s name, built from the details you give us. Guests download it from the stores, get your specials as notifications and collect rewards every visit.</p>
+<span class="pill">Store App · premium</span><h1>Your business in the App Store and Google Play</h1>
+<p class="service-lead-intro">Your own app, under your business’s name, built from the details you give us. Guests download it from the stores, get your specials as notifications and collect rewards every visit.</p>
 <p class="service-price"><strong>{price("STORE_APP_SETUP")}</strong><span>one-time setup, then Website &amp; App Care at {price("STORE_APP_CARE", "month")} after a 90-day free trial</span></p>
 <div class="hero-actions"><a class="btn primary" data-plan-cta="STORE_APP_SETUP" data-cta-label="Start the Store App" href="contact.html?plan=STORE_APP_SETUP">Start the Store App</a><a class="btn ghost" href="contact.html#inquiry">Ask a question</a></div>
 </div><aside class="service-profile-plan" aria-labelledby="checklist-title"><p class="service-eyebrow">What you get</p><h2 id="checklist-title">An app guests keep</h2><ul>{''.join(f'<li>{c}</li>' for c in checklist)}</ul></aside></div></section>
