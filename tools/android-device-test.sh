@@ -31,18 +31,18 @@ diag() {
   echo "app process running: $(adb shell pidof "$PKG" >/dev/null && echo yes || echo no)"
   echo "Google Play services: $(adb shell dumpsys package com.google.android.gms | grep -m1 versionName | tr -d ' ')"
   adb shell dumpsys notification --noredact | grep -E "pkg=$PKG|android.title|android.text" | head -10
-  adb logcat -d | grep -iE "firebase|fcm|gcm|cloudmessag|pushnotif|capacitor/push|NotificationService" | sed -E 's/[A-Za-z0-9_:-]{60,}/<hidden>/g' | tail -40
+  adb logcat -d | grep -E "FirebaseMessaging|FirebaseInstallations|FirebaseApp|Capacitor|PushNotifications|GmsGcmRegistr|GCM[A-Za-z]*:|$PKG" | grep -v NetworkScheduler | sed -E 's/[A-Za-z0-9_:-]{60,}/<hidden>/g' | tail -40
 }
 oidc() { curl -sSf -H "Authorization: Bearer $ACTIONS_ID_TOKEN_REQUEST_TOKEN" "$ACTIONS_ID_TOKEN_REQUEST_URL&audience=menu-made-store-build" | jq -r .value; }
 TEXT="Android device test $RUN_ID"
 sent=no
-for i in $(seq 1 16); do
+for i in $(seq 1 32); do
   token=$(oidc); echo "::add-mask::$token"
   code=$(jq -n --arg b "$TEXT" '{title: "Sample Cafe", body: $b}' | curl -sS -o "$RUNNER_TEMP/push.json" -w '%{http_code}' -X POST \
     -H "Authorization: Bearer $token" -H "Content-Type: application/json" --data-binary @- \
     "https://menu-made.com/api/store-build/android-push-test?scope=owner")
   if [ "$code" = "200" ]; then sent=yes; break; fi
-  echo "worker answered $code: $(jq -r '.error // "?"' "$RUNNER_TEMP/push.json") ($i/16)"
+  echo "worker answered $code: $(jq -r '.error // "?"' "$RUNNER_TEMP/push.json") ($i/32)"
   [ "$code" = "404" ] || break
   sleep 15
 done
@@ -54,7 +54,7 @@ if [ "$sent" != yes ]; then
 fi
 say "Registered with the worker and sent through Firebase: yes"
 
-for i in $(seq 1 36); do
+for i in $(seq 1 60); do
   if adb shell dumpsys notification --noredact | grep -q "$TEXT"; then
     adb shell cmd statusbar expand-notifications; sleep 2; shot 2-notification
     say "Notification reached the phone: yes"
@@ -63,6 +63,6 @@ for i in $(seq 1 36); do
   sleep 5
 done
 adb shell cmd statusbar expand-notifications; sleep 2; shot 2-no-notification
-say "FAIL: the notification didn't reach the phone within 3 minutes"
+say "FAIL: the notification didn't reach the phone within 5 minutes"
 diag
 exit 1
