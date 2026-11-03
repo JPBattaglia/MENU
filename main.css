@@ -2889,4 +2889,5 @@ body:not(.sample-menu-page) .cta-pill:not([href^="contact.html"]):hover{backgrou
 /* Link buttons size to their text, also inside cards that stretch their contents (owner, Nov 3, 2026) */
 body:not(.sample-menu-page) main a:not(.btn):not(.cta-pill):not(.site-skip):not(.link-btn):not(:has(img, picture, svg, h2, h3, h4, p, div)):not([class*="card"]){align-self:flex-start;justify-self:start;width:fit-content;max-width:100%}
 /* About page: the two team buttons stay on one line at every screen size (owner, Nov 3, 2026) */
-body.about-page .team-profile a{white-space:nowrap;font-size:clamp(13px,3.6vw,16px)}
+body.about-page .team-profile{container-type:inline-size}
+body.about-page .team-profile a{white-space:nowrap;font-size:clamp(11px,calc((100cqi - 32px) / 17),16px);padding-inline:12px}
