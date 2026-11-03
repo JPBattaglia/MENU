@@ -2882,3 +2882,7 @@ body:not(.sample-menu-page) main a:not(.btn):not(.cta-pill):not(.site-skip):not(
 body:not(.sample-menu-page) main a:not(.btn):not(.cta-pill):not(.site-skip):not(.link-btn):not(:has(img, picture, svg, h2, h3, h4, p, div)):not([class*="card"]):focus-visible{
   outline:3px solid var(--gold);outline-offset:2px}
 body:not(.sample-menu-page) main p > a:not(.btn):not(.cta-pill):not(:has(img, picture, svg)), body:not(.sample-menu-page) main li > a:not(.btn):not(.cta-pill):not(:has(img, picture, svg)){padding:0 10px;margin:1px 0}
+
+/* "Details" and similar secondary buttons: transparent, border kept (owner, Nov 3, 2026). Buy buttons keep their fill. */
+body:not(.sample-menu-page) .cta-pill:not([href^="contact.html"]){background:transparent;color:var(--brand-soft)}
+body:not(.sample-menu-page) .cta-pill:not([href^="contact.html"]):hover{background:rgba(0,214,230,.14);color:#fff}
