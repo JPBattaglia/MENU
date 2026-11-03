@@ -249,5 +249,5 @@ test('drill (stage 12 task 7): GitHub refusing builds sends one alert, not one p
   assert.equal(g.emails.length, 0, 'a short GitHub outage is retried quietly');
   for (let i = 0; i < 3; i++) await withEmails(g, () => build.advanceStoreBuilds(g.env, Date.parse('2026-10-30T01:05:00Z') + i * 300000));
   assert.equal(g.emails.length, 1, 'refused for over an hour: one build alert');
-  assert.match(g.emails[0].subject, /Store App build needs a look/);
+  assert.match(g.emails[0].subject, /Mobile App build needs a look/);
 });
