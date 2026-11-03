@@ -304,7 +304,17 @@ def sample_link(code):
     return f'<a class="btn ghost mm-sample-link" href="{url}" target="_blank" rel="noopener">See a real sample<span class="mm-sr"> (opens in a new tab)</span></a>' if url else ""
 
 
-def product_section(code, p, kind):
+# What a detail page's product block still shows, beyond the hero and the page's own sections (owner, Nov 3, 2026:
+# no repeated content). Website: its "What we'll ask" and "What it isn't" sections cover what you provide and what
+# isn't included, and the hero names the pages. Accessibility: "Honest about its limits" covers the delivery note.
+DETAIL_PARTS = {
+    "WEBSITE_PACKAGE": ("gets_after_first",),
+    "GOOGLE_VISIBILITY": ("provide", "delivery"),
+    "ACCESSIBILITY_MONITORING": ("provide",),
+}
+
+
+def product_section(code, p, kind, detail=False):
     gets = "".join(f"<li>{g}</li>" for g in p["gets"])
     if kind == "plan":
         price_line = f'{price(code)}'
@@ -316,6 +326,23 @@ def product_section(code, p, kind):
         if code == "ONLINE_MENU_QR":
             price_line += ' <span class="mm-plus">first year, up to 3 pages</span>'
         cta = f'<a class="btn primary" data-plan-cta="{code}" data-cta-label="Start {p["name"]}" href="contact.html?service={p["service"]}">Start {p["name"]}</a>'
+    if detail:
+        parts = DETAIL_PARTS.get(code, ("gets", "provide", "delivery"))
+        cols = []
+        if "gets" in parts or "gets_after_first" in parts:
+            items = p["gets"][1:] if "gets_after_first" in parts else p["gets"]
+            cols.append(f'<div><h4>Also included</h4><ul class="mm-checks">{"".join(f"<li>{g}</li>" for g in items)}</ul></div>')
+        if "provide" in parts:
+            cols.append(f'<div><h4>You provide</h4><p>{p["provide"]}</p></div>')
+        if "delivery" in parts:
+            cols.append(f'<div><h4>How it’s delivered</h4><p>{p["delivery"]}</p></div>')
+        return f"""<article class="mm-product mm-product-detail" id="{p['anchor']}" aria-label="{p['name']} details">
+  <div class="mm-product-body">
+    {"".join(cols)}
+  </div>
+  {('<div class="mm-product-actions">' + sample_link(code) + '</div>') if sample_link(code) else ''}
+</article>
+"""
     return f"""<article class="mm-product" id="{p['anchor']}" aria-labelledby="{p['anchor']}-title">
   <header class="mm-product-head">
     <h3 id="{p['anchor']}-title">{p['name']}</h3>
@@ -375,16 +402,26 @@ FAQ = [
 ]
 
 
-def faq_block():
-    items = "\n".join(f"<details><summary>{q}</summary><p>{a}</p></details>" for q, a in FAQ)
+# Each question appears on one page only (owner, Nov 3, 2026: no repeated content). The home page's "How it works"
+# and "Need one thing done?" sections already answer the first and last questions, so they aren't asked again.
+HOME_FAQ = ("Do I need to give you my passwords?", "Who writes the posts and replies?", "Is there a contract?")
+PLANS_FAQ = ("Can I change or cancel my plan?", "Monthly or yearly?")
+
+
+def faq_items(which):
+    return [(q, a) for q, a in FAQ if q in which]
+
+
+def faq_block(which):
+    items = "\n".join(f"<details><summary>{q}</summary><p>{a}</p></details>" for q, a in faq_items(which))
     return f'<div class="faq-list">\n{items}\n</div>'
 
 
-def faq_jsonld():
+def faq_jsonld(which):
     import json
     return '<script type="application/ld+json">' + json.dumps({
         "@context": "https://schema.org", "@type": "FAQPage",
-        "mainEntity": [{"@type": "Question", "name": q, "acceptedAnswer": {"@type": "Answer", "text": a}} for q, a in FAQ],
+        "mainEntity": [{"@type": "Question", "name": q, "acceptedAnswer": {"@type": "Answer", "text": a}} for q, a in faq_items(which)],
     }) + "</script>\n"
 
 
@@ -397,14 +434,19 @@ def service_jsonld(name, description, url):
     }) + "</script>\n"
 
 
-def mobile_app_premium(head_id):
+def mobile_app_premium(head_id, details=False):
     """Apps for your guests (owner, Nov 3, 2026): the Guest App as the starter option and the Mobile App as the premium
-    one, side by side, on the home, plans and services pages. Prices from the catalog."""
+    one, side by side, on the home, plans and services pages. Prices from the catalog. details=True (services page,
+    where the Guest App isn't listed again): what the buyer provides, how it's delivered and the sample link."""
+    g = PLANS["GUEST_APP"]
+    guest_details = (f'<p class="mm-app-detail"><strong>You provide:</strong> {g["provide"]}</p>'
+                     f'<p class="mm-app-detail"><strong>How it’s delivered:</strong> {g["delivery"]}</p>') if details else ""
+    guest_more = sample_link("GUEST_APP") if details else '<a class="cta-pill" href="services.html#guest-app">Details</a>'
     return f"""<section class="section mm-premium-section" id="mobile-app" aria-labelledby="{head_id}">
   <div class="container">
     <header class="section-head"><h2 id="{head_id}">Apps for your guests</h2><p>Start with a Guest App, or go premium with your own app in the App Store and Google Play.</p></header>
     <div class="mm-app-tiers">
-      <article class="service-card mm-app-tier">
+      <article class="service-card mm-app-tier" id="guest-app">
         <span class="pill">Starter</span>
         <h3>Guest App</h3>
         <p>An app guests add to their home screen from your link or QR code. No app store needed.</p>
@@ -413,8 +455,8 @@ def mobile_app_premium(head_id):
           <li>Notifications (on iPhone, once it’s on the Home Screen)</li>
           <li>A rewards card and its own QR code for tables and windows</li>
         </ul>
-        <p class="mm-premium-price">{price("GUEST_APP", "month")}<span>+ {price("GUEST_APP_SETUP")} setup</span></p>
-        <div class="mm-premium-actions"><a class="btn primary" data-plan-cta="GUEST_APP" data-cta-label="Choose Guest App" href="contact.html?plan=GUEST_APP">Choose Guest App</a><a class="cta-pill" href="services.html#guest-app">Details</a></div>
+        {guest_details}<p class="mm-premium-price">{price("GUEST_APP", "month")}<span>+ {price("GUEST_APP_SETUP")} setup</span></p>
+        <div class="mm-premium-actions"><a class="btn primary" data-plan-cta="GUEST_APP" data-cta-label="Choose Guest App" href="contact.html?plan=GUEST_APP">Choose Guest App</a>{guest_more}</div>
       </article>
       <article class="mm-premium-card mm-app-tier">
         <span class="pill mm-premium-pill">Premium</span>
@@ -504,7 +546,7 @@ def page_index():
 
 <section class="section menu-faq" id="faq" aria-labelledby="faq-title">
   <div class="container"><header class="section-head"><h2 id="faq-title">Questions owners ask</h2></header>
-{faq_block()}
+{faq_block(HOME_FAQ)}
   </div>
 </section>
 
@@ -515,7 +557,7 @@ def page_index():
   </div>
 </section>
 """
-    return head(title, desc, "index.html", "home-page", faq_jsonld()) + body + foot()
+    return head(title, desc, "index.html", "home-page", faq_jsonld(HOME_FAQ)) + body + foot()
 
 
 def page_plans():
@@ -525,7 +567,7 @@ def page_plans():
   <h3>{p['name']}</h3><p>{p['short']}.</p>
   <p class="mm-single-price">{price(code)}{' <span class="mm-plus">+ ' + price("GUEST_APP_SETUP") + ' setup</span>' if code == 'GUEST_APP' else ''}</p>
   <div class="mm-single-actions"><a class="cta-pill" href="services.html#{p['anchor']}">Details</a><a class="btn primary" data-plan-cta="{code}" data-cta-label="Choose" href="contact.html?plan={code}">Choose</a></div>
-</article>""" for code, p in PLANS.items())
+</article>""" for code, p in PLANS.items() if code != "GUEST_APP")
     once = "\n".join(f"""<article class="mm-single">
   <h3>{p['name']}</h3><p>{p['short']}.</p>
   <p class="mm-single-price">{price(code)}{' <span class="mm-plus">first year</span>' if code == 'ONLINE_MENU_QR' else ''}</p>
@@ -596,11 +638,11 @@ def page_plans():
 
 <section class="section menu-faq" id="faq" aria-labelledby="faq-title">
   <div class="container"><header class="section-head"><h2 id="faq-title">Billing questions</h2></header>
-{faq_block()}
+{faq_block(PLANS_FAQ)}
   </div>
 </section>
 """
-    return head(title, desc, "plans.html", "plans-page", faq_jsonld()) + body + foot()
+    return head(title, desc, "plans.html", "plans-page", faq_jsonld(PLANS_FAQ)) + body + foot()
 
 
 # Stage 10 cross-sell: staff merch (sold here) and Nino's design services (sold on ninobattaglia.com).
@@ -740,7 +782,7 @@ def page_staff_merch():
 def page_services():
     title = "What Each Service Does — MENU-MADE"
     desc = "Menu Care, Review Replies, Google Profile Care, Social Posts, Website &amp; App Care, Accessibility Monitoring, Guest App and one-time setups: what you get, what you provide and how it's delivered."
-    monthly = "\n".join(product_section(c, p, "plan") for c, p in PLANS.items())
+    monthly = "\n".join(product_section(c, p, "plan") for c, p in PLANS.items() if c != "GUEST_APP")
     once = "\n".join(product_section(c, p, "once") for c, p in ONCE.items())
     jump = " · ".join(f'<a href="#{p["anchor"]}">{p["name"]}</a>' for p in list(PLANS.values()) + list(ONCE.values())) + ' · <a href="#staff-merch">Staff merch</a> · <a href="#mobile-app">Mobile App</a>'
     body = f"""<section class="hero mm-page-hero">
@@ -772,8 +814,7 @@ def page_services():
   </div>
 </section>
 
-{mobile_app_premium("mobile-app-services-title")}
-{team_and_design_block()}
+{mobile_app_premium("mobile-app-services-title", details=True)}
 
 <section class="section" aria-label="Call to action">
   <div class="container cta">
@@ -796,7 +837,7 @@ def detail_page(path, code, kind, title, desc, eyebrow, h1, intro, checklist_tit
 <div class="hero-actions"><a class="btn primary" data-plan-cta="{code}" data-cta-label="Start {p['name']}" href="{cta_href}">Start {p['name']}</a><a class="btn ghost" href="contact.html#inquiry">Ask a question</a></div>
 </div><aside class="service-profile-plan" aria-labelledby="checklist-title"><p class="service-eyebrow">What you get</p><h2 id="checklist-title">{checklist_title}</h2><ul>{''.join(f'<li>{c}</li>' for c in checklist)}</ul></aside></div></section>
 <section class="section"><div class="container"><div class="mm-products">
-{product_section(code, p, kind)}
+{product_section(code, p, kind, detail=True)}
 </div></div></section>
 {extra_section}
 <section class="section"><div class="container cta"><div><h2>Ready to start?</h2><p>Checkout asks only what we need. Your next step arrives by email right after payment.</p></div><div class="cta-actions"><a class="btn primary" data-plan-cta="{code}" data-cta-label="Start {p['name']}" href="{cta_href}">Start {p['name']}</a><a class="btn ghost" href="plans.html">See all plans</a></div></div></section>
