@@ -2886,3 +2886,5 @@ body:not(.sample-menu-page) main p > a:not(.btn):not(.cta-pill):not(:has(img, pi
 /* "Details" and similar secondary buttons: transparent, border kept (owner, Nov 3, 2026). Buy buttons keep their fill. */
 body:not(.sample-menu-page) .cta-pill:not([href^="contact.html"]){background:transparent;color:var(--brand-soft)}
 body:not(.sample-menu-page) .cta-pill:not([href^="contact.html"]):hover{background:rgba(0,214,230,.14);color:#fff}
+/* Link buttons size to their text, also inside cards that stretch their contents (owner, Nov 3, 2026) */
+body:not(.sample-menu-page) main a:not(.btn):not(.cta-pill):not(.site-skip):not(.link-btn):not(:has(img, picture, svg, h2, h3, h4, p, div)):not([class*="card"]){align-self:flex-start;justify-self:start;width:fit-content;max-width:100%}
