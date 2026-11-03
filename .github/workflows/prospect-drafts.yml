@@ -5,6 +5,7 @@ name: Prospect drafts
 on:
   schedule:
     - cron: "37 15 * * 1"   # Mondays 7:37 am PST, after the 5:23 am prospect search
+    - cron: "41 16 * * 4"   # Thursdays 8:41 am PST: day-3 follow-up drafts only (marketing plan v4)
   workflow_dispatch:
     inputs:
       batch_size:
@@ -19,6 +20,9 @@ on:
       sync_only:
         description: Only record sent mail, replies, opt-outs and bounces (true/false)
         required: false
+      followups_only:
+        description: Only add day-3 follow-up drafts (true/false)
+        required: false
 permissions:
   contents: read
   id-token: write
@@ -28,7 +32,7 @@ concurrency:
 jobs:
   drafts:
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 45   # each menu preview is one Claude read (marketing plan v4)
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -44,6 +48,7 @@ jobs:
           PREVIEW: ${{ inputs.preview }}
           REFRESH: ${{ inputs.refresh }}
           SYNC_ONLY: ${{ inputs.sync_only }}
+          FOLLOWUPS_ONLY: ${{ inputs.followups_only == 'true' || github.event.schedule == '41 16 * * 4' }}
         run: |
           if [ "$PREVIEW" != "true" ] && { [ -z "$ICLOUD_USER" ] || [ -z "$ICLOUD_APP_PASSWORD" ]; }; then echo "iCloud Mail is not connected yet (ICLOUD_USER / ICLOUD_APP_PASSWORD secrets)."; exit 1; fi
           node tools/prospects/drafts.mjs

@@ -28,6 +28,8 @@ import { dailyCoverageReport, handleCoverage } from "./selftest/coverage.js";
 import { handleSiteCheckResult } from "./selftest/site-check.js";
 import { handleD1Usage } from "./selftest/d1-usage.js";
 import { handleProspects, handleProspectBatch, handleProspectStatus } from "./marketing/prospects.js";
+import { handleProspectDemo, handleMenuPreview, handleProspectFollowups } from "./marketing/demo-menu.js";
+import { handleWeeklyNumbers } from "./marketing/weekly-numbers.js";
 import { countingDb, saveTickCount } from "./lib/query-count.js";
 import { advanceMoneyPathsSelfTests } from "./selftest/money-paths.js";
 import { advanceEmailHealthSelfTests } from "./selftest/email-health.js";
@@ -120,6 +122,12 @@ var worker_default = {
     if (url.pathname === "/api/system/prospects" && request.method === "POST") return handleProspects(request, env);
     if (url.pathname === "/api/system/prospects/batch" && request.method === "POST") return handleProspectBatch(request, env);
     if (url.pathname === "/api/system/prospects/status" && request.method === "POST") return handleProspectStatus(request, env);
+    // Marketing plan v4: private phone-menu previews for prospect emails, and the day-3 follow-up list.
+    if (url.pathname === "/api/system/prospects/demo" && request.method === "POST") return handleProspectDemo(request, env);
+    if (url.pathname === "/api/system/prospects/followups" && request.method === "POST") return handleProspectFollowups(request, env);
+    if (url.pathname === "/api/system/weekly-numbers" && request.method === "POST") return handleWeeklyNumbers(request, env);
+    const previewMatch = url.pathname.match(/^\/api\/menu-preview\/([a-f0-9]{36})$/);
+    if (previewMatch && (request.method === "GET" || request.method === "HEAD")) return handleMenuPreview(request, env, previewMatch[1]);
     const storeAppDoneMatch = url.pathname.match(/^\/api\/store-app\/([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})\/done$/i);
     if (storeAppDoneMatch && (request.method === "GET" || request.method === "POST")) return handleStoreAppDone(request, env, storeAppDoneMatch[1].toLowerCase());
     const storeAppRebuildMatch = url.pathname.match(/^\/api\/store-app\/([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})\/rebuild$/i);

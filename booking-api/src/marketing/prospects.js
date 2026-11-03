@@ -103,6 +103,13 @@ async function handleProspectBatch(request, env) {
   return json({ ok: true, prospects: batch });
 }
 
+// A SENT row may carry the message's own date (sent_at) so day-3 follow-ups count from the real send, not the sync.
+function stampTime(u, t) {
+  if (u.status !== "SENT" || typeof u.sent_at !== "string") return t;
+  const at = Date.parse(u.sent_at);
+  return Number.isFinite(at) && at <= Date.parse(t) && at > Date.parse(t) - 60 * 86400000 ? new Date(at).toISOString() : t;
+}
+
 async function handleProspectStatus(request, env) {
   const auth = await verifyRenderer(request, env, { audience: DRAFTS_AUDIENCE, workflow: DRAFTS_WORKFLOW, events: ["schedule", "workflow_dispatch"] });
   if (!auth.ok) return json({ ok: false, error: auth.error }, auth.status);
@@ -122,7 +129,7 @@ async function handleProspectStatus(request, env) {
     const extraValues = gaps && offer ? [JSON.stringify(gaps), offer, `browser-checked ${t.slice(0, 10)}`] : [];
     if (u.status === "NEW" && !extra) continue;
     statements.push(env.DB.prepare(`UPDATE prospects SET status = ?, updated_at = ?${stamp}${extra} WHERE ${where} AND status IN (${from.map(() => "?").join(",")})`)
-      .bind(u.status, t, ...(stamp ? [t] : []), ...extraValues, key, ...from));
+      .bind(u.status, t, ...(stamp ? [stampTime(u, t)] : []), ...extraValues, key, ...from));
   }
   let changed = 0;
   if (statements.length) for (const r of await env.DB.batch(statements)) changed += r?.meta?.changes || 0;

@@ -13,7 +13,7 @@ import { readFileSync } from "node:fs";
 import { resolveMx } from "node:dns/promises";
 import { ImapFlow } from "imapflow";
 import MailComposer from "nodemailer/lib/mail-composer/index.js";
-import { build } from "./email.mjs";
+import { build, buildFollowup } from "./email.mjs";
 import { verify } from "./verify.mjs";
 import { chromium } from "playwright";
 
@@ -25,6 +25,8 @@ const PREVIEW = process.env.PREVIEW === "1" || process.env.PREVIEW === "true";
 // REFRESH=1: rebuild the drafts still in Drafts (after a design or wording change). Sent emails are never touched.
 const REFRESH = process.env.REFRESH === "1" || process.env.REFRESH === "true";
 // SYNC_ONLY=1: record sent mail, replies, opt-outs and bounces; add no drafts.
+// FOLLOWUPS_ONLY=1 (Thursday run): after the sync, add only the day-3 follow-up drafts (marketing plan v4).
+const FOLLOWUPS_ONLY = process.env.FOLLOWUPS_ONLY === "1" || process.env.FOLLOWUPS_ONLY === "true";
 const SYNC_ONLY = process.env.SYNC_ONLY === "1" || process.env.SYNC_ONLY === "true";
 const OPT_OUT = /\b(no thanks|no thank you|unsubscribe|remove me|take me off|stop emailing|not interested|do not (contact|email))\b/i;
 const logo = readFileSync(new URL("./assets/email-logo.png", import.meta.url));
@@ -40,6 +42,23 @@ async function api(path, body) {
   return out;
 }
 const raw = (mail) => new Promise((resolve, reject) => new MailComposer(mail).compile().build((e, m) => (e ? reject(e) : resolve(m))));
+
+// Day-3 follow-ups (marketing plan v4): sent prospects who opened their menu preview 3+ days ago and haven't replied.
+// One draft each, ever; the worker records it so it never repeats.
+async function addFollowups() {
+  const { prospects: due = [], price } = await api("followups", {});
+  const done = [];
+  for (const p of due) {
+    const email = buildFollowup(p, price);
+    const message = await raw({ from: FROM, to: p.email, subject: email.subject, text: email.text, html: email.html,
+      attachments: [{ filename: "menu-made.png", content: logo, cid: "logo@menu-made", contentDisposition: "inline" }],
+      headers: { "X-Menu-Made-Prospect": p.id, "X-Menu-Made-Followup": "1" } });
+    await client.append(draftsBox, message, ["\\Draft", "\\Seen"]);
+    done.push(p.id);
+  }
+  if (done.length) await api("followups", { mark: done });
+  console.log(`Follow-up drafts added: ${done.length}`);
+}
 
 const client = PREVIEW ? null : new ImapFlow({ host: "imap.mail.me.com", port: 993, secure: true, logger: false,
   auth: { user: process.env.ICLOUD_USER, pass: process.env.ICLOUD_APP_PASSWORD } });
@@ -66,7 +85,7 @@ for (const sentBox of sentBoxes) {
     let n = 0;
     for await (const m of client.fetch({ since }, { envelope: true })) {
       n++;
-      for (const to of m.envelope?.to || []) if (to.address) updates.push({ email: to.address.toLowerCase(), status: "SENT" });
+      for (const to of m.envelope?.to || []) if (to.address) updates.push({ email: to.address.toLowerCase(), status: "SENT", ...(m.envelope?.date ? { sent_at: new Date(m.envelope.date).toISOString() } : {}) });
     }
     console.log(`Sent folder "${sentBox}": ${n} messages in the last 45 days`);
   } finally { lock.release(); }
@@ -107,6 +126,7 @@ for (let k = 0; k < updates.length; k += 400) {
 }
 
 if (SYNC_ONLY) { await client.logout(); console.log("Sync only: no drafts added."); process.exit(0); }
+if (FOLLOWUPS_ONLY) { await addFollowups(); await client.logout(); process.exit(0); }
 if (REFRESH) {
   const lock = await client.getMailboxLock(draftsBox);
   const old = [];
@@ -140,6 +160,7 @@ if (REFRESH) {
 const { prospects } = await api("batch", { limit: Math.min(50, LIMIT * 3) });
 const browser = await chromium.launch();
 const drafted = [], skipped = [];
+let previews = 0;
 for (const candidate of prospects) {
   if (drafted.length >= LIMIT) break;
   // The address's domain must accept mail at all (no mail server = a sure bounce).
@@ -150,7 +171,14 @@ for (const candidate of prospects) {
   const p = { ...candidate, gaps_json: JSON.stringify(checked.gaps), offer_code: checked.offer_code, email: checked.email };
   if (PREVIEW) { drafted.push({ id: p.id, status: "NEW", gaps: checked.gaps, offer_code: checked.offer_code }); continue; }
   const confirmed = { gaps: checked.gaps, offer_code: checked.offer_code };
-  const email = build(p);
+  // Marketing plan v4: menu-file prospects get their own menu built as a private phone page first. Any failure just
+  // means the email goes out without the preview.
+  let demoUrl = null;
+  if (checked.offer_code === "ONLINE_MENU_QR" && checked.gaps.some((g) => g === "menu_pdf" || g === "menu_image")) {
+    const demo = await api("demo", { id: p.id }).catch(() => null);
+    if (demo?.ok) { demoUrl = demo.url; previews++; }
+  }
+  const email = build(p, demoUrl);
   if (!email) continue;
   const message = await raw({ from: FROM, to: p.email, subject: email.subject, text: email.text, html: email.html,
     attachments: [{ filename: "menu-made.png", content: logo, cid: "logo@menu-made", contentDisposition: "inline" }],
@@ -165,5 +193,6 @@ if (PREVIEW) {
   process.exit(0);
 }
 if (drafted.length || skipped.length) await api("status", { updates: [...drafted, ...skipped] });
+await addFollowups();
 await client.logout();
-console.log(`Drafts added to iCloud Mail: ${drafted.length} (asked for ${LIMIT}); ${skipped.length} candidates skipped because their gaps didn't hold up in a browser.`);
+console.log(`Drafts added to iCloud Mail: ${drafted.length} (asked for ${LIMIT}), ${previews} with a menu preview; ${skipped.length} candidates skipped because their gaps didn't hold up in a browser.`);

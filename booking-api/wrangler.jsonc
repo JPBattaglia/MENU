@@ -14,7 +14,9 @@
   // SELFTEST_SCHEDULE: the daily self-tests schedule themselves only where this is "on" (src/selftest/daily-clock.js).
   "vars": { "SITE_WILDCARD": "1", "SELFTEST_SCHEDULE": "on" },
   "d1_databases": [
-    { "binding": "DB", "database_name": "menu-made-db", "database_id": "1387bcdc-e462-41ce-bc6b-5cc1b0a47ad0" }
+    { "binding": "DB", "database_name": "menu-made-db", "database_id": "1387bcdc-e462-41ce-bc6b-5cc1b0a47ad0" },
+    // Marketing plan v4: the Nino shop's database, read only by the Friday numbers email (src/marketing/weekly-numbers.js).
+    { "binding": "NINO_DB", "database_name": "nino-printful-commerce", "database_id": "3b48a25e-1854-48ca-b821-ef1552d385cc" }
   ],
   // Not read by the current code; kept so the binding set matches the pre-split worker.
   "kv_namespaces": [

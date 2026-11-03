@@ -3,12 +3,16 @@
 
 const SERVICES = "https://menu-made.com/services.html";
 const SAMPLES = "https://menu-made.com/api/samples";
+// Marketing plan v4 (Nov 3, 2026): Online Menu + QR has its own page; links from these emails are tagged so a sale
+// that follows is counted against the outreach (funnel.js keeps the labels through checkout).
+const ONLINE_MENU = "https://menu-made.com/online-menu?utm_source=outreach&utm_medium=email&utm_campaign=demo-menu";
 // Dark mode (Nov 1, 2026): Apple Mail recoloured the header light while the logo kept a baked-in navy box. The logo
 // is now transparent and the email asks mail apps to keep its light design.
 // Copy revised Nov 1, 2026 (owner): plain wording, accurate to each offer as services.html describes it.
 const OFFERS = {
-  ONLINE_MENU_QR: { name: "Online Menu + QR", url: `${SERVICES}#online-menu`, sample: ["See a real example", `${SAMPLES}/menu`],
-    offer: "Menu-made can turn the menu you already have into a clean, mobile-friendly menu page that Google can read, along with a printable QR code for your tables and front window. It's $129 one time, and that includes the first year of hosting and two rounds of changes.",
+  // Price corrected Nov 3, 2026: $129 setup + $15 first-year hosting = $144 (checkout/quote.js), up to 3 pages.
+  ONLINE_MENU_QR: { name: "Online Menu + QR", url: ONLINE_MENU, sample: ["See a real example", `${SAMPLES}/menu`],
+    offer: "Menu-made can turn the menu you already have into a clean, mobile-friendly menu page that Google can read, along with a printable QR code for your tables and front window. It's $144 for the first year, which covers up to 3 menu pages, hosting and two rounds of changes.",
     how: "All we need is your current menu as a PDF or photos. We build the page, check it, and email you the link and QR code." },
   WEBSITE_PACKAGE: { name: "Website Package", url: `${SERVICES}#website-package`, sample: ["See a real example", `${SAMPLES}/website/`],
     offer: "Menu-made builds simple, mobile-friendly restaurant websites: up to five pages with your menu, hours, map, photos and contact details, on your own domain. It's $499 one time, and the first three months of updates are included.",
@@ -40,12 +44,34 @@ function finding(p) {
     `I came across ${site} and noticed there's no tap-to-call button on phone screens. A guest who wants to call ahead or place an order has to copy your number by hand, and some won't bother.`];
 }
 
-export function build(p) {
+// demoUrl (marketing plan v4): the prospect's own menu, already built as a private phone page by the worker
+// (src/marketing/demo-menu.js). With it, the email leads with the preview instead of a generic sample.
+export function build(p, demoUrl = null) {
   const offer = OFFERS[p.offer_code];
   if (!offer) return null;
   const [subject, observed] = finding(p);
-  const paras = ["Hi there,", observed, offer.offer, offer.how, "If it would help, the details and a real example are below. If not, no problem at all."];
-  const buttons = [[`See ${offer.name}`, offer.url, true], [offer.sample[0], offer.sample[1], false]];
+  const demo = demoUrl && p.offer_code === "ONLINE_MENU_QR";
+  const paras = demo
+    ? ["Hi there,", observed, "So you can see the difference, I went ahead and turned the menu on your site into a phone page. It's private: only you have the link, and it stays up for three weeks.", offer.offer, "If you'd like it live, the button below shows what's included. If not, no problem at all."]
+    : ["Hi there,", observed, offer.offer, offer.how, "If it would help, the details and a real example are below. If not, no problem at all."];
+  const buttons = demo
+    ? [["See your menu as a phone page", demoUrl, true], [`See ${offer.name}`, offer.url, false]]
+    : [[`See ${offer.name}`, offer.url, true], [offer.sample[0], offer.sample[1], false]];
+  return render(p, subject, paras, buttons);
+}
+
+// Day-3 follow-up (marketing plan v4): only for owners who opened their preview and haven't replied.
+export function buildFollowup(p, price = "$144") {
+  const subject = `Your ${p.name} phone menu`;
+  const paras = ["Hi there,",
+    `Following up on the phone version of your menu I sent over last week. If you'd like it live, with a printable QR code for your tables and front window, it's ${price} for the first year, hosting included.`,
+    "You'd upload the same menu at checkout and we'd take it from there. Happy to answer anything first, just reply here.",
+    "Your preview is still at the link below for a little while longer."];
+  const buttons = [["See your menu as a phone page", p.url, true], ["See Online Menu + QR", ONLINE_MENU, false]];
+  return render(p, subject, paras, buttons);
+}
+
+function render(p, subject, paras, buttons) {
   const pHtml = paras.map((x) => `<p style="margin:0 0 16px;font-size:16px;line-height:1.6;color:#26434f;">${esc(x)}</p>`).join("");
   const bHtml = buttons.map(([l, u, prim]) => `<tr><td style="padding:0 0 12px;"><a href="${esc(u)}" style="display:inline-block;background-color:${prim ? "#00a7b5" : "#071f2c"};color:#ffffff;text-decoration:none;font-size:15px;font-weight:bold;padding:13px 22px;border-radius:6px;">${esc(l)}</a></td></tr>`).join("");
   const html = `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="color-scheme" content="light only"><meta name="supported-color-schemes" content="light only"><style>:root{color-scheme:light only;supported-color-schemes:light only}</style><title>${esc(subject)}</title></head>
