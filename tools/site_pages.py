@@ -226,7 +226,7 @@ PLANS = {
               "Its own QR code for table tents and windows",
               "Update specials and your menu any time from your update link"],
         provide="Your logo and details, and the reward if you want a rewards card. If Menu-Made built your website, the form arrives pre-filled.",
-        delivery="Setup builds the app and we approve it before it goes live; the monthly plan keeps it hosted and updatable. This is an app installed from the browser, not an App Store download: for your own listing in the App Store and Google Play, see the <a href=\"store-app.html\">Store App</a>.",
+        delivery="Setup builds the app and we approve it before it goes live; the monthly plan keeps it hosted and updatable. This is an app installed from the browser, not an App Store download. The premium step up is the <a href=\"store-app.html\">Mobile App</a>: your own listing in the App Store and Google Play.",
     ),
 }
 
@@ -397,6 +397,44 @@ def service_jsonld(name, description, url):
     }) + "</script>\n"
 
 
+def mobile_app_premium(head_id):
+    """Apps for your guests (owner, Nov 3, 2026): the Guest App as the starter option and the Mobile App as the premium
+    one, side by side, on the home, plans and services pages. Prices from the catalog."""
+    return f"""<section class="section mm-premium-section" id="mobile-app" aria-labelledby="{head_id}">
+  <div class="container">
+    <header class="section-head"><h2 id="{head_id}">Apps for your guests</h2><p>Start with a Guest App, or go premium with your own app in the App Store and Google Play.</p></header>
+    <div class="mm-app-tiers">
+      <article class="service-card mm-app-tier">
+        <span class="pill">Starter</span>
+        <h3>Guest App</h3>
+        <p>An app guests add to their home screen from your link or QR code. No app store needed.</p>
+        <ul>
+          <li>Menu, specials, hours, call button and your ordering link</li>
+          <li>Notifications (on iPhone, once it’s on the Home Screen)</li>
+          <li>A rewards card and its own QR code for tables and windows</li>
+        </ul>
+        <p class="mm-premium-price">{price("GUEST_APP", "month")}<span>+ {price("GUEST_APP_SETUP")} setup</span></p>
+        <div class="mm-premium-actions"><a class="btn primary" data-plan-cta="GUEST_APP" data-cta-label="Choose Guest App" href="contact.html?plan=GUEST_APP">Choose Guest App</a><a class="cta-pill" href="services.html#guest-app">Details</a></div>
+      </article>
+      <article class="mm-premium-card mm-app-tier">
+        <span class="pill mm-premium-pill">Premium</span>
+        <h3>Mobile App</h3>
+        <p>Your own app in the App Store and Google Play, under your business’s name. Guests find and install it like any other app.</p>
+        <ul>
+          <li>Your own listing in the App Store and Google Play</li>
+          <li>Notifications to every guest who turns them on</li>
+          <li>A rewards card, plus your menu, specials, hours and ordering link</li>
+        </ul>
+        <p class="mm-premium-price">{price("STORE_APP_SETUP")}<span>one-time setup</span></p>
+        <p class="mm-premium-note">Then Website &amp; App Care at {price("STORE_APP_CARE", "month")}, free for the first 90 days. Store approval is decided by Apple and Google.</p>
+        <div class="mm-premium-actions"><a class="btn primary" data-plan-cta="STORE_APP_SETUP" data-cta-label="Start the Mobile App" href="contact.html?plan=STORE_APP_SETUP">Start the Mobile App</a><a class="cta-pill" href="store-app.html">Details</a></div>
+      </article>
+    </div>
+  </div>
+</section>
+"""
+
+
 # ---------------------------------------------------------------- pages
 def page_index():
     title = "MENU-MADE — Menus, Google and Websites for Local Restaurants"
@@ -428,6 +466,7 @@ def page_index():
   </div>
 </section>
 
+{mobile_app_premium("mobile-app-home-title")}
 <section class="section" aria-labelledby="how-title">
   <div class="container">
     <header class="section-head"><h2 id="how-title">How it works</h2><p>No calls to schedule. No passwords to share.</p></header>
@@ -493,11 +532,6 @@ def page_plans():
   <div class="mm-single-actions"><a class="cta-pill" href="services.html#{p['anchor']}">Details</a><a class="btn primary" data-plan-cta="{code}" data-cta-label="Start" href="contact.html?service={p['service']}">Start</a></div>
 </article>""" for code, p in ONCE.items()) + """
 <article class="mm-single">
-  <h3>Store App</h3><p>Your own app in the App Store and Google Play, with notifications and a rewards card.</p>
-  <p class="mm-single-price">""" + price("STORE_APP_SETUP") + """ <span class="mm-plus">then Website &amp; App Care</span></p>
-  <div class="mm-single-actions"><a class="cta-pill" href="store-app.html">Details</a><a class="btn primary" data-plan-cta="STORE_APP_SETUP" data-cta-label="Start" href="contact.html?plan=STORE_APP_SETUP">Start</a></div>
-</article>
-<article class="mm-single">
   <h3>Staff merch</h3><p>Your logo on staff shirts, aprons, caps, mugs and more, with mockups as you order.</p>
   <p class="mm-single-price">10% off 12+ items <span class="mm-plus">15% off 24+</span></p>
   <div class="mm-single-actions"><a class="cta-pill" href="services.html#staff-merch">Details</a><a class="btn primary" href="staff-merch.html">Order</a></div>
@@ -557,6 +591,7 @@ def page_plans():
   </div>
 </section>
 
+{mobile_app_premium("mobile-app-plans-title")}
 {team_and_design_block()}
 
 <section class="section menu-faq" id="faq" aria-labelledby="faq-title">
@@ -707,7 +742,7 @@ def page_services():
     desc = "Menu Care, Review Replies, Google Profile Care, Social Posts, Website &amp; App Care, Accessibility Monitoring, Guest App and one-time setups: what you get, what you provide and how it's delivered."
     monthly = "\n".join(product_section(c, p, "plan") for c, p in PLANS.items())
     once = "\n".join(product_section(c, p, "once") for c, p in ONCE.items())
-    jump = " · ".join(f'<a href="#{p["anchor"]}">{p["name"]}</a>' for p in list(PLANS.values()) + list(ONCE.values())) + ' · <a href="#staff-merch">Staff merch</a>'
+    jump = " · ".join(f'<a href="#{p["anchor"]}">{p["name"]}</a>' for p in list(PLANS.values()) + list(ONCE.values())) + ' · <a href="#staff-merch">Staff merch</a> · <a href="#mobile-app">Mobile App</a>'
     body = f"""<section class="hero mm-page-hero">
   <div class="container">
     <span class="pill">Services</span>
@@ -737,6 +772,7 @@ def page_services():
   </div>
 </section>
 
+{mobile_app_premium("mobile-app-services-title")}
 {team_and_design_block()}
 
 <section class="section" aria-label="Call to action">
@@ -815,7 +851,7 @@ def page_privacy():
 <li><strong>Email records</strong>: which service emails we sent you and whether they were delivered.</li>
 <li><strong>Guest Apps we run for businesses</strong>: when a guest turns on notifications in a business’s Guest App, we keep the address their phone’s push service gives us (from Google, Apple or Mozilla) so we can send that business’s notifications; turning notifications off removes it from sending. A rewards card is a random number kept on the guest’s phone, with the visits and rewards collected on it. We don’t ask guests for a name, email or phone number.</li>
 <li><strong>Your account</strong>: when you buy, we make an account for you with your email address; there is no password. To sign in, we email you a link that works once and expires in minutes. Signing in sets one cookie used only to keep you signed in to your account page for 30 days; it is not used for tracking or advertising. Signing out removes it.</li>
-<li><strong>Store Apps we build for businesses</strong>: when a guest allows notifications in a business’s app from the Apple App Store or Google Play, Apple or Google gives us a device address so we can send that business’s notifications. Turning notifications off, or deleting the app, stops them; we remove addresses Apple or Google tell us are no longer valid. The app’s rewards card works as in the Guest App: a random number kept on the guest’s phone, with the visits and rewards collected on it. The app is published under the business’s own Apple and Google developer accounts, with MENU-MADE added as a team member to build and update it, so each business is responsible for its own store listing and its own policies there.</li>
+<li><strong>Mobile Apps we build for businesses</strong>: when a guest allows notifications in a business’s app from the Apple App Store or Google Play, Apple or Google gives us a device address so we can send that business’s notifications. Turning notifications off, or deleting the app, stops them; we remove addresses Apple or Google tell us are no longer valid. The app’s rewards card works as in the Guest App: a random number kept on the guest’s phone, with the visits and rewards collected on it. The app is published under the business’s own Apple and Google developer accounts, with MENU-MADE added as a team member to build and update it, so each business is responsible for its own store listing and its own policies there.</li>
 <li><strong>Staff merch</strong>: for staff shirt orders we collect the shipping name and address, the sizes, and any logo you upload. The order is printed and shipped by Printful, which receives what it needs to do that. Sales tax is calculated on these orders.</li>
 <li><strong>Design services bought on ninobattaglia.com</strong>: social graphics, flyers, menu designs and logo wordmarks bought on ninobattaglia.com are produced and delivered by MENU-MADE using the same systems, so this policy covers them too.</li>
 </ul>
@@ -1001,9 +1037,9 @@ def page_start():
           <section class="service-choice-group" aria-labelledby="onceChoiceTitle">
             <h3 id="onceChoiceTitle">One-time services and staff merch</h3>
             {once_cards}
-            <article class="service-card mm-choice mm-choice-link" data-name="Store App">
-              <h3>Store App</h3><p>Your own app in the App Store and Google Play, with notifications and a rewards card. Checked out on its own.</p>
-              <div class="service-bottom"><span class="price">{price("STORE_APP_SETUP")}</span><a class="btn primary" href="store-app.html">See the Store App</a></div>
+            <article class="service-card mm-choice mm-choice-link" data-name="Mobile App">
+              <h3>Mobile App</h3><p>Your own app in the App Store and Google Play, with notifications and a rewards card. Checked out on its own.</p>
+              <div class="service-bottom"><span class="price">{price("STORE_APP_SETUP")}</span><a class="btn primary" href="store-app.html">See the Mobile App</a></div>
             </article>
             <article class="service-card mm-choice mm-choice-link" data-name="Staff merch">
               <h3>Staff merch</h3><p>Your logo on shirts, aprons, caps, mugs and more. Ordered on its own page, with mockups of your logo.</p>
@@ -1155,7 +1191,7 @@ def page_terms():
 
 
 def page_store_app():
-    """Stage 11 part 2: the Store App product page. Public since Nov 3, 2026 (owner approved the page; stage 11 exit
+    """Stage 11 part 2: the Mobile App product page. Public since Nov 3, 2026 (owner approved the page; stage 11 exit
     met): in the sitemap and linked from the plans page, the Start page and the Guest App details. Prices come from the
     catalog (STORE_APP_SETUP, STORE_APP_CARE); if the offers are ever taken off sale, site-catalog.js turns the buttons
     into "Opening soon · ask us" by itself."""
@@ -1166,10 +1202,10 @@ def page_store_app():
                  "Notifications to every guest who turns them on", "A rewards card: guests collect a visit with the code at your counter",
                  "Menu and specials changes reach the app with no store update"]
     body = f"""<section class="hero"><div class="container service-detail-hero"><div class="service-lead-copy">
-<span class="pill">Store App · premium</span><h1>Your business in the App Store and Google Play</h1>
+<span class="pill">Mobile App · premium</span><h1>Your business in the App Store and Google Play</h1>
 <p class="service-lead-intro">Your own app, under your business’s name, built from the details you give us. Guests download it from the stores, get your specials as notifications and collect rewards every visit.</p>
 <p class="service-price"><strong>{price("STORE_APP_SETUP")}</strong><span>one-time setup, then Website &amp; App Care at {price("STORE_APP_CARE", "month")} after a 90-day free trial</span></p>
-<div class="hero-actions"><a class="btn primary" data-plan-cta="STORE_APP_SETUP" data-cta-label="Start the Store App" href="contact.html?plan=STORE_APP_SETUP">Start the Store App</a><a class="btn ghost" href="contact.html#inquiry">Ask a question</a></div>
+<div class="hero-actions"><a class="btn primary" data-plan-cta="STORE_APP_SETUP" data-cta-label="Start the Mobile App" href="contact.html?plan=STORE_APP_SETUP">Start the Mobile App</a><a class="btn ghost" href="contact.html#inquiry">Ask a question</a></div>
 </div><aside class="service-profile-plan" aria-labelledby="checklist-title"><p class="service-eyebrow">What you get</p><h2 id="checklist-title">An app guests keep</h2><ul>{''.join(f'<li>{c}</li>' for c in checklist)}</ul></aside></div></section>
 <section class="section"><div class="container service-preparation"><div><h2>How it works</h2><ul class="service-preparation-list">
 <li>After checkout, one short form for your app: name, logo, colours, menu, hours and the reward you want (pre-filled if Menu-Made already has your details).</li>
@@ -1177,8 +1213,8 @@ def page_store_app():
 <li>We set up the app in both stores, build it, write the store listing and submit it. Part of this setup is done by hand on Apple’s and Google’s websites, because they require it.</li>
 <li>Apple and Google review the app, usually in 1 to 3 days. Most apps are live within 1 to 3 weeks of checkout, depending on how quickly the accounts are verified.</li>
 <li>Website &amp; App Care keeps it running: hosting, notifications, the rewards card, store upkeep and the yearly rebuilds Apple and Google require. Free for the first 90 days.</li>
-</ul></div><aside class="service-scope-note"><h3>Good to know</h3><p>Approval is decided by Apple and Google and isn’t guaranteed. If a store asks for changes, we make them and resubmit.</p><p>The app lives in your own developer accounts, so it stays yours. If you cancel Website &amp; App Care, the apps stay in your accounts but notifications and rewards stop, and the app shows your web menu.</p><p>Online ordering inside the app isn’t included: the app links to the ordering you already use.</p><p>Want something simpler? The <a href="services.html#guest-app">Guest App</a> installs from your link or QR code, with notifications and rewards too, and needs no store accounts.</p></aside></div></section>
-<section class="section"><div class="container cta"><div><h2>Ready for your own app?</h2><p>Checkout asks only what we need. Your next step arrives by email right after payment.</p></div><div class="cta-actions"><a class="btn primary" data-plan-cta="STORE_APP_SETUP" data-cta-label="Start the Store App" href="contact.html?plan=STORE_APP_SETUP">Start the Store App</a><a class="btn ghost" href="plans.html">See all plans</a></div></div></section>
+</ul></div><aside class="service-scope-note"><h3>Good to know</h3><p>Want something simpler first? The <a href="services.html#guest-app">Guest App</a> installs from your link or QR code, with no app store: {price("GUEST_APP", "month")} plus {price("GUEST_APP_SETUP")} setup.</p><p>Approval is decided by Apple and Google and isn’t guaranteed. If a store asks for changes, we make them and resubmit.</p><p>The app lives in your own developer accounts, so it stays yours. If you cancel Website &amp; App Care, the apps stay in your accounts but notifications and rewards stop, and the app shows your web menu.</p><p>Online ordering inside the app isn’t included: the app links to the ordering you already use.</p><p>Want something simpler? The <a href="services.html#guest-app">Guest App</a> installs from your link or QR code, with notifications and rewards too, and needs no store accounts.</p></aside></div></section>
+<section class="section"><div class="container cta"><div><h2>Ready for your own app?</h2><p>Checkout asks only what we need. Your next step arrives by email right after payment.</p></div><div class="cta-actions"><a class="btn primary" data-plan-cta="STORE_APP_SETUP" data-cta-label="Start the Mobile App" href="contact.html?plan=STORE_APP_SETUP">Start the Mobile App</a><a class="btn ghost" href="plans.html">See all plans</a></div></div></section>
 """
     return head(title, desc, path, "service-detail-page") + body + foot()
 

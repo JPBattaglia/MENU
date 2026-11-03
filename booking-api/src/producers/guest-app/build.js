@@ -58,7 +58,7 @@ function iconSpecs(app, { hasLogo }) {
   });
 }
 
-// The Store App's 1024 px icons (stage 11 part 2): a full square, no transparency and no rounded corners (Apple and
+// The Mobile App's 1024 px icons (stage 11 part 2): a full square, no transparency and no rounded corners (Apple and
 // Google round it themselves). pad 0.14 = the store icon (like the Apple touch icon); pad 0.24 = the Android adaptive
 // icon's foreground, whose logo must stay inside the 66 of 108 dp every launcher mask keeps.
 function storeIconSvg(app, { hasLogo, pad = 0.14 }) {

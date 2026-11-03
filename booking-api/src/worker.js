@@ -326,7 +326,7 @@ var worker_default = {
 
 // The Guest App's own API (notifications and rewards) is the only place on a customer address that takes a POST.
 const APP_API_PATH = /^app\/api\//;
-// OPTIONS reaches it too: the Store App (stage 11 part 2) asks before posting to rewards (guest-app/native.js).
+// OPTIONS reaches it too: the Mobile App (stage 11 part 2) asks before posting to rewards (guest-app/native.js).
 const methodAllowed = (request, path) => request.method === "GET" || request.method === "HEAD" || ((request.method === "POST" || request.method === "OPTIONS") && APP_API_PATH.test(path || ""));
 
 // One slug serves the website at / and the Guest App at /app/. A slug with only an app opens the app from its root.
@@ -388,12 +388,12 @@ const mmWorkerWithBooking = {
       await sendQueuedPushes(env).catch((error) => console.error("Guest App notifications failed:", error instanceof Error ? error.message : String(error)));
       await nudgeNativePushes(env).catch((error) => console.error("Native push nudge failed:", error instanceof Error ? error.message : String(error)));
       await sendAndroidPushes(env).catch((error) => console.error("Android notifications failed:", error instanceof Error ? error.message : String(error)));
-      await advanceStoreApps(env).catch((error) => console.error("Store App steps failed:", error instanceof Error ? error.message : String(error)));
-      await scheduleYearlyRebuilds(env).catch((error) => console.error("Store App yearly rebuilds failed:", error instanceof Error ? error.message : String(error)));
-      await advanceStoreBuilds(env).catch((error) => console.error("Store App builds failed:", error instanceof Error ? error.message : String(error)));
-      await advanceStoreListings(env).catch((error) => console.error("Store App listings failed:", error instanceof Error ? error.message : String(error)));
+      await advanceStoreApps(env).catch((error) => console.error("Mobile App steps failed:", error instanceof Error ? error.message : String(error)));
+      await scheduleYearlyRebuilds(env).catch((error) => console.error("Mobile App yearly rebuilds failed:", error instanceof Error ? error.message : String(error)));
+      await advanceStoreBuilds(env).catch((error) => console.error("Mobile App builds failed:", error instanceof Error ? error.message : String(error)));
+      await advanceStoreListings(env).catch((error) => console.error("Mobile App listings failed:", error instanceof Error ? error.message : String(error)));
       await advanceGuestAppPushSelfTests(env, app).catch((error) => console.error("Guest App push self-test failed:", error instanceof Error ? error.message : String(error)));
-      await advanceStoreAppSelfTests(env).catch((error) => console.error("Store App self-test failed:", error instanceof Error ? error.message : String(error)));
+      await advanceStoreAppSelfTests(env).catch((error) => console.error("Mobile App self-test failed:", error instanceof Error ? error.message : String(error)));
       await advanceGuestAppSelfTests(env, app).catch((error) => console.error("Guest App self-test failed:", error instanceof Error ? error.message : String(error)));
       await advanceGoogleSelfTests(env).catch((error) => console.error("Google self-test failed:", error instanceof Error ? error.message : String(error)));
       await advanceReviewRepliesSelfTests(env, app).catch((error) => console.error("Review Replies self-test failed:", error instanceof Error ? error.message : String(error)));

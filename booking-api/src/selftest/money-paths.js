@@ -7,6 +7,9 @@
 //   3. Webhook: the live endpoint for https://menu-made.com/api/stripe-webhook exists, is enabled and listens to
 //      every event the worker needs.
 //   4. Deliveries: no live event from the last 3 days (older than an hour) failed to reach the webhook.
+//   5. Names: the Stripe products listed in PRODUCT_NAMES carry the name buyers see on the site (Stripe shows it on
+//      the checkout page). A product renamed on the site (Store App became Mobile App, Nov 3, 2026) is renamed in
+//      Stripe here, once; only the products listed are touched.
 // The Nino shop's own Stripe account is checked by its worker's self-check (listed under "Checked elsewhere").
 // The result is a self_tests row (MONEY_PATHS): on the coverage map and in the daily failure-only email.
 // Start one now by inserting a self_tests row with kind MONEY_PATHS and status REQUESTED.
@@ -20,6 +23,7 @@ const WEBHOOK_URL = "https://menu-made.com/api/stripe-webhook";
 const NEEDED_EVENTS = ["checkout.session.completed", "invoice.paid", "invoice.payment_failed",
   "customer.subscription.created", "customer.subscription.updated", "customer.subscription.deleted"];
 const INTERVAL = { MONTH: "month", YEAR: "year" };
+const PRODUCT_NAMES = { STORE_APP_SETUP: "Mobile App Setup" };
 
 async function maybeScheduleDaily(env, now = dailyClock(env)) {
   if (!now) return;
@@ -93,6 +97,20 @@ async function checkMoneyPaths(env, stripe, now = Date.now()) {
   const failed = (await stripe("/v1/events", { params: [["delivery_success", "false"], ["created[gte]", String(Math.floor(now / 1000) - 3 * 86400)], ["created[lte]", String(Math.floor(now / 1000) - 3600)], ["limit", "20"]] })).data || [];
   if (failed.length) problems.push(`Webhook: ${failed.length} live event${failed.length === 1 ? "" : "s"} didn't reach the worker (e.g. ${failed.slice(0, 3).map((e) => `${e.type} ${e.id}`).join(", ")})`);
   else notes.push("no failed webhook deliveries in 3 days");
+  // 5. Names.
+  for (const [code, name] of Object.entries(PRODUCT_NAMES)) {
+    const row = await env.DB.prepare(`
+        SELECT v.stripe_product_id FROM offers o JOIN offer_versions v ON v.offer_id = o.id WHERE o.code = ? AND v.status = 'ACTIVE' AND v.stripe_product_id IS NOT NULL LIMIT 1
+      `).bind(code).first();
+    if (!row) continue;
+    try {
+      const product = await stripe(`/v1/products/${row.stripe_product_id}`);
+      if (product?.name !== name) {
+        await stripe(`/v1/products/${row.stripe_product_id}`, { method: "POST", params: [["name", name]] });
+        notes.push(`${code}: Stripe product renamed to ${name}`);
+      }
+    } catch (e) { problems.push(`${code}: couldn't check the Stripe product name (${String(e?.message || e).slice(0, 120)})`); }
+  }
   return { problems, notes };
 }
 

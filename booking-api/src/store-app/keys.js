@@ -70,7 +70,7 @@ const status = (ok) => (ok === true ? "VERIFIED" : ok === false ? "FAILED" : "UN
 const mark = (ok) => (ok === true ? "✅" : ok === false ? "❌" : "⚠️");
 
 function formPage(token, error) {
-  return simplePage(error ? 400 : 200, "Apple keys for Store App builds", `${error ? `<p style="color:#a11"><strong>${escapeHtml(error)}</strong></p>` : ""}
+  return simplePage(error ? 400 : 200, "Apple keys for Mobile App builds", `${error ? `<p style="color:#a11"><strong>${escapeHtml(error)}</strong></p>` : ""}
 <p>Already uploaded? Leave both file boxes empty and press <strong>Check and save</strong> to check the saved keys again.</p>
 <p>These let Menu-made upload test builds to TestFlight and send push notifications for your test app (<strong>${OWNER_BUNDLE_ID}</strong>). Both files are in your Downloads folder, named <code>AuthKey_…p8</code>. You can send one now and the other later.</p>
 <form method="post" action="/api/store-keys/owner" enctype="multipart/form-data">
@@ -92,8 +92,8 @@ async function emailLink(env) {
   const bucket = Math.floor(Date.now() / 600000); // at most one email per 10 minutes
   const sent = await sendTransactionalEmail(env, {
     to: inbox,
-    subject: "Upload your Apple keys for Store App builds",
-    html: brandedEmailHtml({ preheader: "One-hour link to hand over the Apple keys.", eyebrow: "STORE APP", heading: "Upload your Apple keys",
+    subject: "Upload your Apple keys for Mobile App builds",
+    html: brandedEmailHtml({ preheader: "One-hour link to hand over the Apple keys.", eyebrow: "MOBILE APP", heading: "Upload your Apple keys",
       paragraphs: ["Open this link on the Mac that has the two AuthKey .p8 files in Downloads. It works for one hour.", "If you didn't ask for this, ignore it."],
       buttons: [{ label: "Upload keys", url: link, primary: true }] }),
     text: `Upload your Apple keys (link works for one hour):\n${link}`,
@@ -152,7 +152,7 @@ async function handleStoreKeys(request, env, { fetchImpl = fetch } = {}) {
   const url = new URL(request.url);
   const isUpload = request.method === "POST" && /multipart\/form-data/i.test(request.headers.get("Content-Type") || "");
   if (request.method === "GET" && !url.searchParams.get("t")) {
-    return simplePage(200, "Apple keys for Store App builds", `<p>We'll email a one-hour link to <strong>${escapeHtml(ownerEmailAddress(env))}</strong>.</p>
+    return simplePage(200, "Apple keys for Mobile App builds", `<p>We'll email a one-hour link to <strong>${escapeHtml(ownerEmailAddress(env))}</strong>.</p>
 <form method="post" action="/api/store-keys/owner"><button type="submit">Email me the link</button></form>`);
   }
   if (request.method === "POST" && !isUpload) return emailLink(env);

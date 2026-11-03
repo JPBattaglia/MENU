@@ -7,9 +7,9 @@
 //   -> cancel the test subscription in Stripe -> the cancel syncs back.
 // Start one by inserting a self_tests row with kind WEBSITE_TRIAL_RUN and status REQUESTED. Only a failure emails the
 // owner. Everything it creates is cancelled at the end (and on failure).
-// Stage 11 part 2: kind STORE_APP_TRIAL_RUN does the same for the Store App: Store App Setup checkout ($999, nothing
+// Stage 11 part 2: kind STORE_APP_TRIAL_RUN does the same for the Mobile App: Mobile App Setup checkout ($999, nothing
 // charged for the app tier) -> Website & App Care (app tier) TRIALING 90 days with an active STORE_APP_CARE entitlement,
-// the Store App project created and its intake started -> cancel -> synced.
+// the Mobile App project created and its intake started -> cancel -> synced.
 import { ownerEmailAddress, publicBaseUrl } from "../lib/config.js";
 import { SELF_TEST_EMAIL, brandedEmailHtml, sendTransactionalEmail } from "../lib/email.js";
 import { nowIso, parseJsonOrNull } from "../lib/http.js";
@@ -20,10 +20,10 @@ const KIND = "WEBSITE_TRIAL_RUN";
 // What each kind buys and expects. Same steps, same safety guards.
 const RUNS = {
   WEBSITE_TRIAL_RUN: { item: "WEBSITE_PACKAGE", plan: "WEBSITE_CARE", cents: 49900, workflow: "WEBSITE_PACKAGE_V1", entitlement: "WEBSITE_CARE", careCents: 4900, product: "Website Package", care: "Website & App Care", business: "Trial Self-Test Cafe" },
-  STORE_APP_TRIAL_RUN: { item: "STORE_APP_SETUP", plan: "STORE_APP_CARE", cents: 99900, workflow: "STORE_APP_SETUP_V1", entitlement: "STORE_APP_CARE", careCents: 9900, product: "Store App", care: "Website & App Care (app tier)", business: "Store Trial Self-Test Cafe" }
+  STORE_APP_TRIAL_RUN: { item: "STORE_APP_SETUP", plan: "STORE_APP_CARE", cents: 99900, workflow: "STORE_APP_SETUP_V1", entitlement: "STORE_APP_CARE", careCents: 9900, product: "Mobile App", care: "Website & App Care (app tier)", business: "Store Trial Self-Test Cafe" }
 };
 const runOf = (test) => RUNS[test.kind] || RUNS[KIND];
-// Daily (stage 12: every offer's self-test runs daily): the website trial at 1:20pm Pacific, the Store App trial at
+// Daily (stage 12: every offer's self-test runs daily): the website trial at 1:20pm Pacific, the Mobile App trial at
 // 1:40pm, each from its minute until the end of that 20-minute slot.
 const DAILY = { WEBSITE_TRIAL_RUN: [20, 20], STORE_APP_TRIAL_RUN: [20, 40] };
 

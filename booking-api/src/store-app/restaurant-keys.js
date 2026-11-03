@@ -1,4 +1,4 @@
-// Stage 11 part 2: each restaurant's keys for its Store App, handed over by the owner with nothing to remember.
+// Stage 11 part 2: each restaurant's keys for its Mobile App, handed over by the owner with nothing to remember.
 // The restaurant has invited Menu-made (the owner inbox) as Admin in its App Store Connect and Play Console; the owner
 // makes the restaurant's keys there and uploads them here. Same pattern as the owner's own pages (keys.js, google-keys.js).
 //   GET  /api/store-keys/app/<store app id>        what's saved, what's missing, and "Email me the upload link"
@@ -26,7 +26,7 @@ const LINK_KIND = "storekeys-app";
 const LINK_TTL_DAYS = 1 / 24;
 const MAX_FILE_BYTES = 16384;
 
-// The owner's own test app (Sample Cafe, com.menumade.samplecafe) is the test restaurant: a Store App with that bundle
+// The owner's own test app (Sample Cafe, com.menumade.samplecafe) is the test restaurant: a Mobile App with that bundle
 // id uses the owner's keys, so the whole per-restaurant path can be proven on the owner's accounts.
 const storeScope = (storeApp) => (storeApp?.bundle_id === OWNER_BUNDLE_ID ? OWNER : storeApp?.business_id || null);
 
@@ -111,7 +111,7 @@ async function emailLink(env, storeApp) {
   const sent = await sendTransactionalEmail(env, {
     to: inbox,
     subject: `Upload the store keys for ${storeApp.appName}`,
-    html: brandedEmailHtml({ preheader: "One-hour link to hand over the restaurant's keys.", eyebrow: "STORE APP", heading: `Keys for ${storeApp.appName}`,
+    html: brandedEmailHtml({ preheader: "One-hour link to hand over the restaurant's keys.", eyebrow: "MOBILE APP", heading: `Keys for ${storeApp.appName}`,
       paragraphs: ["Open this link on the Mac that has the two AuthKey .p8 files and google-services.json in Downloads. It works for one hour.", "If you didn't ask for this, ignore it."],
       buttons: [{ label: "Upload keys", url: link, primary: true }], rows: [["App", storeApp.bundle_id]] }),
     text: `Upload the keys for ${storeApp.appName} (link works for one hour):\n${link}`,
@@ -142,9 +142,9 @@ async function checkPlayAccess(env, storeApp, scope, fetchImpl) {
 async function handleRestaurantKeys(request, env, id, { fetchImpl = fetch } = {}) {
   if (!env.DB || !env.ASSETS) return simplePage(503, "Temporarily unavailable", "<p>Please try again in a minute.</p>");
   const storeApp = await loadStoreApp(env, id);
-  if (!storeApp) return simplePage(404, "Not found", "<p>This Store App doesn't exist.</p>");
+  if (!storeApp) return simplePage(404, "Not found", "<p>This Mobile App doesn't exist.</p>");
   const scope = storeScope(storeApp);
-  if (!scope) return simplePage(409, "Can't take keys yet", "<p>This Store App has no restaurant record. Reply to the setup email and Claude will look.</p>");
+  if (!scope) return simplePage(409, "Can't take keys yet", "<p>This Mobile App has no restaurant record. Reply to the setup email and Claude will look.</p>");
   const expired = () => simplePage(403, "This link has expired", `<p>Open <a href="/api/store-keys/app/${escapeHtml(id)}">the key page</a> again to get a fresh one.</p>`);
   const url = new URL(request.url);
   const isUpload = request.method === "POST" && /multipart\/form-data/i.test(request.headers.get("Content-Type") || "");

@@ -1,4 +1,4 @@
-// Stage 11 part 2: each restaurant's Store App build, started by the worker.
+// Stage 11 part 2: each restaurant's Mobile App build, started by the worker.
 //
 //   READY_TO_BUILD  the 5-minute tick starts .github/workflows/store-app-build.yml through the GitHub API with
 //                   store_app=<id>, upload ticked, both platforms (GITHUB_DISPATCH_TOKEN, as the renderer) -> BUILDING
@@ -59,12 +59,12 @@ async function buildTarget(request, env) {
   const params = new URL(request.url).searchParams;
   const id = String(params.get("store_app") || "").toLowerCase();
   if (id) {
-    if (!UUID.test(id)) return { error: json({ ok: false, error: "Unknown Store App" }, 404) };
+    if (!UUID.test(id)) return { error: json({ ok: false, error: "Unknown Mobile App" }, 404) };
     const storeApp = await env.DB.prepare(`SELECT * FROM store_apps WHERE id = ?`).bind(id).first();
-    if (!storeApp) return { error: json({ ok: false, error: "Unknown Store App" }, 404) };
-    if (!BUILDABLE.has(storeApp.status)) return { error: json({ ok: false, error: `This Store App isn't ready to build (${storeApp.status})` }, 409) };
+    if (!storeApp) return { error: json({ ok: false, error: "Unknown Mobile App" }, 404) };
+    if (!BUILDABLE.has(storeApp.status)) return { error: json({ ok: false, error: `This Mobile App isn't ready to build (${storeApp.status})` }, 409) };
     const scope = storeScope(storeApp);
-    if (!scope) return { error: json({ ok: false, error: "This Store App has no restaurant record" }, 409) };
+    if (!scope) return { error: json({ ok: false, error: "This Mobile App has no restaurant record" }, 409) };
     return { scope, packageId: storeApp.bundle_id, storeApp };
   }
   if ((params.get("scope") || OWNER) !== OWNER) return { error: json({ ok: false, error: "Unknown scope" }, 404) };
@@ -146,8 +146,8 @@ async function alertBuildProblem(env, storeApp, heading, detail, runId) {
   await env.DB.prepare(`UPDATE store_apps SET last_email_at = ?, note = ? WHERE id = ?`).bind(nowIso(), String(detail).slice(0, 200), storeApp.id).run();
   return sendTransactionalEmail(env, {
     to: ownerEmailAddress(env),
-    subject: `Store App build needs a look: ${name}`,
-    html: brandedEmailHtml({ preheader: heading, eyebrow: "STORE APP", heading, paragraphs, rows: [["App", storeApp.bundle_id]],
+    subject: `Mobile App build needs a look: ${name}`,
+    html: brandedEmailHtml({ preheader: heading, eyebrow: "MOBILE APP", heading, paragraphs, rows: [["App", storeApp.bundle_id]],
       buttons: [{ label: "Build again", url: link, primary: true }, { label: "Build log", url: runLink }] }),
     text: `${heading}\n\n${paragraphs.join("\n\n")}\n\nBuild again: ${link}\nBuild log: ${runLink}`,
     idempotencyKey: `store-build-alert/${storeApp.id}/${runId || storeApp.updated_at}/${heading.length}`, purpose: "OWNER_ACTION", templateKey: "store_build_alert_v1"
@@ -202,7 +202,7 @@ async function dispatchBuild(env, storeApp) {
     });
     status = response.status;
   } catch (error) {
-    console.error("Store App build start failed:", error instanceof Error ? error.message : String(error));
+    console.error("Mobile App build start failed:", error instanceof Error ? error.message : String(error));
   }
   return { started: status === 204, status };
 }
@@ -219,10 +219,10 @@ async function advanceStoreBuilds(env, now = Date.now(), { only = null } = {}) {
       const result = await dispatchBuild(env, row);
       if (!result.started) {
         await env.DB.prepare(`UPDATE store_apps SET note = ? WHERE id = ?`).bind(`Build start refused: HTTP ${result.status}`, row.id).run();
-        await dispatchRefused(env, result.status, "a Store App build", now).catch(() => null);
+        await dispatchRefused(env, result.status, "a Mobile App build", now).catch(() => null);
         // Refused for an hour for any other reason: one alert for this build (Stage 12, task 7).
         if (![401, 403, 404].includes(result.status) && now - Date.parse(row.updated_at) > 3600000 && !(row.last_email_at && row.last_email_at >= row.updated_at)) {
-          await alertBuildProblem(env, row, "A Store App build couldn't start", `GitHub has refused to start this build for over an hour (last answer: HTTP ${result.status || "no response"}). It keeps trying every 5 minutes.`, null);
+          await alertBuildProblem(env, row, "A Mobile App build couldn't start", `GitHub has refused to start this build for over an hour (last answer: HTTP ${result.status || "no response"}). It keeps trying every 5 minutes.`, null);
         }
         continue;
       }
@@ -231,7 +231,7 @@ async function advanceStoreBuilds(env, now = Date.now(), { only = null } = {}) {
       started++;
     } else if (now - Date.parse(row.updated_at) > BUILD_TIMEOUT_MS && !(row.last_email_at && row.last_email_at >= row.updated_at)) {
       // One alert per build: a failed platform already sent one (last_email_at after the start).
-      await alertBuildProblem(env, row, "A Store App build hasn't reported back", "The build started over 2 hours ago and hasn't reported a result.", null);
+      await alertBuildProblem(env, row, "A Mobile App build hasn't reported back", "The build started over 2 hours ago and hasn't reported a result.", null);
     }
   }
   return { started };
@@ -241,7 +241,7 @@ async function advanceStoreBuilds(env, now = Date.now(), { only = null } = {}) {
 // Apple and Google keep raising the SDK an app must be built with, so an app in the stores is rebuilt every year: a LIVE
 // app whose last version went live a year ago, with an active app-tier plan (STORE_APP_CARE), goes back to
 // READY_TO_BUILD by itself. From there it is the normal path: build (one patch version up), the owner's listing
-// preview, submission, review. Checked once a day (16:00-16:04 UTC tick); the Store App "Making" switch pauses it.
+// preview, submission, review. Checked once a day (16:00-16:04 UTC tick); the Mobile App "Making" switch pauses it.
 const YEARLY_MS = 365 * 86400000;
 
 async function scheduleYearlyRebuilds(env, now = Date.now(), { force = false } = {}) {
@@ -260,7 +260,7 @@ async function scheduleYearlyRebuilds(env, now = Date.now(), { force = false } =
     const r = await env.DB.prepare(`UPDATE store_apps SET status = 'READY_TO_BUILD', note = 'Yearly rebuild', updated_at = ? WHERE id = ? AND status = 'LIVE'`).bind(nowIso(), id).run();
     queued += r.meta?.changes || 0;
   }
-  if (queued) console.log(`Store App yearly rebuilds queued: ${queued}`);
+  if (queued) console.log(`Mobile App yearly rebuilds queued: ${queued}`);
   return { queued };
 }
 

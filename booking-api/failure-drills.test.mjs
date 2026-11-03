@@ -1,6 +1,6 @@
 // Stage 12, task 7: failure drills. Each failure must reach the owner as one alert with one action.
 // Here: Resend down (the GitHub fallback), GitHub refusing a job, and D1 near its daily limit. Elsewhere:
-// Store App builds refused (store-app-build.test.mjs), Apple and Firebase keys refused (store-app-push.test.mjs,
+// Mobile App builds refused (store-app-build.test.mjs), Apple and Firebase keys refused (store-app-push.test.mjs,
 // store-app-android.test.mjs), Stripe webhook retries (subscriptions.test.mjs duplicate event, webhook-retry.test.mjs).
 // Run: node --no-warnings --test booking-api/failure-drills.test.mjs
 import { test } from 'node:test';
@@ -72,7 +72,7 @@ test('Resend down: a failed owner alert goes through GitHub at once; a success r
 test('GitHub refusing a job: one email a day for a token problem, none for a short outage', async () => {
   const f = setup({ resend: 200 });
   const now = Date.parse('2026-11-01T10:00:00Z');
-  const run = (status, at) => (async () => { const o = globalThis.fetch; globalThis.fetch = async (url, init) => { f.sent.push(JSON.parse(init.body)); return Response.json({ id: 'e' }); }; try { return await dispatchRefused(f.env, status, 'a Store App build', at); } finally { globalThis.fetch = o; } })();
+  const run = (status, at) => (async () => { const o = globalThis.fetch; globalThis.fetch = async (url, init) => { f.sent.push(JSON.parse(init.body)); return Response.json({ id: 'e' }); }; try { return await dispatchRefused(f.env, status, 'a Mobile App build', at); } finally { globalThis.fetch = o; } })();
   await run(502, now);
   assert.equal(f.sent.length, 0);
   await run(401, now);

@@ -1,4 +1,4 @@
-// Stage 11 part 2: the Store App as a product, after checkout.
+// Stage 11 part 2: the Mobile App as a product, after checkout.
 //
 // STORE_APP_SETUP_V1 PRODUCE is the Guest App build (same intake form, same content: the native app reads it from
 // <app>/api/content), approved by the owner like a Guest App. That step also opens a store_apps row (migration 0025),
@@ -78,7 +78,7 @@ async function emailBuyer(env, storeApp, context, reminder) {
   return sendTransactionalEmail(env, {
     to: context.customer_email,
     subject: reminder ? `Reminder: set up your store accounts for ${appName}` : `Next step for ${appName}: your App Store and Google Play accounts`,
-    html: brandedEmailHtml({ preheader: "Two developer accounts and two invites, then we take it from there.", eyebrow: "STORE APP", heading: "Set up your store accounts", paragraphs: steps, buttons: [{ label: "I've sent both invites", url: link, primary: true }] }),
+    html: brandedEmailHtml({ preheader: "Two developer accounts and two invites, then we take it from there.", eyebrow: "MOBILE APP", heading: "Set up your store accounts", paragraphs: steps, buttons: [{ label: "I've sent both invites", url: link, primary: true }] }),
     text: `${steps.map((p) => p.replace(/<[^>]+>/g, "").replace(/&amp;/g, "&")).join("\n\n")}\n\nWhen both invites are sent: ${link}`,
     idempotencyKey: `store-app-buyer/${storeApp.id}/${storeApp.reminders}`, purpose: "ONBOARDING", templateKey: "store_app_accounts_v1",
     context: { customerId: context.customer_id, businessId: context.business_id, orderId: context.order_id, projectId: context.id }
@@ -93,7 +93,7 @@ async function emailOwner(env, storeApp, context, reminder) {
   const privacy = `${publicBaseUrl(env)}/privacy.html`;
   const rows = [["Restaurant", context.business_name || "-"], ["App name", appName], ["Bundle id / package name", storeApp.bundle_id], ["Content", `${slug}.menu-made.com/app`], ["Support URL", support], ["Privacy policy URL", privacy]];
   const steps = [
-    `${escapeHtml(context.business_name || "A restaurant")} sent the store invites for ${escapeHtml(appName)}. These are the steps Apple and Google only allow on their websites (the hands-on part of the Store App, about 30-60 minutes).`,
+    `${escapeHtml(context.business_name || "A restaurant")} sent the store invites for ${escapeHtml(appName)}. These are the steps Apple and Google only allow on their websites (the hands-on part of the Mobile App, about 30-60 minutes).`,
     "1. Accept both invites (App Store Connect email from Apple, Play Console email from Google).",
     `2. Make the restaurant's keys and hand them over on the key page (it lists every click and emails you a one-hour upload link): <a href="${keysPage}">${escapeHtml(keysPage)}</a>. Apple App ID <strong>${escapeHtml(storeApp.bundle_id)}</strong> with Push Notifications, a push key and an App Store Connect API key (Admin) in the restaurant's team; the Android app <strong>${escapeHtml(storeApp.bundle_id)}</strong> in Menu-made's Firebase project; Menu-made's Play account invited in the restaurant's Play Console.`,
     `3. App Store Connect: New App, name ${escapeHtml(appName)}, bundle id ${escapeHtml(storeApp.bundle_id)}, SKU ${escapeHtml(storeApp.bundle_id)}. App Privacy: the app collects no name, email or phone number; rewards use a random card number kept on the phone; notifications use Apple's device token. Age Rating: answer None / No throughout (a restaurant's menu; if the menu lists alcohol, answer the alcohol question as Infrequent/Mild). Pricing and Availability: Free, all countries.`,
@@ -102,8 +102,8 @@ async function emailOwner(env, storeApp, context, reminder) {
   ];
   return sendTransactionalEmail(env, {
     to: ownerEmailAddress(env),
-    subject: reminder ? `Reminder: store setup for ${appName}` : `Store App: hands-on setup for ${appName}`,
-    html: brandedEmailHtml({ preheader: "The website-only steps for a new Store App.", eyebrow: "STORE APP", heading: `Set up ${appName} in the stores`, paragraphs: steps, rows, buttons: [{ label: "Done", url: link, primary: true }] }),
+    subject: reminder ? `Reminder: store setup for ${appName}` : `Mobile App: hands-on setup for ${appName}`,
+    html: brandedEmailHtml({ preheader: "The website-only steps for a new Mobile App.", eyebrow: "MOBILE APP", heading: `Set up ${appName} in the stores`, paragraphs: steps, rows, buttons: [{ label: "Done", url: link, primary: true }] }),
     text: `${steps.map((p) => p.replace(/<[^>]+>/g, "").replace(/&amp;/g, "&")).join("\n")}\n\n${rows.map(([k, v]) => `${k}: ${v}`).join("\n")}\n\nDone: ${link}`,
     idempotencyKey: `store-app-owner/${storeApp.id}/${storeApp.reminders}`, purpose: "OWNER_ACTION", templateKey: "store_app_owner_setup_v1"
   });

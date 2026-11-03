@@ -138,20 +138,23 @@ test('store steps: buyer checklist after approval, reminders, buyer Done -> owne
   assert.equal((await call(f, `https://menu-made.com/api/store-app/${id}/done?t=bad`)).status, 403);
 });
 
-test('site: the Store App page exists but stays hidden until the exit (noindex, linked from nowhere, prices from the catalog)', () => {
-  const { readdirSync } = fs;
+test('site: the Mobile App page is public (owner, Nov 3), paired with the Guest App, prices from the catalog', () => {
   const root = new URL('../', import.meta.url);
   const page = readFileSync(new URL('store-app.html', root), 'utf8');
-  assert.match(page, /<meta name="robots" content="noindex">/);
+  assert.doesNotMatch(page, /noindex/);
+  assert.doesNotMatch(page, /Store App|restaurant/i, 'customer wording is Mobile App and business');
   assert.match(page, /data-price-for="STORE_APP_SETUP"/);
   assert.match(page, /data-price-for="STORE_APP_CARE" data-price-interval="month"/);
-  assert.match(page, /data-plan-cta="STORE_APP_SETUP"/, 'the button reads "Opening soon" while the offer is not on sale');
+  assert.match(page, /data-plan-cta="STORE_APP_SETUP"/);
   assert.match(page, /isn’t guaranteed/);
+  assert.match(page, /href="services.html#guest-app"/, 'links down to the Guest App');
   assert.doesNotMatch(page, /\$(999|99\/mo|990)/, 'no hard-coded Menu-made prices (Apple and Google fees are theirs)');
-  for (const f of readdirSync(root).filter((n) => n.endsWith('.html') && n !== 'store-app.html')) {
-    assert.doesNotMatch(readFileSync(new URL(f, root), 'utf8'), /store-app\.html/, `${f} links the hidden page`);
+  for (const f of ['index.html', 'plans.html', 'services.html']) {
+    const html = readFileSync(new URL(f, root), 'utf8');
+    assert.match(html, /id="mobile-app"/, `${f} has the apps section`);
+    assert.match(html, /data-plan-cta="GUEST_APP"[\s\S]*data-plan-cta="STORE_APP_SETUP"/, `${f} pairs Guest App and Mobile App`);
   }
-  assert.doesNotMatch(readFileSync(new URL('sitemap.xml', root), 'utf8'), /store-app/);
+  assert.match(readFileSync(new URL('sitemap.xml', root), 'utf8'), /menu-made\.com\/store-app</);
 });
 
 test('self-test STORE_APP_RUN passes through the real steps, reaches no store or GitHub, emails only the test inbox, and leaves nothing behind', async () => {

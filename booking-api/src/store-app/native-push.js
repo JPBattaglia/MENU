@@ -1,4 +1,4 @@
-// Stage 11 part 2: native push notifications for the Store App (iOS through a GitHub job, Android from the worker).
+// Stage 11 part 2: native push notifications for the Mobile App (iOS through a GitHub job, Android from the worker).
 //
 // Why a GitHub job: Apple's push service (APNs) speaks HTTP/2 only and Worker fetches don't (the push key check got
 // Cloudflare 520, Oct 29, 2026). So, like the Social Posts renderer, the worker parks the work and a GitHub Actions
@@ -9,7 +9,7 @@
 // Android: Firebase Cloud Messaging is plain HTTPS, so the worker sends Android notifications itself from the 5-minute
 // schedule (android_push_jobs, migration 0024) with the Firebase service account from the Google files page.
 //
-// Phone side (Store App, from capacitor://localhost or https://localhost; routed through engage.js handleAppApi):
+// Phone side (Mobile App, from capacitor://localhost or https://localhost; routed through engage.js handleAppApi):
 //   POST <app>/api/push/native     { platform: "ios" | "android", token, bundle_id, environment }
 // GitHub job side (Bearer <GitHub OIDC token, audience menu-made-native-push>, manual runs of native-push.yml on master):
 //   GET  /api/native-push/next      claims the oldest waiting batch: { job: { id, claim, title, body, tag, devices }, apple }
@@ -124,7 +124,7 @@ async function nudgeNativePushes(env, now = Date.now()) {
   let alerted = 0;
   for (const job of pending.filter((j) => j.created_at < iso(STALE_MINUTES) && !j.alerted_at).slice(0, 3)) {
     if (await alertOwner(env, job.id, "Notifications are waiting to be sent", [
-      "A Store App notification has waited over an hour because the GitHub sender hasn't run.",
+      "A Mobile App notification has waited over an hour because the GitHub sender hasn't run.",
       "Open the JPBattaglia/MENU repository on GitHub, go to Actions, choose \"Native push\" and click \"Run workflow\". If the workflow shows as disabled, enable it first."
     ])) alerted++;
   }
@@ -204,8 +204,8 @@ async function failJob(env, jobId, note, scope = null) {
   await env.DB.prepare(`UPDATE native_push_jobs SET status = 'FAILED', note = ?, claim_id = NULL, updated_at = ?, finished_at = ? WHERE id = ?`).bind(note, t, t, jobId).run();
   // One alert a day per key, however many notifications it stops (Stage 12, task 7).
   if (scope && !(await alertOnce(env, `push-key:apple:${scope}`, 86400000))) return;
-  await alertOwner(env, jobId, "Store App notifications couldn't be sent", [
-    `${note}, so a Store App notification wasn't sent.`,
+  await alertOwner(env, jobId, "Mobile App notifications couldn't be sent", [
+    `${note}, so a Mobile App notification wasn't sent.`,
     `Open ${publicBaseUrl(env)}/api/store-keys/owner, ask for the emailed link, and upload the push key ("Menu made push", AuthKey_….p8) again. Notifications sent after that go out normally.`
   ]);
 }
@@ -263,7 +263,7 @@ async function failAndroidJob(env, job, scope, note) {
   await env.DB.prepare(`UPDATE store_credentials SET check_status = 'FAILED', check_note = ?, updated_at = ? WHERE scope = ? AND kind = 'FIREBASE_ACCOUNT'`).bind(note.slice(0, 160), t, scope).run();
   if (!(await alertOnce(env, `push-key:firebase:${scope}`, 86400000))) return;
   await alertOwner(env, job.id, "Android notifications couldn't be sent", [
-    `${note}, so an Android Store App notification wasn't sent.`,
+    `${note}, so an Android Mobile App notification wasn't sent.`,
     `Open ${publicBaseUrl(env)}/api/store-keys/google, ask for the emailed link, and upload the Firebase service account key again. Notifications sent after that go out normally.`
   ], "android_push_jobs");
 }

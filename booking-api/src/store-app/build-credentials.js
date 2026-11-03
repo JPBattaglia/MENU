@@ -1,5 +1,5 @@
-// Stage 11 part 2: what the Store App build (.github/workflows/store-app-build.yml) gets from the worker.
-// Every route takes ?store_app=<id> (a restaurant's Store App, or the owner's test app; keys by its scope, see
+// Stage 11 part 2: what the Mobile App build (.github/workflows/store-app-build.yml) gets from the worker.
+// Every route takes ?store_app=<id> (a restaurant's Mobile App, or the owner's test app; keys by its scope, see
 // restaurant-keys.js) or ?scope=owner (the sample build config in the repo). Examples with scope=owner:
 //   GET  /api/store-build/credentials?scope=owner                   the App Store Connect API key (iOS)
 //   GET  /api/store-build/credentials?scope=owner&platform=android  google-services.json, the Google Play account and
@@ -111,7 +111,7 @@ async function handleAndroidBundle(request, env) {
   const sent = await sendTransactionalEmail(env, {
     to: ownerEmailAddress(env),
     subject: owner ? "Upload the first Android build to Google Play" : `Upload the first Android build of ${label.name} to Google Play`,
-    html: brandedEmailHtml({ preheader: "One manual upload, then builds upload themselves.", eyebrow: "STORE APP", heading: "First Android upload", paragraphs: steps,
+    html: brandedEmailHtml({ preheader: "One manual upload, then builds upload themselves.", eyebrow: "MOBILE APP", heading: "First Android upload", paragraphs: steps,
       buttons: [{ label: `Download build ${version} (.aab)`, url: link, primary: true }], rows: [["App", packageId], ["Build", version]] }),
     text: `${steps.join("\n")}\n\nDownload (7 days): ${link}`,
     idempotencyKey: `store-bundle/${scope}/${version}`, purpose: "OWNER_ACTION", templateKey: "store_bundle_first_upload_v1"

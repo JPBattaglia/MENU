@@ -29,7 +29,7 @@ function appUrl(env, slug) {
 }
 
 // The logo uploaded on the app form, else the business's website logo, else the logo uploaded with its Online Menu
-// + QR (owner decision Oct 28, 2026). PNG or JPG only: the renderer can't draw WebP or SVG. Also used by the Store App
+// + QR (owner decision Oct 28, 2026). PNG or JPG only: the renderer can't draw WebP or SVG. Also used by the Mobile App
 // build (store-app/store-build.js) for its 1024 px store icon. context: { id (project id), business_id }.
 async function findAppLogo(env, context) {
   return await env.DB.prepare(`SELECT storage_key, mime_type FROM assets WHERE project_id = ? AND status = 'VALID' AND json_extract(metadata_json, '$.app_image') = 'logo' ORDER BY uploaded_at DESC LIMIT 1`).bind(context.id).first()

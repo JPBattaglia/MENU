@@ -1,4 +1,4 @@
-// Self-test for the Store App's own steps (stage 11 part 2), run by the worker's 5-minute schedule.
+// Self-test for the Mobile App's own steps (stage 11 part 2), run by the worker's 5-minute schedule.
 // Daily at 10:20am PT, or start one by inserting a self_tests row with kind STORE_APP_RUN and status REQUESTED.
 //
 // A scaffold restaurant with a Stripe test-mode order and an approved app goes through the real code, one step at a time
@@ -55,12 +55,12 @@ async function scaffold(env, test) {
     await env.DB.prepare(`INSERT INTO customers (id, created_at, updated_at, email, first_name, last_name) VALUES (?, ?, ?, ?, 'Menu-Made', 'Self-Test')`).bind(customer.id, t, t, SELF_TEST_EMAIL).run();
   }
   const offer = await env.DB.prepare(`SELECT o.id AS offer_id, v.id AS version_id FROM offers o JOIN offer_versions v ON v.offer_id = o.id WHERE o.code = 'STORE_APP_SETUP' AND v.status = 'ACTIVE' ORDER BY v.version_number LIMIT 1`).first();
-  if (!offer) throw new Error("The Store App Setup offer is not in the catalog");
+  if (!offer) throw new Error("The Mobile App Setup offer is not in the catalog");
   const s = { short, customerId: customer.id, businessId: crypto.randomUUID(), orderId: crypto.randomUUID(), itemId: crypto.randomUUID(), projectId: crypto.randomUUID(),
     appId: crypto.randomUUID(), assetId: crypto.randomUUID(), deliverableId: crypto.randomUUID(), storeAppId: crypto.randomUUID(), slug: `storeselftest-${short}`, bundleId: `com.menumade.storeselftest${short}` };
   await env.DB.prepare(`INSERT INTO businesses (id, created_at, updated_at, name) VALUES (?, ?, ?, ?)`).bind(s.businessId, t, t, NAME).run();
   await env.DB.prepare(`INSERT INTO orders (id, created_at, updated_at, customer_id, business_id, status, currency, subtotal_cents, discount_cents, tax_cents, total_cents, payment_status, stripe_checkout_session_id, placed_at, notes) VALUES (?, ?, ?, ?, ?, 'DELIVERED', 'USD', 0, 0, 0, 0, 'PAID', ?, ?, ?)`)
-    .bind(s.orderId, t, t, customer.id, s.businessId, `cs_test_storeapp_${short}`, t, `Store App self-test ${test.id}`).run();
+    .bind(s.orderId, t, t, customer.id, s.businessId, `cs_test_storeapp_${short}`, t, `Mobile App self-test ${test.id}`).run();
   await env.DB.prepare(`INSERT INTO order_items (id, order_id, offer_id, offer_version_id, quantity, unit_price_cents, line_total_cents, fulfillment_status) VALUES (?, ?, ?, ?, 1, 0, 0, 'FULFILLED')`).bind(s.itemId, s.orderId, offer.offer_id, offer.version_id).run();
   await env.DB.prepare(`INSERT INTO projects (id, order_id, order_item_id, business_id, customer_id, project_type, status, workflow_key, created_at, updated_at) VALUES (?, ?, ?, ?, ?, 'APP', 'IN_PROGRESS', 'STORE_APP_SETUP_V1', ?, ?)`)
     .bind(s.projectId, s.orderId, s.itemId, s.businessId, customer.id, t, t).run();
@@ -169,10 +169,10 @@ async function failTest(env, test, message) {
   const failed = await updateTest(env, test, { status: "FAILED", error: String(message).slice(0, 1000), log: `FAILED: ${message}` });
   await sendTransactionalEmail(env, {
     to: ownerEmailAddress(env),
-    subject: "Store App self-test failed",
-    html: brandedEmailHtml({ preheader: "The automated test of the Store App steps failed.", eyebrow: "SELF-TEST", heading: "The Store App steps need a look",
-      paragraphs: ["The daily test of the Store App's steps (store accounts, builds, listing and approval) failed. New Store App orders may stall at that step until this is fixed. Forward this to Claude."], rows: [["Error", failed.error], ["Self-test", test.id]] }),
-    text: `The Store App self-test failed.\n${failed.error}\nSelf-test: ${test.id}`,
+    subject: "Mobile App self-test failed",
+    html: brandedEmailHtml({ preheader: "The automated test of the Mobile App steps failed.", eyebrow: "SELF-TEST", heading: "The Mobile App steps need a look",
+      paragraphs: ["The daily test of the Mobile App's steps (store accounts, builds, listing and approval) failed. New Mobile App orders may stall at that step until this is fixed. Forward this to Claude."], rows: [["Error", failed.error], ["Self-test", test.id]] }),
+    text: `The Mobile App self-test failed.\n${failed.error}\nSelf-test: ${test.id}`,
     idempotencyKey: `self-test-failed/${test.id}`, purpose: "AUTOMATION_ALERT", templateKey: "self_test_failed_v1"
   }).catch(() => null);
   return failed;

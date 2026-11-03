@@ -1,4 +1,4 @@
-// Stage 11 part 2: sending a restaurant's approved Store App listing to Apple and Google, and checking review status.
+// Stage 11 part 2: sending a restaurant's approved Mobile App listing to Apple and Google, and checking review status.
 // Everything here runs with the restaurant's own keys (scope from restaurant-keys.js). Each function returns
 // { ok: true, ... } or { ok: false, step, message } with Apple's or Google's own words, which go to the owner by email.
 //

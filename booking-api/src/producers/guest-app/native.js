@@ -1,4 +1,4 @@
-// Stage 11 part 2: what the Store App (the native iOS / Android app in app-shell/) reads from a restaurant's live app.
+// Stage 11 part 2: what the Mobile App (the native iOS / Android app in app-shell/) reads from a restaurant's live app.
 //   GET <app>/api/content   the live app's public content as JSON: name, address, phone, quick links, specials, menu,
 //                           hours, brand colour, icon and the rewards settings. Only what the live app page already
 //                           shows; nothing private. Answers 404 until the owner has approved the app.

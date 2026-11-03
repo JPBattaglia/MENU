@@ -18,7 +18,7 @@ import { slugify, sniffImage, validSlug } from "../website/intake.js";
 
 const LINK_KIND = "appintake";
 const WORKFLOW = "GUEST_APP_SETUP_V1";
-// The Store App (stage 11) uses the same form: its store apps show this content.
+// The Mobile App (stage 11) uses the same form: its store apps show this content.
 const APP_WORKFLOWS = new Set([WORKFLOW, "STORE_APP_SETUP_V1"]);
 const MAX_LOGO = 1_500_000;
 const FIELDS = [

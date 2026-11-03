@@ -15,7 +15,7 @@ const RUNBOOK = {
   R6: { title: "A self-test failed", happened: "A sandbox test order for one service didn't pass. Real buyers may hit the same problem.", action: "Forward this email to Claude." },
   R7: { title: "Daily check", happened: "Once a day: a service's self-test didn't pass or went stale, or a real order needs you.", action: "Do what each line says; for anything else, forward this email to Claude." },
   R8: { title: "Database near its free limit", happened: "Cloudflare's free daily database limit is close. If reached, checkouts and sites stop until 5 pm Pacific.", action: "Forward this email to Claude; it cuts the reads for free (you stay on the free plan)." },
-  R9: { title: "App notifications problem", happened: "A Store App notification couldn't be sent (Apple or Google refused it).", action: "Forward this email to Claude." },
+  R9: { title: "App notifications problem", happened: "A Mobile App notification couldn't be sent (Apple or Google refused it).", action: "Forward this email to Claude." },
   R10: { title: "GitHub refused a job", happened: "GitHub didn't accept a job from the worker; app builds, images and notifications wait (nothing is lost).", action: "Tell Claude \"GitHub token refused\"; it walks you through a new token, about 3 minutes." }
 };
 
