@@ -24,6 +24,15 @@ sleep 25
 adb shell input keyevent KEYCODE_HOME
 sleep 3
 
+# What the phone saw, with anything token-like blanked (public log).
+diag() {
+  echo "--- diagnostics"
+  echo "notifications from the app: $(adb shell dumpsys notification --noredact | grep -c "pkg=$PKG")"
+  echo "app process running: $(adb shell pidof "$PKG" >/dev/null && echo yes || echo no)"
+  echo "Google Play services: $(adb shell dumpsys package com.google.android.gms | grep -m1 versionName | tr -d ' ')"
+  adb shell dumpsys notification --noredact | grep -E "pkg=$PKG|android.title|android.text" | head -10
+  adb logcat -d | grep -iE "firebase|fcm|gcm|cloudmessag|pushnotif|capacitor/push|NotificationService" | sed -E 's/[A-Za-z0-9_:-]{60,}/<hidden>/g' | tail -40
+}
 oidc() { curl -sSf -H "Authorization: Bearer $ACTIONS_ID_TOKEN_REQUEST_TOKEN" "$ACTIONS_ID_TOKEN_REQUEST_URL&audience=menu-made-store-build" | jq -r .value; }
 TEXT="Android device test $RUN_ID"
 sent=no
@@ -40,7 +49,7 @@ done
 if [ "$sent" != yes ]; then
   shot no-registration
   say "FAIL: the phone never registered for notifications with the worker, or Firebase refused the send"
-  adb logcat -d | grep -iE "capacitor|firebase|fcm" | grep -viE "token" | tail -30
+  diag
   exit 1
 fi
 say "Registered with the worker and sent through Firebase: yes"
@@ -55,4 +64,5 @@ for i in $(seq 1 36); do
 done
 adb shell cmd statusbar expand-notifications; sleep 2; shot 2-no-notification
 say "FAIL: the notification didn't reach the phone within 3 minutes"
+diag
 exit 1
