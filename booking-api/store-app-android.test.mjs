@@ -207,6 +207,35 @@ test('Android build: gets the Google files, keeps the first upload key, and a fi
   assert.equal((await call(f, `https://menu-made.com/api/store-build/bundle/13?t=${encodeURIComponent(t)}`)).status, 403, 'a link is for its own build only');
 });
 
+test('Android device test: one notification to the phone that just registered, then that registration is retired', async () => {
+  const f = await setup();
+  const req = await oidc(f);
+  const g = fakeGoogle({ fcm: () => [200, { name: 'projects/x/messages/1' }] });
+  f.env.GOOGLE_FETCH = g.fetchImpl;
+  const send = () => req('/api/store-build/android-push-test?scope=owner', { method: 'POST', body: JSON.stringify({ title: 'Sample Cafe', body: 'Device test 1' }) });
+  assert.equal((await send()).status, 404, 'no phone registered yet');
+  await register(f, FCM_A);
+  assert.equal((await send()).status, 409, 'no Firebase key on file');
+  await withFirebase(f);
+  const ok = await send();
+  assert.equal(ok.status, 200);
+  assert.deepEqual(await ok.json(), { ok: true, sent: true });
+  const fcm = g.calls.filter((c) => c.url.includes('fcm'));
+  assert.equal(fcm.length, 1, 'only the test phone');
+  const msg = JSON.parse(fcm[0].init.body).message;
+  assert.deepEqual([msg.token, msg.notification.body], [FCM_A, 'Device test 1']);
+  assert.equal(f.row(`SELECT status FROM native_push_devices WHERE token = ?`, FCM_A).status, 'GONE');
+  assert.equal(f.row(`SELECT COUNT(*) AS n FROM push_messages`).n, 0, 'no guest message, daily limit untouched');
+  assert.equal((await send()).status, 404, 'a retired phone is not sent to again');
+  // An old registration (another phone, hours ago) is never picked.
+  await register(f, FCM_B);
+  f.sql(`UPDATE native_push_devices SET updated_at = '2026-10-01T00:00:00.000Z' WHERE token = ?`, FCM_B);
+  assert.equal((await send()).status, 404);
+  // Only the build workflow may call it.
+  const bad = await req('/api/store-build/android-push-test?scope=owner', { method: 'POST', body: '{}' }, { iss: 'https://token.actions.githubusercontent.com', aud: 'menu-made-store-build', exp: Math.floor(Date.now() / 1000) + 300, repository: 'JPBattaglia/MENU', ref: 'refs/heads/master', job_workflow_ref: 'JPBattaglia/MENU/.github/workflows/native-push.yml@refs/heads/master', event_name: 'workflow_dispatch' });
+  assert.equal(bad.status, 403);
+});
+
 test('app shell: Android push only when the build carried google-services.json', () => {
   const app = readFileSync(new URL('../app-shell/www/app.js', import.meta.url), 'utf8');
   const wf = readFileSync(new URL('../.github/workflows/store-app-build.yml', import.meta.url), 'utf8');

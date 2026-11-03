@@ -9,6 +9,10 @@
 //   POST /api/store-build/android-bundle?scope=owner&version=N      the signed .aab, when Google Play doesn't know the
 //                                                                    app yet: stored and emailed to the owner to upload by hand
 //   GET  /api/store-build/bundle/<N>?a=<store app id>&t=             the owner's download (signed link, 7 days; no a = owner)
+//   POST /api/store-build/android-push-test?scope=owner              the Android device test (virtual phone, Nov 3, 2026):
+//                                                                    one notification through the worker's Firebase sender to
+//                                                                    the phone of this package registered in the last 15
+//                                                                    minutes, then that registration is retired
 // All but the download need a GitHub Actions OIDC token (audience menu-made-store-build) from a manual run
 // (workflow_dispatch) of that workflow on master; push-triggered builds are unsigned and never ask. The repo is public,
 // so the workflow masks every secret line before writing it to a file and never prints it.
@@ -16,7 +20,8 @@ import { ownerEmailAddress, publicBaseUrl } from "../lib/config.js";
 import { brandedEmailHtml, sendTransactionalEmail } from "../lib/email.js";
 import { nowIso, simplePage } from "../lib/http.js";
 import { signLinkToken, verifyLinkToken } from "../lib/links.js";
-import { loadCredential, seal, unseal } from "./keys.js";
+import { OWNER, loadCredential, seal, unseal } from "./keys.js";
+import { fcmSend, parseServiceAccount } from "./google.js";
 import { loadGoogleServices } from "./google-keys.js";
 import { buildTarget } from "./store-build.js";
 import { storeScope } from "./restaurant-keys.js";
@@ -131,4 +136,37 @@ async function handleBundleDownload(request, env, version) {
   return new Response(obj.body, { headers: { "Content-Type": "application/octet-stream", "Content-Disposition": `attachment; filename="${label.file}-${version}.aab"`, "Cache-Control": "no-store" } });
 }
 
-export { BUNDLE_LINK_KIND, handleAndroidBundle, handleAndroidKey, handleBuildCredentials, handleBundleDownload };
+export { BUNDLE_LINK_KIND, handleAndroidBundle, handleAndroidKey, handleAndroidPushTest, handleBuildCredentials, handleBundleDownload };
+
+// The Android device test (store-app-build.yml, platforms = android-device-test) runs the signed app on a virtual
+// Android phone on GitHub's runner. The app registers that phone like any guest's (POST <app>/api/push/native); this
+// route then sends it one notification with the same Firebase key and sender the 5-minute tick uses (Firebase is
+// always the owner's project, restaurant-keys.js), and retires the registration so no later notification is sent to a
+// phone that no longer exists. Only that one phone is sent to: no guest is notified and the app's daily limit is untouched.
+const DEVICE_TEST_MINUTES = 15;
+async function handleAndroidPushTest(request, env) {
+  const { packageId, error } = await authorize(request, env);
+  if (error) return error;
+  const since = new Date(Date.now() - DEVICE_TEST_MINUTES * 60_000).toISOString();
+  const device = await env.DB.prepare(`
+      SELECT id, token FROM native_push_devices WHERE platform = 'ANDROID' AND bundle_id = ? AND status = 'ACTIVE' AND updated_at > ? ORDER BY updated_at DESC LIMIT 1
+    `).bind(packageId, since).first();
+  if (!device) return json({ ok: false, error: `No Android phone registered for this app in the last ${DEVICE_TEST_MINUTES} minutes` }, 404);
+  let cred = null;
+  try { cred = await loadCredential(env, OWNER, "FIREBASE_ACCOUNT"); } catch { cred = null; }
+  const sa = cred ? parseServiceAccount(cred.p8) : null;
+  if (!sa || !cred.teamId) return json({ ok: false, error: "No Firebase key on file" }, 409);
+  let body = {};
+  try { body = JSON.parse(await request.text()) || {}; } catch { body = {}; }
+  const title = String(body.title || "Sample Cafe").replace(/\s+/g, " ").trim().slice(0, 50) || "Sample Cafe";
+  const text = String(body.body || "Android test notification").replace(/\s+/g, " ").trim().slice(0, 160) || "Android test notification";
+  let out;
+  try {
+    out = await fcmSend(sa, cred.teamId, device.token, { title, body: text, tag: "device-test" }, { fetchImpl: env.GOOGLE_FETCH || fetch }); // GOOGLE_FETCH is a test seam
+  } catch (e) {
+    out = { ok: false, reason: String(e?.message || e).slice(0, 120) };
+  }
+  await env.DB.prepare(`UPDATE native_push_devices SET status = 'GONE', updated_at = ? WHERE id = ?`).bind(nowIso(), device.id).run();
+  return json(out.ok ? { ok: true, sent: true } : { ok: false, sent: false, error: `Firebase refused it (${out.reason})` }, out.ok ? 200 : 502);
+}
+
