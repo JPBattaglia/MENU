@@ -5,6 +5,7 @@ import { brandedEmailHtml, escapeHtml } from "../../lib/email.js";
 import { parseJsonOrNull } from "../../lib/http.js";
 import { isTestOrder } from "../../approvals/release.js";
 import { productForWorkflow } from "./products.js";
+import { INCLUDED_ROUNDS, revisionLink } from "../../approvals/buyer-revision.js";
 
 const NINO_SITE = "https://ninobattaglia.com";
 const infoOf = (files) => parseJsonOrNull(files?.find((f) => f.deliverable_type === "NINO_DESIGN_PACK")?.metadata_json)?.nino_design || {};
@@ -42,7 +43,7 @@ const ninoDesignOverrides = {
       text: [`${business}'s ${product.name} is ready for review.`, summary(product, info), "", ...previews.map((p) => `${p.label}: ${p.url}`), `Review and approve: ${approveUrl}`].join("\n")
     };
   },
-  async buyerEmail({ context, files, linkFor }) {
+  async buyerEmail({ context, files, linkFor, env }) {
     const product = productForWorkflow(context.workflow_key);
     const business = context.business_name || "your business";
     const info = infoOf(files);
@@ -51,6 +52,11 @@ const ninoDesignOverrides = {
     const buttons = [];
     if (preview) buttons.push({ label: "See your designs", url: await linkFor(preview, { download: false }), primary: true });
     if (pack) buttons.push({ label: "Download all files (ZIP)", url: await linkFor(pack, { download: true }) });
+    // Two rounds of changes are included (owner, Nov 4, 2026); the page counts what's left.
+    const row = env?.DB ? await env.DB.prepare(`SELECT metadata_json FROM projects WHERE id = ?`).bind(context.id).first().catch(() => null) : null;
+    const used = Number(parseJsonOrNull(row?.metadata_json)?.buyer_revisions?.count || 0);
+    const changes = env && used < INCLUDED_ROUNDS ? await revisionLink(env, context.id) : null;
+    if (changes) buttons.push({ label: `Request changes (${INCLUDED_ROUNDS - used} of ${INCLUDED_ROUNDS} rounds left)`, url: changes });
     return {
       recipient: context.customer_email,
       subject: `${isTestOrder(context) ? "[TEST] " : ""}Your ${product.name} from Nino Battaglia is ready`,

@@ -95,7 +95,7 @@ function isCustomerEmail(to, purpose, env) {
   const owner = String(env?.OWNER_EMAIL || REPLY_TO_ADDRESS).trim().toLowerCase();
   if (!recipient || recipient === owner || recipient === String(REPLY_TO_ADDRESS).toLowerCase() || recipient === String(INTERNAL_BCC).toLowerCase()) return false;
   const kind = String(purpose || "");
-  return !(kind === "AUTOMATION_ALERT" || kind === "ACCOUNT_SIGN_IN" || kind.startsWith("OWNER") || kind.endsWith("_OWNER"));
+  return !(kind === "AUTOMATION_ALERT" || kind === "ACCOUNT_SIGN_IN" || kind === "MENU_PREVIEW" || kind.startsWith("OWNER") || kind.endsWith("_OWNER"));
 }
 function withAccountLink(html, text) {
   const block = `<tr><td style="padding:20px 32px;border-top:1px solid #dce8ec;"><p style="margin:0 0 10px;font-size:14px;line-height:1.6;color:#26434f;">Your orders, deliveries and plan links are always in your account. Sign in with this email address; no password needed.</p><a href="${ACCOUNT_URL}" style="display:inline-block;background-color:#071f2c;color:#ffffff;text-decoration:none;font-size:14px;font-weight:bold;padding:10px 18px;border-radius:6px;">Your account</a></td></tr>`;

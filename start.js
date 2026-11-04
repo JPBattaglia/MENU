@@ -31,6 +31,7 @@ const order = { plan: null, once: new Set() };
 let offers = null;
 let checkoutInFlight = false;
 let uploadedDocumentRequest = null;
+let previewDocumentId = ''; // a free preview's stored menu file, reused so the buyer doesn't upload it again
 let lockedFieldValues = null;
 
 const els = {
@@ -355,6 +356,8 @@ async function checkout() {
       if (!uploadedDocumentRequest.received) { await window.MenuMadeDocuments.send(uploadedDocumentRequest.payload, file, controller.signal); uploadedDocumentRequest.received = true; }
       customer.notes = composeNotes(brief, notes, 500, uploadedDocumentRequest.payload.requestId);
       $('lead_document_status').textContent = 'Menu received. Reference: ' + uploadedDocumentRequest.payload.requestId;
+    } else if (previewDocumentId && order.once.has(MENU)) {
+      customer.notes = composeNotes(brief, notes, 500, previewDocumentId);
     }
     els.checkoutBtn.textContent = 'Opening secure checkout…';
     window.MenuMadeFunnel?.track('checkout_attempt');
@@ -424,6 +427,19 @@ render(false);
   showStatus('Prices could not be loaded. Refresh the page, or send us a message below and we will reply with a checkout link.');
   updateCards();
 });
+
+// "Make it live" from a free menu preview: prefill the details and attach the menu file it was made from.
+const previewToken = params.get('preview');
+if (previewToken && /^[a-f0-9]{36}$/.test(previewToken)) {
+  fetch((Catalog?.API || '') + '/api/menu-preview/handoff/' + previewToken).then(r => r.json()).then(data => {
+    if (!data?.ok || !/^[0-9a-f-]{36}$/.test(data.request_id || '')) return;
+    previewDocumentId = data.request_id;
+    if (!els.business.value) els.business.value = data.business || '';
+    if (!els.email.value) els.email.value = data.email || '';
+    if (!els.name.value) els.name.focus();
+    $('lead_document_status').textContent = 'The menu from your preview is attached. Add a different file only if you want to replace it.';
+  }).catch(() => {});
+}
 
 const ask = params.get('ask');
 if (ask && /^[A-Z_]+$/.test(ask)) {

@@ -1,4 +1,7 @@
 import { handleAdminQueue } from "./admin/queue.js";
+import { handlePreviewCreate, handlePreviewView, handlePreviewHandoff } from "./marketing/public-preview.js";
+import { handleOrderCancel } from "./account/cancel.js";
+import { handleBuyerRevision } from "./approvals/buyer-revision.js";
 import { handleApprovalRequest, handleBatchApprovalRequest } from "./approvals/approvals.js";
 import { mmBookingEnvironment, mmBookingHandler } from "./booking/booking.js";
 import { getPublicOffers, getSiteCatalog } from "./checkout/catalog.js";
@@ -126,6 +129,15 @@ var worker_default = {
     if (url.pathname === "/api/system/prospects/demo" && request.method === "POST") return handleProspectDemo(request, env);
     if (url.pathname === "/api/system/prospects/followups" && request.method === "POST") return handleProspectFollowups(request, env);
     if (url.pathname === "/api/system/weekly-numbers" && request.method === "POST") return handleWeeklyNumbers(request, env);
+    const revisionMatch = url.pathname.match(/^\/api\/revision\/([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})$/i);
+    if (revisionMatch && (request.method === "GET" || request.method === "POST")) return handleBuyerRevision(request, env, revisionMatch[1].toLowerCase());
+    const cancelMatch = url.pathname.match(/^\/api\/order\/([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})\/cancel$/i);
+    if (cancelMatch && (request.method === "GET" || request.method === "POST")) return handleOrderCancel(request, env, cancelMatch[1].toLowerCase());
+    if (url.pathname === "/api/menu-preview/create" && (request.method === "POST" || request.method === "OPTIONS")) return handlePreviewCreate(request, env);
+    const publicPreview = url.pathname.match(/^\/api\/menu-preview\/(view|handoff)\/([a-f0-9]{36})$/);
+    if (publicPreview && (request.method === "GET" || request.method === "HEAD")) {
+      return publicPreview[1] === "view" ? handlePreviewView(request, env, publicPreview[2]) : handlePreviewHandoff(env, publicPreview[2]);
+    }
     const previewMatch = url.pathname.match(/^\/api\/menu-preview\/([a-f0-9]{36})$/);
     if (previewMatch && (request.method === "GET" || request.method === "HEAD")) return handleMenuPreview(request, env, previewMatch[1]);
     const storeAppDoneMatch = url.pathname.match(/^\/api\/store-app\/([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})\/done$/i);

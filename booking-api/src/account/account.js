@@ -19,6 +19,7 @@ import { counterLink as appCounterLink, pushLink as appPushLink } from "../produ
 import { intakeLink as siteIntakeLink } from "../producers/website/intake.js";
 import { photoLibraryLink } from "../producers/google-care/library.js";
 import { hostedMenu, liveWebsite } from "../producers/google-visibility/sources.js";
+import { cancelLink, loadOrder, refundEligibility } from "./cancel.js";
 
 const SIGN_IN_KIND = "account_signin";
 const SESSION_KIND = "account_session";
@@ -240,6 +241,8 @@ async function orderActions(env, orderId) {
       actions.push(link("Connect your Google profile", await googleConnectUrl(env, project.id)));
     }
   }
+  // Custom work can be cancelled for a full refund until work starts (src/account/cancel.js).
+  if (refundEligibility(await loadOrder(env, orderId)).ok) actions.push(link("Cancel for a full refund", await cancelLink(env, orderId)));
   return actions;
 }
 

@@ -150,7 +150,7 @@ async function briefAndProduce(f, product, values, files = {}) {
 }
 
 async function approveAndDeliver(f) {
-  assert.equal(f.row(`SELECT status FROM approvals`).status, 'PENDING');
+  assert.equal(f.row(`SELECT status FROM approvals ORDER BY rowid DESC LIMIT 1`).status, 'PENDING');
   const owner = f.emails.find((e) => /Approve Sample Cafe/.test(e.subject));
   assert.ok(owner, 'owner asked to approve');
   const [approveUrl] = linksIn(owner.text, '/api/approvals/');
@@ -222,5 +222,36 @@ test('logo: no logo upload asked, 18 files drawn, delivered after approval', asy
     f.emails.length = 0;
     await briefAndProduce(f, 'NINO_LOGO', { business_name: 'Sample Cafe', tagline: '', style: 'rustic', brand_colors: '' });
     await approveAndDeliver(f);
+  });
+});
+
+test('buyer changes: two included rounds from the delivery email, each redone and re-approved, then the link says none are left', async () => {
+  const f = setup('NINO_FLYER');
+  await withFetch(f.fetch, async () => {
+    await briefAndProduce(f, 'NINO_FLYER', { business_name: 'Sample Cafe', headline: 'Grand Opening', details: 'Saturday 10am', style: 'bold', brand_colors: '' });
+    const buyer = await approveAndDeliver(f);
+    assert.match(buyer.text, /Request changes \(2 of 2 rounds left\)/);
+    const [changeUrl] = linksIn(buyer.text, '/api/revision/');
+    assert.ok(changeUrl, 'change link in the delivery email');
+    assert.match(await (await call(f, changeUrl)).text(), /2 of 2/);
+    for (let round = 1; round <= 2; round++) {
+      const form = new FormData(); form.append('note', `round ${round}: bigger headline`);
+      const res = await call(f, changeUrl, { method: 'POST', body: form });
+      assert.equal(res.status, 200, await res.clone().text());
+      assert.equal(f.row(`SELECT status FROM projects`).status, 'READY');
+      assert.ok(f.emails.some((e) => new RegExp(`Change request \\(round ${round} of 2\\)`).test(e.subject)), 'owner told');
+      const again = new FormData(); again.append('note', 'one more while busy');
+      assert.equal((await call(f, changeUrl, { method: 'POST', body: again })).status, 409, 'no second request while one is in progress');
+      f.emails.length = 0;
+      await api.runScheduledProduction(f.env); await Promise.all(f.pending);
+      const pending = f.row(`SELECT id, revision_number FROM approvals WHERE status = 'PENDING'`);
+      assert.equal(pending.revision_number, round + 1, 'new version goes to the owner as a revision');
+      await approveAndDeliver(f);
+      if (round === 1) assert.match(f.emails.find((e) => /is ready/.test(e.subject)).text, /1 of 2 rounds left/);
+      else assert.doesNotMatch(f.emails.find((e) => /is ready/.test(e.subject)).text, /Request changes/);
+    }
+    const last = new FormData(); last.append('note', 'a third round please');
+    assert.match(await (await call(f, changeUrl, { method: 'POST', body: last })).text(), /used both included rounds/);
+    assert.match(await (await call(f, changeUrl)).text(), /Both rounds of changes used/);
   });
 });

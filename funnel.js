@@ -32,7 +32,7 @@
   try { sessionStorage.setItem('mm_funnel_session', JSON.stringify(session)); } catch {}
   const tracking = () => ({ visitor_id: session.id, session_id: session.id, source: session.source,
     medium: session.medium, campaign: session.campaign, referrer: session.referrer, landing_path: session.landing_path });
-  const stages = new Set(['sample_menu_view', 'start_clicked', 'service_selected', 'details_opened', 'checkout_attempt', 'checkout_error', 'inquiry_attempt', 'inquiry_received', 'quote_started', 'quote_received', 'booking_link_clicked', 'onboarding_opened', 'onboarding_completed', 'service_link_clicked', 'case_study_view', 'demo_view']);
+  const stages = new Set(['sample_menu_view', 'start_clicked', 'service_selected', 'details_opened', 'checkout_attempt', 'checkout_error', 'inquiry_attempt', 'inquiry_received', 'quote_started', 'quote_received', 'booking_link_clicked', 'onboarding_opened', 'onboarding_completed', 'service_link_clicked', 'case_study_view', 'demo_view', 'menu_preview_start', 'menu_preview_ready']);
   const seen = new Set();
   function send(eventType, stage, service) {
     const selectedService = serviceSlug(service);

@@ -224,7 +224,11 @@ async function runDeliverStep(targetStep, env, presenter) {
   }
 
   let current = approval;
-  if (!current || !["PENDING", "APPROVED"].includes(current.status)) {
+  // An approval covers the files it was asked about; a redo after delivery (a buyer's change request) makes new
+  // files, which need their own approval. Older approvals without a file list keep counting as before.
+  const approvedIds = parseJsonOrNull(current?.metadata_json)?.deliverable_ids;
+  const coversFiles = !Array.isArray(approvedIds) || owner.every((file) => approvedIds.includes(file.id));
+  if (!current || !["PENDING", "APPROVED"].includes(current.status) || (current.status === "APPROVED" && !coversFiles)) {
     current = await createOwnerApproval(targetStep, context, owner, routing, approval, env);
   }
   if (current.status === "PENDING") {

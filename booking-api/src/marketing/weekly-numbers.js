@@ -3,7 +3,7 @@
 //
 // Sales come from our own records, by the campaign label each visit arrived with (utm_campaign): Menu-made and Nino
 // design-service orders from funnel_events + orders here, Nino shop orders from the shop's own database (NINO_DB,
-// read only). No Google tag runs on either site, so ad spend isn't known here: the email shows the most each campaign
+// read only). The Google Ads tag on both sites reports to Google, not here, so ad spend isn't known here: the email shows the most each campaign
 // can have spent so far (its daily budget times days run, capped at its total), and so the highest possible cost per
 // sale. Claude adds the exact spend at the weekly check in the Google Ads account.
 import { nowIso } from "../lib/http.js";
@@ -55,6 +55,36 @@ async function menuCheckouts(env, sinceIso) {
   return new Map(rows.map((r) => [r.campaign, Number(r.n)]));
 }
 
+// Visits that arrived with a campaign label (both sites send SITE_VISIT here; the Nino site only for labelled
+// visits, with no identifiers, so each Nino page load counts once).
+async function campaignVisits(env, sinceIso) {
+  const rows = (await env.DB.prepare(`
+      SELECT campaign, COUNT(DISTINCT COALESCE(session_id, id)) AS n FROM funnel_events
+      WHERE event_type = 'SITE_VISIT' AND created_at >= ? AND campaign IS NOT NULL
+      GROUP BY campaign`).bind(sinceIso).all()).results || [];
+  return new Map(rows.map((r) => [r.campaign, Number(r.n)]));
+}
+
+// Shop checkouts opened (paid or not), by campaign.
+async function shopCheckouts(env, sinceIso) {
+  if (!env.NINO_DB) return null;
+  const since = Math.floor(Date.parse(sinceIso) / 1000);
+  const rows = (await env.NINO_DB.prepare(`
+      SELECT COALESCE(json_extract(snapshot_json, '$.attribution.campaign'), json_extract(snapshot_json, '$.attribution.source'), 'none') AS campaign,
+        COUNT(*) AS n
+      FROM commerce_orders WHERE live_mode = 1 AND created_at >= ? GROUP BY campaign`).bind(since).all()).results || [];
+  return new Map(rows.map((r) => [r.campaign, Number(r.n)]));
+}
+
+// Where a campaign is losing people, from the step counts since it started. Null when there is too little to say.
+function weakStep({ visits, checkouts, sales }) {
+  if (visits < 15) return null;
+  if (checkouts === 0) return "people visit but none start checkout: the page or the price is the likely problem";
+  if (sales === 0 && checkouts >= 3) return "checkouts start but none finish: the checkout step is the likely problem";
+  if (checkouts / visits < 0.02) return "under 2 in 100 visitors start checkout: the page or the price is the likely problem";
+  return null;
+}
+
 async function shopSales(env, sinceIso) {
   if (!env.NINO_DB) return null;
   const since = Math.floor(Date.parse(sinceIso) / 1000);
@@ -78,12 +108,26 @@ async function outreach(env, sinceIso) {
   };
 }
 
+// Free Online Menu previews (src/marketing/public-preview.js): made, opened, and paid orders that reused the file.
+async function freePreviews(env, sinceIso) {
+  try {
+    const one = async (sql, ...args) => Number((await env.DB.prepare(sql).bind(...args).first())?.n || 0);
+    return {
+      made: await one(`SELECT COUNT(*) AS n FROM menu_previews WHERE status = 'READY' AND created_at >= ?`, sinceIso),
+      opened: await one(`SELECT COUNT(*) AS n FROM menu_previews WHERE status = 'READY' AND created_at >= ? AND open_count > 0`, sinceIso),
+      ordered: await one(`SELECT COUNT(DISTINCT m.token) AS n FROM menu_previews m JOIN orders o ON o.notes LIKE '%Document ref: ' || m.request_id || '%'
+        WHERE m.status = 'READY' AND o.payment_status = 'PAID' AND o.created_at >= ?`, sinceIso)
+    };
+  } catch { return { made: 0, opened: 0, ordered: 0 }; }
+}
+
 // The report itself, exported for the tests: { subject, rows, paragraphs, text }.
 async function weeklyNumbers(env, now = Date.now()) {
   const weekIso = new Date(now - 7 * DAY).toISOString();
   const startIso = new Date(Date.parse(`${CAMPAIGNS[0].start}T00:00:00-08:00`)).toISOString();
-  const [mmWeek, mmAll, checkouts, shopWeek, shopAll, out] = await Promise.all([
-    menuSales(env, weekIso), menuSales(env, startIso), menuCheckouts(env, startIso), shopSales(env, weekIso), shopSales(env, startIso), outreach(env, weekIso)
+  const [mmWeek, mmAll, checkouts, shopWeek, shopAll, out, visits, shopOpened] = await Promise.all([
+    menuSales(env, weekIso), menuSales(env, startIso), menuCheckouts(env, startIso), shopSales(env, weekIso), shopSales(env, startIso), outreach(env, weekIso),
+    campaignVisits(env, startIso), shopCheckouts(env, startIso)
   ]);
   const rows = [];
   let totalSales = 0;
@@ -96,8 +140,12 @@ async function weeklyNumbers(env, now = Date.now()) {
     if (spent === 0) { rows.push([c.name, `Starts ${shortDate(c.start)}. No spend yet.`]); continue; }
     const perSale = all.sales ? Math.round(spent / all.sales) : null;
     const verdict = perSale === null ? "no sale yet" : perSale <= c.keeps ? "under break-even" : "over break-even";
-    rows.push([c.name, `${week.sales} sale${week.sales === 1 ? "" : "s"} this week (${money(week.cents)}). Since ${shortDate(c.start)}: ${all.sales} sale${all.sales === 1 ? "" : "s"}${c.store === "menu" ? `, ${checkouts.get(c.key) || 0} checkouts started` : ""}, at most ${money(spent)} spent, ${perSale === null ? "no sale yet" : `at most ${money(perSale)} per sale`} (break-even ${money(c.keeps)}: ${verdict}).`]);
+    const steps = { visits: visits.get(c.key) || 0, checkouts: (c.store === "menu" ? checkouts.get(c.key) : shopOpened?.get(c.key)) || 0, sales: all.sales };
+    const weak = weakStep(steps);
+    rows.push([c.name, `${week.sales} sale${week.sales === 1 ? "" : "s"} this week (${money(week.cents)}). Since ${shortDate(c.start)}: ${steps.visits} visit${steps.visits === 1 ? "" : "s"}, ${steps.checkouts} checkout${steps.checkouts === 1 ? "" : "s"} started, ${all.sales} paid; at most ${money(spent)} spent, ${perSale === null ? "no sale yet" : `at most ${money(perSale)} per sale`} (break-even ${money(c.keeps)}: ${verdict}).${weak ? ` Weak step: ${weak}.` : ""}`]);
   }
+  const previews = await freePreviews(env, weekIso);
+  if (previews.made || previews.ordered) rows.push(["Free menu previews", `${previews.made} made this week, ${previews.opened} opened, ${previews.ordered} went on to a paid order.`]);
   const demo = mmAll.get(OUTREACH) || { sales: 0, cents: 0 };
   const demoWeek = mmWeek.get(OUTREACH) || { sales: 0, cents: 0 };
   totalSales += demoWeek.sales;
@@ -127,4 +175,4 @@ async function handleWeeklyNumbers(request, env, { now = Date.now() } = {}) {
   return json({ ok: Boolean(sent?.ok), at: nowIso(), lines: report.rows.length, ...(sent?.ok ? {} : { error: String(sent?.error || "send failed") }) });
 }
 
-export { AUDIENCE as WEEKLY_NUMBERS_AUDIENCE, WORKFLOW as WEEKLY_NUMBERS_WORKFLOW, CAMPAIGNS, maxSpend, weeklyNumbers, handleWeeklyNumbers };
+export { AUDIENCE as WEEKLY_NUMBERS_AUDIENCE, WORKFLOW as WEEKLY_NUMBERS_WORKFLOW, CAMPAIGNS, maxSpend, weakStep, weeklyNumbers, handleWeeklyNumbers };

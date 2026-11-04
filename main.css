@@ -2893,3 +2893,18 @@ body.about-page .team-profile{container-type:inline-size}
 body.about-page .team-profile a{white-space:nowrap;font-size:clamp(11px,calc((100cqi - 32px) / 17),16px);padding-inline:12px}
 /* Portfolio: Pinecrest's tall menu fills its featured card like the website screenshots (owner, Nov 3, 2026) */
 .website-work-grid .work-visual.fill-card img{object-fit:cover;object-position:center 60%}
+
+/* Free Online Menu preview form (online-menu.html, Nov 4, 2026) */
+.mm-try { display: grid; gap: 28px; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); align-items: start; border: 1px solid rgba(0,214,230,.35); border-radius: var(--radius-lg); padding: clamp(20px, 4vw, 36px); background: rgba(0,0,0,.14); }
+.mm-try-copy h2 { margin-top: 6px; }
+.mm-try-form { display: grid; gap: 8px; }
+.mm-try-form label { font-weight: 800; font-size: 13.5px; margin-top: 6px; }
+.mm-try-form input:not(.mm-hp) { width: 100%; border-radius: 14px; border: 1px solid rgba(0,214,230,.45); background: rgba(0,0,0,.22); color: #fff; padding: 10px 12px; font: inherit; }
+.mm-try-form .btn { margin-top: 12px; justify-self: start; }
+.mm-try-status { min-height: 1.5em; margin: 6px 0 0; }
+.mm-try-status .btn { margin: 10px 10px 0 0; }
+.mm-try-status.is-error { color: #ffd2d2; }
+.mm-try-fine { font-size: 13px; color: var(--muted); margin: 0; }
+.mm-hp { position: absolute; left: -9999px; width: 1px; height: 1px; opacity: 0; }
+.mm-recent .cta-actions { margin-top: 14px; }
+@media (max-width: 760px) { .mm-try { grid-template-columns: 1fr; width: auto; margin-inline: 12px; } }
