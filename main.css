@@ -2922,3 +2922,10 @@ body.about-page .team-profile a{white-space:nowrap;font-size:clamp(11px,calc((10
   :where(body:not(.sample-menu-page)) .nav a { margin-left: 10px; font-size: 13px }
   :where(body:not(.sample-menu-page)) .nav-cta { margin-left: 10px; padding: 7px 12px }
 }
+
+/* Website preview form: the optional details fold away (Nov 5, 2026). */
+.mm-try-more { margin: 4px 0 10px; }
+.mm-try-more summary { cursor: pointer; font-weight: 700; color: var(--brand-soft); padding: 6px 0; }
+.mm-try-form textarea { width: 100%; box-sizing: border-box; border-radius: 14px; border: 1px solid rgba(0,214,230,.45); background: rgba(0,0,0,.22); color: #fff; padding: 10px 12px; font: inherit; }
+.mm-try-more label { display: block; }
+.mm-try-more input, .mm-try-more textarea { margin: 4px 0 8px; }

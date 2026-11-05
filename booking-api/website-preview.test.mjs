@@ -1,0 +1,150 @@
+// Free Website Package preview (owner, Nov 5, 2026): a business sees its own site before paying, and prospect emails
+// carry one. Run: node --no-warnings --test booking-api/website-preview.test.mjs
+import { test } from 'node:test';
+import assert from 'node:assert/strict';
+import { createD1, createR2 } from './test-support/d1.mjs';
+
+const { default: worker } = await import('./src/worker.js');
+const { offeringsFromMenu, prefillFromPreview, PER_NETWORK_DAY } = await import('./src/marketing/website-preview.js');
+
+const MENU = { sections: [{ name: 'Pizza', items: [{ name: 'Margherita', description: 'Mozzarella and basil', price: '$15' }, { name: 'Marinara', description: '', price: '$12' }] }], notes: '', unreadable: '' };
+const COPY = { tagline: 'Pizza with mozzarella and basil', intro: 'Sample Pizza serves Margherita and Marinara pizza. Call ahead or stop by.', about: ['Sample Pizza makes Margherita pizza with mozzarella and basil, and a simple Marinara, for guests who stop by or call ahead.'], meta_description: 'Sample Pizza: Margherita and Marinara pizza, hours, address and phone number.', meta_about: 'About Sample Pizza and the pizza we make every day.' };
+const PAGE_FACTS = { about: 'Family pizzeria serving Margherita and Marinara.', phone: '(415) 555-0100', address: '1 Main St, San Francisco', hours: 'Mon-Sun: 11am-9pm', offerings: '# Pizza\nMargherita | Mozzarella and basil | $15' };
+const PHONE = 'Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X)';
+
+function setup() {
+  const env = { DB: createD1(), ASSETS: createR2(), ANTHROPIC_API_KEY: 'sk-ant-test', RESEND_API_KEY: 're_test' };
+  const call = (path, init = {}) => worker.fetch(new Request(`https://menu-made.com${path}`, init), env, { waitUntil() {} });
+  const create = (body) => call('/api/website-preview/create', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+  const get = (path, agent = PHONE) => call(path, { headers: { 'User-Agent': agent } });
+  const upload = async ({ email = 'owner@pizza.example', ip = 'net-1' } = {}) => {
+    const id = crypto.randomUUID();
+    const storageKey = `private/inquiries/${id}/abc`;
+    await env.ASSETS.put(storageKey, new Uint8Array([37, 80, 68, 70]));
+    env.DB.raw.prepare(`INSERT INTO mm_booking_requests (id, payload, ip_hash, created_at) VALUES (?, ?, ?, ?)`).run(id,
+      JSON.stringify({ type: 'inquiry', purpose: 'checkout', email, name: 'Pizza', document: { storageKey, contentType: 'application/pdf', name: 'menu.pdf', size: 4 } }), ip, Math.floor(Date.now() / 1000));
+    return id;
+  };
+  return { env, call, create, get, upload };
+}
+
+// Claude: the menu read (record_menu), the copy and the page facts (generate's tool), by what each request asks for.
+function stubApis(t, { site = '<html><body><h1>Sample Pizza</h1><p>Family pizzeria serving Margherita and Marinara. Call (415) 555-0100. 1 Main St, San Francisco. Open Mon-Sun 11am-9pm.</p></body></html>' } = {}) {
+  const calls = { menu: 0, copy: 0, facts: 0, email: 0, site: 0 };
+  const original = globalThis.fetch;
+  globalThis.fetch = async (input, init) => {
+    const url = String(input?.url || input);
+    if (url === 'https://api.anthropic.com/v1/messages') {
+      const body = JSON.parse(init.body);
+      const tool = body.tools?.[0]?.name;
+      if (tool === 'record_menu') { calls.menu++; return Response.json({ model: 'claude-test', content: [{ type: 'tool_use', name: 'record_menu', input: MENU }], usage: { input_tokens: 1, output_tokens: 1 } }); }
+      const facts = JSON.stringify(body.tools[0].input_schema).includes('phone number exactly');
+      if (facts) calls.facts++; else calls.copy++;
+      return Response.json({ model: 'claude-test', content: [{ type: 'tool_use', name: tool, input: facts ? PAGE_FACTS : COPY }], usage: { input_tokens: 1, output_tokens: 1 } });
+    }
+    if (url === 'https://api.resend.com/emails') { calls.email++; return Response.json({ id: 'em_1' }); }
+    if (url.startsWith('https://pizza.example')) { calls.site++; return new Response(site, { headers: { 'Content-Type': 'text/html' } }); }
+    throw new Error(`unexpected fetch ${url}`);
+  };
+  t.after(() => { globalThis.fetch = original; });
+  return calls;
+}
+
+test('the menu becomes the builder\'s offerings text', () => {
+  assert.equal(offeringsFromMenu(MENU), '# Pizza\nMargherita | Mozzarella and basil | $15\nMarinara | $12');
+});
+
+test('an upload becomes a watermarked, unindexed website preview with its own pages, emailed, and checkout can pick it up', async (t) => {
+  const f = setup();
+  const calls = stubApis(t);
+  const res = await f.create({ request_id: await f.upload(), email: 'Owner@Pizza.example', business: 'Sample Pizza', phone: '(415) 555-0100', hours: 'Mon-Sun: 11am-9pm' });
+  const out = await res.json();
+  assert.equal(res.status, 200, JSON.stringify(out));
+  assert.match(out.url, /^https:\/\/menu-made\.com\/api\/website-preview\/view\/[a-f0-9]{36}\/index\.html$/);
+  const home = await f.get(new URL(out.url).pathname);
+  assert.equal(home.status, 200);
+  assert.equal(home.headers.get('X-Robots-Tag'), 'noindex, nofollow');
+  const html = await home.text();
+  for (const words of ['Sample Pizza', 'PREVIEW%20%C2%B7%20NOT%20LIVE', '@media print', 'Make it live: $499', 'service=website&amp;wpreview=', 'href="menu.html"', 'tel:']) assert.ok(html.includes(words), words);
+  const menu = await (await f.get(new URL(out.url).pathname.replace('index.html', 'menu.html'))).text();
+  assert.match(menu, /Margherita/); assert.match(menu, /\$15/);
+  assert.equal((await f.get(new URL(out.url).pathname.replace('index.html', 'secret.txt'))).status, 404, 'only page files are served');
+  assert.equal(calls.menu, 1); assert.equal(calls.copy, 1); assert.equal(calls.email, 1);
+  const handoff = await (await f.get(`/api/website-preview/handoff/${out.token}`)).json();
+  assert.deepEqual(handoff, { ok: true, business: 'Sample Pizza', email: 'owner@pizza.example' });
+  const prefill = await prefillFromPreview(f.env, 'owner@pizza.example');
+  assert.equal(prefill.phone, '(415) 555-0100'); assert.match(prefill.offerings, /Margherita/);
+});
+
+test('a current website adds its about text, phone and address; the public limits hold', async (t) => {
+  const f = setup();
+  const calls = stubApis(t);
+  const out = await (await f.create({ request_id: await f.upload({ email: 'a@pizza.example' }), email: 'a@pizza.example', business: 'Sample Pizza', website: 'pizza.example' })).json();
+  assert.equal(out.ok, true, JSON.stringify(out));
+  assert.equal(calls.site, 1); assert.equal(calls.facts, 1);
+  const contact = await (await f.get(`/api/website-preview/view/${out.token}/contact.html`)).text();
+  assert.match(contact, /1 Main St, San Francisco/);
+  // Same email again: the same preview back, no new build.
+  const again = await (await f.create({ request_id: await f.upload({ email: 'a@pizza.example' }), email: 'a@pizza.example', business: 'Sample Pizza' })).json();
+  assert.equal(again.reused, true);
+  for (let i = 1; i < PER_NETWORK_DAY; i++) await f.create({ request_id: await f.upload({ email: `n${i}@pizza.example` }), email: `n${i}@pizza.example`, business: 'X' });
+  const blocked = await f.create({ request_id: await f.upload({ email: 'z@pizza.example' }), email: 'z@pizza.example', business: 'Y' });
+  assert.equal(blocked.status, 429);
+});
+
+test('ended and unknown previews show a plain ended page', async (t) => {
+  const f = setup();
+  stubApis(t);
+  const out = await (await f.create({ request_id: await f.upload({ email: 'b@pizza.example' }), email: 'b@pizza.example', business: 'Sample Pizza' })).json();
+  f.env.DB.raw.prepare(`UPDATE website_previews SET expires_at = '2000-01-01T00:00:00.000Z'`).run();
+  const ended = await f.get(new URL(out.url).pathname);
+  assert.equal(ended.status, 410);
+  assert.equal((await f.get(`/api/website-preview/view/${'a'.repeat(36)}/index.html`)).status, 410);
+});
+
+async function prospectSetup(rows) {
+  const f = setup();
+  const b64u = (v) => Buffer.from(v).toString('base64url');
+  const pair = await crypto.subtle.generateKey({ name: 'RSASSA-PKCS1-v1_5', modulusLength: 2048, publicExponent: new Uint8Array([1, 0, 1]), hash: 'SHA-256' }, true, ['sign', 'verify']);
+  const kid = `kid-site-${crypto.randomUUID()}`;
+  f.env.RENDER_OIDC_FETCH = async () => Response.json({ keys: [{ ...(await crypto.subtle.exportKey('jwk', pair.publicKey)), kid, alg: 'RS256', use: 'sig' }] });
+  const now = Math.floor(Date.now() / 1000);
+  const claims = { iss: 'https://token.actions.githubusercontent.com', aud: 'menu-made-prospect-drafts', exp: now + 300, nbf: now - 5, repository: 'JPBattaglia/MENU', ref: 'refs/heads/master',
+    job_workflow_ref: 'JPBattaglia/MENU/.github/workflows/prospect-drafts.yml@refs/heads/master', event_name: 'workflow_dispatch' };
+  const h = b64u(JSON.stringify({ alg: 'RS256', kid, typ: 'JWT' })); const b = b64u(JSON.stringify(claims));
+  const jwt = `${h}.${b}.${b64u(new Uint8Array(await crypto.subtle.sign('RSASSA-PKCS1-v1_5', pair.privateKey, new TextEncoder().encode(`${h}.${b}`))))}`;
+  f.post = (path, body) => f.call(path, { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${jwt}` }, body: JSON.stringify(body) });
+  const t = new Date().toISOString();
+  for (const r of rows) f.env.DB.raw.prepare(`INSERT INTO prospects (id, name, city, address, phone, website, cuisine, status, gaps_json, offer_code, email, found_at, checked_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, 'NEW', ?, ?, ?, ?, ?, ?)`)
+    .run(r.id, r.name, r.city || null, r.address || null, r.phone || null, r.website || null, r.cuisine || null, r.gaps, r.offer, r.email, t, t, t);
+  return f;
+}
+
+test('prospects: a bad-on-phone site is rebuilt from its own page; a no-website business from its listing; follow-ups know it is a website', async (t) => {
+  const f = await prospectSetup([
+    { id: 'node/10', name: 'Sample Pizza', website: 'https://pizza.example', gaps: '["no_phone_layout"]', offer: 'CONVERSION_FIX', email: 'hi@pizza.example' },
+    { id: 'node/11', name: 'Corner Deli', city: 'Oakland', address: '9 Elm St, Oakland', phone: '510-555-0101', cuisine: 'sandwich', gaps: '["no_website"]', offer: 'WEBSITE_PACKAGE', email: 'hi@deli.example' },
+    { id: 'node/12', name: 'Ghost Cafe', gaps: '["no_website"]', offer: 'WEBSITE_PACKAGE', email: 'hi@ghost.example' }
+  ]);
+  const calls = stubApis(t);
+  const rebuilt = await (await f.post('/api/system/prospects/site-demo', { id: 'node/10' })).json();
+  assert.equal(rebuilt.ok, true, JSON.stringify(rebuilt)); assert.equal(rebuilt.from, 'their website');
+  assert.equal(calls.site, 1);
+  const html = await (await f.get(new URL(rebuilt.url).pathname)).text();
+  assert.match(html, /A private preview made for you by Menu-made/);
+  const listing = await (await f.post('/api/system/prospects/site-demo', { id: 'node/11' })).json();
+  assert.equal(listing.ok, true, JSON.stringify(listing)); assert.equal(listing.from, 'their listing');
+  const pages = f.env.DB.raw.prepare(`SELECT page_count FROM website_previews WHERE prospect_id = 'node/11'`).get().page_count;
+  assert.equal(pages, 3, 'no menu: home, about, contact');
+  const empty = await (await f.post('/api/system/prospects/site-demo', { id: 'node/12' })).json();
+  assert.equal(empty.ok, false); assert.match(empty.skip, /not enough public details/);
+  assert.equal((await (await f.post('/api/system/prospects/site-demo', { id: 'node/10' })).json()).reused, true);
+  // Sent 4 days ago, preview made before the send and opened once: a website follow-up.
+  const old = new Date(Date.now() - 5 * 86400000).toISOString();
+  f.env.DB.raw.prepare(`UPDATE prospect_demos SET created_at = ? WHERE prospect_id = 'node/10'`).run(old);
+  f.env.DB.raw.prepare(`UPDATE prospects SET status = 'SENT', sent_at = ? WHERE id = 'node/10'`).run(new Date(Date.now() - 4 * 86400000).toISOString());
+  await f.get(new URL(rebuilt.url).pathname);
+  const list = await (await f.post('/api/system/prospects/followups', {})).json();
+  const item = list.prospects.find((p) => p.id === 'node/10');
+  assert.equal(item.kind, 'opened'); assert.equal(item.demo_kind, 'website'); assert.equal(item.url, rebuilt.url);
+});

@@ -10,6 +10,7 @@ import { sha256Hex } from "../../lib/util.js";
 import { refreshOnboardingState } from "../../onboarding/onboarding.js";
 import { loadDeliveryContext } from "../../approvals/release.js";
 import { STYLES, hexOk } from "./styles.js";
+import { prefillFromPreview } from "../../marketing/website-preview.js";
 
 const LINK_KIND = "siteintake";
 const MAX_IMAGE = 1_500_000;
@@ -175,7 +176,10 @@ async function handleSiteIntake(request, env, projectId) {
     const token = new URL(request.url).searchParams.get("t") || "";
     const payload = await verifyLinkToken(env, token, [LINK_KIND], projectId);
     if (!payload || payload.expired) return denied();
-    return formPage(projectId, token, await savedValues(env, projectId), { locked });
+    // Nothing saved yet: start from the buyer's free website preview, if they made one (owner, Nov 5, 2026).
+    const saved = await savedValues(env, projectId);
+    const values = Object.values(saved).some(Boolean) ? saved : await prefillFromPreview(env, context.customer_email);
+    return formPage(projectId, token, values, { locked });
   }
   let form;
   try { form = await request.formData(); } catch { return simplePage(400, "Something went wrong", "<p>Please go back and try again.</p>"); }

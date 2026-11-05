@@ -44,9 +44,20 @@ function finding(p) {
     `I came across ${site} and noticed there's no tap-to-call button on phone screens. A guest who wants to call ahead or place an order has to copy your number by hand, and some won't bother.`];
 }
 
-// demoUrl (marketing plan v4): the prospect's own menu, already built as a private phone page by the worker
-// (src/marketing/demo-menu.js). With it, the email leads with the preview instead of a generic sample.
-export function build(p, demoUrl = null) {
+// demoUrl (marketing plan v4): the prospect's own menu as a private phone page, or (Nov 5, 2026) their business as a
+// private website preview (demoKind "website"), built by the worker. With it, the email leads with the preview.
+const WEBSITE_PRICE = "$499";
+const builtFrom = (p) => (p.website ? "what's on your current site" : "your public listing");
+
+export function build(p, demoUrl = null, demoKind = "menu") {
+  if (demoUrl && demoKind === "website") {
+    const offer = OFFERS.WEBSITE_PACKAGE;
+    const [subject, observed] = finding(p);
+    const paras = ["Hi there,", observed,
+      `So you can see the difference, I went ahead and built ${p.name} a phone-friendly website from ${builtFrom(p)}. It's private: only you have the link, and it stays up for three weeks.`,
+      offer.offer, "If you'd like it live, the button below shows what's included. If not, no problem at all."];
+    return render(p, subject, paras, [["See your website preview", demoUrl, true], [`See ${offer.name}`, offer.url, false]]);
+  }
   const offer = OFFERS[p.offer_code];
   if (!offer) return null;
   const [subject, observed] = finding(p);
@@ -62,6 +73,14 @@ export function build(p, demoUrl = null) {
 
 // Day-3 follow-up (marketing plan v4): only for owners who opened their preview and haven't replied.
 export function buildFollowup(p, price = "$144") {
+  if (p.demo_kind === "website") {
+    const offer = OFFERS.WEBSITE_PACKAGE;
+    const paras = ["Hi there,",
+      `Following up on the website preview I built for ${p.name} last week. If you'd like it live on your own web address, with your photos and colours, it's ${WEBSITE_PRICE} one time, with three months of updates included.`,
+      "After checkout there's one short form, already filled in from the preview, and we take it from there. Happy to answer anything first, just reply here.",
+      "Your preview is still at the link below for a little while longer."];
+    return render(p, `Your ${p.name} website preview`, paras, [["See your website preview", p.url, true], [`See ${offer.name}`, offer.url, false]]);
+  }
   const subject = `Your ${p.name} phone menu`;
   const paras = ["Hi there,",
     `Following up on the phone version of your menu I sent over last week. If you'd like it live, with a printable QR code for your tables and front window, it's ${price} for the first year, hosting included.`,
@@ -72,8 +91,15 @@ export function buildFollowup(p, price = "$144") {
 }
 
 // Day-3 follow-up for prospects emailed before previews existed (Nov 5, 2026). With demoUrl, the follow-up carries
-// their menu built as a phone page; otherwise a short reminder of the one offer from the first email.
-export function buildFirstFollowup(p, demoUrl = null, price = "$144") {
+// their menu built as a phone page, or their business as a website; otherwise a short reminder of the first email's offer.
+export function buildFirstFollowup(p, demoUrl = null, price = "$144", demoKind = "menu") {
+  if (demoUrl && demoKind === "website") {
+    const offer = OFFERS.WEBSITE_PACKAGE;
+    const paras = ["Hi there,",
+      `Following up on my note from earlier this week. Rather than describe it, I went ahead and built a phone-friendly website for ${p.name} from ${builtFrom(p)}, so you can see the difference. It's private: only you have the link, and it stays up for three weeks.`,
+      offer.offer, "Happy to answer anything first, just reply here."];
+    return render(p, `A website preview for ${p.name}`, paras, [["See your website preview", demoUrl, true], [`See ${offer.name}`, offer.url, false]]);
+  }
   const offer = OFFERS[p.offer_code];
   if (!offer) return null;
   if (demoUrl && p.offer_code === "ONLINE_MENU_QR") {

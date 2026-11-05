@@ -441,6 +441,18 @@ if (previewToken && /^[a-f0-9]{36}$/.test(previewToken)) {
   }).catch(() => {});
 }
 
+// "Make it live" from a free website preview (Nov 5, 2026): prefill the business and email. The intake form after
+// payment starts from what the preview was built from.
+const sitePreviewToken = params.get('wpreview');
+if (sitePreviewToken && /^[a-f0-9]{36}$/.test(sitePreviewToken)) {
+  fetch((Catalog?.API || '') + '/api/website-preview/handoff/' + sitePreviewToken).then(r => r.json()).then(data => {
+    if (!data?.ok) return;
+    if (!els.business.value) els.business.value = data.business || '';
+    if (!els.email.value && data.email && data.email !== 'info@menu-made.com') els.email.value = data.email;
+    if (!els.name.value) els.name.focus();
+  }).catch(() => {});
+}
+
 const ask = params.get('ask');
 if (ask && /^[A-Z_]+$/.test(ask)) {
   const select = $('inquiryService');

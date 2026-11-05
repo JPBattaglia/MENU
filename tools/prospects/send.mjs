@@ -17,6 +17,7 @@ import { ImapFlow } from "imapflow";
 import nodemailer from "nodemailer";
 import { build, buildFollowup, buildFirstFollowup } from "./email.mjs";
 import { verify } from "./verify.mjs";
+import { makePreview } from "./preview.mjs";
 
 const API = "https://menu-made.com/api/system/prospects";
 const USER = process.env.ZOHO_USER || "jp@getmenumade.com";
@@ -114,12 +115,9 @@ for (const p of due) {
   if (left <= 0) break;
   let email;
   if (p.kind === "no_preview") {
-    let url = null;
-    if (p.offer_code === "ONLINE_MENU_QR" && /menu_pdf|menu_image/.test(p.gaps_json || "")) {
-      const demo = await api("demo", { id: p.id }).catch(() => null);
-      if (demo?.ok) { url = demo.url; built++; }
-    }
-    email = buildFirstFollowup(p, url, price);
+    const preview = await makePreview(api, p);
+    if (preview) built++;
+    email = buildFirstFollowup({ ...p, offer_code: preview?.offer_code || p.offer_code }, preview?.url || null, price, preview?.kind);
   } else email = buildFollowup(p, price);
   if (!email) continue;
   await smtp.sendMail(mail(p, email, { "X-Menu-Made-Followup": "1" }));
@@ -142,17 +140,15 @@ if (left > 0) {
     const checked = await verify(browser, candidate).catch(() => null);
     if (!checked) { skipped.push({ id: candidate.id, status: "SKIPPED" }); continue; }
     const p = { ...candidate, gaps_json: JSON.stringify(checked.gaps), offer_code: checked.offer_code, email: checked.email };
-    let demoUrl = null;
-    if (checked.offer_code === "ONLINE_MENU_QR" && checked.gaps.some((g) => g === "menu_pdf" || g === "menu_image")) {
-      // The preview is built while the prospect is still NEW; record the confirmed gaps first.
-      await api("status", { updates: [{ id: p.id, status: "NEW", gaps: checked.gaps, offer_code: checked.offer_code }] });
-      const demo = await api("demo", { id: p.id }).catch(() => null);
-      if (demo?.ok) { demoUrl = demo.url; previews++; }
-    }
-    const email = build(p, demoUrl);
+    // The preview is built while the prospect is still NEW; record the confirmed gaps first.
+    await api("status", { updates: [{ id: p.id, status: "NEW", gaps: checked.gaps, offer_code: checked.offer_code }] });
+    const preview = await makePreview(api, p, checked.gaps);
+    if (preview) { previews++; p.offer_code = preview.offer_code; }
+    const demoUrl = preview?.url || null;
+    const email = build(p, demoUrl, preview?.kind);
     if (!email) continue;
     await smtp.sendMail(mail(p, email));
-    sent.push({ id: p.id, status: "SENT", via: "getmenumade", sent_at: new Date().toISOString(), gaps: checked.gaps, offer_code: checked.offer_code });
+    sent.push({ id: p.id, status: "SENT", via: "getmenumade", sent_at: new Date().toISOString(), gaps: checked.gaps, offer_code: p.offer_code });
   }
   await browser.close();
 }

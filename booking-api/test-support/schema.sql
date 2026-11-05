@@ -583,3 +583,26 @@ CREATE INDEX IF NOT EXISTS menu_previews_ip ON menu_previews (ip_hash, created_a
 -- 0035_prospect_send_via.sql
 ALTER TABLE prospects ADD COLUMN sent_via TEXT;
 CREATE INDEX IF NOT EXISTS prospects_sent_via ON prospects (sent_via, sent_at);
+
+-- 0036_website_previews.sql
+CREATE TABLE IF NOT EXISTS website_previews (
+  token TEXT PRIMARY KEY,
+  source TEXT NOT NULL,
+  prospect_id TEXT,
+  request_id TEXT,
+  email TEXT,
+  business TEXT NOT NULL,
+  ip_hash TEXT,
+  campaign TEXT,
+  status TEXT NOT NULL,              -- BUILDING | READY | FAILED
+  error TEXT,
+  facts_json TEXT,                   -- what the site was built from (prefills the intake after purchase)
+  page_count INTEGER,
+  created_at TEXT NOT NULL,
+  expires_at TEXT NOT NULL,
+  open_count INTEGER NOT NULL DEFAULT 0,
+  first_opened_at TEXT
+);
+CREATE INDEX IF NOT EXISTS website_previews_email ON website_previews (email, created_at DESC);
+CREATE INDEX IF NOT EXISTS website_previews_created ON website_previews (created_at);
+ALTER TABLE prospect_demos ADD COLUMN kind TEXT NOT NULL DEFAULT 'menu';

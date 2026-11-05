@@ -35,7 +35,8 @@ function parseHours(text) {
 }
 
 function pageList(site) {
-  const pages = [{ file: "index.html", nav: "Home" }, { file: site.kind === "services" ? "services.html" : "menu.html", nav: site.kind === "services" ? "Services" : "Menu" }, { file: "about.html", nav: "About" }];
+  // No offerings (only possible in a free preview built from a public listing; the paid intake requires them): no Menu page.
+  const pages = [{ file: "index.html", nav: "Home" }, ...(parseOfferings(site.offerings).length ? [{ file: site.kind === "services" ? "services.html" : "menu.html", nav: site.kind === "services" ? "Services" : "Menu" }] : []), { file: "about.html", nav: "About" }];
   if (site.photos.length) pages.push({ file: "gallery.html", nav: "Gallery" });
   pages.push({ file: "contact.html", nav: "Contact" });
   return pages;
@@ -68,7 +69,7 @@ function buildSite(site, copy) {
   const hero = site.photos[0] ? `<img class="hero-img" src="${esc(site.photos[0].path)}" alt="${esc(site.photos[0].alt)}" width="980" height="420">` : "";
   const pages = {};
   pages["index.html"] = shell(site, copy, "index.html", `${site.name} | ${copy.tagline}`, copy.meta_description, `<div class="hero">${hero}<h1>${esc(site.name)}</h1><p class="lead">${esc(copy.tagline)}</p><p>${buttons(site)}</p></div><div class="text"><p>${esc(copy.intro)}</p></div>`);
-  pages[menuFile] = shell(site, copy, menuFile, `${menuTitle} | ${site.name}`, `${menuTitle} at ${site.name}.`, `<h1>${menuTitle}</h1>${menuHtml(site, sections)}<p>${buttons(site)}</p>`);
+  if (sections.length) pages[menuFile] = shell(site, copy, menuFile, `${menuTitle} | ${site.name}`, `${menuTitle} at ${site.name}.`, `<h1>${menuTitle}</h1>${menuHtml(site, sections)}<p>${buttons(site)}</p>`);
   pages["about.html"] = shell(site, copy, "about.html", `About | ${site.name}`, copy.meta_about, `<h1>About ${esc(site.name)}</h1><div class="text">${copy.about.map((p) => `<p>${esc(p)}</p>`).join("")}</div>`);
   if (site.photos.length) pages["gallery.html"] = shell(site, copy, "gallery.html", `Gallery | ${site.name}`, `Photos of ${site.name}.`, `<h1>Gallery</h1><ul class="gallery">${site.photos.map((p) => `<li><img src="${esc(p.path)}" alt="${esc(p.alt)}" width="400" height="230" loading="lazy"></li>`).join("")}</ul>`);
   const map = site.address ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${site.name} ${site.address}`)}` : "";

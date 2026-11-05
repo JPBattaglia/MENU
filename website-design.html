@@ -12,7 +12,7 @@
   <link rel="shortcut icon" href="MENU=.png">
   <link rel="apple-touch-icon" href="MENU=.png">
   <link rel="stylesheet" href="main.css?v=20261105-nav">
-  <script src="funnel.js?v=20261016-service-measurement" defer></script>
+  <script src="funnel.js?v=20261104-preview" defer></script>
   <script src="site-nav.js?v=20261016-accessible-navigation" defer></script>
   <script src="site-catalog.js?v=20261103-prices" defer></script>
   <link rel="canonical" href="https://menu-made.com/website-design">
@@ -61,7 +61,7 @@
 <span class="pill">Website Package</span><h1>A finished website, without the back-and-forth</h1>
 <p class="service-lead-intro">Tell us about your business in one short form. We build a site of up to 5 pages in the style you choose, check it, approve it and put it live, then keep it hosted and updated with Website &amp; App Care.</p>
 <p class="service-price"><strong><span class="mm-price" data-price-for="WEBSITE_PACKAGE">$499</span></strong><span>A finished website, with 3 months of Website &amp; App Care</span></p>
-<div class="hero-actions"><a class="btn primary" data-plan-cta="WEBSITE_PACKAGE" data-cta-label="Start Website Package" href="contact.html?service=website">Start Website Package</a><a class="btn ghost" href="contact.html#inquiry">Ask a question</a></div>
+<div class="hero-actions"><a class="btn primary" href="#try-free" data-cta-label="See my website free">See my website free first</a><a class="btn ghost" data-plan-cta="WEBSITE_PACKAGE" data-cta-label="Start Website Package" href="contact.html?service=website">Start Website Package</a><a class="btn ghost" href="contact.html#inquiry">Ask a question</a></div>
 </div><aside class="service-profile-plan" aria-labelledby="checklist-title"><p class="service-eyebrow">What you get</p><h2 id="checklist-title">Up to 5 pages</h2><ul><li>Home</li><li>Menu or Services</li><li>About</li><li>Gallery</li><li>Contact &amp; Hours</li></ul></aside></div></section>
 <section class="section"><div class="container"><div class="mm-products">
 <article class="mm-product mm-product-detail" id="website-package" aria-label="Website Package details">
@@ -72,6 +72,22 @@
 </article>
 
 </div></div></section>
+<section class="section" id="try-free"><div class="container mm-try"><div class="mm-try-copy"><p class="service-eyebrow">Free, before you pay</p><h2>See your business as a website first</h2><p>Upload your menu and we’ll build your website from it in about a minute, so you can see it on your phone. It’s a preview only: it isn’t live, and it ends after 3 days. Like it? Make it live and your details carry over.</p></div>
+<form class="mm-try-form" id="siteTryForm" novalidate>
+<label for="site_business">Business name</label><input id="site_business" maxlength="150" autocomplete="organization" required>
+<label for="site_email">Email</label><input id="site_email" type="email" maxlength="150" autocomplete="email" inputmode="email" required>
+<label for="site_file">Your menu (PDF or photo, up to 5 MB)</label><input id="site_file" type="file" accept=".pdf,.png,.jpg,.jpeg,.webp,application/pdf,image/png,image/jpeg,image/webp" required>
+<details class="mm-try-more"><summary>Add your phone, address and hours (optional)</summary>
+<label for="site_phone">Phone</label><input id="site_phone" maxlength="30" autocomplete="tel" inputmode="tel">
+<label for="site_address">Street address</label><input id="site_address" maxlength="160" autocomplete="street-address">
+<label for="site_hours">Opening hours</label><textarea id="site_hours" maxlength="400" rows="3" placeholder="Mon-Fri: 11am-9pm"></textarea>
+<label for="site_current">Your current website, if you have one</label><input id="site_current" maxlength="300" inputmode="url" placeholder="www.yourplace.com">
+</details>
+<input type="text" id="site_hp" name="website" tabindex="-1" autocomplete="off" aria-hidden="true" class="mm-hp">
+<button class="btn primary" type="submit" id="siteTryBtn">Show me my website</button>
+<p class="mm-try-status" id="siteTryStatus" role="status" aria-live="polite"></p>
+<p class="mm-try-fine">One free preview per email. We email you the link too; nothing else, unless you order.</p>
+</form></div></section>
 <section class="section"><div class="container service-preparation"><div><h2>What we’ll ask after checkout</h2><ul class="service-preparation-list"><li>Your business story in a few sentences, and anything you want on the About page.</li><li>Your menu or list of services, hours, phone, address and email.</li><li>Your logo and up to 6 photos (PNG, JPEG or WebP).</li><li>Your favourite of the 9 styles and a brand colour, or let us pick.</li><li>The name you want before .menu-made.com, and your own domain if you have one.</li></ul></div><aside class="service-scope-note"><h3>What it isn’t</h3><p>The package is a fixed-scope site of up to 5 pages. Online ordering, booking systems, member areas and custom integrations aren’t included.</p><p>After the 3 included months, Website &amp; App Care continues at its monthly price unless you cancel. It covers hosting and changes on request.</p><a href="services.html#website-care">How Website &amp; App Care works</a></aside></div></section>
 <section class="section"><div class="container cta"><div><h2>Ready to start?</h2><p>Checkout asks only what we need. Your next step arrives by email right after payment.</p></div><div class="cta-actions"><a class="btn primary" data-plan-cta="WEBSITE_PACKAGE" data-cta-label="Start Website Package" href="contact.html?service=website">Start Website Package</a><a class="btn ghost" href="plans.html">See all plans</a></div></div></section>
 </main>
@@ -96,5 +112,7 @@
   <nav class="footer-links" aria-label="More from MENU-MADE"><a href="plans.html">Plans &amp; Pricing</a><a href="services.html">Services</a><a href="website-design.html">Website Package</a><a href="google-visibility.html">Google Visibility</a><a href="accessibility-services.html">Accessibility Monitoring</a><a href="staff-merch.html">Staff Merch</a><a href="https://ninobattaglia.com/services.html#design-services">Design by Nino</a><a href="portfolio.html">Our Work</a><a href="about.html">Meet JP &amp; Nino</a><a href="account.html">Your account</a><a href="privacy.html">Privacy</a><a href="terms.html">Terms</a><a href="refunds.html">Refunds &amp; Support</a><a href="accessibility.html">Site Accessibility</a></nav>
 </footer>
 <script src="section-parallax.js?v=20261015-unified" defer></script>
+<script src="document-upload.js?v=20261104-preview" defer></script>
+<script src="site-preview.js?v=20261105-site" defer></script>
 </body>
 </html>

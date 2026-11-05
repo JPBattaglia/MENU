@@ -1,5 +1,6 @@
 import { handleAdminQueue } from "./admin/queue.js";
 import { handlePreviewCreate, handlePreviewView, handlePreviewHandoff, handleRepLink } from "./marketing/public-preview.js";
+import { handleWebsitePreviewCreate, handleWebsitePreviewView, handleWebsitePreviewHandoff, handleProspectSiteDemo } from "./marketing/website-preview.js";
 import { handleOrderCancel } from "./account/cancel.js";
 import { handleBuyerRevision } from "./approvals/buyer-revision.js";
 import { handleApprovalRequest, handleBatchApprovalRequest } from "./approvals/approvals.js";
@@ -134,6 +135,13 @@ var worker_default = {
     if (revisionMatch && (request.method === "GET" || request.method === "POST")) return handleBuyerRevision(request, env, revisionMatch[1].toLowerCase());
     const cancelMatch = url.pathname.match(/^\/api\/order\/([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})\/cancel$/i);
     if (cancelMatch && (request.method === "GET" || request.method === "POST")) return handleOrderCancel(request, env, cancelMatch[1].toLowerCase());
+    // Free Website Package previews (owner, Nov 5, 2026).
+    if (url.pathname === "/api/website-preview/create" && (request.method === "POST" || request.method === "OPTIONS")) return handleWebsitePreviewCreate(request, env);
+    const sitePreview = url.pathname.match(/^\/api\/website-preview\/(view|handoff)\/([a-f0-9]{36})(?:\/([a-z]+\.html))?$/);
+    if (sitePreview && (request.method === "GET" || request.method === "HEAD")) {
+      return sitePreview[1] === "view" ? handleWebsitePreviewView(request, env, sitePreview[2], sitePreview[3] || "index.html") : handleWebsitePreviewHandoff(env, sitePreview[2]);
+    }
+    if (url.pathname === "/api/system/prospects/site-demo" && request.method === "POST") return handleProspectSiteDemo(request, env);
     if (url.pathname === "/api/menu-preview/rep-link" && (request.method === "GET" || request.method === "POST")) return handleRepLink(request, env);
     if (url.pathname === "/api/menu-preview/create" && (request.method === "POST" || request.method === "OPTIONS")) return handlePreviewCreate(request, env);
     const publicPreview = url.pathname.match(/^\/api\/menu-preview\/(view|handoff)\/([a-f0-9]{36})$/);

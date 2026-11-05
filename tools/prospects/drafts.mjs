@@ -15,6 +15,7 @@ import { ImapFlow } from "imapflow";
 import MailComposer from "nodemailer/lib/mail-composer/index.js";
 import { build, buildFollowup, buildFirstFollowup } from "./email.mjs";
 import { verify } from "./verify.mjs";
+import { makePreview } from "./preview.mjs";
 import { chromium } from "playwright";
 
 const API = "https://menu-made.com/api/system/prospects";
@@ -53,12 +54,9 @@ async function addFollowups() {
   for (const p of due) {
     let email;
     if (p.kind === "no_preview") {
-      let url = null;
-      if (p.offer_code === "ONLINE_MENU_QR" && /menu_pdf|menu_image/.test(p.gaps_json || "")) {
-        const demo = await api("demo", { id: p.id }).catch(() => null);
-        if (demo?.ok) { url = demo.url; built++; }
-      }
-      email = buildFirstFollowup(p, url, price);
+      const preview = await makePreview(api, p);
+      if (preview) built++;
+      email = buildFirstFollowup({ ...p, offer_code: preview?.offer_code || p.offer_code }, preview?.url || null, price, preview?.kind);
     } else email = buildFollowup(p, price);
     if (!email) continue;
     const message = await raw({ from: FROM, to: p.email, subject: email.subject, text: email.text, html: email.html,
@@ -191,14 +189,13 @@ for (const candidate of prospects) {
   const p = { ...candidate, gaps_json: JSON.stringify(checked.gaps), offer_code: checked.offer_code, email: checked.email };
   if (PREVIEW) { drafted.push({ id: p.id, status: "NEW", gaps: checked.gaps, offer_code: checked.offer_code }); continue; }
   const confirmed = { gaps: checked.gaps, offer_code: checked.offer_code };
-  // Marketing plan v4: menu-file prospects get their own menu built as a private phone page first. Any failure just
-  // means the email goes out without the preview.
-  let demoUrl = null;
-  if (checked.offer_code === "ONLINE_MENU_QR" && checked.gaps.some((g) => g === "menu_pdf" || g === "menu_image")) {
-    const demo = await api("demo", { id: p.id }).catch(() => null);
-    if (demo?.ok) { demoUrl = demo.url; previews++; }
-  }
-  const email = build(p, demoUrl);
+  // Marketing plan v4: each prospect's own menu (as a phone page) or business (as a website) is built first.
+  // Any failure just means the email goes out without the preview.
+  await api("status", { updates: [{ id: p.id, status: "NEW", ...confirmed }] }).catch(() => null);
+  const preview = await makePreview(api, p, checked.gaps);
+  if (preview) { previews++; p.offer_code = preview.offer_code; confirmed.offer_code = preview.offer_code; }
+  const demoUrl = preview?.url || null;
+  const email = build(p, demoUrl, preview?.kind);
   if (!email) continue;
   const message = await raw({ from: FROM, to: p.email, subject: email.subject, text: email.text, html: email.html,
     attachments: [{ filename: "menu-made.png", content: logo, cid: "logo@menu-made", contentDisposition: "inline" }],
