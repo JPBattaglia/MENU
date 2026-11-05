@@ -71,8 +71,8 @@ async function emailBuyer(env, storeApp, context, reminder) {
   const link = await doneLink(env, storeApp, BUYER_KIND);
   const steps = [
     `Your app content for <strong>${escapeHtml(appName)}</strong> is approved. To publish it under your restaurant's name, Apple and Google need it in your own developer accounts. About 30 minutes, once.`,
-    `<strong>Apple</strong>: 1. Enroll in the Apple Developer Program as an organization at developer.apple.com/programs/enroll ($99 a year, paid to Apple). Apple asks for a D-U-N-S number, which is free from Dun &amp; Bradstreet; getting one can take a few days. 2. In App Store Connect, Users and Access, invite <strong>${escapeHtml(owner)}</strong> with the Admin role.`,
-    `<strong>Google</strong>: 1. Create a Google Play developer account as an organization at play.google.com/console/signup ($25 once, paid to Google). 2. In Play Console, Users and permissions, invite <strong>${escapeHtml(owner)}</strong> with Admin (all permissions).`,
+    `<strong>Apple</strong>: 1. Enroll in the Apple Developer Program as an organization at developer.apple.com/programs/enroll ($99 a year, paid to Apple). Apple asks for a D-U-N-S number, which is free from Dun &amp; Bradstreet; getting one can take a few days. 2. In App Store Connect, Business, declare your trader status as <strong>a trader</strong> (your business) and enter the business address, phone and email; Apple shows these to customers in the EU. 3. In App Store Connect, Users and Access, invite <strong>${escapeHtml(owner)}</strong> with the Admin role.`,
+    `<strong>Google</strong>: 1. Create a Google Play developer account as an organization at play.google.com/console/signup ($25 once, paid to Google). 2. When Play Console asks you to declare your trader status, choose <strong>This is a trader account</strong> and use the business address, phone and email; Google shows these to users in the EU. 3. In Play Console, Users and permissions, invite <strong>${escapeHtml(owner)}</strong> with Admin (all permissions).`,
     "Press the button once both invites are sent. We do the rest: app records, builds, store listings and submission. App Store and Google Play approval is decided by Apple and Google and isn't guaranteed."
   ];
   return sendTransactionalEmail(env, {
@@ -91,13 +91,14 @@ async function emailOwner(env, storeApp, context, reminder) {
   const support = `${publicBaseUrl(env)}/contact.html`;
   const keysPage = `${publicBaseUrl(env)}/api/store-keys/app/${storeApp.id}`;
   const privacy = `${publicBaseUrl(env)}/privacy.html`;
-  const rows = [["Restaurant", context.business_name || "-"], ["App name", appName], ["Bundle id / package name", storeApp.bundle_id], ["Content", `${slug}.menu-made.com/app`], ["Support URL", support], ["Privacy policy URL", privacy]];
+  const terms = `${publicBaseUrl(env)}/terms.html#app-users`;
+  const rows = [["Restaurant", context.business_name || "-"], ["App name", appName], ["Bundle id / package name", storeApp.bundle_id], ["Content", `${slug}.menu-made.com/app`], ["Support URL", support], ["Privacy policy URL", privacy], ["Terms of Service URL", terms]];
   const steps = [
     `${escapeHtml(context.business_name || "A restaurant")} sent the store invites for ${escapeHtml(appName)}. These are the steps Apple and Google only allow on their websites (the hands-on part of the Mobile App, about 30-60 minutes).`,
     "1. Accept both invites (App Store Connect email from Apple, Play Console email from Google).",
     `2. Make the restaurant's keys and hand them over on the key page (it lists every click and emails you a one-hour upload link): <a href="${keysPage}">${escapeHtml(keysPage)}</a>. Apple App ID <strong>${escapeHtml(storeApp.bundle_id)}</strong> with Push Notifications, a push key and an App Store Connect API key (Admin) in the restaurant's team; the Android app <strong>${escapeHtml(storeApp.bundle_id)}</strong> in Menu-made's Firebase project; Menu-made's Play account invited in the restaurant's Play Console.`,
     `3. App Store Connect: New App, name ${escapeHtml(appName)}, bundle id ${escapeHtml(storeApp.bundle_id)}, SKU ${escapeHtml(storeApp.bundle_id)}. App Privacy: the app collects no name, email or phone number; rewards use a random card number kept on the phone; notifications use Apple's device token. Age Rating: answer None / No throughout (a restaurant's menu; if the menu lists alcohol, answer the alcohol question as Infrequent/Mild). Pricing and Availability: Free, all countries.`,
-    `4. Play Console: Create app ${escapeHtml(appName)}, App, Free. Data safety and content rating with the same facts (a restaurant's menu, hours and rewards; no user-generated content; no ads). App content: target audience 18+ (or 13+), no ads, app access: no sign-in needed.`,
+    `4. Play Console: Create app ${escapeHtml(appName)}, App, Free. Data safety and content rating with the same facts (a restaurant's menu, hours and rewards; no user-generated content; no ads). App content: target audience 18+ (or 13+), no ads, app access: no sign-in needed; Trader status: confirm <strong>trader</strong> and enter the Terms of Service URL ${escapeHtml(terms)}.`,
     "Press Done when steps 1-4 are finished. Done checks the keys first and says what's missing, if anything."
   ];
   return sendTransactionalEmail(env, {
