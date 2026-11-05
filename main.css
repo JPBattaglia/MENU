@@ -2909,3 +2909,9 @@ body.about-page .team-profile a{white-space:nowrap;font-size:clamp(11px,calc((10
 .mm-hp { position: absolute; left: -9999px; width: 1px; height: 1px; opacity: 0; }
 .mm-recent .cta-actions { margin-top: 14px; }
 @media (max-width: 760px) { .mm-try { grid-template-columns: 1fr; width: auto; margin-inline: 12px; } }
+
+/* Home "What do you need?" shortcuts (owner, Nov 5, 2026: the website option was hard to find). */
+.hero-pick { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin-top: 22px; }
+.hero-pick p { flex-basis: 100%; margin: 0; font-weight: 700; color: var(--brand-soft); }
+.hero-pick a { padding: 9px 16px; border: 1px solid var(--brand-soft); border-radius: var(--button-radius); color: var(--brand-soft); font-weight: 700; text-decoration: none; background: transparent; }
+.hero-pick a:hover, .hero-pick a:focus-visible { background: rgba(0, 214, 230, .12); }
