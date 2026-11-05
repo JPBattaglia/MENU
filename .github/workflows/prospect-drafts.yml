@@ -46,7 +46,11 @@ jobs:
         with:
           node-version: 22
       - name: Install mail libraries
-        run: cd tools/prospects && npm init -y >/dev/null && npm i --no-audit --no-fund imapflow@1 nodemailer@6 playwright@1 && npx playwright install --with-deps chromium
+        # A half-published Playwright release (1.65.0, Nov 5, 2026) broke the install: fall back to the previous minor.
+        run: |
+          cd tools/prospects && npm init -y >/dev/null
+          npm i --no-audit --no-fund imapflow@1 nodemailer@6 playwright@1 || npm i --no-audit --no-fund imapflow@1 nodemailer@6 playwright@~1.64.0 || npm i --no-audit --no-fund imapflow@1 nodemailer@6 playwright@~1.63.0
+          npx playwright install --with-deps chromium
       - name: Auto-send from jp@getmenumade.com
         if: github.event.schedule == '19 18 * * 1-5' || inputs.send == 'true'
         env:

@@ -26,7 +26,7 @@ jobs:
       - name: Install Chromium and the accessibility scanner
         run: |
           mkdir -p /tmp/sc && cd /tmp/sc && npm init -y >/dev/null
-          npm i --no-audit --no-fund playwright@1 @axe-core/playwright@4
+          npm i --no-audit --no-fund playwright@1 @axe-core/playwright@4 || npm i --no-audit --no-fund playwright@~1.64.0 @axe-core/playwright@4 || npm i --no-audit --no-fund playwright@~1.63.0 @axe-core/playwright@4
           npx playwright install --with-deps chromium
       - name: Check both sites
         run: |
