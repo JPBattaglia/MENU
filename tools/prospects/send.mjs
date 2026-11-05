@@ -78,6 +78,8 @@ for (const folder of folders) {
         bounces += failed.size;
         continue;
       }
+      // Only answers to our own emails count (Zoho's welcome and notice mail is not a prospect reply).
+      if (!m.envelope?.inReplyTo && !/^\s*re:/i.test(subject)) continue;
       const out = OPT_OUT.test(`${subject}\n${text.split(/\r?\n\r?\n/).slice(1).join("\n").slice(0, 4000)}`);
       updates.push({ email: from, status: out ? "OPTED_OUT" : "REPLIED" });
       replies++;
