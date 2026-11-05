@@ -1,5 +1,5 @@
 import { handleAdminQueue } from "./admin/queue.js";
-import { handlePreviewCreate, handlePreviewView, handlePreviewHandoff } from "./marketing/public-preview.js";
+import { handlePreviewCreate, handlePreviewView, handlePreviewHandoff, handleRepLink } from "./marketing/public-preview.js";
 import { handleOrderCancel } from "./account/cancel.js";
 import { handleBuyerRevision } from "./approvals/buyer-revision.js";
 import { handleApprovalRequest, handleBatchApprovalRequest } from "./approvals/approvals.js";
@@ -134,6 +134,7 @@ var worker_default = {
     if (revisionMatch && (request.method === "GET" || request.method === "POST")) return handleBuyerRevision(request, env, revisionMatch[1].toLowerCase());
     const cancelMatch = url.pathname.match(/^\/api\/order\/([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})\/cancel$/i);
     if (cancelMatch && (request.method === "GET" || request.method === "POST")) return handleOrderCancel(request, env, cancelMatch[1].toLowerCase());
+    if (url.pathname === "/api/menu-preview/rep-link" && (request.method === "GET" || request.method === "POST")) return handleRepLink(request, env);
     if (url.pathname === "/api/menu-preview/create" && (request.method === "POST" || request.method === "OPTIONS")) return handlePreviewCreate(request, env);
     const publicPreview = url.pathname.match(/^\/api\/menu-preview\/(view|handoff)\/([a-f0-9]{36})$/);
     if (publicPreview && (request.method === "GET" || request.method === "HEAD")) {

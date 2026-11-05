@@ -9,6 +9,7 @@
 import { nowIso } from "../lib/http.js";
 import { sendTransactionalEmail, brandedEmailHtml } from "../lib/email.js";
 import { ownerEmailAddress } from "../lib/config.js";
+import { repUrl } from "./public-preview.js";
 import { verifyRenderer } from "../producers/social-posts/render-jobs.js";
 
 const AUDIENCE = "menu-made-weekly-numbers";
@@ -168,10 +169,13 @@ async function handleWeeklyNumbers(request, env, { now = Date.now() } = {}) {
   if (!auth.ok) return json({ ok: false, error: auth.error }, auth.status);
   if (!env.DB) return json({ ok: false, error: "No database" }, 503);
   const report = await weeklyNumbers(env, now);
+  const rep = env.PRODUCTION_RUNNER_SECRET ? await repUrl(env).catch(() => null) : null;
   const sent = await sendTransactionalEmail(env, {
     to: ownerEmailAddress(env), subject: report.subject,
-    html: brandedEmailHtml({ preheader: report.rows.map(([k]) => k).join(", "), eyebrow: "FRIDAY NUMBERS", heading: report.subject, paragraphs: report.paragraphs, rows: report.rows }),
-    text: report.text, idempotencyKey: `weekly-numbers/${report.day}`, purpose: "OWNER_REPORT", templateKey: "weekly_numbers_v1"
+    // A fresh rep mode link every week (owner, Nov 5, 2026), so it's always in the inbox when a visit comes up.
+    html: brandedEmailHtml({ preheader: report.rows.map(([k]) => k).join(", "), eyebrow: "FRIDAY NUMBERS", heading: report.subject, paragraphs: report.paragraphs, rows: report.rows,
+      ...(rep ? { buttons: [{ label: "Rep mode: show a menu on a visit", url: rep, primary: false }] } : {}) }),
+    text: report.text + (rep ? `\n\nRep mode (show a business its phone menu during a visit): ${rep}` : ""), idempotencyKey: `weekly-numbers/${report.day}`, purpose: "OWNER_REPORT", templateKey: "weekly_numbers_v1"
   }).catch((error) => ({ ok: false, error: error instanceof Error ? error.message : String(error) }));
   return json({ ok: Boolean(sent?.ok), at: nowIso(), lines: report.rows.length, ...(sent?.ok ? {} : { error: String(sent?.error || "send failed") }) });
 }

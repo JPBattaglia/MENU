@@ -12,6 +12,13 @@
 //   GET  /api/menu-preview/handoff/<token>                                     -> { ok, business, email, request_id }
 //
 // request_id is the upload made a moment earlier through /api/inquiry (purpose "checkout": stored, no emails).
+//
+// Rep mode (owner, Nov 5, 2026): for in-person visits (Shift4 from January), JP opens /online-menu?rep=<signed link>
+// on his phone, photographs a paper menu and shows the owner their own phone menu on the spot. A valid rep token
+// skips the per-email, per-network and daily public limits (REP_PER_DAY caps the cost instead); the restaurant's
+// email is optional (blank = the preview link goes to the owner inbox). The link is emailed to the owner inbox:
+//   GET/POST /api/menu-preview/rep-link   "Email me the rep link" (always goes to the owner inbox; REP_TTL_DAYS)
+// and a fresh one is in every Friday numbers email, so there's no token to remember.
 import { nowIso, parseJsonOrNull } from "../lib/http.js";
 import { bytesToBase64 } from "../lib/util.js";
 import { brandedEmailHtml, escapeHtml, sendTransactionalEmail } from "../lib/email.js";
@@ -19,10 +26,16 @@ import { readMenuWithClaude } from "../producers/menu-qr/claude-reader.js";
 import { buildDesignedMenuHtml } from "../producers/menu-qr/design.js";
 import { MENU_PACKAGE_PRICING } from "../checkout/quote.js";
 import { pausedForSale } from "../lib/switches.js";
+import { signLinkToken, verifyLinkToken } from "../lib/links.js";
+import { ownerEmailAddress } from "../lib/config.js";
+import { simplePage } from "../lib/http.js";
 
 const PREVIEW_HOURS = 72;
 const MAX_OPENS = 25;
 const PER_DAY = 30;
+const REP_PER_DAY = 40;
+const REP_KIND = "menu-rep";
+const REP_TTL_DAYS = 120;
 const PER_NETWORK_DAY = 2;
 const EMAIL_DAYS = 30;
 const UPLOAD_MAX_AGE_SECONDS = 2 * 3600;
@@ -38,6 +51,12 @@ const dollars = (cents) => `$${(cents / 100).toLocaleString("en-US", { maximumFr
 const cleanText = (value, max) => String(value || "").replace(/[\r\n\x00]/g, " ").trim().slice(0, max);
 const startUrl = (token) => `${SITE}/contact.html?service=menu&preview=${token}`;
 const viewUrl = (token) => `${SITE}/api/menu-preview/view/${token}`;
+const repUrl = async (env) => `${SITE}/online-menu?rep=${encodeURIComponent(await signLinkToken(env, { kind: REP_KIND, id: "owner", ttlDays: REP_TTL_DAYS }))}#try-free`;
+async function isRep(env, token) {
+  if (!token || !env.PRODUCTION_RUNNER_SECRET) return false;
+  const payload = await verifyLinkToken(env, String(token), [REP_KIND], "owner").catch(() => null);
+  return !!payload && !payload.expired;
+}
 
 function newToken() {
   const bytes = crypto.getRandomValues(new Uint8Array(18));
@@ -98,6 +117,11 @@ async function handlePreviewCreate(request, env, { now = Date.now() } = {}) {
 
   const t = new Date(now).toISOString();
   const dayAgo = new Date(now - 86400000).toISOString();
+  const rep = await isRep(env, body?.rep);
+  if (rep && await count(env, `SELECT COUNT(*) AS n FROM menu_previews WHERE campaign = 'rep' AND created_at > ?`, dayAgo) >= REP_PER_DAY) {
+    return json({ ok: false, error: `Rep mode has made ${REP_PER_DAY} previews today, its daily limit.` }, 429);
+  }
+  if (!rep) {
   const existing = await env.DB.prepare(`SELECT token, request_id, status, expires_at FROM menu_previews WHERE email = ? AND created_at > ? ORDER BY created_at DESC LIMIT 1`)
     .bind(email, new Date(now - EMAIL_DAYS * 86400000).toISOString()).first();
   if (existing) {
@@ -111,11 +135,13 @@ async function handlePreviewCreate(request, env, { now = Date.now() } = {}) {
   if (await count(env, `SELECT COUNT(*) AS n FROM menu_previews WHERE created_at > ?`, dayAgo) >= PER_DAY) {
     return json({ ok: false, error: "We've made all of today's free previews. Please try again tomorrow, or start your order now." }, 429);
   }
+  }
   if (!env.ANTHROPIC_API_KEY) return json({ ok: false, error: "Previews aren't available right now. Please try again later." }, 503);
 
   const token = newToken();
   const tracking = body?.tracking && typeof body.tracking === "object" ? body.tracking : {};
-  const campaign = cleanText(tracking.campaign, 100) || null;
+  const campaign = rep ? "rep" : cleanText(tracking.campaign, 100) || null;
+  const started = Date.now();
   // Claim the slot first, so two quick submits can't both start a build.
   await env.DB.prepare(`INSERT INTO menu_previews (token, request_id, email, business, ip_hash, campaign, status, created_at, expires_at) VALUES (?, ?, ?, ?, ?, ?, 'BUILDING', ?, ?)`)
     .bind(token, requestId, email, business, upload.ip_hash || "", campaign, t, hoursFromNow(PREVIEW_HOURS, now)).run();
@@ -138,6 +164,8 @@ async function handlePreviewCreate(request, env, { now = Date.now() } = {}) {
     return json({ ok: false, error: "We couldn't read that menu file. Try a clearer PDF or photo, or start your order and we'll handle it." }, 422);
   }
   const url = viewUrl(token);
+  const seconds = Math.round((Date.now() - started) / 1000);
+  console.log(`Menu preview ${rep ? "(rep) " : ""}made in ${seconds}s`);
   await sendTransactionalEmail(env, {
     to: email,
     subject: "Your free menu preview",
@@ -153,7 +181,29 @@ async function handlePreviewCreate(request, env, { now = Date.now() } = {}) {
     text: `Your menu preview: ${url}\nIt ends in ${PREVIEW_HOURS / 24} days and has no QR code.\nMake it live (${dollars(firstYearCents())} first year): ${startUrl(token)}`,
     idempotencyKey: `menu-preview/${token}`, purpose: "MENU_PREVIEW", templateKey: "menu_preview_v1"
   }).catch((error) => console.error("Preview email failed:", error instanceof Error ? error.message : String(error)));
-  return json({ ok: true, url, token });
+  return json({ ok: true, url, token, seconds, ...(rep ? { start: startUrl(token) } : {}) });
+}
+
+// "Email me the rep link": always to the owner inbox, so asking for it reveals nothing.
+async function handleRepLink(request, env) {
+  const inbox = ownerEmailAddress(env);
+  if (request.method === "GET") {
+    return simplePage(200, "Rep mode", `<p>Rep mode lets you photograph a menu on a visit and show the owner their phone menu on the spot. We'll email a link to <strong>${escapeHtml(inbox)}</strong>; open it on your phone and keep it (it works for ${REP_TTL_DAYS} days).</p>
+<form method="post" action="/api/menu-preview/rep-link"><button type="submit">Email me the rep link</button></form>`);
+  }
+  const link = await repUrl(env);
+  const sent = await sendTransactionalEmail(env, {
+    to: inbox,
+    subject: "Your rep mode link for on-the-spot menu previews",
+    html: brandedEmailHtml({ preheader: "Show a business its own phone menu during a visit.", eyebrow: "OWNER", heading: "Rep mode",
+      paragraphs: ["Open this on your phone during a visit. Take a photo of their menu (or upload their PDF), add the business name and, if they want it, their email. About a minute later you can hand them the phone with their menu on it.",
+        `No daily limits for you (up to ${REP_PER_DAY} a day), and the preview link is emailed to them, or to you if you leave their email blank. Add it to your home screen so it's always one tap away. The link works for ${REP_TTL_DAYS} days; a fresh one comes in every Friday numbers email.`],
+      buttons: [{ label: "Open rep mode", url: link, primary: true }] }),
+    text: `Rep mode (works for ${REP_TTL_DAYS} days):\n${link}`,
+    idempotencyKey: `rep-link/${Math.floor(Date.now() / 600000)}`, purpose: "OWNER_ACTION", templateKey: "rep_link_v1"
+  }).catch((error) => ({ ok: false, error }));
+  if (!sent?.ok) return simplePage(502, "The email didn't send", "<p>Please try again in a minute.</p>");
+  return simplePage(200, "Check your email", `<p>We sent the rep mode link to <strong>${escapeHtml(inbox)}</strong>.</p>`);
 }
 
 async function handlePreviewView(request, env, token, { now = Date.now() } = {}) {
@@ -183,4 +233,5 @@ async function handlePreviewHandoff(env, token, { now = Date.now() } = {}) {
   return json({ ok: true, business: row.business, email: row.email, request_id: row.request_id });
 }
 
+export { handleRepLink, repUrl, REP_PER_DAY };
 export { handlePreviewCreate, handlePreviewView, handlePreviewHandoff, publicPreviewPage, PREVIEW_HOURS, MAX_OPENS, PER_DAY, PER_NETWORK_DAY };

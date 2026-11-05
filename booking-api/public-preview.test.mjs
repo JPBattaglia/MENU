@@ -145,3 +145,29 @@ test('the preview page keeps the menu and adds the bar and watermark', () => {
   assert.match(html, /<body class="m">\n<aside class="mm-preview"/);
   assert.match(html, /noindex/);
 });
+
+test('rep mode: a valid rep link skips the public limits, a forged one does not, and the rep link is emailed only to the owner', async (t) => {
+  const f = setup();
+  f.env.PRODUCTION_RUNNER_SECRET = 'runner-secret-for-tests';
+  f.env.OWNER_EMAIL = 'owner@menu-made.example';
+  const calls = stubClaude(t);
+  const { repUrl } = await import('./src/marketing/public-preview.js');
+  const rep = new URL(await repUrl(f.env)).searchParams.get('rep');
+  // The same network and inbox, many times over: the public limit is PER_NETWORK_DAY a day and one per email.
+  for (let i = 0; i < PER_NETWORK_DAY + 2; i++) {
+    const out = await (await f.create({ request_id: await f.upload({ email: 'info@menu-made.com' }), email: 'info@menu-made.com', business: `Visit ${i}`, rep })).json();
+    assert.equal(out.ok, true, JSON.stringify(out));
+    assert.equal(out.reused, undefined, 'each visit gets its own preview');
+    assert.ok(Number.isInteger(out.seconds));
+    assert.match(out.start, /contact\.html\?service=menu&preview=/);
+  }
+  assert.equal(f.env.DB.raw.prepare(`SELECT COUNT(*) AS n FROM menu_previews WHERE campaign = 'rep'`).get().n, PER_NETWORK_DAY + 2);
+  const forged = await f.create({ request_id: await f.upload({ email: 'x@cafe.example' }), email: 'x@cafe.example', business: 'Forged', rep: rep.slice(0, -2) + 'xx' });
+  assert.equal(forged.status, 429, 'a forged rep link gets the public network limit');
+  const before = calls.email;
+  const page = await (await f.get('/api/menu-preview/rep-link')).text();
+  assert.match(page, /owner@menu-made\.example/);
+  const res = await worker.fetch(new Request('https://menu-made.com/api/menu-preview/rep-link', { method: 'POST' }), f.env, { waitUntil() {} });
+  assert.equal(res.status, 200);
+  assert.equal(calls.email, before + 1);
+});
