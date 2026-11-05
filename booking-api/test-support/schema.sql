@@ -580,3 +580,6 @@ CREATE TABLE IF NOT EXISTS menu_previews (
 CREATE INDEX IF NOT EXISTS menu_previews_email ON menu_previews (email, created_at DESC);
 CREATE INDEX IF NOT EXISTS menu_previews_created ON menu_previews (created_at);
 CREATE INDEX IF NOT EXISTS menu_previews_ip ON menu_previews (ip_hash, created_at);
+-- 0035_prospect_send_via.sql
+ALTER TABLE prospects ADD COLUMN sent_via TEXT;
+CREATE INDEX IF NOT EXISTS prospects_sent_via ON prospects (sent_via, sent_at);

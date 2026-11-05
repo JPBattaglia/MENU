@@ -1,11 +1,15 @@
 # Marketing (Nov 1, 2026): the week's prospect emails as drafts in info@menu-made.com (iCloud Mail), after the
-# Monday prospect search. Nothing is sent: the owner reviews each draft in Apple Mail and taps Send.
+# Monday prospect search, and again on Thursdays (20 to 25 new prospects each run, owner, Nov 5, 2026). Drafts are never
+# sent by this job: the owner reviews each one in Apple Mail and taps Send. Separately, the weekday "send" run emails
+# prospects itself from jp@getmenumade.com (owner, Nov 5, 2026; needs ZOHO_APP_PASSWORD), warming up from 3 a day;
+# once warmed up it replaces the new iCloud drafts.
 # Needs the ICLOUD_USER and ICLOUD_APP_PASSWORD repository secrets. This public log shows counts only.
 name: Prospect drafts
 on:
   schedule:
     - cron: "37 15 * * 1"   # Mondays 7:37 am PST, after the 5:23 am prospect search
-    - cron: "41 16 * * 4"   # Thursdays 8:41 am PST: day-3 follow-up drafts only (marketing plan v4)
+    - cron: "41 16 * * 4"   # Thursdays 8:41 am PST: new drafts + day-3 follow-ups (owner doubled outreach, Nov 5, 2026)
+    - cron: "19 18 * * 1-5" # Weekdays 10:19 am PST: auto-send from jp@getmenumade.com (warm-up caps; send.mjs)
   workflow_dispatch:
     inputs:
       batch_size:
@@ -22,6 +26,9 @@ on:
         required: false
       followups_only:
         description: Only add day-3 follow-up drafts (true/false)
+        required: false
+      send:
+        description: Run the getmenumade.com auto-sender instead of iCloud drafts (true/false)
         required: false
 permissions:
   contents: read
@@ -40,7 +47,14 @@ jobs:
           node-version: 22
       - name: Install mail libraries
         run: cd tools/prospects && npm init -y >/dev/null && npm i --no-audit --no-fund imapflow@1 nodemailer@6 playwright@1 && npx playwright install --with-deps chromium
+      - name: Auto-send from jp@getmenumade.com
+        if: github.event.schedule == '19 18 * * 1-5' || inputs.send == 'true'
+        env:
+          ZOHO_APP_PASSWORD: ${{ secrets.ZOHO_APP_PASSWORD }}
+          PREVIEW: ${{ inputs.preview }}
+        run: node tools/prospects/send.mjs
       - name: Sync replies and add this week's drafts
+        if: github.event.schedule != '19 18 * * 1-5' && inputs.send != 'true'
         env:
           ICLOUD_USER: ${{ secrets.ICLOUD_USER }}
           ICLOUD_APP_PASSWORD: ${{ secrets.ICLOUD_APP_PASSWORD }}
@@ -48,7 +62,7 @@ jobs:
           PREVIEW: ${{ inputs.preview }}
           REFRESH: ${{ inputs.refresh }}
           SYNC_ONLY: ${{ inputs.sync_only }}
-          FOLLOWUPS_ONLY: ${{ inputs.followups_only == 'true' || github.event.schedule == '41 16 * * 4' }}
+          FOLLOWUPS_ONLY: ${{ inputs.followups_only }}
         run: |
           if [ "$PREVIEW" != "true" ] && { [ -z "$ICLOUD_USER" ] || [ -z "$ICLOUD_APP_PASSWORD" ]; }; then echo "iCloud Mail is not connected yet (ICLOUD_USER / ICLOUD_APP_PASSWORD secrets)."; exit 1; fi
           node tools/prospects/drafts.mjs

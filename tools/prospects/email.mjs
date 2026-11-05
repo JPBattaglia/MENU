@@ -71,6 +71,26 @@ export function buildFollowup(p, price = "$144") {
   return render(p, subject, paras, buttons);
 }
 
+// Day-3 follow-up for prospects emailed before previews existed (Nov 5, 2026). With demoUrl, the follow-up carries
+// their menu built as a phone page; otherwise a short reminder of the one offer from the first email.
+export function buildFirstFollowup(p, demoUrl = null, price = "$144") {
+  const offer = OFFERS[p.offer_code];
+  if (!offer) return null;
+  if (demoUrl && p.offer_code === "ONLINE_MENU_QR") {
+    const paras = ["Hi there,",
+      "Following up on my note from earlier this week about your menu. Rather than describe it, I went ahead and turned the menu on your site into a phone page so you can see the difference. It's private: only you have the link, and it stays up for three weeks.",
+      `If you'd like it live, with a printable QR code for your tables and front window, it's ${price} for the first year, hosting included. You'd upload the same menu at checkout and we'd take it from there.`,
+      "Happy to answer anything first, just reply here."];
+    return render(p, `Your ${p.name} menu as a phone page`, paras, [["See your menu as a phone page", demoUrl, true], ["See Online Menu + QR", ONLINE_MENU, false]]);
+  }
+  const [subject] = finding(p);
+  const paras = ["Hi there,",
+    `Following up on my note from earlier this week. ${offer.offer}`,
+    offer.how,
+    "Happy to answer anything first, just reply here. If it's not a fit, no problem at all."];
+  return render(p, `Re: ${subject}`, paras, [[`See ${offer.name}`, offer.url, true], [offer.sample[0], offer.sample[1], false]]);
+}
+
 function render(p, subject, paras, buttons) {
   const pHtml = paras.map((x) => `<p style="margin:0 0 16px;font-size:16px;line-height:1.6;color:#26434f;">${esc(x)}</p>`).join("");
   const bHtml = buttons.map(([l, u, prim]) => `<tr><td style="padding:0 0 12px;"><a href="${esc(u)}" style="display:inline-block;background-color:${prim ? "#00a7b5" : "#071f2c"};color:#ffffff;text-decoration:none;font-size:15px;font-weight:bold;padding:13px 22px;border-radius:6px;">${esc(l)}</a></td></tr>`).join("");

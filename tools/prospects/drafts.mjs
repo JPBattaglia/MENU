@@ -13,7 +13,7 @@ import { readFileSync } from "node:fs";
 import { resolveMx } from "node:dns/promises";
 import { ImapFlow } from "imapflow";
 import MailComposer from "nodemailer/lib/mail-composer/index.js";
-import { build, buildFollowup } from "./email.mjs";
+import { build, buildFollowup, buildFirstFollowup } from "./email.mjs";
 import { verify } from "./verify.mjs";
 import { chromium } from "playwright";
 
@@ -43,13 +43,24 @@ async function api(path, body) {
 }
 const raw = (mail) => new Promise((resolve, reject) => new MailComposer(mail).compile().build((e, m) => (e ? reject(e) : resolve(m))));
 
-// Day-3 follow-ups (marketing plan v4): sent prospects who opened their menu preview 3+ days ago and haven't replied.
-// One draft each, ever; the worker records it so it never repeats.
+// Day-3 follow-ups (marketing plan v4): sent prospects who opened their menu preview 3+ days ago and haven't replied,
+// plus (Nov 5, 2026) prospects emailed before previews existed: their menu preview is built now when their menu is a
+// file, otherwise they get a short follow-up about their offer. One draft each, ever; the worker records it.
 async function addFollowups() {
   const { prospects: due = [], price } = await api("followups", {});
   const done = [];
+  let built = 0;
   for (const p of due) {
-    const email = buildFollowup(p, price);
+    let email;
+    if (p.kind === "no_preview") {
+      let url = null;
+      if (p.offer_code === "ONLINE_MENU_QR" && /menu_pdf|menu_image/.test(p.gaps_json || "")) {
+        const demo = await api("demo", { id: p.id }).catch(() => null);
+        if (demo?.ok) { url = demo.url; built++; }
+      }
+      email = buildFirstFollowup(p, url, price);
+    } else email = buildFollowup(p, price);
+    if (!email) continue;
     const message = await raw({ from: FROM, to: p.email, subject: email.subject, text: email.text, html: email.html,
       attachments: [{ filename: "menu-made.png", content: logo, cid: "logo@menu-made", contentDisposition: "inline" }],
       headers: { "X-Menu-Made-Prospect": p.id, "X-Menu-Made-Followup": "1" } });
@@ -57,7 +68,7 @@ async function addFollowups() {
     done.push(p.id);
   }
   if (done.length) await api("followups", { mark: done });
-  console.log(`Follow-up drafts added: ${done.length}`);
+  console.log(`Follow-up drafts added: ${done.length} (${built} with a menu preview built for the follow-up)`);
 }
 
 const client = PREVIEW ? null : new ImapFlow({ host: "imap.mail.me.com", port: 993, secure: true, logger: false,
@@ -152,6 +163,15 @@ if (REFRESH) {
   }
   await client.logout();
   console.log(`Refreshed ${rebuilt} drafts still in Drafts (${old.length} found).`);
+  process.exit(0);
+}
+
+// Once the getmenumade.com sender has warmed up (send.mjs), it sends the new prospects itself and the iCloud drafts
+// stop (owner, Nov 5, 2026); follow-ups for prospects the owner sent from iCloud still arrive here as drafts.
+const plan = await api("send-plan", {}).catch(() => null);
+if (plan?.warmup_done && !PREVIEW) {
+  await addFollowups(); await client.logout();
+  console.log("New prospects now go out automatically from jp@getmenumade.com; only follow-up drafts were added.");
   process.exit(0);
 }
 

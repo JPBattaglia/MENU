@@ -4,7 +4,10 @@
 //
 //   POST /api/system/prospects/demo       { id }   (prospect-drafts.yml OIDC) -> { ok, url, item_count } | { ok:false, skip }
 //   GET  /api/menu-preview/<token>                 the private preview page (noindex, unlisted, expires)
-//   POST /api/system/prospects/followups  { }      -> sent prospects who opened their preview 3+ days ago, no follow-up yet
+//   POST /api/system/prospects/followups  { }      -> sent prospects due a day-3 follow-up, no follow-up yet:
+//                                                     kind "opened": opened their preview 3+ days after the send;
+//                                                     kind "no_preview": emailed before previews existed (Nov 2 to 3
+//                                                     batch, fix Nov 5); the job builds the preview then if it can
 //                                         { mark }  -> record that a follow-up draft now exists (one per prospect, ever)
 //
 // One prospect per request (each build is one menu fetch plus one Claude read). Pages are kept in R2 under
@@ -99,7 +102,7 @@ async function handleProspectDemo(request, env, { fetcher = fetch, now = Date.no
   const p = id ? await env.DB.prepare(`SELECT id, name, status, gaps_json, menu_url, offer_code FROM prospects WHERE id = ?`).bind(id).first() : null;
   if (!p) return json({ ok: false, skip: "unknown prospect" }, 404);
   const gaps = JSON.parse(p.gaps_json || "[]");
-  if (p.offer_code !== "ONLINE_MENU_QR" || !p.menu_url || !gaps.some((g) => MENU_GAPS.has(g)) || !["NEW", "DRAFTED"].includes(p.status)) {
+  if (p.offer_code !== "ONLINE_MENU_QR" || !p.menu_url || !gaps.some((g) => MENU_GAPS.has(g)) || !["NEW", "DRAFTED", "SENT"].includes(p.status)) {
     return json({ ok: false, skip: "not an Online Menu + QR prospect with a menu file" });
   }
   const t = new Date(now).toISOString();
@@ -149,16 +152,30 @@ async function handleProspectFollowups(request, env, { now = Date.now() } = {}) 
     const result = await env.DB.prepare(`UPDATE prospects SET followup_drafted_at = ?, updated_at = ? WHERE status = 'SENT' AND followup_drafted_at IS NULL AND id IN (${ids.map(() => "?").join(",")})`).bind(t, t, ...ids).run();
     return json({ ok: true, changed: result?.meta?.changes || 0 });
   }
-  // Sent at least 3 days ago (and within 3 weeks), preview opened, no reply / opt-out / bounce (those change status),
-  // no follow-up yet.
-  const rows = (await env.DB.prepare(`
+  // Sent at least 3 days ago (and within 3 weeks), no reply / opt-out / bounce (those change status), no follow-up yet.
+  // With a preview: only when it was opened. Without one (sent before previews existed): every such prospect.
+  // { via: "getmenumade" }: only prospects the auto-sender emailed (their follow-up is sent the same way); otherwise only
+  // prospects the owner sent from iCloud (their follow-up is a draft).
+  const viaSql = body?.via === "getmenumade" ? "p.sent_via = 'getmenumade'" : "p.sent_via IS NULL";
+  const range = [daysFromNow(-FOLLOWUP_AFTER_DAYS, now), daysFromNow(-21, now)];
+  const opened = (await env.DB.prepare(`
       SELECT p.id, p.name, p.city, p.email, p.sent_at, d.token, d.open_count, d.expires_at
       FROM prospects p JOIN prospect_demos d ON d.prospect_id = p.id AND d.status = 'READY'
-      WHERE p.status = 'SENT' AND p.followup_drafted_at IS NULL AND p.email IS NOT NULL
+      WHERE p.status = 'SENT' AND p.followup_drafted_at IS NULL AND p.email IS NOT NULL AND ${viaSql}
         AND p.sent_at <= ? AND p.sent_at >= ? AND d.open_count > 0 AND d.expires_at > ?
-      ORDER BY p.sent_at LIMIT 50`).bind(daysFromNow(-FOLLOWUP_AFTER_DAYS, now), daysFromNow(-21, now), daysFromNow(2, now)).all()).results || [];
+      ORDER BY p.sent_at LIMIT 50`).bind(...range, daysFromNow(2, now)).all()).results || [];
+  // A preview built for the follow-up itself (created after the send) doesn't count as one the prospect was sent.
+  const previewless = (await env.DB.prepare(`
+      SELECT p.id, p.name, p.city, p.email, p.website, p.gaps_json, p.menu_url, p.offer_code, p.sent_at FROM prospects p
+      WHERE p.status = 'SENT' AND p.followup_drafted_at IS NULL AND p.email IS NOT NULL AND p.offer_code IS NOT NULL AND ${viaSql}
+        AND p.sent_at <= ? AND p.sent_at >= ?
+        AND NOT EXISTS (SELECT 1 FROM prospect_demos d WHERE d.prospect_id = p.id AND d.status = 'READY' AND d.created_at <= p.sent_at)
+      ORDER BY p.sent_at LIMIT 50`).bind(...range).all()).results || [];
   const seen = new Set();
-  const prospects = rows.filter((r) => !seen.has(r.id) && seen.add(r.id)).map((r) => ({ id: r.id, name: r.name, city: r.city, email: r.email, url: `${SITE}/api/menu-preview/${r.token}`, opens: r.open_count }));
+  const prospects = [
+    ...opened.filter((r) => !seen.has(r.id) && seen.add(r.id)).map((r) => ({ kind: "opened", id: r.id, name: r.name, city: r.city, email: r.email, url: `${SITE}/api/menu-preview/${r.token}`, opens: r.open_count })),
+    ...previewless.filter((r) => !seen.has(r.id) && seen.add(r.id)).map((r) => ({ kind: "no_preview", id: r.id, name: r.name, city: r.city, email: r.email, website: r.website, gaps_json: r.gaps_json, menu_url: r.menu_url, offer_code: r.offer_code }))
+  ].slice(0, 50);
   return json({ ok: true, prospects, price: dollars(firstYearCents()) });
 }
 

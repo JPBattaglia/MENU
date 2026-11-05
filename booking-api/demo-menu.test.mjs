@@ -99,17 +99,41 @@ test('follow-ups list sent prospects who opened their preview 3+ days ago, once 
   const { url } = await (await f.post('/api/system/prospects/demo', { id: 'node/1' })).json();
   let list = await (await f.post('/api/system/prospects/followups', {})).json();
   assert.deepEqual(list.prospects, [], 'not sent yet');
+  f.env.DB.raw.prepare(`UPDATE prospect_demos SET created_at = ?`).run(new Date(Date.now() - 5 * 86400000).toISOString());
   f.env.DB.raw.prepare(`UPDATE prospects SET status = 'SENT', sent_at = ? WHERE id = 'node/1'`).run(new Date(Date.now() - 4 * 86400000).toISOString());
   list = await (await f.post('/api/system/prospects/followups', {})).json();
   assert.deepEqual(list.prospects, [], 'preview not opened yet');
   await f.get(new URL(url).pathname);
   list = await (await f.post('/api/system/prospects/followups', {})).json();
   assert.equal(list.prospects.length, 1);
+  assert.equal(list.prospects[0].kind, 'opened');
   assert.equal(list.prospects[0].url, url);
   assert.equal(list.price, '$144');
   assert.equal((await (await f.post('/api/system/prospects/followups', { mark: ['node/1'] })).json()).changed, 1);
   list = await (await f.post('/api/system/prospects/followups', {})).json();
   assert.deepEqual(list.prospects, [], 'one follow-up per prospect');
+});
+
+test('prospects emailed before previews existed get one follow-up, and a preview can be built for them after the send', async (t) => {
+  const f = await setup();
+  stubFetch(t);
+  const sent = new Date(Date.now() - 3.5 * 86400000).toISOString();
+  f.env.DB.raw.prepare(`UPDATE prospects SET status = 'SENT', sent_at = ?`).run(sent);
+  let list = await (await f.post('/api/system/prospects/followups', {})).json();
+  assert.deepEqual(list.prospects.map((p) => [p.id, p.kind, p.offer_code]).sort(), [['node/1', 'no_preview', 'ONLINE_MENU_QR'], ['node/2', 'no_preview', 'WEBSITE_PACKAGE']]);
+  const demo = await (await f.post('/api/system/prospects/demo', { id: 'node/1' })).json();
+  assert.equal(demo.ok, true, 'a SENT menu-file prospect can get a preview for the follow-up');
+  list = await (await f.post('/api/system/prospects/followups', {})).json();
+  assert.equal(list.prospects.length, 2, 'a preview built after the send does not hide the prospect');
+  assert.equal((await (await f.post('/api/system/prospects/followups', { mark: ['node/1', 'node/2'] })).json()).changed, 2);
+  assert.deepEqual((await (await f.post('/api/system/prospects/followups', {})).json()).prospects, []);
+});
+
+test('a prospect sent 2 days ago, or 4 weeks ago, gets no follow-up yet / any more', async () => {
+  const f = await setup();
+  f.env.DB.raw.prepare(`UPDATE prospects SET status = 'SENT', sent_at = ? WHERE id = 'node/1'`).run(new Date(Date.now() - 2 * 86400000).toISOString());
+  f.env.DB.raw.prepare(`UPDATE prospects SET status = 'SENT', sent_at = ? WHERE id = 'node/2'`).run(new Date(Date.now() - 28 * 86400000).toISOString());
+  assert.deepEqual((await (await f.post('/api/system/prospects/followups', {})).json()).prospects, []);
 });
 
 test('only the drafts workflow on master may build previews or read follow-ups', async () => {

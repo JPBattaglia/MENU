@@ -10,7 +10,7 @@
 //
 // A re-found business keeps its outreach status (DRAFTED, SENT, OPTED_OUT ...); only what was found is refreshed.
 // Emails go out as Gmail drafts the owner sends himself (Resend's policy forbids cold outreach, and Resend carries
-// every customer email), 20 to 25 a week.
+// every customer email), 20 to 25 twice a week (Monday and Thursday; owner, Nov 5, 2026).
 import { nowIso } from "../lib/http.js";
 import { verifyRenderer } from "../producers/social-posts/render-jobs.js";
 
@@ -73,7 +73,8 @@ async function handleProspects(request, env) {
 // ---------- Weekly drafts (.github/workflows/prospect-drafts.yml) ----------
 // The job takes the week's batch, places branded drafts in the Drafts folder of info@menu-made.com (iCloud Mail, the
 // owner reviews and taps Send), then reports what it did and what it saw in Sent and the inbox:
-//   POST /api/system/prospects/batch   { limit }  -> NEW prospects with an email, best first, one per email address,
+//   POST /api/system/prospects/batch   { limit }  -> NEW prospects with an email, menu-file prospects first (they get their
+//                                                    own menu preview; owner, Nov 5, 2026), then best score, one per email,
 //                                                    never an address already drafted, sent, replied or opted out
 //   POST /api/system/prospects/status  { updates: [{ id?, email?, status }] }  SKIPPED | BOUNCED | DRAFTED | SENT | REPLIED | OPTED_OUT
 const DRAFTS_AUDIENCE = "menu-made-prospect-drafts";
@@ -97,7 +98,8 @@ async function handleProspectBatch(request, env) {
       SELECT id, name, kind, cuisine, city, website, email, gaps_json, menu_url, offer_code, score FROM prospects p
       WHERE status = 'NEW' AND email IS NOT NULL AND offer_code IS NOT NULL
         AND NOT EXISTS (SELECT 1 FROM prospects q WHERE q.email = p.email AND q.status != 'NEW')
-      ORDER BY score DESC, id LIMIT ?`).bind(limit * 3).all()).results || [];
+      ORDER BY (offer_code = 'ONLINE_MENU_QR' AND menu_url IS NOT NULL AND (gaps_json LIKE '%menu_pdf%' OR gaps_json LIKE '%menu_image%')) DESC,
+        score DESC, id LIMIT ?`).bind(limit * 3).all()).results || [];
   const seen = new Set(); const batch = [];
   for (const r of rows) { if (seen.has(r.email)) continue; seen.add(r.email); batch.push(r); if (batch.length === limit) break; }
   return json({ ok: true, prospects: batch });
@@ -119,7 +121,8 @@ async function handleProspectStatus(request, env) {
   const t = nowIso(); const statements = [];
   for (const u of updates) {
     const from = NEXT[u?.status]; if (!from) continue;
-    const stamp = u.status === "DRAFTED" ? ", drafted_at = COALESCE(drafted_at, ?)" : u.status === "SENT" ? ", sent_at = ?" : "";
+    const via = u.status === "SENT" && u.via === "getmenumade" ? ", sent_via = 'getmenumade'" : "";
+    const stamp = (u.status === "DRAFTED" ? ", drafted_at = COALESCE(drafted_at, ?)" : u.status === "SENT" ? ", sent_at = ?" : "") + via;
     const where = typeof u.id === "string" ? "id = ?" : typeof u.email === "string" ? "email = ?" : null; if (!where) continue;
     const key = u.id || String(u.email).toLowerCase();
     // Browser-confirmed gaps (verify.mjs) replace the finder's, so the email states only what was confirmed.
@@ -129,11 +132,46 @@ async function handleProspectStatus(request, env) {
     const extraValues = gaps && offer ? [JSON.stringify(gaps), offer, `browser-checked ${t.slice(0, 10)}`] : [];
     if (u.status === "NEW" && !extra) continue;
     statements.push(env.DB.prepare(`UPDATE prospects SET status = ?, updated_at = ?${stamp}${extra} WHERE ${where} AND status IN (${from.map(() => "?").join(",")})`)
-      .bind(u.status, t, ...(stamp ? [stampTime(u, t)] : []), ...extraValues, key, ...from));
+      .bind(u.status, t, ...(u.status === "DRAFTED" || u.status === "SENT" ? [stampTime(u, t)] : []), ...extraValues, key, ...from));
   }
   let changed = 0;
   if (statements.length) for (const r of await env.DB.batch(statements)) changed += r?.meta?.changes || 0;
   return json({ ok: true, changed });
 }
 
+
+// ---------- Auto-sending from jp@getmenumade.com (owner decision, Nov 5, 2026) ----------
+// A new sending domain has to warm up: a few emails a day, rising, weekdays only, counted from the first auto-send.
+//   POST /api/system/prospects/send-plan  {}  -> { day, cap, sent_today, left, warmup_done }
+// Business day 1 to 5: 3 a day; 6 to 10: 6; 11 to 15: 8; from day 16 (warm-up over): 10 a day, about 50 a week,
+// which replaces the Monday/Thursday iCloud drafts (the owner's pace of 40 to 50 a week). Follow-ups count too.
+const WARMUP = [[5, 3], [10, 6], [15, 8]];
+const STEADY_CAP = 10;
+const pacificDay = (ms) => new Intl.DateTimeFormat("en-CA", { timeZone: "America/Los_Angeles", year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date(ms));
+function businessDays(fromDay, toDay) {
+  let n = 0;
+  for (let d = new Date(`${fromDay}T12:00:00Z`); d <= new Date(`${toDay}T12:00:00Z`); d = new Date(d.getTime() + 86400000)) if (d.getUTCDay() % 6) n++;
+  return Math.max(1, n);
+}
+function sendCap(day) { for (const [last, cap] of WARMUP) if (day <= last) return cap; return STEADY_CAP; }
+
+async function sendPlan(env, now = Date.now()) {
+  const first = await env.DB.prepare(`SELECT MIN(sent_at) AS at FROM prospects WHERE sent_via = 'getmenumade'`).first("at");
+  const today = pacificDay(now);
+  const day = first ? businessDays(pacificDay(Date.parse(first)), today) : 1;
+  const since = new Date(now - 36 * 3600000).toISOString();
+  const recent = (await env.DB.prepare(`SELECT sent_at, followup_drafted_at FROM prospects WHERE sent_via = 'getmenumade' AND (sent_at >= ? OR followup_drafted_at >= ?)`).bind(since, since).all()).results || [];
+  let sentToday = 0;
+  for (const r of recent) { if (r.sent_at && pacificDay(Date.parse(r.sent_at)) === today) sentToday++; if (r.followup_drafted_at && pacificDay(Date.parse(r.followup_drafted_at)) === today) sentToday++; }
+  const cap = sendCap(day);
+  return { day, cap, sent_today: sentToday, left: Math.max(0, cap - sentToday), warmup_done: day > WARMUP.at(-1)[0] && !!first };
+}
+
+async function handleSendPlan(request, env, { now = Date.now() } = {}) {
+  const auth = await verifyRenderer(request, env, { audience: DRAFTS_AUDIENCE, workflow: DRAFTS_WORKFLOW, events: ["schedule", "workflow_dispatch"] });
+  if (!auth.ok) return json({ ok: false, error: auth.error }, auth.status);
+  return json({ ok: true, ...(await sendPlan(env, now)) });
+}
+
+export { sendPlan, handleSendPlan, businessDays, sendCap };
 export { AUDIENCE as PROSPECTS_AUDIENCE, WORKFLOW as PROSPECTS_WORKFLOW, DRAFTS_AUDIENCE, DRAFTS_WORKFLOW, handleProspects, handleProspectBatch, handleProspectStatus, prospectRow };

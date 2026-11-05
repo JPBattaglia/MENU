@@ -87,6 +87,15 @@ test('the drafts job gets the best NEW prospects with an email, one per address,
   assert.equal(res.changed, 0, 'an opted-out prospect never goes back');
 });
 
+test('menu-file prospects (they get their own menu preview) come before higher-scored prospects for other offers', async () => {
+  const f = await setup();
+  await f.post({ prospects: [{ ...CAFE, score: 2 }, { ...CAFE, id: 'node/106', name: 'Slow Site', email: 'x@slow.example', gaps: ['no_tap_to_call'], menu_url: null, offer_code: 'CONVERSION_FIX', score: 60 }] });
+  const drafts = { ...f.good, aud: 'menu-made-prospect-drafts', job_workflow_ref: 'JPBattaglia/MENU/.github/workflows/prospect-drafts.yml@refs/heads/master' };
+  const req = new Request('https://menu-made.com/api/system/prospects/batch', { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${await f.sign(drafts)}` }, body: JSON.stringify({ limit: 25 }) });
+  const batch = (await (await worker.fetch(req, f.env, { waitUntil() {} })).json()).prospects;
+  assert.deepEqual(batch.map((p) => p.id), [CAFE.id, 'node/106']);
+});
+
 test('browser-confirmed gaps replace the finder guesses; failed checks are skipped', async () => {
   const f = await setup();
   await f.post({ prospects: [CAFE, { ...CAFE, id: 'node/105', email: 'b@other.example' }] });
@@ -97,4 +106,33 @@ test('browser-confirmed gaps replace the finder guesses; failed checks are skipp
   const rows = Object.fromEntries(f.rows().map((r) => [r.id, r]));
   assert.equal(rows['node/101'].gaps_json, '["no_tap_to_call"]'); assert.equal(rows['node/101'].offer_code, 'CONVERSION_FIX'); assert.match(rows['node/101'].notes, /browser-checked/);
   assert.equal(rows['node/105'].status, 'SKIPPED');
+});
+
+test('auto-send warm-up: 3 a day for the first week of business days, rising to 10, counted from the first auto-send', async () => {
+  const { businessDays, sendCap, sendPlan } = await import('./src/marketing/prospects.js');
+  assert.equal(businessDays('2026-11-06', '2026-11-06'), 1);
+  assert.equal(businessDays('2026-11-06', '2026-11-09'), 2, 'Fri to Mon skips the weekend');
+  assert.deepEqual([1, 5, 6, 10, 11, 15, 16, 40].map(sendCap), [3, 3, 6, 6, 8, 8, 10, 10]);
+  const f = await setup();
+  const now = Date.parse('2026-11-10T18:00:00Z'); // Tue 10 am PT
+  let plan = await sendPlan(f.env, now);
+  assert.deepEqual(plan, { day: 1, cap: 3, sent_today: 0, left: 3, warmup_done: false });
+  await f.post({ prospects: [CAFE, { ...CAFE, id: 'node/107', email: 'z@z.example' }] });
+  f.env.DB.raw.prepare(`UPDATE prospects SET status='SENT', sent_via='getmenumade', sent_at=? WHERE id=?`).run('2026-11-06T17:00:00Z', CAFE.id);
+  f.env.DB.raw.prepare(`UPDATE prospects SET status='SENT', sent_via='getmenumade', sent_at=? WHERE id='node/107'`).run('2026-11-10T17:30:00Z');
+  plan = await sendPlan(f.env, now);
+  assert.deepEqual(plan, { day: 3, cap: 3, sent_today: 1, left: 2, warmup_done: false });
+  plan = await sendPlan(f.env, Date.parse('2026-12-01T18:00:00Z'));
+  assert.equal(plan.warmup_done, true); assert.equal(plan.cap, 10);
+});
+
+test('a SENT update from the auto-sender is marked sent_via getmenumade', async () => {
+  const f = await setup();
+  await f.post({ prospects: [CAFE] });
+  const drafts = { ...f.good, aud: 'menu-made-prospect-drafts', job_workflow_ref: 'JPBattaglia/MENU/.github/workflows/prospect-drafts.yml@refs/heads/master' };
+  const req = new Request('https://menu-made.com/api/system/prospects/status', { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${await f.sign(drafts)}` },
+    body: JSON.stringify({ updates: [{ id: CAFE.id, status: 'SENT', via: 'getmenumade', sent_at: new Date(Date.now() - 60000).toISOString() }] }) });
+  assert.equal((await (await worker.fetch(req, f.env, { waitUntil() {} })).json()).changed, 1);
+  const row = f.env.DB.raw.prepare(`SELECT status, sent_via, sent_at FROM prospects`).get();
+  assert.equal(row.status, 'SENT'); assert.equal(row.sent_via, 'getmenumade'); assert.ok(row.sent_at);
 });
