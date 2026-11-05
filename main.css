@@ -2915,3 +2915,10 @@ body.about-page .team-profile a{white-space:nowrap;font-size:clamp(11px,calc((10
 .hero-pick p { flex-basis: 100%; margin: 0; font-weight: 700; color: var(--brand-soft); }
 .hero-pick a { padding: 9px 16px; border: 1px solid var(--brand-soft); border-radius: var(--button-radius); color: var(--brand-soft); font-weight: 700; text-decoration: none; background: transparent; }
 .hero-pick a:hover, .hero-pick a:focus-visible { background: rgba(0, 214, 230, .12); }
+
+/* 701-860px (Nov 5, 2026): the menu gained "Online Menu" and "Websites"; tighten it so "Start" stays on screen. */
+@media (max-width: 860px) and (min-width: 701px) {
+  :where(body:not(.sample-menu-page)) .brand-word { width: 112px }
+  :where(body:not(.sample-menu-page)) .nav a { margin-left: 10px; font-size: 13px }
+  :where(body:not(.sample-menu-page)) .nav-cta { margin-left: 10px; padding: 7px 12px }
+}
