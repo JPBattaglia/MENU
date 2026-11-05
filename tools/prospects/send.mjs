@@ -69,7 +69,8 @@ for (const folder of folders) {
       if (!from || from === USER || from.endsWith("@getmenumade.com") || from.endsWith("@zoho.com") && !/mailer-daemon|postmaster/.test(from)) continue;
       const text = m.source ? m.source.toString("utf8") : "";
       const subject = m.envelope?.subject || "";
-      if (/^(mailer-daemon|postmaster)@/i.test(from) || /undeliver|delivery (status notification|has failed|failure)|returned mail|failure notice|could not be delivered/i.test(subject)) {
+      // Any standard delivery-failure report counts, whatever its sender or subject (Nov 5, 2026: one was missed).
+      if (/^(mailer-daemon|postmaster)@/i.test(from) || /undeliver|not delivered|delivery (status notification|has failed|failure|incomplete)|returned mail|failure notice|could not be delivered|mail delivery failed/i.test(subject) || /final-recipient:|diagnostic-code:|action:\s*failed|status:\s*5\.\d+\.\d+|address not found|user unknown|no such user|mailbox (unavailable|not found|does not exist)|recipient address rejected/i.test(text.slice(0, 20000))) {
         const failed = new Set();
         for (const r of text.matchAll(/(?:final|original)-recipient:\s*rfc822;\s*<?([^\s>]+@[^\s>]+)/gi)) failed.add(r[1].toLowerCase());
         if (!failed.size) for (const r of text.matchAll(/(?:^|[\s<:])([a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,24})/gim)) {
