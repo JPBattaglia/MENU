@@ -7,7 +7,7 @@ import { createD1 } from './test-support/d1.mjs';
 
 const { weeklyNumbers, maxSpend, weakStep, CAMPAIGNS } = await import('./src/marketing/weekly-numbers.js');
 
-// Friday Nov 27, 2026, 9 am PST: twelve days into the Nov 16 campaigns.
+// Friday Nov 27, 2026, 9 am PST: 24 days into the campaigns that started Nov 4.
 const NOW = Date.parse('2026-11-27T17:00:00Z');
 
 function ninoDb(rows) {
@@ -38,9 +38,9 @@ function seed(env) {
 
 test('the most a campaign can have spent grows by its daily budget and stops at its cap', () => {
   const shop = CAMPAIGNS.find((c) => c.key === 'nino-shop');
-  assert.equal(maxSpend(shop, Date.parse('2026-11-10T12:00:00Z')), 0);
-  assert.equal(maxSpend(shop, Date.parse('2026-11-16T12:00:00-08:00')), 225);
-  assert.equal(maxSpend(shop, Date.parse('2027-01-01T12:00:00Z')), 6500);
+  assert.equal(maxSpend(shop, Date.parse('2026-11-03T12:00:00Z')), 0);
+  assert.equal(maxSpend(shop, Date.parse('2026-11-04T12:00:00-08:00')), 202);
+  assert.equal(maxSpend(shop, Date.parse('2027-01-20T12:00:00Z')), 12100);
 });
 
 test('Friday numbers count live paid sales once each, by campaign, and the shop by its order attribution', async () => {
@@ -58,11 +58,11 @@ test('Friday numbers count live paid sales once each, by campaign, and the shop 
   assert.match(row('Menu-made search ads'), /^1 sale this week \(\$144\)/);
   assert.match(row('Menu-made search ads'), /2 visits, 2 checkouts started, 1 paid/);
   assert.match(row('Nino shopping ads'), /2 visits, 2 checkouts started, 1 paid/);
-  assert.match(row('Menu-made search ads'), /at most \$40\.80 spent, at most \$40\.80 per sale \(break-even \$135: under break-even\)/);
+  assert.match(row('Menu-made search ads'), /at most \$88\.80 spent, at most \$88\.80 per sale \(break-even \$135: under break-even\)/);
   assert.match(row('Nino design search ads'), /^1 sale this week \(\$199\)/);
   assert.match(row('Nino shopping ads'), /^1 sale this week \(\$33\.19\)/);
   assert.match(row('Nino shop, other'), /^1 order this week/);
-  assert.match(row('Prospect emails'), /1 sent this week.*Sales from the emails since Nov 16: 1 \(\$144\)/);
+  assert.match(row('Prospect emails'), /1 sent this week.*Sales from the emails since Nov 4: 1 \(\$144\)/);
   assert.equal(r.subject, 'Friday numbers: 5 sales this week');
   assert.match(row('Free menu previews'), /^2 made this week, 1 opened, 1 went on to a paid order/);
 });

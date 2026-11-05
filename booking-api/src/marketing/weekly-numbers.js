@@ -14,11 +14,12 @@ import { verifyRenderer } from "../producers/social-posts/render-jobs.js";
 const AUDIENCE = "menu-made-weekly-numbers";
 const WORKFLOW = "JPBattaglia/MENU/.github/workflows/weekly-numbers.yml@refs/heads/master";
 
-// The three ad campaigns in plan v4, with what one sale keeps (for the break-even line). Cents.
+// The three ad campaigns (plan v4 amended Nov 4, 2026 by the owner: $500 total, live Nov 4 to Jan 2 for Google's
+// spend-$500-get-$500 credit), with what one sale keeps (for the break-even line). Cents.
 const CAMPAIGNS = [
-  { key: "mm-search", name: "Menu-made search ads", daily: 340, cap: 12000, start: "2026-11-16", end: "2026-12-20", keeps: 13500, store: "menu" },
-  { key: "nino-design", name: "Nino design search ads", daily: 240, cap: 8500, start: "2026-11-16", end: "2026-12-20", keeps: 19000, store: "menu" },
-  { key: "nino-shop", name: "Nino shopping ads", daily: 225, cap: 6500, start: "2026-11-16", end: "2026-12-14", keeps: 900, store: "nino" }
+  { key: "mm-search", name: "Menu-made search ads", daily: 370, cap: 22200, start: "2026-11-04", end: "2027-01-02", keeps: 13500, store: "menu" },
+  { key: "nino-design", name: "Nino design search ads", daily: 262, cap: 15700, start: "2026-11-04", end: "2027-01-02", keeps: 19000, store: "menu" },
+  { key: "nino-shop", name: "Nino shopping ads", daily: 202, cap: 12100, start: "2026-11-04", end: "2027-01-02", keeps: 900, store: "nino" }
 ];
 const OUTREACH = "demo-menu";
 
@@ -149,7 +150,7 @@ async function weeklyNumbers(env, now = Date.now()) {
   const demo = mmAll.get(OUTREACH) || { sales: 0, cents: 0 };
   const demoWeek = mmWeek.get(OUTREACH) || { sales: 0, cents: 0 };
   totalSales += demoWeek.sales;
-  rows.push(["Prospect emails", `${out.sent} sent this week, ${out.previews} menu previews built, ${out.opened} opened, ${out.followups} follow-ups drafted, ${out.replied} replies, ${out.optedOut} opt-outs, ${out.bounced} bounces. Sales from the emails since Nov 16: ${demo.sales} (${money(demo.cents)}).`]);
+  rows.push(["Prospect emails", `${out.sent} sent this week, ${out.previews} menu previews built, ${out.opened} opened, ${out.followups} follow-ups drafted, ${out.replied} replies, ${out.optedOut} opt-outs, ${out.bounced} bounces. Sales from the emails since ${shortDate(CAMPAIGNS[0].start)}: ${demo.sales} (${money(demo.cents)}).`]);
   if (shopWeek) {
     const other = [...shopWeek.entries()].filter(([k]) => !CAMPAIGNS.some((c) => c.key === k)).reduce((n, [, v]) => n + v.sales, 0);
     totalSales += other;
