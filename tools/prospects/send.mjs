@@ -154,4 +154,4 @@ if (left > 0) {
 }
 if (sent.length || skipped.length) await api("status", { updates: [...sent, ...skipped] });
 await imap.logout();
-console.log(`Sent from ${USER}: ${sent.length} new (${previews} with a menu preview), ${followed.length} follow-ups (${built} previews built); ${skipped.length} candidates skipped.`);
+console.log(`Sent from ${USER}: ${sent.length} new (${previews} with a menu or website preview), ${followed.length} follow-ups (${built} previews built); ${skipped.length} candidates skipped.`);

@@ -76,7 +76,7 @@ function buildSite(site, copy) {
   const social = [site.facebook && ["Facebook", site.facebook], site.instagram && ["Instagram", site.instagram]].filter(Boolean);
   pages["contact.html"] = shell(site, copy, "contact.html", `Contact and hours | ${site.name}`, `Hours, address and phone for ${site.name}.`,
     `<h1>Contact and hours</h1><div class="card">${site.address ? `<p><strong>Address</strong><br>${esc(site.address)}<br><a href="${esc(map)}">Get directions</a></p>` : ""}${site.phone ? `<p><strong>Phone</strong><br><a href="tel:${esc(digits(site.phone))}">${esc(site.phone)}</a></p>` : ""}${site.email ? `<p><strong>Email</strong><br><a href="mailto:${esc(site.email)}">${esc(site.email)}</a></p>` : ""}${social.length ? `<p><strong>Follow us</strong><br>${social.map(([n, u]) => `<a href="${esc(u)}">${n}</a>`).join(" · ")}</p>` : ""}</div>
-<h2>Hours</h2>${hours.length ? `<dl class="hours">${hours.map((h) => (h.day ? `<dt>${esc(h.day)}</dt><dd>${esc(h.time)}</dd>` : `<dd style="grid-column:1/3">${esc(h.time)}</dd>`)).join("")}</dl>` : "<p>Please call for our hours.</p>"}`);
+<h2>Hours</h2>${hours.length ? `<dl class="hours">${hours.map((h) => (h.day ? `<dt>${esc(h.day)}</dt><dd>${esc(h.time)}</dd>` : `<dd style="grid-column:1/3">${esc(h.time)}</dd>`)).join("")}</dl>` : site.phone ? "<p>Please call for our hours.</p>" : "<p>Hours coming soon.</p>"}`);
   return pages;
 }
 

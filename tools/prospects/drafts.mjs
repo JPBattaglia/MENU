@@ -66,7 +66,7 @@ async function addFollowups() {
     done.push(p.id);
   }
   if (done.length) await api("followups", { mark: done });
-  console.log(`Follow-up drafts added: ${done.length} (${built} with a menu preview built for the follow-up)`);
+  console.log(`Follow-up drafts added: ${done.length} (${built} with a preview built for the follow-up)`);
 }
 
 const client = PREVIEW ? null : new ImapFlow({ host: "imap.mail.me.com", port: 993, secure: true, logger: false,
@@ -212,4 +212,4 @@ if (PREVIEW) {
 if (drafted.length || skipped.length) await api("status", { updates: [...drafted, ...skipped] });
 await addFollowups();
 await client.logout();
-console.log(`Drafts added to iCloud Mail: ${drafted.length} (asked for ${LIMIT}), ${previews} with a menu preview; ${skipped.length} candidates skipped because their gaps didn't hold up in a browser.`);
+console.log(`Drafts added to iCloud Mail: ${drafted.length} (asked for ${LIMIT}), ${previews} with a menu or website preview; ${skipped.length} candidates skipped because their gaps didn't hold up in a browser.`);
