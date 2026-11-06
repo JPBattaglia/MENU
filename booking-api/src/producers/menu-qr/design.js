@@ -56,7 +56,8 @@ async function loadLogoDataUri(asset, env) {
 function buildDesignedMenuHtml({ businessName, brandColors, menu, logoDataUri }) {
   const esc = escapeHtml2;
   const clean = (value, max) => String(value ?? "").replace(/\s+/g, " ").trim().slice(0, max);
-  const colors = parseBrandColors(brandColors).filter((c) => c !== "#ffffff");
+  // Pale colours (paper, cream, white) can't carry white text or headings, so they're left out.
+  const colors = parseBrandColors(brandColors).filter((c) => colorLuminance(c) < 0.6);
   const primary = readableOnWhiteText(colors[0] || "#1f2a2e");
   const accent = colors[1] ? readableOnWhiteText(colors[1]) : primary;
   const sections = (menu.sections || []).slice(0, 60).map((section, index) => ({

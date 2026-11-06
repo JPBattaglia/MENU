@@ -7,7 +7,7 @@ import { createD1, createR2 } from './test-support/d1.mjs';
 const { default: worker } = await import('./src/worker.js');
 const { publicPreviewPage, MAX_OPENS, PER_NETWORK_DAY } = await import('./src/marketing/public-preview.js');
 
-const MENU = { sections: [{ name: 'Starters', items: [{ name: 'Garlic Bread', description: 'House focaccia', price: '$9' }] }], notes: '', unreadable: '' };
+const MENU = { sections: [{ name: 'Starters', items: [{ name: 'Garlic Bread', description: 'House focaccia', price: '$9' }] }], notes: '', unreadable: '', colors: ['#a8322d', '#f3ead8', 'not-a-colour'] };
 const PHONE = 'Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X)';
 
 function setup() {
@@ -53,6 +53,8 @@ test('an upload becomes a watermarked, unprintable phone preview with no QR, and
   assert.equal(page.headers.get('X-Robots-Tag'), 'noindex, nofollow');
   const html = await page.text();
   assert.match(html, /Garlic Bread/);
+  assert.match(html, /Make it live: \$144 for the first year/, 'the price keeps its dollar sign');
+  assert.match(html, /--primary: #a8322d/, "the menu's own colour, not black and white; the cream paper colour is skipped");
   assert.match(html, /PREVIEW%20%C2%B7%20NOT%20LIVE/);
   assert.match(html, /@media print/);
   assert.match(html, /contact\.html\?service=menu&amp;preview=[a-f0-9]{36}/);

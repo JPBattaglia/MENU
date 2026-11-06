@@ -22,7 +22,7 @@
 import { nowIso, parseJsonOrNull } from "../lib/http.js";
 import { bytesToBase64 } from "../lib/util.js";
 import { brandedEmailHtml, escapeHtml, sendTransactionalEmail } from "../lib/email.js";
-import { readMenuWithClaude } from "../producers/menu-qr/claude-reader.js";
+import { menuColors, readMenuWithClaude } from "../producers/menu-qr/claude-reader.js";
 import { buildDesignedMenuHtml } from "../producers/menu-qr/design.js";
 import { MENU_PACKAGE_PRICING } from "../checkout/quote.js";
 import { pausedForSale } from "../lib/switches.js";
@@ -80,8 +80,9 @@ function publicPreviewPage(menuHtml, token) {
   @media print { body > * { display: none !important; } body::before { content: "This is a preview from menu-made.com and can't be printed. Make it live to get your menu and QR code."; display: block; padding: 40px; font: 18px system-ui, sans-serif; } }
 </style>`;
   return menuHtml
-    .replace("</head>", `<meta name="robots" content="noindex,nofollow">\n${style}\n</head>`)
-    .replace(/<body([^>]*)>/, `<body$1>\n${bar}`);
+    // Function replacers: the bar holds a price like "$144", and "$1" in a replacement string means "group 1".
+    .replace("</head>", () => `<meta name="robots" content="noindex,nofollow">\n${style}\n</head>`)
+    .replace(/<body([^>]*)>/, (match, attrs) => `<body${attrs}>\n${bar}`);
 }
 
 function plainPage(status, title, body) {
@@ -154,7 +155,7 @@ async function handlePreviewCreate(request, env, { now = Date.now() } = {}) {
       ? { type: "document", source: { type: "base64", media_type: mime, data: bytesToBase64(bytes) } }
       : { type: "image", source: { type: "base64", media_type: mime, data: bytesToBase64(bytes) } };
     const read = await readMenuWithClaude(block, env);
-    const page = publicPreviewPage(buildDesignedMenuHtml({ businessName: business, brandColors: null, menu: read.menu, logoDataUri: null }), token);
+    const page = publicPreviewPage(buildDesignedMenuHtml({ businessName: business, brandColors: menuColors(read.menu), menu: read.menu, logoDataUri: null }), token);
     await env.ASSETS.put(`menu-previews/${token}.html`, page, { httpMetadata: { contentType: "text/html; charset=utf-8" } });
     await env.DB.prepare(`UPDATE menu_previews SET status = 'READY', item_count = ? WHERE token = ?`).bind(read.extraction?.item_count ?? null, token).run();
   } catch (error) {

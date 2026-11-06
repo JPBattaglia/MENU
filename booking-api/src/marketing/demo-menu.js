@@ -16,7 +16,7 @@
 import { nowIso } from "../lib/http.js";
 import { bytesToBase64 } from "../lib/util.js";
 import { escapeHtml } from "../lib/email.js";
-import { readMenuWithClaude, structureMenuText } from "../producers/menu-qr/claude-reader.js";
+import { menuColors, readMenuWithClaude, structureMenuText } from "../producers/menu-qr/claude-reader.js";
 import { extractReadableText } from "../producers/menu-qr/inputs.js";
 import { buildDesignedMenuHtml } from "../producers/menu-qr/design.js";
 import { MENU_PACKAGE_PRICING } from "../checkout/quote.js";
@@ -82,8 +82,8 @@ function previewPage(menuHtml, name) {
   .mm-preview a { flex: none; padding: 11px 18px; border-radius: 6px; background: #00a7b5; color: #fff; font-weight: 700; text-decoration: none; }
 </style>`;
   return menuHtml
-    .replace("</head>", `<meta name="robots" content="noindex,nofollow">\n${style}\n</head>`)
-    .replace(/<body>/, `<body>\n${bar}`);
+    .replace("</head>", () => `<meta name="robots" content="noindex,nofollow">\n${style}\n</head>`)
+    .replace(/<body>/, () => `<body>\n${bar}`);
 }
 
 function plainPage(status, title, body) {
@@ -112,7 +112,7 @@ async function handleProspectDemo(request, env, { fetcher = fetch, now = Date.no
   const token = newToken();
   try {
     const read = await readProspectMenu(p.menu_url, env, fetcher);
-    const page = previewPage(buildDesignedMenuHtml({ businessName: p.name, brandColors: null, menu: read.menu, logoDataUri: null }), p.name);
+    const page = previewPage(buildDesignedMenuHtml({ businessName: p.name, brandColors: menuColors(read.menu), menu: read.menu, logoDataUri: null }), p.name);
     await env.ASSETS.put(`prospect-demos/${token}.html`, page, { httpMetadata: { contentType: "text/html; charset=utf-8" } });
     const itemCount = read.extraction?.item_count ?? null;
     await env.DB.prepare(`INSERT INTO prospect_demos (token, prospect_id, status, item_count, created_at, expires_at) VALUES (?, ?, 'READY', ?, ?, ?)`)
