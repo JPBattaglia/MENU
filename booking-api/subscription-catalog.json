@@ -137,5 +137,11 @@
         }
       }
     }
-  }
+  },
+  "price_changes": [
+    { "date": "2026-11-06", "offer": "BUNDLE_GROWTH", "migration": "0039_growth_169.sql",
+      "monthly": { "price": "price_1UYuSPHw7f6jhUv8FJPdUNRq", "amount": 16900 },
+      "annual": { "price": "price_1UYuSRHw7f6jhUv8x9I0cJxe", "amount": 169000 },
+      "note": "Owner: Growth $169 so it stays below the same services as Your own plan. The bundles section keeps the launch prices migration 0001 created." }
+  ]
 }

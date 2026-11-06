@@ -561,3 +561,24 @@ test('your own plan: the subscription gets exactly the services picked, at the p
     assert.doesNotMatch(welcome.html, /Your own plan is active[\s\S]*switch between monthly and annual/);
   } finally { h.restore(); }
 });
+
+test('Growth at $169 (owner, Nov 6, 2026): new checkouts use the new price; subscriptions on the old price still map to Growth', async () => {
+  const h = setup();
+  try {
+    h.env.DB.raw.exec(readFileSync(new URL('./migrations/0039_growth_169.sql', import.meta.url), 'utf8'));
+    h.env.DB.raw.exec(readFileSync(new URL('./migrations/0039_growth_169.sql', import.meta.url), 'utf8')); // safe twice
+    const res = await h.checkout({ items: [{ key: 'BUNDLE_GROWTH' }], interval: 'month', customer: buyer });
+    assert.equal(res.status, 200, JSON.stringify(res.body));
+    assert.equal(h.stripe.sessions.at(-1).params.get('line_items[0][price_data][unit_amount]'), '16900');
+    const year = await h.checkout({ items: [{ key: 'BUNDLE_GROWTH' }], interval: 'year', customer: buyer });
+    assert.equal(h.stripe.sessions.at(-1).params.get('line_items[0][price_data][unit_amount]'), '169000');
+    const live = await h.checkout({ items: [{ key: 'BUNDLE_GROWTH' }], interval: 'month', customer: buyer }, true);
+    if (live.status === 200) assert.equal(h.stripe.sessions.at(-1).params.get('line_items[0][price]'), 'price_1UYuSPHw7f6jhUv8FJPdUNRq');
+    const cat = await (await h.call('/api/catalog')).json();
+    assert.deepEqual(cat.offers.find((o) => o.code === 'BUNDLE_GROWTH').prices, { month: 16900, year: 169000 });
+    const { planForStripePrice } = await import('./src/subscriptions/plans.js');
+    const old = await planForStripePrice({ id: catalog.bundles.BUNDLE_GROWTH.monthly.price, recurring: { interval: 'month' } }, null, h.env);
+    assert.equal(old.offerCode, 'BUNDLE_GROWTH', 'a subscription on the old $179 price is still Growth');
+    void year;
+  } finally { h.restore(); }
+});
