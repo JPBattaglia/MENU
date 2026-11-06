@@ -194,6 +194,10 @@ test("owner's own apps: made once by the tick at no charge, owner keys, no buyer
   const first = await own.ensureOwnStoreApps(f.env, { force: true, fetchImpl: logoFetch });
   assert.deepEqual(first.created.map((c) => [c.key, c.logo]), [['menumade', true], ['nino', true]]);
   assert.deepEqual((await own.ensureOwnStoreApps(f.env, { force: true, fetchImpl: logoFetch })).created, [], 'never twice');
+  // A logo that failed the first time is attached on a later pass, before the content is approved.
+  f.sql(`DELETE FROM assets WHERE json_extract(metadata_json, '$.app_image') = 'logo' AND project_id = (SELECT project_id FROM store_apps WHERE bundle_id = 'com.menumade.ninobattaglia')`);
+  await own.ensureOwnStoreApps(f.env, { force: true, fetchImpl: logoFetch });
+  assert.equal(f.row(`SELECT COUNT(*) AS n FROM assets WHERE json_extract(metadata_json, '$.app_image') = 'logo'`).n, 2);
   const apps = DB_rows(f, `SELECT bundle_id, status, own_app FROM store_apps ORDER BY bundle_id`);
   assert.deepEqual(apps, [{ bundle_id: 'com.menumade.menumade', status: 'WAITING_APP', own_app: 1 }, { bundle_id: 'com.menumade.ninobattaglia', status: 'WAITING_APP', own_app: 1 }]);
   assert.deepEqual(DB_rows(f, `SELECT total_cents, payment_status, stripe_checkout_session_id FROM orders`), [{ total_cents: 0, payment_status: 'PAID', stripe_checkout_session_id: null }, { total_cents: 0, payment_status: 'PAID', stripe_checkout_session_id: null }], 'no charge and not a test order, so it reaches the real stores');
