@@ -37,6 +37,7 @@ function setup() {
   DB.raw.exec(readFileSync(new URL('./migrations/0013_google_connections.sql', import.meta.url), 'utf8'));
   DB.raw.exec(readFileSync(new URL('./migrations/0014_review_replies.sql', import.meta.url), 'utf8'));
   DB.raw.exec(readFileSync(new URL('./migrations/0015_google_profile_care.sql', import.meta.url), 'utf8'));
+  DB.raw.exec(readFileSync(new URL('./migrations/0038_custom_plan.sql', import.meta.url), 'utf8'));
 
   const stripe = { sessions: [], subscriptions: new Map(), customers: new Map(), portal: [], deleted: [], keys: [] };
   const emails = [];
@@ -94,12 +95,12 @@ function setup() {
     return { status: res.status, body: await res.json() };
   };
   // A Stripe subscription as the 2025+ API returns it (periods on the item), for a sandbox checkout's inline price.
-  const makeSub = ({ id, orderId, plan, interval = 'month', amount, start, status = 'active', trialEnd = null, customer = 'cus_test_1' }) => {
+  const makeSub = ({ id, orderId, plan, interval = 'month', amount, start, status = 'active', trialEnd = null, customer = 'cus_test_1', includes = null }) => {
     const end = interval === 'year' ? addMonths(start, 12) : addMonths(start, 1);
     const sub = {
       id, object: 'subscription', status, customer, currency: 'usd', cancel_at_period_end: false,
       start_date: unix(start), canceled_at: null, ended_at: null, trial_end: trialEnd,
-      metadata: { order_id: orderId, plan_code: plan, environment: 'sandbox' },
+      metadata: { order_id: orderId, plan_code: plan, environment: 'sandbox', ...(includes ? { includes } : {}) },
       items: { data: [{ id: `si_${id}`, quantity: 1, current_period_start: unix(start), current_period_end: unix(end),
         price: { id: `price_inline_${id}`, unit_amount: amount, recurring: { interval }, product: { id: `prod_inline_${id}`, metadata: { plan_code: plan } } } }] }
     };
@@ -487,5 +488,76 @@ test('billing portal link opens a Stripe portal session for that subscriber only
     assert.equal(tampered.status, 403);
     const other = await h.call(`/api/billing-portal/00000000-0000-4000-8000-000000000000${link.search}`);
     assert.equal(other.status, 403);
+  } finally { h.restore(); }
+});
+
+// "Your own plan" (owner, Nov 6, 2026): ticked monthly services at one price, 10% off for two, 20% off for three or more.
+test('your own plan: priced by the server, 10% off two services, 20% off three or more, rounded down to whole dollars', async () => {
+  const h = setup();
+  try {
+    const two = await h.checkout({ items: [{ key: 'CUSTOM_PLAN', includes: ['SOCIAL_POSTS', 'MENU_CARE'] }], interval: 'month', customer: buyer });
+    assert.equal(two.status, 200, JSON.stringify(two.body));
+    let p = h.stripe.sessions.at(-1).params;
+    assert.equal(p.get('mode'), 'subscription');
+    assert.equal(p.get('line_items[0][price_data][unit_amount]'), '14200', '$29 + $129 = $158, 10% off = $142.20, rounded down');
+    assert.equal(p.get('line_items[0][price_data][product_data][metadata][plan_code]'), 'CUSTOM_PLAN');
+    assert.equal(p.get('subscription_data[metadata][plan_code]'), 'CUSTOM_PLAN');
+    assert.equal(p.get('subscription_data[metadata][includes]'), 'MENU_CARE,SOCIAL_POSTS');
+    assert.equal(h.one(`SELECT total_cents FROM orders WHERE id = ?`, two.body.order_id).total_cents, 14200);
+
+    const three = await h.checkout({ items: [{ key: 'CUSTOM_PLAN', includes: ['MENU_CARE', 'SOCIAL_POSTS', 'WEBSITE_CARE'] }], interval: 'year', customer: buyer });
+    assert.equal(three.status, 200, JSON.stringify(three.body));
+    p = h.stripe.sessions.at(-1).params;
+    assert.equal(p.get('line_items[0][price_data][unit_amount]'), '165600', '$2,070 a year, 20% off');
+    assert.equal(p.get('line_items[0][price_data][recurring][interval]'), 'year');
+
+    const overlap = await h.checkout({ items: [{ key: 'CUSTOM_PLAN', includes: ['GOOGLE_PROFILE_CARE', 'REVIEW_REPLIES', 'MENU_CARE'] }], interval: 'month', customer: buyer });
+    assert.equal(overlap.status, 200, JSON.stringify(overlap.body));
+    p = h.stripe.sessions.at(-1).params;
+    assert.equal(p.get('subscription_data[metadata][includes]'), 'MENU_CARE,GOOGLE_PROFILE_CARE', 'Google Profile Care already answers reviews');
+    assert.equal(p.get('line_items[0][price_data][unit_amount]'), '16000', '$29 + $149 = $178, two services 10% off = $160.20, rounded down');
+
+    const res = await h.call('/api/catalog');
+    const cat = await res.json();
+    assert.deepEqual(cat.custom_plan.discount_percent, { two: 10, three_or_more: 20 });
+    assert.ok(!cat.offers.some((o) => o.code === 'CUSTOM_PLAN'), 'not listed as an offer of its own');
+  } finally { h.restore(); }
+});
+
+test('your own plan: needs two or more listed monthly services; the Website Package still needs Website Care in it', async () => {
+  const h = setup();
+  try {
+    for (const includes of [['MENU_CARE'], [], ['MENU_CARE', 'BUNDLE_PRO'], ['MENU_CARE', 'ONLINE_MENU_QR']]) {
+      const r = await h.checkout({ items: [{ key: 'CUSTOM_PLAN', includes }], interval: 'month', customer: buyer });
+      assert.equal(r.status, 400, `${includes} -> ${JSON.stringify(r.body)}`);
+    }
+    const noCare = await h.checkout({ items: [{ key: 'CUSTOM_PLAN', includes: ['MENU_CARE', 'SOCIAL_POSTS'] }, { key: 'WEBSITE_PACKAGE' }], interval: 'month', customer: buyer });
+    assert.equal(noCare.status, 400);
+    assert.match(noCare.body.error, /Website Care/);
+    assert.equal(h.stripe.sessions.length, 0);
+  } finally { h.restore(); }
+});
+
+test('your own plan: the subscription gets exactly the services picked, at the price Stripe bills, and a welcome email that reads right', async () => {
+  const h = setup();
+  try {
+    const res = await h.checkout({ items: [{ key: 'CUSTOM_PLAN', includes: ['MENU_CARE', 'SOCIAL_POSTS', 'ACCESSIBILITY_MONITORING'] }], interval: 'month', customer: buyer });
+    assert.equal(res.status, 200, JSON.stringify(res.body));
+    // $29 + $129 + $39 = $197, 20% off = $157.60 -> $157
+    h.makeSub({ id: 'sub_custom', orderId: res.body.order_id, plan: 'CUSTOM_PLAN', amount: 15700, start: '2026-11-06T18:00:00.000Z',
+      includes: 'MENU_CARE,SOCIAL_POSTS,ACCESSIBILITY_MONITORING' });
+    const done = await h.webhook('checkout.session.completed', { id: h.stripe.sessions.at(-1).id, object: 'checkout.session', mode: 'subscription',
+      subscription: 'sub_custom', customer: 'cus_test_1', amount_total: 15700, currency: 'usd', payment_status: 'paid', metadata: { order_id: res.body.order_id } });
+    assert.equal(done.status, 200, JSON.stringify(done.body));
+    const row = h.one(`SELECT * FROM subscriptions WHERE provider_subscription_id = 'sub_custom'`);
+    assert.equal(row.amount_cents, 15700);
+    assert.equal(row.offer_id, 'offer_custom_plan');
+    assert.deepEqual(h.rows(`SELECT entitlement_type FROM entitlements WHERE subscription_id = ? AND status = 'ACTIVE' ORDER BY entitlement_type`, row.id).map((e) => e.entitlement_type),
+      ['ACCESSIBILITY_MONITORING', 'MENU_CARE', 'SOCIAL_POSTS']);
+    const welcome = h.emails.find((e) => e.subject === 'Your own plan is active');
+    assert.ok(welcome, h.emails.map((e) => e.subject).join(' | '));
+    assert.match(welcome.text, /\$157\/month/);
+    assert.match(welcome.text, /Menu Care/);
+    assert.doesNotMatch(welcome.html, /Your own plan is active[\s\S]*switch between monthly and annual/);
   } finally { h.restore(); }
 });

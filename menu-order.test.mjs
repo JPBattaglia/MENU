@@ -184,6 +184,26 @@ test('checkout sends the plan with its interval, one-time items, and the short b
   assert.match(p.sent[0].body.customer.notes, /^Google: existing profile/);
 });
 
+test('your own plan from the plans page: the picks, the one-time services and the total reach checkout', async () => {
+  const p = await page('?custom=SOCIAL_POSTS,MENU_CARE,ACCESSIBILITY_MONITORING&add=google&interval=month');
+  const s = p.state();
+  assert.equal(s.plan, 'CUSTOM_PLAN');
+  assert.deepEqual(s.once, ['GOOGLE_VISIBILITY']);
+  // $29 + $129 + $39 = $197, 20% off = $157.60 -> $157, plus $149 once.
+  assert.equal(p.get('cartTotal').textContent, '$306.00');
+  p.fill();
+  await p.get('checkoutBtn').fire('click');
+  assert.equal(p.sent.length, 1);
+  assert.deepEqual(p.sent[0].body.items, [
+    { key: 'CUSTOM_PLAN', qty: 1, interval: 'month', includes: ['MENU_CARE', 'SOCIAL_POSTS', 'ACCESSIBILITY_MONITORING'] },
+    { key: 'GOOGLE_VISIBILITY', qty: 1 }
+  ]);
+  const one = await page('?custom=MENU_CARE');
+  assert.equal(one.state().plan, 'MENU_CARE', 'one service is that service on its own');
+  const overlap = await page('?custom=GOOGLE_PROFILE_CARE,REVIEW_REPLIES');
+  assert.equal(overlap.state().plan, 'GOOGLE_PROFILE_CARE', 'Google Profile Care already answers reviews');
+});
+
 test('briefs are validated before payment', async () => {
   const g = await page('?service=google');
   g.fill(); g.get('googleMode').value = '';

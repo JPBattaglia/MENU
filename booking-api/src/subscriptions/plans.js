@@ -81,4 +81,74 @@ async function includedPlanVersions(plan, env) {
   return out;
 }
 
-export { normalizeInterval, resolvePlan, planForStripePrice, includedPlanVersions };
+
+// "Your own plan" (owner, Nov 6, 2026): the monthly services a buyer ticks on the plans page, at one price.
+// Price = the separate prices for the interval added up, 10% off for two services, 20% off for three or more,
+// rounded down to whole dollars. The services ride on the Stripe subscription's metadata (includes).
+const CUSTOM_CODE = "CUSTOM_PLAN";
+const CUSTOM_ALLOWED = ["MENU_CARE", "REVIEW_REPLIES", "GOOGLE_PROFILE_CARE", "SOCIAL_POSTS", "WEBSITE_CARE", "ACCESSIBILITY_MONITORING", "GUEST_APP"];
+const CUSTOM_DISCOUNTS = { 2: 10, 3: 20 }; // count -> percent off; 3 means 3 or more
+
+function customDiscountPercent(count) {
+  if (count >= 3) return CUSTOM_DISCOUNTS[3];
+  return CUSTOM_DISCOUNTS[count] || 0;
+}
+
+function customPriceCents(listCents, count) {
+  return Math.floor((listCents * (100 - customDiscountPercent(count))) / 100 / 100) * 100;
+}
+
+// The services named for a custom plan, cleaned: known codes only, each once, in the catalog order.
+function customIncludes(input) {
+  const list = Array.isArray(input) ? input : String(input || "").split(",");
+  const wanted = new Set(list.map((code) => String(code || "").trim().toUpperCase()).filter(Boolean));
+  return CUSTOM_ALLOWED.filter((code) => wanted.has(code));
+}
+
+class CustomPlanError extends Error {}
+
+// A priced custom plan for these services and interval. Throws CustomPlanError when the pick isn't valid.
+async function resolveCustomPlan(input, interval, env) {
+  const raw = (Array.isArray(input) ? input : String(input || "").split(",")).map((c) => String(c || "").trim()).filter(Boolean);
+  let includes = customIncludes(raw);
+  if (includes.length !== new Set(raw.map((c) => c.toUpperCase())).size) throw new CustomPlanError("Your own plan can only include the monthly services listed on the plans page.");
+  // Google Profile Care already answers reviews: Review Replies isn't charged twice.
+  if (includes.includes("GOOGLE_PROFILE_CARE")) includes = includes.filter((code) => code !== "REVIEW_REPLIES");
+  if (includes.length < 2) throw new CustomPlanError("Your own plan needs at least two monthly services. For one, choose that service on its own.");
+  const base = await resolvePlan(CUSTOM_CODE, interval, env, { requirePublic: false });
+  if (!base) throw new Error("The CUSTOM_PLAN offer is missing (migration 0038)");
+  let listCents = 0;
+  const names = [];
+  for (const code of includes) {
+    const part = await resolvePlan(code, interval, env, { requirePublic: false });
+    if (!part) throw new CustomPlanError(`${code} isn't available ${interval === "YEAR" ? "yearly" : "monthly"} right now.`);
+    listCents += part.priceCents;
+    names.push(part.offerName);
+  }
+  return {
+    ...base,
+    kind: "CUSTOM",
+    includes,
+    includedNames: names,
+    listCents,
+    discountPercent: customDiscountPercent(includes.length),
+    priceCents: customPriceCents(listCents, includes.length),
+    requiresSetup: includes.includes("GUEST_APP") ? "GUEST_APP_SETUP" : null
+  };
+}
+
+// A custom plan read back from Stripe carries its services in the subscription metadata.
+// Its price is the one Stripe bills (the catalog row holds a placeholder 0).
+function withCustomIncludes(plan, metadata, unitAmountCents = null) {
+  if (!plan || plan.offerCode !== CUSTOM_CODE) return plan;
+  const includes = customIncludes(metadata?.includes);
+  if (!includes.length) throw new Error("A custom plan subscription has no services in its metadata (includes)");
+  const priceCents = Number.isFinite(Number(unitAmountCents)) && unitAmountCents !== null ? Number(unitAmountCents) : plan.priceCents;
+  return { ...plan, kind: "CUSTOM", includes, priceCents, requiresSetup: includes.includes("GUEST_APP") ? "GUEST_APP_SETUP" : null };
+}
+
+export {
+  normalizeInterval, resolvePlan, planForStripePrice, includedPlanVersions,
+  CUSTOM_CODE, CUSTOM_ALLOWED, CUSTOM_DISCOUNTS, CustomPlanError, customDiscountPercent, customPriceCents, customIncludes,
+  resolveCustomPlan, withCustomIncludes
+};

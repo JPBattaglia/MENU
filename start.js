@@ -28,7 +28,23 @@ const BRIEFS = {
 };
 const BRIEF_IDS = ['conversionUrl', 'conversionGoal', 'googleMode', 'googleUrl'];
 
-const order = { plan: null, once: new Set() };
+const order = { plan: null, once: new Set(), custom: [] };
+// "Your own plan" (Nov 6, 2026): the monthly services ticked on the plans page, one price. The server prices it the
+// same way (src/subscriptions/plans.js); this only shows the buyer the total before checkout.
+const CUSTOM = 'CUSTOM_PLAN';
+const CUSTOM_SERVICES = ['MENU_CARE', 'REVIEW_REPLIES', 'GOOGLE_PROFILE_CARE', 'SOCIAL_POSTS', 'WEBSITE_CARE', 'ACCESSIBILITY_MONITORING', 'GUEST_APP'];
+function cleanCustom(codes) {
+  const wanted = new Set(codes.map(c => String(c).trim().toUpperCase()));
+  let list = CUSTOM_SERVICES.filter(c => wanted.has(c));
+  if (list.includes('GOOGLE_PROFILE_CARE')) list = list.filter(c => c !== 'REVIEW_REPLIES'); // already answers reviews
+  return list;
+}
+function customQuote(codes = order.custom) {
+  let list = 0;
+  for (const code of codes) { const p = Catalog.priceOf(offer(code), interval()); if (p === null) return null; list += p; }
+  const pct = codes.length >= 3 ? 20 : codes.length === 2 ? 10 : 0;
+  return { list, pct, cents: Math.floor(list * (100 - pct) / 100 / 100) * 100 };
+}
 let offers = null;
 let checkoutInFlight = false;
 let uploadedDocumentRequest = null;
@@ -47,7 +63,10 @@ const interval = () => Catalog?.interval || 'month';
 const money = cents => '$' + (cents / 100).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 const offer = code => offers?.get(code) || null;
 const cardFor = code => document.querySelector(`.service-card[data-code="${code}"]`);
-const nameOf = code => offer(code)?.name || cardFor(code)?.dataset.name || code;
+const nameOf = code => code === CUSTOM ? 'Your own plan' : (offer(code)?.name || cardFor(code)?.dataset.name || code);
+const planCents = code => code === CUSTOM ? (customQuote()?.cents ?? null) : Catalog.priceOf(offer(code), interval());
+const wholeMoney = cents => '$' + (cents / 100).toLocaleString('en-US', { minimumFractionDigits: cents % 100 ? 2 : 0, maximumFractionDigits: 2 });
+const planLabel = code => { if (code !== CUSTOM) return Catalog.label(offer(code), interval()); const c = planCents(code); return c === null ? '' : wholeMoney(c) + (interval() === 'year' ? '/yr' : '/mo'); };
 const sellable = o => Boolean(o) && (o.on_sale || TEST_CHECKOUT);
 
 function showStatus(message) { els.status.textContent = message; els.status.classList.add('show'); }
@@ -91,11 +110,14 @@ function effectivePlan() {
 
 // Mirrors the order engine's rules so the buyer sees a problem before checkout, not after.
 function orderProblem() {
-  const plan = order.plan ? offer(order.plan) : null;
+  const plan = order.plan === CUSTOM ? { name: 'your own plan', includes: order.custom } : order.plan ? offer(order.plan) : null;
   if (order.once.has(WEBSITE) && plan && !plan.includes.includes('WEBSITE_CARE')) {
-    return `The Website Package comes with Website Care. Check it out on its own, or with a plan that includes Website Care (Pro or Website Care on its own), and add ${plan.name} in a second checkout.`;
+    return order.plan === CUSTOM
+      ? 'The Website Package comes with Website Care. Add Website Care to your own plan, or check out the Website Package on its own.'
+      : `The Website Package comes with Website Care. Check it out on its own, or with a plan that includes Website Care (Pro or Website Care on its own), and add ${plan.name} in a second checkout.`;
   }
-  for (const code of [order.plan, ...order.once].filter(Boolean)) {
+  const codes = order.plan === CUSTOM ? [...order.custom, ...order.once] : [order.plan, ...order.once];
+  for (const code of codes.filter(Boolean)) {
     if (offers && !sellable(offer(code))) return `${nameOf(code)} opens soon. Remove it to continue, or ask us about it below.`;
   }
   return '';
@@ -140,7 +162,10 @@ function lineFor(code, kind) {
   const strong = document.createElement('strong');
   strong.textContent = nameOf(code);
   const small = document.createElement('small');
-  if (kind === 'plan') {
+  if (kind === 'plan' && code === CUSTOM) {
+    const q = customQuote();
+    small.textContent = order.custom.map(nameOf).join(', ') + ' · ' + planLabel(CUSTOM) + (q?.pct ? `, ${q.pct}% off` : '') + (interval() === 'year' ? ' · billed yearly' : ' · billed monthly');
+  } else if (kind === 'plan') {
     small.textContent = Catalog.label(o, interval()) + (interval() === 'year' ? ' · billed yearly' : ' · billed monthly');
   } else if (code === MENU) {
     const quote = menuQuote();
@@ -187,13 +212,12 @@ function render(openEmptyChoices = true) {
     today += code === MENU ? (quote?.totalCents || 0) : (Catalog.priceOf(offer(code), interval()) || 0);
   }
   const plan = effectivePlan();
-  if (plan && !plan.trial) today += Catalog.priceOf(offer(plan.code), interval()) || 0;
+  if (plan && !plan.trial) today += planCents(plan.code) || 0;
   els.recurringRow.hidden = !plan;
   if (plan) {
-    const o = offer(plan.code);
     els.recurring.textContent = plan.trial
-      ? `${nameOf(plan.code)} free for 3 months, then ${Catalog.label(o, interval())}`
-      : `${Catalog.label(o, interval())}, renews ${interval() === 'year' ? 'yearly' : 'monthly'} until you cancel`;
+      ? `${nameOf(plan.code)} free for 3 months, then ${planLabel(plan.code)}`
+      : `${planLabel(plan.code)}, renews ${interval() === 'year' ? 'yearly' : 'monthly'} until you cancel`;
   }
   els.total.textContent = validPages ? money(today) : 'Enter page count';
   const problem = any ? orderProblem() : '';
@@ -233,7 +257,8 @@ function add(code, { quiet = false } = {}) {
   if (o.prices) {
     if (order.plan === code) return false;
     if (order.plan && !quiet) showStatus(`Your order has one plan at a time, so ${nameOf(order.plan)} was replaced by ${o.name}. Bundles combine plans for less.`);
-    if (order.plan === 'GUEST_APP') order.once.delete('GUEST_APP_SETUP');
+    if (order.plan === 'GUEST_APP' || (order.plan === CUSTOM && order.custom.includes('GUEST_APP'))) order.once.delete('GUEST_APP_SETUP');
+    order.custom = [];
     order.plan = code;
     if (o.requires_setup) order.once.add(o.requires_setup);
   } else {
@@ -245,9 +270,24 @@ function add(code, { quiet = false } = {}) {
   return true;
 }
 
+// Your own plan from the plans page: two or more monthly services; one is just that service.
+function setCustom(codes) {
+  if (flowBusy() || !offers) return false;
+  const list = cleanCustom(codes).filter(code => sellable(offer(code)));
+  if (list.length < 2) return list.length ? add(list[0], { quiet: true }) : false;
+  if (order.plan === 'GUEST_APP' || (order.plan === CUSTOM && order.custom.includes('GUEST_APP'))) order.once.delete('GUEST_APP_SETUP');
+  order.plan = CUSTOM;
+  order.custom = list;
+  if (list.includes('GUEST_APP')) order.once.add('GUEST_APP_SETUP');
+  window.MenuMadeFunnel?.track('service_selected', CUSTOM);
+  render();
+  return true;
+}
+
 function remove(code) {
   if (order.plan === code) {
-    const setup = offer(code)?.requires_setup;
+    const setup = code === CUSTOM ? (order.custom.includes('GUEST_APP') ? 'GUEST_APP_SETUP' : null) : offer(code)?.requires_setup;
+    order.custom = [];
     order.plan = null;
     if (setup) order.once.delete(setup);
   } else {
@@ -337,7 +377,7 @@ async function checkout() {
   const brief = collectBrief(); if (brief === null) return;
   if (!els.scope.checked) { showStatus('Please confirm you have read what is included.'); els.scope.focus(); return; }
   const items = [
-    ...(order.plan ? [{ key: order.plan, qty: 1, interval: interval() }] : []),
+    ...(order.plan ? [{ key: order.plan, qty: 1, interval: interval(), ...(order.plan === CUSTOM ? { includes: order.custom } : {}) }] : []),
     ...[...order.once].map(code => ({ key: code, qty: 1 }))
   ];
   const customer = { name, business, email, phone, notes: composeNotes(brief, notes, 500) };
@@ -421,6 +461,13 @@ render(false);
     .filter(code => code && /^[A-Z_]+$/.test(code) && offers.has(code));
   let chosen = false;
   for (const code of requested) chosen = add(code, { quiet: false }) || chosen;
+  // From the plans page builder: ?custom=A,B (two or more monthly services) and ?add=X,Y (one-time services).
+  const custom = (params.get('custom') || '').split(',').filter(Boolean);
+  if (custom.length) chosen = setCustom(custom) || chosen;
+  for (const raw of (params.get('add') || '').split(',').filter(Boolean)) {
+    const code = Object.hasOwn(ALIASES, raw) ? ALIASES[raw] : raw.toUpperCase();
+    if (/^[A-Z_]+$/.test(code) && offers.has(code) && !offers.get(code).prices) chosen = add(code, { quiet: true }) || chosen;
+  }
   render(false);
   if (chosen) { els.picker.open = false; showDetails(false); }
   if (location.hash === '#optionalServices') els.picker.open = true;

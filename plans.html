@@ -11,10 +11,11 @@
   <link rel="icon" type="image/png" href="MENU=.png">
   <link rel="shortcut icon" href="MENU=.png">
   <link rel="apple-touch-icon" href="MENU=.png">
-  <link rel="stylesheet" href="main.css?v=20261106-simple3">
+  <link rel="stylesheet" href="main.css?v=20261106-build">
   <script src="funnel.js?v=20261016-service-measurement" defer></script>
   <script src="site-nav.js?v=20261105-nav" defer></script>
   <script src="site-catalog.js?v=20261103-prices" defer></script>
+  <script src="plan-builder.js?v=20261106" defer></script>
   <link rel="canonical" href="https://menu-made.com/plans">
   <meta property="og:type" content="website">
   <meta property="og:locale" content="en_US">
@@ -122,44 +123,42 @@
   </div>
 </section>
 
-<section class="section" id="single" aria-labelledby="single-title">
+<section class="section" id="build" aria-labelledby="build-title">
   <div class="container">
-    <details class="mm-build-own">
-      <summary><span id="single-title">Build your own: each monthly service on its own</span></summary>
-      <p>Monthly or yearly, using the same switch as the plans above. A plan costs less than the same services bought one by one.</p>
-    <div class="mm-singles">
-<article class="mm-single">
-  <h3>Menu Care</h3><p>Unlimited menu updates, same QR code.</p>
-  <p class="mm-single-price"><span class="mm-price" data-price-for="MENU_CARE">$29/mo</span></p>
-  <div class="mm-single-actions"><a class="cta-pill" href="services.html#menu-care">Details</a><a class="btn primary" data-plan-cta="MENU_CARE" data-cta-label="Choose" href="contact.html?plan=MENU_CARE">Choose</a></div>
-</article>
-<article class="mm-single">
-  <h3>Review Replies</h3><p>Every new Google review answered.</p>
-  <p class="mm-single-price"><span class="mm-price" data-price-for="REVIEW_REPLIES">$49/mo</span></p>
-  <div class="mm-single-actions"><a class="cta-pill" href="services.html#review-replies">Details</a><a class="btn primary" data-plan-cta="REVIEW_REPLIES" data-cta-label="Choose" href="contact.html?plan=REVIEW_REPLIES">Choose</a></div>
-</article>
-<article class="mm-single">
-  <h3>Google Profile Care</h3><p>A busy, up-to-date Google profile.</p>
-  <p class="mm-single-price"><span class="mm-price" data-price-for="GOOGLE_PROFILE_CARE">$149/mo</span></p>
-  <div class="mm-single-actions"><a class="cta-pill" href="services.html#google-profile-care">Details</a><a class="btn primary" data-plan-cta="GOOGLE_PROFILE_CARE" data-cta-label="Choose" href="contact.html?plan=GOOGLE_PROFILE_CARE">Choose</a></div>
-</article>
-<article class="mm-single">
-  <h3>Social Posts</h3><p>A month of posts, ready to share.</p>
-  <p class="mm-single-price"><span class="mm-price" data-price-for="SOCIAL_POSTS">$129/mo</span></p>
-  <div class="mm-single-actions"><a class="cta-pill" href="services.html#social-posts">Details</a><a class="btn primary" data-plan-cta="SOCIAL_POSTS" data-cta-label="Choose" href="contact.html?plan=SOCIAL_POSTS">Choose</a></div>
-</article>
-<article class="mm-single">
-  <h3>Website Care</h3><p>Hosting and changes for a website Menu-Made built.</p>
-  <p class="mm-single-price"><span class="mm-price" data-price-for="WEBSITE_CARE">$49/mo</span></p>
-  <div class="mm-single-actions"><a class="cta-pill" href="services.html#website-care">Details</a><a class="btn primary" data-plan-cta="WEBSITE_CARE" data-cta-label="Choose" href="contact.html?plan=WEBSITE_CARE">Choose</a></div>
-</article>
-<article class="mm-single">
-  <h3>Accessibility Monitoring</h3><p>A monthly accessibility check of your site.</p>
-  <p class="mm-single-price"><span class="mm-price" data-price-for="ACCESSIBILITY_MONITORING">$39/mo</span></p>
-  <div class="mm-single-actions"><a class="cta-pill" href="services.html#accessibility-monitoring">Details</a><a class="btn primary" data-plan-cta="ACCESSIBILITY_MONITORING" data-cta-label="Choose" href="contact.html?plan=ACCESSIBILITY_MONITORING">Choose</a></div>
-</article>
+    <header class="section-head"><h2 id="build-title">Or build your own plan</h2><p>Tick what you need and watch the total. Two monthly services are 10% off, three or more are 20% off.</p></header>
+    <div class="mm-builder" data-plan-builder>
+      <div class="mm-builder-list">
+        <fieldset class="mm-toggle" data-billing-toggle>
+          <legend class="mm-sr">Billing</legend>
+          <label><input type="radio" name="billing-build" value="month" checked><span>Monthly</span></label>
+          <label><input type="radio" name="billing-build" value="year"><span>Yearly <em>2 months free</em></span></label>
+        </fieldset>
+        <fieldset class="mm-pick-group"><legend>Monthly services</legend>
+      <label class="mm-pick"><input type="checkbox" data-code="MENU_CARE" data-kind="month" data-name="Menu Care"><span class="mm-pick-text"><strong>Menu Care</strong><small>We update your online menu whenever you ask. Your QR codes keep working.</small></span><span class="mm-pick-price"><span class="mm-price" data-price-for="MENU_CARE">$29/mo</span></span></label>
+      <label class="mm-pick"><input type="checkbox" data-code="REVIEW_REPLIES" data-kind="month" data-name="Review Replies"><span class="mm-pick-text"><strong>Review Replies</strong><small>Every new Google review gets a reply.</small><small class="mm-pick-note" data-note="REVIEW_REPLIES" hidden>Included in Google Profile Care</small></span><span class="mm-pick-price"><span class="mm-price" data-price-for="REVIEW_REPLIES">$49/mo</span></span></label>
+      <label class="mm-pick"><input type="checkbox" data-code="GOOGLE_PROFILE_CARE" data-kind="month" data-name="Google Profile Care"><span class="mm-pick-text"><strong>Google Profile Care</strong><small>A new Google post every week, fresh photos, review replies and a monthly report.</small></span><span class="mm-pick-price"><span class="mm-price" data-price-for="GOOGLE_PROFILE_CARE">$149/mo</span></span></label>
+      <label class="mm-pick"><input type="checkbox" data-code="SOCIAL_POSTS" data-kind="month" data-name="Social Posts"><span class="mm-pick-text"><strong>Social Posts</strong><small>12 posts a month, written and designed, ready to share.</small></span><span class="mm-pick-price"><span class="mm-price" data-price-for="SOCIAL_POSTS">$129/mo</span></span></label>
+      <label class="mm-pick"><input type="checkbox" data-code="WEBSITE_CARE" data-kind="month" data-name="Website Care"><span class="mm-pick-text"><strong>Website Care</strong><small>Hosting and changes for a website Menu-made built.</small></span><span class="mm-pick-price"><span class="mm-price" data-price-for="WEBSITE_CARE">$49/mo</span></span></label>
+      <label class="mm-pick"><input type="checkbox" data-code="ACCESSIBILITY_MONITORING" data-kind="month" data-name="Accessibility Monitoring"><span class="mm-pick-text"><strong>Accessibility Monitoring</strong><small>A monthly check that your website works for every guest.</small></span><span class="mm-pick-price"><span class="mm-price" data-price-for="ACCESSIBILITY_MONITORING">$39/mo</span></span></label>
+      <label class="mm-pick"><input type="checkbox" data-code="GUEST_APP" data-kind="month" data-name="Guest App"><span class="mm-pick-text"><strong>Guest App</strong><small>An app guests add to their home screen: menu, specials, rewards card and notifications.</small></span><span class="mm-pick-price"><span class="mm-price" data-price-for="GUEST_APP">$29/mo</span> <span class="mm-plus">+ <span class="mm-price" data-price-for="GUEST_APP_SETUP">$299</span> setup</span></span></label>
+        </fieldset>
+        <fieldset class="mm-pick-group"><legend>One-time services</legend>
+      <label class="mm-pick"><input type="checkbox" data-code="ONLINE_MENU_QR" data-kind="once" data-name="Online Menu + QR"><span class="mm-pick-text"><strong>Online Menu + QR</strong><small>Your menu as a phone page, a QR code for every table and a print-ready PDF.</small></span><span class="mm-pick-price"><span class="mm-price" data-price-for="ONLINE_MENU_QR">$144</span> <span class="mm-plus">first year</span></span></label>
+      <label class="mm-pick"><input type="checkbox" data-code="WEBSITE_PACKAGE" data-kind="once" data-name="Website Package"><span class="mm-pick-text"><strong>Website Package</strong><small>A new website of up to 5 pages, or a rebuild of yours. Includes 3 months of Website Care.</small></span><span class="mm-pick-price"><span class="mm-price" data-price-for="WEBSITE_PACKAGE">$499</span></span></label>
+      <label class="mm-pick"><input type="checkbox" data-code="GOOGLE_VISIBILITY" data-kind="once" data-name="Google Visibility"><span class="mm-pick-text"><strong>Google Visibility</strong><small>A one-time tune-up of your Google profile, with a before-and-after report.</small></span><span class="mm-pick-price"><span class="mm-price" data-price-for="GOOGLE_VISIBILITY">$149</span></span></label>
+        </fieldset>
+        <p class="mm-builder-more">Want your own app in the App Store and Google Play? <a href="apps.html">See the Mobile App</a>.</p>
+      </div>
+      <a class="mm-builder-bar" data-bar href="#build-total-title" hidden><span data-bar-text></span><span>See total</span></a>
+      <aside class="mm-builder-total" aria-labelledby="build-total-title">
+        <h3 id="build-total-title">Your total</h3>
+        <p class="mm-builder-empty" data-empty>Tick a service to see your total.</p>
+        <dl class="mm-builder-lines" data-lines aria-live="polite"></dl>
+        <div class="mm-builder-hint" data-hint hidden><p data-hint-text></p><a class="cta-pill" data-hint-link href="#bundles">Choose a plan instead</a></div>
+        <a class="btn primary mm-builder-go is-disabled" data-checkout aria-disabled="true" href="#build">Continue to checkout</a>
+        <p class="mm-builder-small">Next you add your details. Nothing is charged until Stripe’s secure checkout.</p>
+      </aside>
     </div>
-    </details>
   </div>
 </section>
 

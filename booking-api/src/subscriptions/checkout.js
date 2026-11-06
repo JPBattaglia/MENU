@@ -3,10 +3,11 @@
 //   - one plan or bundle per checkout, monthly or annual; setups ride along as one-time line items
 //   - Website Package alone starts Website Care with a 90-day trial in the same checkout
 //   - Guest App needs the Guest App Setup in the same cart
+//   - "Your own plan" (CUSTOM_PLAN, Nov 6, 2026): the item carries includes (2+ monthly services); priced here, never by the browser
 import { CheckoutValidationError } from "../checkout/quote.js";
 import { parseJsonOrNull } from "../lib/http.js";
 import { stripeRequest } from "../lib/stripe.js";
-import { normalizeInterval, resolvePlan } from "./plans.js";
+import { CUSTOM_CODE, CustomPlanError, normalizeInterval, resolveCustomPlan, resolvePlan } from "./plans.js";
 
 async function classifyItem(identifier, env) {
   const clean = String(identifier || "").trim();
@@ -49,7 +50,7 @@ async function buildSubscriptionCart(itemsInput, data, env, environment) {
     const identifier = item?.offer_id || item?.code || item?.slug || item?.key;
     const row = identifier ? await classifyItem(identifier, env) : null;
     if (row?.billing_type === "RECURRING") {
-      planInputs.push({ identifier, interval: item.interval });
+      planInputs.push({ identifier, interval: item.interval, includes: item.includes });
     } else {
       oneTimeInputs.push(item);
       if (row?.code) setupCodes.add(row.code);
@@ -82,7 +83,20 @@ async function buildSubscriptionCart(itemsInput, data, env, environment) {
     trialDays = await setupTrialDays(env, "STORE_APP_SETUP");
   }
   let plan = null;
-  if (planIdentifier) {
+  if (planIdentifier && String(planIdentifier).toUpperCase() === CUSTOM_CODE) {
+    try {
+      plan = await resolveCustomPlan(planInputs[0]?.includes, interval, env);
+    } catch (error) {
+      if (error instanceof CustomPlanError) throw new CheckoutValidationError(error.message);
+      throw error;
+    }
+    if (live && !plan.stripeProductId) {
+      throw new CheckoutValidationError("No live Stripe product is configured for your own plan", 500);
+    }
+    if (setupCodes.has("WEBSITE_PACKAGE") && !plan.includes.includes("WEBSITE_CARE")) {
+      throw new CheckoutValidationError("The Website Package includes Website Care; check it out on its own or with a plan that includes Website Care.");
+    }
+  } else if (planIdentifier) {
     plan = await resolvePlan(planIdentifier, interval, env, { requirePublic: live });
     if (!plan) {
       throw new CheckoutValidationError(live
@@ -114,7 +128,7 @@ async function buildSubscriptionCart(itemsInput, data, env, environment) {
         quantity: 1,
         offerId: plan.offerId,
         offerCode: plan.offerCode,
-        offerName: plan.offerName,
+        offerName: plan.kind === "CUSTOM" ? `${plan.offerName}: ${plan.includedNames.join(", ")}` : plan.offerName,
         offerVersionId: plan.offerVersionId,
         // Nothing is charged today during a trial; the recurring amount is kept in metadata.
         priceCents: trialDays ? 0 : plan.priceCents,
@@ -126,6 +140,7 @@ async function buildSubscriptionCart(itemsInput, data, env, environment) {
           interval: plan.interval,
           includes: plan.includes,
           recurring_amount_cents: plan.priceCents,
+          ...(plan.kind === "CUSTOM" ? { list_amount_cents: plan.listCents, discount_percent: plan.discountPercent } : {}),
           ...(trialDays ? { trial_days: trialDays } : {})
         }
       };
@@ -136,7 +151,20 @@ async function buildSubscriptionCart(itemsInput, data, env, environment) {
 function appendSubscriptionParams(params, cart, index, environment, pending) {
   const { plan, trialDays } = cart;
   const prefix = `line_items[${index}]`;
-  if (environment === "live") {
+  if (plan.kind === "CUSTOM") {
+    // One price for the services picked, made at checkout under the "Your own plan" product.
+    params.append(`${prefix}[price_data][currency]`, plan.currency.toLowerCase());
+    params.append(`${prefix}[price_data][unit_amount]`, String(plan.priceCents));
+    params.append(`${prefix}[price_data][recurring][interval]`, plan.interval === "YEAR" ? "year" : "month");
+    if (environment === "live") {
+      params.append(`${prefix}[price_data][product]`, plan.stripeProductId);
+    } else {
+      params.append(`${prefix}[price_data][product_data][name]`, `${plan.offerName} (${plan.interval === "YEAR" ? "annual" : "monthly"})`);
+      params.append(`${prefix}[price_data][product_data][metadata][plan_code]`, plan.offerCode);
+    }
+    params.append("subscription_data[metadata][includes]", plan.includes.join(","));
+    params.append("subscription_data[description]", `Your own plan: ${plan.includedNames.join(", ")}`);
+  } else if (environment === "live") {
     params.append(`${prefix}[price]`, plan.stripePriceId);
   } else {
     params.append(`${prefix}[price_data][currency]`, plan.currency.toLowerCase());
