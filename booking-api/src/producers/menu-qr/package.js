@@ -88,6 +88,15 @@ async function menuQrBuyerEmail({ context, files, linkFor, targetStep, env }) {
       filename: file.original_filename
     });
   }
+  // Hosted menus also get a print-ready PDF with the QR code on it (owner, Nov 5, 2026).
+  const printUrl = hosted ? `${qrDestination}/print.pdf` : null;
+  if (printUrl) links.push({ type: "PRINT_PDF", label: "Download your print menu (PDF)", url: printUrl });
+  // More formats from the same live menu: a tri-fold, a QR table tent and a menu screen for a TV (owner, Nov 5, 2026).
+  const extras = hosted ? [
+    { label: "Tri-fold menu (PDF, print double-sided, flip on the short edge)", url: `${qrDestination}/tri-fold.pdf` },
+    { label: "QR table tent (PDF, fold in half)", url: `${qrDestination}/table-tent.pdf` },
+    { label: "TV menu screen (open on a smart TV's browser)", url: `${qrDestination}/tv` }
+  ] : [];
   const business = context.business_name || "your business";
   const firstName = context.first_name || "there";
   const subject = `${isTestOrder(context) ? "[TEST] " : ""}Your online menu and QR code are ready`;
@@ -97,11 +106,14 @@ async function menuQrBuyerEmail({ context, files, linkFor, targetStep, env }) {
     heading: `${business}'s menu and QR code are ready`,
     paragraphs: [
       `Hi ${escapeHtml(firstName)},`,
-      "Your mobile-friendly menu page and QR code are finished. Use the buttons below to open and save them.",
-      hosted ? `Your menu is live at <a href="${escapeHtml(qrDestination)}">${escapeHtml(qrDestination)}</a>, and your QR code opens it. Print the QR code for your tables; there's nothing else to set up.` : qrDestination ? `Your QR code opens <strong>${escapeHtml(qrDestination)}</strong>. Put the menu page at that address (or send it to whoever manages your website), then print the QR code for your tables.` : "Print the QR code for your tables and place the menu page where it points."
+      printUrl ? "Your mobile-friendly menu page, QR code and print-ready menu PDF are finished. Use the buttons below to open and save them." : "Your mobile-friendly menu page and QR code are finished. Use the buttons below to open and save them.",
+      hosted ? `Your menu is live at <a href="${escapeHtml(qrDestination)}">${escapeHtml(qrDestination)}</a>, and your QR code opens it. Print the QR code for your tables; there's nothing else to set up.` : qrDestination ? `Your QR code opens <strong>${escapeHtml(qrDestination)}</strong>. Put the menu page at that address (or send it to whoever manages your website), then print the QR code for your tables.` : "Print the QR code for your tables and place the menu page where it points.",
+      ...extras.length ? [`Also made from your live menu: ${extras.map((e) => `<a href="${escapeHtml(e.url)}">${escapeHtml(e.label)}</a>`).join(" · ")}.`] : []
     ],
     buttons: links.map((link, index) => ({ label: link.label, url: link.url, primary: index === 0 })),
-    footnote: `These links work for ${DELIVERY_LINK_TTL_DAYS} days, so save both files. Questions or changes? Reply to this email.`
+    footnote: printUrl
+      ? `The menu and QR code links work for ${DELIVERY_LINK_TTL_DAYS} days, so save both files. The print links keep working and always match your live menu. Questions or changes? Reply to this email.`
+      : `These links work for ${DELIVERY_LINK_TTL_DAYS} days, so save both files. Questions or changes? Reply to this email.`
   });
   const text = [
     `Hi ${firstName},`,
@@ -111,7 +123,8 @@ async function menuQrBuyerEmail({ context, files, linkFor, targetStep, env }) {
     ...links.map((link) => `${link.label}: ${link.url}`),
     "",
     hosted ? `Your menu is live at ${qrDestination}, and your QR code opens it. Print the QR code for your tables; there's nothing else to set up.` : qrDestination ? `Your QR code opens ${qrDestination}. Put the menu page at that address, then print the QR code for your tables.` : "",
-    `These links work for ${DELIVERY_LINK_TTL_DAYS} days, so save both files. Questions or changes? Reply to this email.`,
+    ...extras.length ? ["", "Also made from your live menu:", ...extras.map((e) => `${e.label}: ${e.url}`), ""] : [],
+    printUrl ? `The menu and QR code links work for ${DELIVERY_LINK_TTL_DAYS} days, so save both files. The print links keep working and always match your live menu. Questions or changes? Reply to this email.` : `These links work for ${DELIVERY_LINK_TTL_DAYS} days, so save both files. Questions or changes? Reply to this email.`,
     "",
     "The MENU-MADE team"
   ].join("\n");

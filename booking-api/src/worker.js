@@ -43,7 +43,7 @@ import { advanceStoreAppSelfTests } from "./selftest/store-app-selftest.js";
 import { customHostSlug, runDomainWatch } from "./producers/website/domains.js";
 import { handlePlanSettings } from "./subscriptions/settings.js";
 import { handleMenuCareRequest } from "./producers/menu-care/intake.js";
-import { handleDeliveryDownload, handleHostedMenu } from "./delivery/delivery.js";
+import { handleDeliveryDownload, handleHostedMenu, handleHostedMenuPdf, handleHostedMenuTv } from "./delivery/delivery.js";
 import { handleExtraPagesDone, handleExtraPagesPay } from "./producers/menu-qr/page-billing.js";
 import { advanceSelfTests } from "./selftest/menu-qr-selftest.js";
 import { advanceWebsiteTrialSelfTests } from "./selftest/website-trial-selftest.js";
@@ -175,6 +175,14 @@ var worker_default = {
     const hostedMenuMatch = url.pathname.match(/^\/api\/menu\/([a-z0-9-]{1,60})$/);
     if (hostedMenuMatch && request.method === "GET") {
       return handleHostedMenu(request, env, hostedMenuMatch[1]);
+    }
+    const hostedMenuPdfMatch = url.pathname.match(/^\/api\/menu\/([a-z0-9-]{1,60})\/(print|tri-fold|table-tent)\.pdf$/);
+    if (hostedMenuPdfMatch && request.method === "GET") {
+      return handleHostedMenuPdf(request, env, hostedMenuPdfMatch[1], `${hostedMenuPdfMatch[2]}.pdf`);
+    }
+    const hostedMenuTvMatch = url.pathname.match(/^\/api\/menu\/([a-z0-9-]{1,60})\/tv$/);
+    if (hostedMenuTvMatch && request.method === "GET") {
+      return handleHostedMenuTv(request, env, hostedMenuTvMatch[1]);
     }
     const careMatch = url.pathname.match(/^\/api\/menu-care\/([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}|[0-9a-f]{16,64})$/i);
     if (careMatch && (request.method === "GET" || request.method === "POST")) {

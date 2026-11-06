@@ -173,6 +173,7 @@ test('a change request is applied, approved by the owner, and goes live at the s
     assert.deepEqual(f.emails[1].to, ['owner@proofcafe.example']);
     assert.match(f.emails[1].text, /Your online menu now shows/);
     assert.match(f.emails[1].text, new RegExp(HOSTED.replaceAll('.', '\\.')));
+    assert.ok(f.emails[1].text.includes(`Print menu (PDF): ${HOSTED}/print.pdf`));
     const after = await hosted(f);
     assert.match(after, /Bruschetta/); assert.match(after, /\$16/); assert.doesNotMatch(after, />\$15</);
     assert.match(after, /Pepperoni/, 'items the request did not mention are still there');
