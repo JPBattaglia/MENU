@@ -1,4 +1,5 @@
 import { bytesToBase64, escapeHtml2 } from "../../lib/util.js";
+import { styleCss, styleMeta, toStyle } from "./style.js";
 
 var NAMED_MENU_COLORS = {
   tan: "#b8956a", red: "#a8322d", green: "#2f6b45", navy: "#1f2a44", gold: "#b8902b", black: "#1b1b1b",
@@ -53,13 +54,17 @@ async function loadLogoDataUri(asset, env) {
   return `data:${mime};base64,${bytesToBase64(bytes)}`;
 }
 
-function buildDesignedMenuHtml({ businessName, brandColors, menu, logoDataUri }) {
+function buildDesignedMenuHtml({ businessName, brandColors, menu, logoDataUri, style }) {
+  // The look of the customer's own menu, when the reader saw one (style.js); otherwise the standard page.
+  let theme = toStyle(style ?? menu?.style);
   const esc = escapeHtml2;
   const clean = (value, max) => String(value ?? "").replace(/\s+/g, " ").trim().slice(0, max);
   // Pale colours (paper, cream, white) can't carry white text or headings, so they're left out.
   const colors = parseBrandColors(brandColors).filter((c) => colorLuminance(c) < 0.6);
-  const primary = readableOnWhiteText(colors[0] || "#1f2a2e");
-  const accent = colors[1] ? readableOnWhiteText(colors[1]) : primary;
+  // Colours named for the order (or read from the menu) lead the theme's headings and accents.
+  if (theme && colors.length) theme = toStyle({ ...theme, heading: colors[0], accent: colors[1] || colors[0] });
+  const primary = theme ? theme.heading : readableOnWhiteText(colors[0] || "#1f2a2e");
+  const accent = theme ? theme.accent : colors[1] ? readableOnWhiteText(colors[1]) : primary;
   const sections = (menu.sections || []).slice(0, 60).map((section, index) => ({
     id: `s${index + 1}`,
     name: clean(section.name, 120) || "Menu",
@@ -91,6 +96,7 @@ function buildDesignedMenuHtml({ businessName, brandColors, menu, logoDataUri })
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>${name} — Menu</title>
 <meta name="description" content="${name} menu">
+${styleMeta(theme)}
 <style>
   :root { --primary: ${primary}; --accent: ${accent}; --ink: #1d1d1b; --muted: #5d5a55; --paper: #fbf8f3; --rule: #e6dfd3; }
   * { box-sizing: border-box; }
@@ -115,7 +121,7 @@ function buildDesignedMenuHtml({ businessName, brandColors, menu, logoDataUri })
   .price { font-weight: 650; color: var(--primary); white-space: nowrap; font-variant-numeric: tabular-nums; }
   .desc { margin: 4px 0 0; color: var(--muted); font-size: 15px; }
   .notes { margin-top: 32px; padding: 16px; border-radius: 10px; background: #fff; border: 1px solid var(--rule); color: var(--muted); font-size: 14px; }
-  footer { padding: 24px 20px 36px; text-align: center; color: var(--muted); font-size: 12px; }
+  footer { padding: 24px 20px 36px; text-align: center; color: var(--muted); font-size: 12px; }${styleCss(theme)}
 </style>
 </head>
 <body>

@@ -34,6 +34,26 @@ var MENU_EXTRACTION_TOOL = {
         }
       },
       notes: { type: "string", description: "Printed footnotes worth keeping (allergens, surcharges, hours). Empty if none." },
+      style: {
+        type: "object",
+        description: "How the printed menu looks, so the phone version can match it. Describe what you see; use the closest option.",
+        properties: {
+          paper: { type: "string", description: "Background or paper colour as a hex code, e.g. #f3e6c4 for cream. #ffffff if plain white." },
+          text: { type: "string", description: "Colour of the description text, hex." },
+          heading: { type: "string", description: "Colour of the section headings, hex." },
+          item: { type: "string", description: "Colour of the item names, hex." },
+          price: { type: "string", description: "Colour of the prices, hex." },
+          accent: { type: "string", description: "Colour of rules, borders or ornaments, hex. Same as heading if none." },
+          title_font: { type: "string", enum: ["classic-serif", "elegant-serif", "modern-sans", "condensed-sans", "rounded-sans", "slab", "typewriter", "script"], description: "Kind of typeface used for the business name or menu title." },
+          heading_font: { type: "string", enum: ["classic-serif", "elegant-serif", "modern-sans", "condensed-sans", "rounded-sans", "slab", "typewriter", "script"], description: "Kind of typeface used for section headings." },
+          body_font: { type: "string", enum: ["classic-serif", "elegant-serif", "modern-sans", "condensed-sans", "rounded-sans", "slab", "typewriter"], description: "Kind of typeface used for item names and descriptions." },
+          heading_case: { type: "string", enum: ["upper", "title", "as-printed"], description: "Are section headings in capitals?" },
+          item_case: { type: "string", enum: ["upper", "title", "as-printed"], description: "Are item names in capitals?" },
+          heading_align: { type: "string", enum: ["center", "left"] },
+          divider: { type: "string", enum: ["line", "double", "dotted", "ornament", "none"], description: "What sits under or around section headings." },
+          item_layout: { type: "string", enum: ["stacked", "inline"], description: "stacked: description on its own line under the name. inline: description runs on after the name." }
+        }
+      },
       colors: {
         type: "array",
         items: { type: "string" },
@@ -85,7 +105,7 @@ async function readMenuWithClaude(contentBlock, env) {
         role: "user",
         content: [
           contentBlock,
-          { type: "text", text: "This is a restaurant or food business menu. Respond only by calling the record_menu tool once, with the whole menu. Read every page: a menu often runs over several pages, and a section can continue on the next page without repeating its heading, so keep those items in the same section and don't stop until the last item on the last page. Copy names, descriptions and prices exactly as printed; never invent, correct, translate or round anything. Keep the menu's own section order. Skip decorative text, logos, navigation and page numbers." }
+          { type: "text", text: "This is a restaurant or food business menu. Respond only by calling the record_menu tool once, with the whole menu. Read every page: a menu often runs over several pages, and a section can continue on the next page without repeating its heading, so keep those items in the same section and don't stop until the last item on the last page. Copy names, descriptions and prices exactly as printed; never invent, correct, translate or round anything. Keep the menu's own section order. Skip decorative text, logos, navigation and page numbers. Also fill in style with how the printed menu looks: its colours, kinds of typeface, capitals and layout." }
         ]
       }]
     })
