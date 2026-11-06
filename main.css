@@ -2911,10 +2911,28 @@ body.about-page .team-profile a{white-space:nowrap;font-size:clamp(11px,calc((10
 @media (max-width: 760px) { .mm-try { grid-template-columns: 1fr; width: auto; margin-inline: 12px; } }
 
 /* Home "What do you need?" shortcuts (owner, Nov 5, 2026: the website option was hard to find). */
-.hero-pick { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin-top: 22px; }
-.hero-pick p { flex-basis: 100%; margin: 0; font-weight: 700; color: var(--brand-soft); }
-.hero-pick a { padding: 9px 16px; border: 1px solid var(--brand-soft); border-radius: var(--button-radius); color: var(--brand-soft); font-weight: 700; text-decoration: none; background: transparent; }
-.hero-pick a:hover, .hero-pick a:focus-visible { background: rgba(0, 214, 230, .12); }
+/* "What do you need?" dropdown (owner, Nov 5, 2026: chips and text links both looked cluttered). A <details> menu so it
+   works without JS; a small script in index.html closes it on outside click and Escape. !important on the links beats
+   the site-wide "text links become pills" rule. */
+.hero-pick { position: relative; display: inline-block; margin-top: 18px; z-index: 5; }
+.hero-pick summary { list-style: none; display: inline-flex; align-items: center; gap: 10px; cursor: pointer; padding: 10px 16px 10px 18px; border-radius: var(--button-radius); border: 1px solid rgba(0, 214, 230, .45); background: rgba(0, 214, 230, .08); color: var(--brand-soft); font-weight: 700; font-size: 15px; user-select: none; transition: background .15s, border-color .15s; }
+.hero-pick summary::-webkit-details-marker { display: none; }
+.hero-pick summary::after { content: ""; width: 8px; height: 8px; border-right: 2px solid currentColor; border-bottom: 2px solid currentColor; transform: translateY(-2px) rotate(45deg); transition: transform .2s; }
+.hero-pick[open] summary::after { transform: translateY(2px) rotate(-135deg); }
+.hero-pick summary:hover, .hero-pick[open] summary { background: rgba(0, 214, 230, .16); border-color: var(--cyan); }
+.hero-pick summary:focus-visible { outline: 3px solid var(--gold); outline-offset: 2px; }
+.hero-pick-menu { position: absolute; top: calc(100% + 10px); left: 0; width: min(380px, calc(100vw - 32px)); padding: 8px; border-radius: 20px; border: 1px solid rgba(0, 214, 230, .4); background: linear-gradient(160deg, rgba(14, 62, 74, .92), rgba(5, 28, 36, .96)); box-shadow: 0 0 0 1px rgba(255, 255, 255, .04) inset, 0 20px 50px rgba(0, 0, 0, .5), 0 0 36px rgba(0, 214, 230, .18); backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px); animation: hero-pick-in .18s ease-out; }
+@keyframes hero-pick-in { from { opacity: 0; transform: translateY(-6px); } to { opacity: 1; transform: none; } }
+.hero-pick-menu a { display: grid !important; grid-template-columns: 40px 1fr; gap: 14px; align-items: center; width: auto !important; margin: 0 !important; padding: 11px 14px !important; border: 0 !important; border-radius: 12px !important; background: transparent !important; box-shadow: none !important; text-decoration: none !important; line-height: 1.35 !important; }
+.hero-pick-menu a b { display: block; font-weight: inherit; }
+.hero-pick-icon { display: grid; place-items: center; width: 40px; height: 40px; border-radius: 12px; background: rgba(0, 214, 230, .12); border: 1px solid rgba(0, 214, 230, .28); color: var(--cyan); transition: background .15s, color .15s, box-shadow .15s; }
+.hero-pick-icon svg { width: 22px; height: 22px; fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
+.hero-pick-menu a:hover .hero-pick-icon, .hero-pick-menu a:focus-visible .hero-pick-icon { background: var(--cyan); color: #04242c; box-shadow: 0 0 16px rgba(0, 214, 230, .5); }
+.hero-pick-menu a strong { display: block; color: #fff; font-size: 15px; }
+.hero-pick-menu a span { display: block; margin-top: 2px; color: rgba(255, 255, 255, .62); font-size: 13px; font-weight: 400; }
+.hero-pick-menu a:hover, .hero-pick-menu a:focus-visible { background: rgba(0, 214, 230, .12) !important; }
+.hero-pick-menu a:hover strong, .hero-pick-menu a:focus-visible strong { color: var(--brand-soft); }
+@media (prefers-reduced-motion: reduce) { .hero-pick-menu { animation: none; } .hero-pick summary::after { transition: none; } }
 
 /* 701-860px (Nov 5, 2026): the menu gained "Online Menu" and "Websites"; tighten it so "Start" stays on screen. */
 @media (max-width: 860px) and (min-width: 701px) {
