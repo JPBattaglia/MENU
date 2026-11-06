@@ -1,4 +1,4 @@
-// What the owner and the customer read for a Website & App Care update (stage 7). Reuses the Website Package preview links.
+// What the owner and the customer read for a Website Care update (stage 7). Reuses the Website Package preview links.
 import { APPROVAL_TTL_DAYS } from "../../lib/config.js";
 import { brandedEmailHtml, escapeHtml } from "../../lib/email.js";
 import { parseJsonOrNull } from "../../lib/http.js";

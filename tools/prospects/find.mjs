@@ -145,7 +145,7 @@ async function checkSite(website) {
 function offerFor(gaps) {
   if (gaps.some((g) => g.startsWith("menu_"))) return "ONLINE_MENU_QR";
   if (gaps.includes("no_website") || gaps.includes("no_phone_layout") || gaps.includes("site_down")) return "WEBSITE_PACKAGE";
-  if (gaps.includes("no_tap_to_call") || gaps.includes("no_https")) return "CONVERSION_FIX";
+  if (gaps.includes("no_tap_to_call") || gaps.includes("no_https")) return "WEBSITE_PACKAGE"; // Conversion Fix folded in, Nov 6, 2026
   return null;
 }
 

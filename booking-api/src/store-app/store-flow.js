@@ -11,7 +11,7 @@
 //                         (the Done button refuses until the restaurant's keys are uploaded and checked:
 //                         /api/store-keys/app/<id>, restaurant-keys.js)
 //   READY_TO_BUILD        next: the per-restaurant build (not built yet, see handbook)
-// STORE_APP_CARE_V1 (Website & App Care, app tier) sends the same monthly email as the Guest App plan.
+// STORE_APP_CARE_V1 (Mobile App Care) sends the same monthly email as the Guest App plan.
 //
 //   GET/POST /api/store-app/<id>/done?t=   the buyer's or the owner's Done button (the link kind says whose)
 import { ownerEmailAddress, publicBaseUrl } from "../lib/config.js";
