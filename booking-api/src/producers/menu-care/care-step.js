@@ -180,7 +180,8 @@ async function runMenuCareProduceStep(targetStep, env, deps = {}) {
     businessName: live.businessName || context.business_name,
     brandColors: [live.primary, live.accent].filter(Boolean).join(", "),
     menu: change.menu,
-    logoDataUri: live.logoDataUri
+    logoDataUri: live.logoDataUri,
+    style: live.style
   });
   assertMenuRendered(html, change.menu);
   const bytes = new TextEncoder().encode(html);

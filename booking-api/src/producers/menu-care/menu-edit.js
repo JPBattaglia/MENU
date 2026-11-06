@@ -5,6 +5,7 @@
 // Nothing here publishes. The care step renders the new version and the owner approves it before it goes live.
 import { generate } from "../../ai/generate.js";
 import { findUnsupportedFacts } from "../../ai/quality.js";
+import { readStyleMeta } from "../menu-qr/style.js";
 
 const decode = (text) => String(text ?? "")
   .replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&quot;/g, '"').replace(/&#0?39;/g, "'").replace(/&amp;/g, "&");
@@ -47,7 +48,8 @@ function parseMenuHtml(html) {
     primary: /--primary:\s*(#[0-9a-f]{6})/i.exec(source)?.[1] || null,
     accent: /--accent:\s*(#[0-9a-f]{6})/i.exec(source)?.[1] || null,
     logoDataUri: logo ? decode(logo) : null,
-    menu: { sections, notes, unreadable: "" }
+    menu: { sections, notes, unreadable: "" },
+    style: readStyleMeta(source)
   };
 }
 
