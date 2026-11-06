@@ -2908,7 +2908,10 @@ body.about-page .team-profile a{white-space:nowrap;font-size:clamp(11px,calc((10
 .mm-try-fine { font-size: 13px; color: var(--muted); margin: 0; }
 .mm-hp { position: absolute; left: -9999px; width: 1px; height: 1px; opacity: 0; }
 .mm-recent .cta-actions { margin-top: 14px; }
-@media (max-width: 760px) { .mm-try { grid-template-columns: 1fr; width: auto; margin-inline: 12px; } }
+/* The card is also the .container, whose side padding is inside its border, so it needs its own gap from the
+   screen edge at every width (owner, Nov 5, 2026: it touched the edges between 761 and ~1180px). */
+.mm-try { box-sizing: border-box; width: min(1064px, calc(100% - 56px)); } /* same 28px gutter as the other cards */
+@media (max-width: 760px) { .mm-try { grid-template-columns: 1fr; } }
 
 /* Home "What do you need?" shortcuts (owner, Nov 5, 2026: the website option was hard to find). */
 /* "What do you need?" dropdown (owner, Nov 5, 2026: chips and text links both looked cluttered). A <details> menu so it
@@ -2921,7 +2924,7 @@ body.about-page .team-profile a{white-space:nowrap;font-size:clamp(11px,calc((10
 .hero-pick[open] summary::after { transform: translateY(2px) rotate(-135deg); }
 .hero-pick summary:hover, .hero-pick[open] summary { background: rgba(0, 214, 230, .16); border-color: var(--cyan); }
 .hero-pick summary:focus-visible { outline: 3px solid var(--gold); outline-offset: 2px; }
-.hero-pick-menu { position: absolute; top: calc(100% + 10px); left: 0; width: min(380px, calc(100vw - 32px)); padding: 8px; border-radius: 20px; border: 1px solid rgba(0, 214, 230, .4); background: linear-gradient(160deg, rgba(14, 62, 74, .92), rgba(5, 28, 36, .96)); box-shadow: 0 0 0 1px rgba(255, 255, 255, .04) inset, 0 20px 50px rgba(0, 0, 0, .5), 0 0 36px rgba(0, 214, 230, .18); backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px); animation: hero-pick-in .18s ease-out; }
+.hero-pick-menu { position: absolute; top: calc(100% + 10px); left: 0; width: min(380px, calc(100vw - 56px)); padding: 8px; border-radius: 20px; border: 1px solid rgba(0, 214, 230, .4); background: linear-gradient(160deg, rgba(14, 62, 74, .92), rgba(5, 28, 36, .96)); box-shadow: 0 0 0 1px rgba(255, 255, 255, .04) inset, 0 20px 50px rgba(0, 0, 0, .5), 0 0 36px rgba(0, 214, 230, .18); backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px); animation: hero-pick-in .18s ease-out; }
 @keyframes hero-pick-in { from { opacity: 0; transform: translateY(-6px); } to { opacity: 1; transform: none; } }
 .hero-pick-menu a { display: grid !important; grid-template-columns: 40px 1fr; gap: 14px; align-items: center; width: auto !important; margin: 0 !important; padding: 11px 14px !important; border: 0 !important; border-radius: 12px !important; background: transparent !important; box-shadow: none !important; text-decoration: none !important; line-height: 1.35 !important; }
 .hero-pick-menu a b { display: block; font-weight: inherit; }
