@@ -9,6 +9,9 @@ tools/catalog-snapshot.json (a copy of /api/catalog the "Site prices" workflow r
 visitors see a price even before or without the live call.
 
 Run from the repo root:  python3 tools/site_pages.py
+
+RETIRED Nov 6, 2026: the pages are now edited directly, and running this rebuild undoes those edits (it removed
+the Google Ads tag and would have undone the Nov 5 navigation). Prices are refreshed by tools/refresh_prices.py.
 """
 from pathlib import Path
 import html
@@ -1310,6 +1313,9 @@ def page_store_app():
 
 
 def main():
+    import sys
+    if "--i-know-this-overwrites-pages" not in sys.argv:
+        sys.exit("site_pages.py is retired (Nov 6, 2026): it overwrites direct page edits. Use tools/refresh_prices.py.")
     pages = {
         "index.html": page_index(),
         "plans.html": page_plans(),
