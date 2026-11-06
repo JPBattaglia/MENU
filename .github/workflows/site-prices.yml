@@ -1,6 +1,7 @@
 # Site prices (Nov 3, 2026): keeps the prices written into menu-made.com's pages in step with the catalog.
 # Daily and on demand: copies https://menu-made.com/api/catalog to tools/catalog-snapshot.json, rebuilds the pages
-# with tools/site_pages.py and commits only when something changed (Cloudflare then deploys the site as for any push).
+# with tools/refresh_prices.py (only the text inside the price spans; Nov 6, 2026: the old
+# tools/site_pages.py rebuild undid direct page edits) and commits only when something changed (Cloudflare then deploys the site as for any push).
 # Pages still refresh prices live in the browser; this only makes sure a price shows even before that call answers.
 name: Site prices
 
@@ -29,8 +30,8 @@ jobs:
           jq -S '{offers: [.offers[] | {code, kind, on_sale, prices, price_cents, menu_package}] | sort_by(.code)}' catalog.json > tools/catalog-snapshot.json
           rm catalog.json
           echo "offers: $(jq '.offers | length' tools/catalog-snapshot.json)"
-      - name: Rebuild the pages
-        run: python3 tools/site_pages.py
+      - name: Refresh the prices in the pages
+        run: python3 tools/refresh_prices.py
       - name: Commit if anything changed
         run: |
           if git diff --quiet; then echo "Prices unchanged"; exit 0; fi
