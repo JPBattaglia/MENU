@@ -34,6 +34,11 @@ var MENU_EXTRACTION_TOOL = {
         }
       },
       notes: { type: "string", description: "Printed footnotes worth keeping (allergens, surcharges, hours). Empty if none." },
+      colors: {
+        type: "array",
+        items: { type: "string" },
+        description: "Up to 3 colours the menu's design uses for its text, headings and accents, as hex codes like #a8322d, the most prominent first. Not the paper or background colour. Empty if the menu is black and white."
+      },
       unreadable: { type: "string", description: "Describe any part you could not read with confidence. Empty if everything was legible." }
     },
     required: ["sections", "notes", "unreadable"]
@@ -80,7 +85,7 @@ async function readMenuWithClaude(contentBlock, env) {
         role: "user",
         content: [
           contentBlock,
-          { type: "text", text: "This is a restaurant or food business menu. Respond only by calling the record_menu tool once, with the whole menu. Copy names, descriptions and prices exactly as printed; never invent, correct, translate or round anything. Keep the menu's own section order. Skip decorative text, logos, navigation and page numbers." }
+          { type: "text", text: "This is a restaurant or food business menu. Respond only by calling the record_menu tool once, with the whole menu. Read every page: a menu often runs over several pages, and a section can continue on the next page without repeating its heading, so keep those items in the same section and don't stop until the last item on the last page. Copy names, descriptions and prices exactly as printed; never invent, correct, translate or round anything. Keep the menu's own section order. Skip decorative text, logos, navigation and page numbers." }
         ]
       }]
     })
@@ -111,6 +116,15 @@ async function readMenuWithClaude(contentBlock, env) {
   };
 }
 
+// The menu's own colours from the read, as the "#a8322d, #2b2b2b" text the page design takes, or null.
+function menuColors(menu) {
+  const colors = (Array.isArray(menu?.colors) ? menu.colors : [])
+    .map((value) => String(value || "").trim().toLowerCase())
+    .filter((value) => /^#[0-9a-f]{6}$/.test(value))
+    .slice(0, 3);
+  return colors.length ? colors.join(", ") : null;
+}
+
 async function structureMenuText(text, env) {
   return readMenuWithClaude({ type: "text", text: `MENU TEXT:\n${String(text).slice(0, 60000)}` }, env);
 }
@@ -137,6 +151,7 @@ export {
   MENU_EXTRACTION_MODEL,
   MENU_EXTRACTION_TOOL,
   formatExtractedMenu,
+  menuColors,
   readMenuWithClaude,
   structureMenuText,
   extractMenuFromFile

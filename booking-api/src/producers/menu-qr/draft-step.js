@@ -1,6 +1,6 @@
 import { nowIso } from "../../lib/http.js";
 import { sanitizeFilename, sha256Hex } from "../../lib/util.js";
-import { extractMenuFromFile, structureMenuText } from "./claude-reader.js";
+import { extractMenuFromFile, menuColors, structureMenuText } from "./claude-reader.js";
 import { assertMenuRendered, buildDesignedMenuHtml, buildMenuDraftHtml, loadLogoDataUri } from "./design.js";
 import { fetchMenuSource, getInputValue, loadPreparedPayload } from "./inputs.js";
 import { completeStep, loadProject } from "../../workflows/runner.js";
@@ -57,7 +57,8 @@ async function runGenerateMenuDraftStep(targetStep, env) {
   const logoDataUri = await loadLogoDataUri(getInputValue(preparedPayload.inputs, "logo"), env).catch(() => null);
   const draftHtml = source.menu ? buildDesignedMenuHtml({
     businessName,
-    brandColors,
+    // No colours given: use the ones the menu itself is printed in, as the free preview does.
+    brandColors: brandColors || menuColors(source.menu),
     menu: source.menu,
     logoDataUri
   }) : buildMenuDraftHtml({

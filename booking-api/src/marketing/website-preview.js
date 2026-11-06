@@ -123,7 +123,7 @@ function wrapPage(html, token, { prospect = false } = {}) {
   .mm-preview a { flex: none; padding: 11px 18px; border-radius: 6px; background: #00a7b5; color: #fff; font-weight: 700; text-decoration: none; }
   @media print { body > * { display: none !important; } body::before { content: "This is a preview from menu-made.com and can't be printed."; display: block; padding: 40px; font: 18px system-ui, sans-serif; } }
 </style>`;
-  return html.replace("</head>", `<meta name="robots" content="noindex,nofollow">\n${style}\n</head>`).replace(/<body([^>]*)>/, `<body$1>\n${bar}`);
+  return html.replace("</head>", () => `<meta name="robots" content="noindex,nofollow">\n${style}\n</head>`).replace(/<body([^>]*)>/, (match, attrs) => `<body${attrs}>\n${bar}`);
 }
 
 // Copy for when the AI copy fails its checks twice: plain, factual, nothing claimed.
