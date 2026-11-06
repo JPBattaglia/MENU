@@ -4,7 +4,7 @@
 import { nowIso, parseJsonOrNull } from "../lib/http.js";
 import { stripeRequest } from "../lib/stripe.js";
 import { sha256Hex } from "../lib/util.js";
-import { includedPlanVersions, planForStripePrice } from "./plans.js";
+import { includedPlanVersions, planForStripePrice, withCustomIncludes } from "./plans.js";
 
 // A subscription that did not come from a menu-made checkout (no order to attach it to).
 class ForeignSubscriptionError extends Error {}
@@ -69,7 +69,7 @@ async function syncSubscription(env, environment, stripeSubscriptionId, { overri
   if (!owner) throw new ForeignSubscriptionError(`Subscription ${stripeSub.id} has no matching order (metadata.order_id ${stripeSub?.metadata?.order_id || "missing"})`);
   if (!owner.business_id) throw new Error(`Subscription ${stripeSub.id} order has no business`);
   const item = stripeSub.items?.data?.[0];
-  const plan = await planForStripePrice(item?.price, stripeSub?.metadata?.plan_code, env);
+  const plan = withCustomIncludes(await planForStripePrice(item?.price, stripeSub?.metadata?.plan_code, env), stripeSub?.metadata, item?.price?.unit_amount ?? null);
   if (!plan) throw new Error(`Subscription ${stripeSub.id} uses a price that matches no plan (${item?.price?.id || "none"})`);
   const status = overrideStatus || STATUS[stripeSub.status] || "INCOMPLETE";
   const period = periodOf(stripeSub);

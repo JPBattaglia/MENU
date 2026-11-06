@@ -1,3 +1,4 @@
+import { CUSTOM_ALLOWED, CUSTOM_CODE, CUSTOM_DISCOUNTS } from "../subscriptions/plans.js";
 import { jsonResponse, nowIso, parseJsonOrNull } from "../lib/http.js";
 import { MENU_PACKAGE_PRICING } from "./quote.js";
 import { NINO_PRODUCTS } from "../producers/nino-design/products.js";
@@ -251,7 +252,7 @@ async function getSiteCatalog(env) {
       `).bind(timestamp, timestamp).all();
     const byCode = new Map();
     for (const row of results) {
-      if (SITE_HIDDEN.test(row.code)) continue;
+      if (SITE_HIDDEN.test(row.code) || row.code === CUSTOM_CODE) continue;
       let offer = byCode.get(row.code);
       const scope = parseJsonOrNull(row.scope_json) || {};
       if (!offer) {
@@ -288,7 +289,9 @@ async function getSiteCatalog(env) {
         if (offer.prices[key] === undefined) offer.prices[key] = Number(row.price_cents);
       }
     }
-    const response = jsonResponse({ ok: true, offers: [...byCode.values()] });
+    // "Your own plan" (Nov 6, 2026): the plans page builds it from these services; checkout prices it the same way.
+    const custom_plan = { code: CUSTOM_CODE, services: CUSTOM_ALLOWED, discount_percent: { two: CUSTOM_DISCOUNTS[2], three_or_more: CUSTOM_DISCOUNTS[3] }, rounding: "down to whole dollars" };
+    const response = jsonResponse({ ok: true, offers: [...byCode.values()], custom_plan });
     response.headers.set("Cache-Control", "public, max-age=60");
     return response;
   } catch (error) {

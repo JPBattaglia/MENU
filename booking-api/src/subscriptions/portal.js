@@ -67,25 +67,31 @@ async function sendSubscriptionWelcome(env, subscription) {
   const annual = subscription.plan.interval === "YEAR";
   const price = `$${(subscription.plan.priceCents / 100).toFixed(subscription.plan.priceCents % 100 ? 2 : 0)}/${annual ? "year" : "month"}`;
   const includedNames = subscription.included.map((p) => p.offerName).join(", ");
+  // "Your own plan" (Nov 6, 2026) reads "your own plan", not "your Your own plan"; Stripe's billing page can't move it
+  // to another plan, so the email doesn't promise that.
+  const custom = subscription.plan.kind === "CUSTOM";
+  const planName = custom ? "own plan" : subscription.plan.offerName;
   const trial = subscription.status === "TRIALING" && subscription.stripe?.trial_end
     ? new Date(subscription.stripe.trial_end * 1000).toISOString().slice(0, 10) : null;
   const paragraphs = [
-    `Hi${customer.first_name ? ` ${escapeHtml(customer.first_name)}` : ""}, your ${escapeHtml(subscription.plan.offerName)} is active. We'll start this month's work for you right away.`,
+    `Hi${customer.first_name ? ` ${escapeHtml(customer.first_name)}` : ""}, your ${escapeHtml(planName)} is active. We'll start this month's work for you right away.`,
     trial ? `It's included free until ${trial}; billing starts after that.` : `You'll be billed ${price} until you change or cancel your plan.`,
-    "Use the button below anytime to update your card, switch between monthly and annual billing, or cancel."
+    custom
+      ? "Use the button below anytime to update your card, see your invoices or cancel. To change which services you get, reply to this email."
+      : "Use the button below anytime to update your card, switch between monthly and annual billing, or cancel."
   ];
   return sendTransactionalEmail(env, {
     to: customer.email,
-    subject: `Your ${subscription.plan.offerName} is active`,
+    subject: `Your ${planName} is active`,
     html: brandedEmailHtml({
-      preheader: `Your ${subscription.plan.offerName} is active.`,
+      preheader: `Your ${planName} is active.`,
       eyebrow: "PLAN ACTIVE",
-      heading: `Welcome to your ${subscription.plan.offerName}`,
+      heading: `Welcome to your ${planName}`,
       paragraphs,
-      rows: [["Plan", subscription.plan.offerName], ["Includes", includedNames], ["Billing", trial ? `Free until ${trial}, then ${price}` : price]],
+      rows: [["Plan", custom ? "Your own plan" : subscription.plan.offerName], ["Includes", includedNames], ["Billing", trial ? `Free until ${trial}, then ${price}` : price]],
       buttons: [{ label: "Manage your plan", url: manageUrl, primary: true }]
     }),
-    text: `Your ${subscription.plan.offerName} is active.\nIncludes: ${includedNames}\nBilling: ${trial ? `free until ${trial}, then ${price}` : price}\nManage your plan: ${manageUrl}`,
+    text: `Your ${planName} is active.\nIncludes: ${includedNames}\nBilling: ${trial ? `free until ${trial}, then ${price}` : price}\nManage your plan: ${manageUrl}`,
     idempotencyKey: key,
     purpose: "SUBSCRIPTION_WELCOME",
     templateKey: "subscription_welcome_v1",
