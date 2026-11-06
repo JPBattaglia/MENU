@@ -74,7 +74,7 @@ test('a trialing Website Care subscription passes, then the test subscription, w
     await advanceWebsiteTrialSelfTests(f.env, null);
     const r = f.row(`SELECT stage, log_json FROM self_tests`);
     assert.equal(r.stage, 'AWAIT_CANCELLED');
-    assert.match(r.log_json, /Trial ended: subscription ACTIVE, first month charged \(\$49\), this month's Website & App Care job created/);
+    assert.match(r.log_json, /Trial ended: subscription ACTIVE, first month charged \(\$49\), this month's Website Care job created/);
     assert.ok(f.stripe.includes('DELETE /v1/subscriptions/sub_test_1'));
     await advanceWebsiteTrialSelfTests(f.env, null);
     assert.equal(f.row(`SELECT status FROM self_tests`).status, 'RUNNING', 'waits for the cancel to sync');
@@ -133,7 +133,7 @@ test('STORE_APP_TRIAL_RUN: buys the Mobile App Setup and checks the app tier tri
     await advanceWebsiteTrialSelfTests(f.env, null);
     const r = f.row(`SELECT stage, log_json FROM self_tests`);
     assert.equal(r.stage, 'AWAIT_CANCELLED');
-    assert.match(r.log_json, /app tier\) TRIALING/);
+    assert.match(r.log_json, /Mobile App Care TRIALING/);
     assert.match(r.log_json, /first month charged \(\$99\)/);
     assert.match(r.log_json, /Mobile App project created/);
   });

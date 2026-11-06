@@ -5,6 +5,7 @@ const SERVICES = "https://menu-made.com/services.html";
 const SAMPLES = "https://menu-made.com/api/samples";
 // Marketing plan v4 (Nov 3, 2026): Online Menu + QR has its own page; links from these emails are tagged so a sale
 // that follows is counted against the outreach (funnel.js keeps the labels through checkout).
+const WEBSITE = "https://menu-made.com/website-design?utm_source=outreach&utm_medium=email&utm_campaign=demo-website#try-free";
 const ONLINE_MENU = "https://menu-made.com/online-menu?utm_source=outreach&utm_medium=email&utm_campaign=demo-menu";
 // Dark mode (Nov 1, 2026): Apple Mail recoloured the header light while the logo kept a baked-in navy box. The logo
 // is now transparent and the email asks mail apps to keep its light design.
@@ -14,13 +15,12 @@ const OFFERS = {
   ONLINE_MENU_QR: { name: "Online Menu + QR", url: ONLINE_MENU, sample: ["See a real example", `${SAMPLES}/menu`],
     offer: "Menu-made can turn the menu you already have into a clean, mobile-friendly menu page that Google can read, along with a printable QR code for your tables and front window. It's $144 for the first year, which covers up to 3 menu pages, hosting and two rounds of changes.",
     how: "All we need is your current menu as a PDF or photos. We build the page, check it, and email you the link and QR code." },
-  WEBSITE_PACKAGE: { name: "Website Package", url: `${SERVICES}#website-package`, sample: ["See a real example", `${SAMPLES}/website/`],
-    offer: "Menu-made builds simple, mobile-friendly restaurant websites: up to five pages with your menu, hours, map, photos and contact details, on your own domain. It's $499 one time, and the first three months of updates are included.",
-    how: "After checkout you fill out one short form with your details and photos. We write and build the site from there." },
-  CONVERSION_FIX: { name: "Conversion Fix", url: `${SERVICES}#conversion-fix`, sample: ["See a real example", `${SAMPLES}/conversion`],
-    offer: "Menu-made's Conversion Fix reviews your current site the way a guest on a phone uses it and gives you a clear, prioritized list of fixes, like tap-to-call, directions, hours and getting to your menu in one tap. It's $299 one time.",
-    how: "There's nothing to prepare. We review the site you already have and email you the list." }
+  // Nov 6, 2026 (owner): Conversion Fix is folded into the Website Package; links go to the website page's free preview.
+  WEBSITE_PACKAGE: { name: "Website Package", url: WEBSITE, sample: ["See a real example", `${SAMPLES}/website/`],
+    offer: "Menu-made builds simple, mobile-friendly websites for food and drink businesses: up to five pages with your menu, hours, map, photos and contact details, on your own domain. It's $499 one time, and the first three months of updates are included.",
+    how: "You can see your business as a website before paying anything: the button below builds a private preview in a few seconds. If you like it, one short form after checkout and we take it from there." }
 };
+OFFERS.CONVERSION_FIX = OFFERS.WEBSITE_PACKAGE; // prospects stored before Nov 6 still say CONVERSION_FIX
 const FOOTER = "You're receiving this one-time note because your business is listed publicly online. Reply \"no thanks\" and we won't contact you again. Menu-made, 706 Kearny St, San Francisco, CA 94108.";
 const esc = (s) => String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
 

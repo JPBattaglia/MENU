@@ -253,7 +253,7 @@ PLANS = {
         delivery="Delivered at the start of each month.",
     ),
     "WEBSITE_CARE": dict(
-        name="Website &amp; App Care", anchor="website-care", short="Hosting and changes for your Menu-Made site",
+        name="Website Care", anchor="website-care", short="Hosting and changes for your Menu-Made site",
         gets=["Hosting for the website Menu-Made built for you",
               "Changes on request from your private change link: menu or services, hours, phone, address, wording, style and colour",
               "Every change checked and approved before it goes live",
@@ -288,8 +288,8 @@ BUNDLES = {
     "BUNDLE_GROWTH": dict(name="Growth", tagline="Everything in Starter, plus a busy Google profile.",
                           includes=["Menu Care", "Google Profile Care (with review replies)", "Accessibility Monitoring"], badge="Most popular"),
     "BUNDLE_PRO": dict(name="Pro", tagline="Your whole online presence, handled.",
-                       includes=["Everything in Growth", "Social Posts", "Website &amp; App Care"],
-                       note="Website &amp; App Care looks after a website Menu-Made built: add the Website Package if you need one."),
+                       includes=["Everything in Growth", "Social Posts", "Website Care"],
+                       note="Website Care looks after a website Menu-Made built: add the Website Package if you need one."),
 }
 
 ONCE = {
@@ -305,11 +305,11 @@ ONCE = {
     ),
     "WEBSITE_PACKAGE": dict(
         name="Website Package", anchor="website-package", service="website",
-        short="A finished website, with 3 months of Website &amp; App Care",
+        short="A finished website, with 3 months of Website Care",
         gets=["A website of up to 5 pages: Home, Menu or Services, About, Gallery, Contact &amp; Hours",
               "Your choice of 9 styles, written from what you tell us about your business",
               "Live at yourname.menu-made.com once approved, and on your own domain when you point it to us",
-              "3 months of Website &amp; App Care included"],
+              "3 months of Website Care included"],
         provide="A short form after checkout: your story, menu or services, hours, contact details, logo and up to 6 photos.",
         delivery="We approve it before it goes live. Not included: online ordering, booking systems, member areas, custom integrations or more than 5 pages.",
     ),
@@ -520,7 +520,7 @@ def mobile_app_premium(head_id, details=False):
           <li>A rewards card, plus your menu, specials, hours and ordering link</li>
         </ul>
         <p class="mm-premium-price">{price("STORE_APP_SETUP")}<span>one-time setup</span></p>
-        <p class="mm-premium-note">Then Website &amp; App Care at {price("STORE_APP_CARE", "month")}, free for the first 90 days. Store approval is decided by Apple and Google.</p>
+        <p class="mm-premium-note">Then Website Care at {price("STORE_APP_CARE", "month")}, free for the first 90 days. Store approval is decided by Apple and Google.</p>
         <div class="mm-premium-actions"><a class="btn primary" data-plan-cta="STORE_APP_SETUP" data-cta-label="Start the Mobile App" href="contact.html?plan=STORE_APP_SETUP">Start the Mobile App</a><a class="cta-pill" href="store-app.html">Details</a></div>
       </article>
     </div>
@@ -577,7 +577,7 @@ def page_index():
     <header class="section-head"><h2 id="once-title">Need one thing done?</h2><p>One-time services, no plan required.</p></header>
     <div class="cards">
       <article class="service-card"><h3>Online Menu + QR</h3><p>Your PDF or photo menu turned into a mobile menu page and a QR code for every table.</p><div class="service-bottom"><span class="price">{price("ONLINE_MENU_QR")}</span><a class="cta-pill" href="contact.html?service=menu">Start my menu</a></div></article>
-      <article class="service-card"><h3>Website Package</h3><p>A finished website of up to 5 pages in your choice of 9 styles, with 3 months of Website &amp; App Care.</p><div class="service-bottom"><span class="price">{price("WEBSITE_PACKAGE")}</span><a class="cta-pill" href="website-design.html">See the package</a></div></article>
+      <article class="service-card"><h3>Website Package</h3><p>A finished website of up to 5 pages in your choice of 9 styles, with 3 months of Website Care.</p><div class="service-bottom"><span class="price">{price("WEBSITE_PACKAGE")}</span><a class="cta-pill" href="website-design.html">See the package</a></div></article>
       <article class="service-card"><h3>Google Visibility</h3><p>A one-time tune-up of your Google profile, with a before-and-after report.</p><div class="service-bottom"><span class="price">{price("GOOGLE_VISIBILITY")}</span><a class="cta-pill" href="google-visibility.html">See what we check</a></div></article>
       <article class="service-card"><h3>Conversion Fix</h3><p>A prioritized fix list for your current website, with rewritten copy and code snippets.</p><div class="service-bottom"><span class="price">{price("CONVERSION_FIX")}</span><a class="cta-pill" href="services.html#conversion-fix">See the details</a></div></article>
     </div>
@@ -636,7 +636,7 @@ def page_plans():
         ("Accessibility Monitoring: monthly site check", True, True, True),
         ("Google Profile Care: weekly posts, photos, monthly report", False, True, True),
         ("Social Posts: 12 posts a month", False, False, True),
-        ("Website &amp; App Care: hosting and changes for your Menu-Made site", False, False, True),
+        ("Website Care: hosting and changes for your Menu-Made site", False, False, True),
     ]
     tick = '<span aria-label="Included">✓</span>'
     dash = '<span aria-label="Not included">—</span>'
@@ -833,7 +833,7 @@ def page_staff_merch():
 
 def page_services():
     title = "What Each Service Does — MENU-MADE"
-    desc = "Menu Care, Review Replies, Google Profile Care, Social Posts, Website &amp; App Care, Accessibility Monitoring, Guest App and one-time setups: what you get, what you provide and how it's delivered."
+    desc = "Menu Care, Review Replies, Google Profile Care, Social Posts, Website Care, Accessibility Monitoring, Guest App and one-time setups: what you get, what you provide and how it's delivered."
     monthly = "\n".join(product_section(c, p, "plan") for c, p in PLANS.items() if c != "GUEST_APP")
     once = "\n".join(product_section(c, p, "once") for c, p in ONCE.items())
     jump = " ".join(f'<a href="#{p["anchor"]}">{p["name"]}</a>' for p in list(PLANS.values()) + list(ONCE.values())) + ' <a href="#staff-merch">Staff merch</a> <a href="#mobile-app">Mobile App</a>'
@@ -898,12 +898,12 @@ def detail_page(path, code, kind, title, desc, eyebrow, h1, intro, checklist_tit
 
 
 def page_website():
-    extra = """<section class="section"><div class="container service-preparation"><div><h2>What we’ll ask after checkout</h2><ul class="service-preparation-list"><li>Your business story in a few sentences, and anything you want on the About page.</li><li>Your menu or list of services, hours, phone, address and email.</li><li>Your logo and up to 6 photos (PNG, JPEG or WebP).</li><li>Your favourite of the 9 styles and a brand colour, or let us pick.</li><li>The name you want before .menu-made.com, and your own domain if you have one.</li></ul></div><aside class="service-scope-note"><h3>What it isn’t</h3><p>The package is a fixed-scope site of up to 5 pages. Online ordering, booking systems, member areas and custom integrations aren’t included.</p><p>After the 3 included months, Website &amp; App Care continues at its monthly price unless you cancel. It covers hosting and changes on request.</p><a href="services.html#website-care">How Website &amp; App Care works</a></aside></div></section>"""
+    extra = """<section class="section"><div class="container service-preparation"><div><h2>What we’ll ask after checkout</h2><ul class="service-preparation-list"><li>Your business story in a few sentences, and anything you want on the About page.</li><li>Your menu or list of services, hours, phone, address and email.</li><li>Your logo and up to 6 photos (PNG, JPEG or WebP).</li><li>Your favourite of the 9 styles and a brand colour, or let us pick.</li><li>The name you want before .menu-made.com, and your own domain if you have one.</li></ul></div><aside class="service-scope-note"><h3>What it isn’t</h3><p>The package is a fixed-scope site of up to 5 pages. Online ordering, booking systems, member areas and custom integrations aren’t included.</p><p>After the 3 included months, Website Care continues at its monthly price unless you cancel. It covers hosting and changes on request.</p><a href="services.html#website-care">How Website Care works</a></aside></div></section>"""
     return detail_page("website-design.html", "WEBSITE_PACKAGE", "once",
                        "Website Package for Food &amp; Bev Businesses — MENU-MADE",
-                       "A finished website of up to 5 pages in your choice of 9 styles, live on a menu-made.com address once approved and on your own domain when you point it. Includes 3 months of Website &amp; App Care.",
+                       "A finished website of up to 5 pages in your choice of 9 styles, live on a menu-made.com address once approved and on your own domain when you point it. Includes 3 months of Website Care.",
                        "Website Package", "A finished website, without the back-and-forth",
-                       "Tell us about your business in one short form. We build a site of up to 5 pages in the style you choose, check it, approve it and put it live, then keep it hosted and updated with Website &amp; App Care.",
+                       "Tell us about your business in one short form. We build a site of up to 5 pages in the style you choose, check it, approve it and put it live, then keep it hosted and updated with Website Care.",
                        "Up to 5 pages", ["Home", "Menu or Services", "About", "Gallery", "Contact &amp; Hours"], extra)
 
 
@@ -1174,7 +1174,7 @@ def page_start():
             <button class="btn secondary" id="clearBtn" type="button" disabled>Clear</button>
           </div>
           <div class="status" id="status" role="status" aria-live="polite"></div>
-          <details class="billing-details" id="billingDetails" hidden><summary>How billing works</summary><p class="mini">Today’s total covers your first month or year of the plan and any one-time services. Plans renew automatically. You can switch plans or cancel from the billing link in your plan emails; cancelling stops the plan at the end of the paid period. The Website Package includes 3 months of Website &amp; App Care before its first charge. You’ll see the final total at Stripe before paying.</p></details>
+          <details class="billing-details" id="billingDetails" hidden><summary>How billing works</summary><p class="mini">Today’s total covers your first month or year of the plan and any one-time services. Plans renew automatically. You can switch plans or cancel from the billing link in your plan emails; cancelling stops the plan at the end of the paid period. The Website Package includes 3 months of Website Care before its first charge. You’ll see the final total at Stripe before paying.</p></details>
 
           <div class="intake" id="intakeStep">
             <div class="two">
@@ -1290,14 +1290,14 @@ def page_store_app():
     into "Opening soon · ask us" by itself."""
     path = "store-app.html"
     title = "Your Business App in the App Store and Google Play — MENU-MADE"
-    desc = "Your business's own app in the App Store and Google Play: menu, specials, hours, notifications and a rewards card, built from your details and kept current with Website &amp; App Care."
+    desc = "Your business's own app in the App Store and Google Play: menu, specials, hours, notifications and a rewards card, built from your details and kept current with Website Care."
     checklist = ["Your own listing in the App Store and Google Play", "Menu, specials, hours, call, directions and your ordering link",
                  "Notifications to every guest who turns them on", "A rewards card: guests collect a visit with the code at your counter",
                  "Menu and specials changes reach the app with no store update"]
     body = f"""<section class="hero"><div class="container service-detail-hero"><div class="service-lead-copy">
 <span class="pill">Mobile App · premium</span><h1>Your business in the App Store and Google Play</h1>
 <p class="service-lead-intro">Your own app, under your business’s name, built from the details you give us. Guests download it from the stores, get your specials as notifications and collect rewards every visit.</p>
-<p class="service-price"><strong>{price("STORE_APP_SETUP")}</strong><span>one-time setup, then Website &amp; App Care at {price("STORE_APP_CARE", "month")} after a 90-day free trial</span></p>
+<p class="service-price"><strong>{price("STORE_APP_SETUP")}</strong><span>one-time setup, then Website Care at {price("STORE_APP_CARE", "month")} after a 90-day free trial</span></p>
 <div class="hero-actions"><a class="btn primary" data-plan-cta="STORE_APP_SETUP" data-cta-label="Start the Mobile App" href="contact.html?plan=STORE_APP_SETUP">Start the Mobile App</a><a class="btn ghost" href="contact.html#inquiry">Ask a question</a></div>
 </div><aside class="service-profile-plan" aria-labelledby="checklist-title"><p class="service-eyebrow">What you get</p><h2 id="checklist-title">An app guests keep</h2><ul>{''.join(f'<li>{c}</li>' for c in checklist)}</ul></aside></div></section>
 <section class="section"><div class="container service-preparation"><div><h2>How it works</h2><ul class="service-preparation-list">
@@ -1305,8 +1305,8 @@ def page_store_app():
 <li>You open developer accounts with Apple ($99 a year, paid to Apple) and Google ($25 once, paid to Google) as your business, and invite Menu-Made. Apple and Google ask for a free D-U-N-S number, which can take a few days to get. We email you the steps.</li>
 <li>We set up the app in both stores, build it, write the store listing and submit it. Part of this setup is done by hand on Apple’s and Google’s websites, because they require it.</li>
 <li>Apple and Google review the app, usually in 1 to 3 days. Most apps are live within 1 to 3 weeks of checkout, depending on how quickly the accounts are verified.</li>
-<li>Website &amp; App Care keeps it running: hosting, notifications, the rewards card, store upkeep and the yearly rebuilds Apple and Google require. Free for the first 90 days.</li>
-</ul></div><aside class="service-scope-note"><h3>Good to know</h3><p>Want something simpler first? The <a href="services.html#guest-app">Guest App</a> installs from your link or QR code, with no app store: {price("GUEST_APP", "month")} plus {price("GUEST_APP_SETUP")} setup.</p><p>Approval is decided by Apple and Google and isn’t guaranteed. If a store asks for changes, we make them and resubmit.</p><p>The app lives in your own developer accounts, so it stays yours. If you cancel Website &amp; App Care, the apps stay in your accounts but notifications and rewards stop, and the app shows your web menu.</p><p>Online ordering inside the app isn’t included: the app links to the ordering you already use.</p><p>Want something simpler? The <a href="services.html#guest-app">Guest App</a> installs from your link or QR code, with notifications and rewards too, and needs no store accounts.</p></aside></div></section>
+<li>Website Care keeps it running: hosting, notifications, the rewards card, store upkeep and the yearly rebuilds Apple and Google require. Free for the first 90 days.</li>
+</ul></div><aside class="service-scope-note"><h3>Good to know</h3><p>Want something simpler first? The <a href="services.html#guest-app">Guest App</a> installs from your link or QR code, with no app store: {price("GUEST_APP", "month")} plus {price("GUEST_APP_SETUP")} setup.</p><p>Approval is decided by Apple and Google and isn’t guaranteed. If a store asks for changes, we make them and resubmit.</p><p>The app lives in your own developer accounts, so it stays yours. If you cancel Website Care, the apps stay in your accounts but notifications and rewards stop, and the app shows your web menu.</p><p>Online ordering inside the app isn’t included: the app links to the ordering you already use.</p><p>Want something simpler? The <a href="services.html#guest-app">Guest App</a> installs from your link or QR code, with notifications and rewards too, and needs no store accounts.</p></aside></div></section>
 <section class="section"><div class="container cta"><div><h2>Ready for your own app?</h2><p>Checkout asks only what we need. Your next step arrives by email right after payment.</p></div><div class="cta-actions"><a class="btn primary" data-plan-cta="STORE_APP_SETUP" data-cta-label="Start the Mobile App" href="contact.html?plan=STORE_APP_SETUP">Start the Mobile App</a><a class="btn ghost" href="plans.html">See all plans</a></div></div></section>
 """
     return head(title, desc, path, "service-detail-page") + body + foot()

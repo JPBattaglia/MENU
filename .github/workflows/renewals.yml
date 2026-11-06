@@ -6,7 +6,7 @@
 #   Apple developer  yearly membership: date from the repo variable APPLE_DEVELOPER_RENEWS (YYYY-MM-DD). Until it is
 #                    set, the run shows a warning but doesn't fail.
 #   Apple SDK        each spring Apple requires apps to be built with the newest Xcode (late April in recent years):
-#                    reminder from March 25, so Website & App Care rebuilds are on the new SDK in time.
+#                    reminder from March 25, so Mobile App Care rebuilds are on the new SDK in time.
 #   Google Play      new app versions must target the latest Android API level by August 31 each year: reminder from
 #                    August 1 (only matters once Android store apps are on; stage 11 Android is deferred).
 #   Keys             fixed expiry dates the owner gave (Printful key for the Nino shop: Dec 31, 2027).

@@ -2949,3 +2949,24 @@ body.about-page .team-profile a{white-space:nowrap;font-size:clamp(11px,calc((10
 .mm-try-form textarea { width: 100%; box-sizing: border-box; border-radius: 14px; border: 1px solid rgba(0,214,230,.45); background: rgba(0,0,0,.22); color: #fff; padding: 10px 12px; font: inherit; }
 .mm-try-more label { display: block; }
 .mm-try-more input, .mm-try-more textarea { margin: 4px 0 8px; }
+
+/* Nov 6, 2026: simpler offers. Plans page "Build your own" (single services, collapsed) and the home steps. */
+.mm-build-own { padding: 0 24px; background: rgba(0, 30, 36, 0.45); border: 1px solid rgba(95, 242, 255, 0.3); border-radius: 16px; }
+.mm-build-own > summary { cursor: pointer; padding: 20px 0; color: #fff; font-weight: 700; font-size: 19px; }
+.mm-build-own > summary:focus-visible { outline: 2px solid var(--cyan); outline-offset: 4px; }
+.mm-build-own[open] > summary { border-bottom: 1px solid rgba(95, 242, 255, 0.2); margin-bottom: 16px; }
+.mm-build-own > p { color: var(--muted); margin: 0 0 18px; }
+.mm-build-own > .mm-singles { padding-bottom: 24px; }
+.mm-steps .service-card { display: flex; flex-direction: column; gap: 10px; }
+.mm-steps .service-card .pill { align-self: flex-start; }
+.mm-steps .service-card .service-bottom { margin-top: auto; }
+.mm-apps-compare th[scope="row"] { text-align: left; }
+@media (max-width: 640px) {
+  .mm-apps-compare, .mm-apps-compare tbody, .mm-apps-compare tr, .mm-apps-compare th, .mm-apps-compare td { display: block; width: auto; }
+  .mm-apps-compare { min-width: 0; }
+  .mm-apps-compare thead { display: none; }
+  .mm-apps-compare tr { padding: 14px 16px; border-bottom: 1px solid rgba(95, 242, 255, 0.2); }
+  .mm-apps-compare th[scope="row"] { padding: 0 0 8px; font-size: 17px; }
+  .mm-apps-compare td { padding: 4px 0; text-align: left; border: 0; }
+  .mm-apps-compare td::before { content: attr(data-label) ": "; font-weight: 700; color: var(--cyan); }
+}

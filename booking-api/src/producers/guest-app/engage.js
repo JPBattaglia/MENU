@@ -249,7 +249,7 @@ async function linkedApp(env, request, appId, kind) {
   return { app, token, form, data: parseJsonOrNull(app.data_json) || {} };
 }
 
-// The Guest App plan, or the Mobile App's Website & App Care (app tier), which runs on the same app.
+// The Guest App plan, or the Mobile App's Mobile App Care, which runs on the same app.
 const planActive = async (env, businessId) => Boolean(businessId && await env.DB.prepare(`SELECT 1 AS ok FROM entitlements WHERE business_id = ? AND entitlement_type IN ('GUEST_APP', 'STORE_APP_CARE') AND status = 'ACTIVE' LIMIT 1`).bind(businessId).first());
 
 async function handleAppPush(request, env, appId) {

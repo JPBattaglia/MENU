@@ -57,7 +57,7 @@ export async function verify(browser, p) {
         }
       } else if ((home.text.match(PRICE) || []).length < 5 && !home.links.some((l) => /menu/i.test(l.text + l.href))) gaps.push("menu_missing");
     }
-    const offer_code = gaps.some((g) => g.startsWith("menu_")) ? "ONLINE_MENU_QR" : gaps.includes("no_phone_layout") ? "WEBSITE_PACKAGE" : gaps.includes("no_tap_to_call") ? "CONVERSION_FIX" : null;
+    const offer_code = gaps.some((g) => g.startsWith("menu_")) ? "ONLINE_MENU_QR" : gaps.includes("no_phone_layout") ? "WEBSITE_PACKAGE" : gaps.includes("no_tap_to_call") ? "WEBSITE_PACKAGE" : null;
     return offer_code ? { gaps, offer_code, email } : null;
   } finally { await context.close(); }
 }

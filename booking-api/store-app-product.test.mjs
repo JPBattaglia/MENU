@@ -152,11 +152,13 @@ test('site: the Mobile App page is public (owner, Nov 3), paired with the Guest 
   // So every Menu-made amount on the page sits inside a catalog price span.
   const outside = page.replace(/<span class="mm-price"[^>]*>[^<]*<\/span>/g, '');
   assert.doesNotMatch(outside, /\$(999|99\/mo|990)/, 'no Menu-made price outside a catalog price span (Apple and Google fees are theirs)');
-  for (const f of ['index.html', 'plans.html', 'services.html']) {
+  // Nov 6, 2026 (owner, simpler offers): the two apps are paired on the Apps page and Services; home and plans link there.
+  for (const f of ['apps.html', 'services.html']) {
     const html = readFileSync(new URL(f, root), 'utf8');
     assert.match(html, /id="mobile-app"/, `${f} has the apps section`);
     assert.match(html, /data-plan-cta="GUEST_APP"[\s\S]*data-plan-cta="STORE_APP_SETUP"/, `${f} pairs Guest App and Mobile App`);
   }
+  for (const f of ['index.html', 'plans.html']) assert.match(readFileSync(new URL(f, root), 'utf8'), /href="apps.html"/, `${f} links to the Apps page`);
   assert.match(readFileSync(new URL('sitemap.xml', root), 'utf8'), /menu-made\.com\/store-app</);
 });
 

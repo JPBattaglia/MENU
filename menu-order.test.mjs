@@ -174,25 +174,17 @@ test('menu page count is priced from the catalog package and invalid counts bloc
 
 test('checkout sends the plan with its interval, one-time items, and the short briefs', async () => {
   const p = await page('?plan=BUNDLE_STARTER&interval=year');
-  await p.buttons.get('CONVERSION_FIX').fire('click');
   await p.buttons.get('GOOGLE_VISIBILITY').fire('click');
   p.fill();
   await p.get('checkoutBtn').fire('click');
   assert.equal(p.sent.length, 1);
   assert.equal(p.sent[0].url, '/api/create-checkout');
-  assert.deepEqual(p.sent[0].body.items, [{ key: 'BUNDLE_STARTER', qty: 1, interval: 'year' }, { key: 'CONVERSION_FIX', qty: 1 }, { key: 'GOOGLE_VISIBILITY', qty: 1 }]);
+  assert.deepEqual(p.sent[0].body.items, [{ key: 'BUNDLE_STARTER', qty: 1, interval: 'year' }, { key: 'GOOGLE_VISIBILITY', qty: 1 }]);
   assert.equal(p.sent[0].body.interval, 'year');
-  assert.match(p.sent[0].body.customer.notes, /^Website fix: https:\/\/example.com\/\nGoal: More reservations\nGoogle: existing profile/);
+  assert.match(p.sent[0].body.customer.notes, /^Google: existing profile/);
 });
 
 test('briefs are validated before payment', async () => {
-  const p = await page('?service=conversion');
-  p.fill();
-  for (const url of ['', 'javascript:alert(1)', 'https://user:password@example.com']) {
-    p.get('conversionUrl').value = url;
-    await p.get('checkoutBtn').fire('click');
-    assert.equal(p.sent.length, 0);
-  }
   const g = await page('?service=google');
   g.fill(); g.get('googleMode').value = '';
   await g.get('checkoutBtn').fire('click');
@@ -200,7 +192,7 @@ test('briefs are validated before payment', async () => {
 });
 
 test('old service links still work', async () => {
-  for (const [service, code] of [['menu', 'ONLINE_MENU_QR'], ['conversion', 'CONVERSION_FIX'], ['google', 'GOOGLE_VISIBILITY'], ['accessibility', 'ACCESSIBILITY_MONITORING'], ['app', 'GUEST_APP'], ['__proto__', null]]) {
+  for (const [service, code] of [['menu', 'ONLINE_MENU_QR'], ['conversion', 'WEBSITE_PACKAGE'], ['conversion_fix', 'WEBSITE_PACKAGE'], ['google', 'GOOGLE_VISIBILITY'], ['accessibility', 'ACCESSIBILITY_MONITORING'], ['app', 'GUEST_APP'], ['__proto__', null]]) {
     const p = await page('?service=' + service);
     const s = p.state();
     assert.equal(s.plan === code || s.once.includes(code) || (code === null && !s.plan && !s.once.length), true, service);
