@@ -5,7 +5,7 @@ import assert from 'node:assert/strict';
 import { createD1, createR2 } from './test-support/d1.mjs';
 
 const { default: worker } = await import('./src/worker.js');
-const { publicPreviewPage, MAX_OPENS, PER_NETWORK_DAY } = await import('./src/marketing/public-preview.js');
+const { publicPreviewPage, MAX_OPENS, PER_NETWORK_DAY, PER_EMAIL } = await import('./src/marketing/public-preview.js');
 
 const MENU = { sections: [{ name: 'Starters', items: [{ name: 'Garlic Bread', description: 'House focaccia', price: '$9' }] }], notes: '', unreadable: '', colors: ['#a8322d', '#f3ead8', 'not-a-colour'] };
 const PHONE = 'Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X)';
@@ -16,12 +16,12 @@ function setup() {
   const create = (body) => call('/api/menu-preview/create', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
   const get = (path, agent = PHONE) => call(path, { headers: { 'User-Agent': agent } });
   // An upload as /api/inquiry stores it: purpose "checkout", file in R2, rate-limit hash per network.
-  const upload = async ({ email = 'owner@cafe.example', ip = 'net-1', type = 'application/pdf', age = 0 } = {}) => {
+  const upload = async ({ email = 'owner@cafe.example', ip = 'net-1', type = 'application/pdf', age = 0, name = 'menu.pdf', size = 4 } = {}) => {
     const id = crypto.randomUUID();
     const storageKey = `private/inquiries/${id}/abc`;
     await env.ASSETS.put(storageKey, new Uint8Array([37, 80, 68, 70]));
     env.DB.raw.prepare(`INSERT INTO mm_booking_requests (id, payload, ip_hash, created_at) VALUES (?, ?, ?, ?)`).run(id,
-      JSON.stringify({ type: 'inquiry', purpose: 'checkout', email, name: 'Cafe', document: { storageKey, contentType: type, name: 'menu.pdf', size: 4 } }), ip, Math.floor(Date.now() / 1000) - age);
+      JSON.stringify({ type: 'inquiry', purpose: 'checkout', email, name: 'Cafe', document: { storageKey, contentType: type, name, size } }), ip, Math.floor(Date.now() / 1000) - age);
     return id;
   };
   return { env, create, get, upload };
@@ -65,7 +65,7 @@ test('an upload becomes a watermarked, unprintable phone preview with no QR, and
   assert.deepEqual({ ...row }, { campaign: 'mm-search', status: 'READY', email: 'owner@cafe.example' });
 });
 
-test('the same email gets its existing preview back, and after it ends cannot get another free one', async (t) => {
+test('the same email and menu get the existing preview back, and after it ends cannot get another free one', async (t) => {
   const f = setup();
   const calls = stubClaude(t);
   const first = await (await f.create({ request_id: await f.upload(), email: 'owner@cafe.example', business: 'Sample Cafe' })).json();
@@ -73,13 +73,33 @@ test('the same email gets its existing preview back, and after it ends cannot ge
   assert.equal(again.reused, true);
   assert.equal(again.token, first.token);
   f.env.DB.raw.prepare(`UPDATE menu_previews SET expires_at = '2000-01-01T00:00:00.000Z'`).run();
-  const res = await f.create({ request_id: await f.upload(), email: 'owner@cafe.example', business: 'Other Name' });
+  const res = await f.create({ request_id: await f.upload(), email: 'owner@cafe.example', business: 'Sample Cafe' });
   assert.equal(res.status, 409);
   const out = await res.json();
   assert.equal(out.used, true);
   assert.match(out.start, /preview=/);
   assert.equal(calls.claude, 1, 'only one Claude read for one email');
   assert.equal((await f.get(`/api/menu-preview/view/${first.token}`)).status, 410, 'an ended preview is gone');
+});
+
+test(`a different menu file gets a new preview, up to ${PER_EMAIL} per email a month`, async (t) => {
+  const f = setup();
+  const calls = stubClaude(t);
+  const make = async (name, size, ip) => (await f.create({ request_id: await f.upload({ name, size, ip }), email: 'owner@cafe.example', business: 'Sample Cafe' })).json();
+  const first = await make('lunch.pdf', 100, 'net-a');
+  const second = await make('dinner.pdf', 200, 'net-b');
+  assert.equal(second.ok, true);
+  assert.notEqual(second.token, first.token, 'the new menu, not the first preview again');
+  assert.equal(second.reused, undefined);
+  const again = await make('dinner.pdf', 200, 'net-c');
+  assert.equal(again.token, second.token, 'the same file again reuses its preview');
+  await make('brunch.pdf', 300, 'net-c');
+  const res = await f.create({ request_id: await f.upload({ name: 'drinks.pdf', size: 400, ip: 'net-d' }), email: 'owner@cafe.example', business: 'Sample Cafe' });
+  assert.equal(res.status, 409);
+  const out = await res.json();
+  assert.match(out.error, new RegExp(`made ${PER_EMAIL} free previews`));
+  assert.match(out.start, /preview=/);
+  assert.equal(calls.claude, PER_EMAIL);
 });
 
 test(`a preview stops opening after ${MAX_OPENS} views, so it can't be used as the table menu`, async (t) => {

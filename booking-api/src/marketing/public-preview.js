@@ -3,7 +3,8 @@
 //   - no QR code, no hosted /api/menu/<slug> address, and a "Preview, not live" watermark on every screen;
 //   - it ends after PREVIEW_HOURS or MAX_OPENS opens, whichever comes first (a table menu would be opened far more);
 //   - printing shows a notice instead of the menu;
-//   - one preview per email address every 30 days, two per network a day, PER_DAY in total a day (each build is one
+//   - PER_EMAIL previews per email address every 30 days (the same file again reuses its preview), two per network a
+//     day, PER_DAY in total a day (each build is one
 //     Claude read, so the cap is also the cost ceiling).
 // "Make it live" opens checkout with the same menu file already attached (no second upload).
 //
@@ -38,6 +39,7 @@ const REP_KIND = "menu-rep";
 const REP_TTL_DAYS = 120;
 const PER_NETWORK_DAY = 2;
 const EMAIL_DAYS = 30;
+const PER_EMAIL = 3; // free previews per email per EMAIL_DAYS; the same file again reuses the last one
 const UPLOAD_MAX_AGE_SECONDS = 2 * 3600;
 const HANDOFF_DAYS = 14;
 const SITE = "https://menu-made.com";
@@ -92,6 +94,13 @@ function plainPage(status, title, body) {
   return new Response(html, { status, headers: { "Content-Type": "text/html; charset=utf-8", "Cache-Control": "no-store", "X-Robots-Tag": "noindex, nofollow" } });
 }
 
+// Two uploads are the same menu when the file has the same name, size and type (each upload is stored separately).
+async function sameMenuFile(env, requestId, doc) {
+  const row = await env.DB.prepare(`SELECT payload FROM mm_booking_requests WHERE id = ?`).bind(requestId).first();
+  const before = parseJsonOrNull(row?.payload)?.document;
+  return !!before && before.name === doc.name && Number(before.size) === Number(doc.size) && String(before.contentType).toLowerCase() === String(doc.contentType).toLowerCase();
+}
+
 async function count(env, sql, ...args) {
   return Number((await env.DB.prepare(sql).bind(...args).first())?.n || 0);
 }
@@ -123,12 +132,22 @@ async function handlePreviewCreate(request, env, { now = Date.now() } = {}) {
     return json({ ok: false, error: `Rep mode has made ${REP_PER_DAY} previews today, its daily limit.` }, 429);
   }
   if (!rep) {
-  const existing = await env.DB.prepare(`SELECT token, request_id, status, expires_at FROM menu_previews WHERE email = ? AND created_at > ? ORDER BY created_at DESC LIMIT 1`)
-    .bind(email, new Date(now - EMAIL_DAYS * 86400000).toISOString()).first();
+  const since = new Date(now - EMAIL_DAYS * 86400000).toISOString();
+  const existing = await env.DB.prepare(`SELECT token, request_id, business, status, expires_at FROM menu_previews WHERE email = ? AND created_at > ? ORDER BY created_at DESC LIMIT 1`)
+    .bind(email, since).first();
   if (existing) {
     if (existing.status === "BUILDING") return json({ ok: false, error: "Your preview is still being made. Give it a minute." }, 409);
-    if (existing.status === "READY" && existing.expires_at > t) return json({ ok: true, url: viewUrl(existing.token), token: existing.token, reused: true });
-    if (existing.status === "READY") return json({ ok: false, used: true, error: "You've already had a free preview with this email. Start your order and we'll build your menu from your file.", start: startUrl(existing.token) }, 409);
+    // The same file and name again gets the preview already made. A different menu file (or name) gets a new one,
+    // up to PER_EMAIL a month (owner, Nov 5, 2026: re-uploading a different menu kept showing the first preview).
+    const same = existing.status === "READY" && existing.business === business && await sameMenuFile(env, existing.request_id, doc);
+    if (same && existing.expires_at > t) return json({ ok: true, url: viewUrl(existing.token), token: existing.token, reused: true });
+    const made = await count(env, `SELECT COUNT(*) AS n FROM menu_previews WHERE email = ? AND status = 'READY' AND created_at > ?`, email, since);
+    if (same || made >= PER_EMAIL) {
+      const latest = await env.DB.prepare(`SELECT token FROM menu_previews WHERE email = ? AND status = 'READY' AND created_at > ? ORDER BY created_at DESC LIMIT 1`).bind(email, since).first();
+      return json({ ok: false, used: true, error: same
+        ? "You've already had a free preview of this menu. Start your order and we'll build your menu from your file."
+        : `You've made ${made} free previews with this email this month. Start your order and we'll build your menu from your file.`, start: startUrl(latest?.token || existing.token) }, 409);
+    }
   }
   if (await count(env, `SELECT COUNT(*) AS n FROM menu_previews WHERE ip_hash = ? AND created_at > ?`, upload.ip_hash || "", dayAgo) >= PER_NETWORK_DAY) {
     return json({ ok: false, error: "This connection has made its free previews for today. Please try again tomorrow." }, 429);
@@ -235,4 +254,4 @@ async function handlePreviewHandoff(env, token, { now = Date.now() } = {}) {
 }
 
 export { handleRepLink, repUrl, REP_PER_DAY };
-export { handlePreviewCreate, handlePreviewView, handlePreviewHandoff, publicPreviewPage, PREVIEW_HOURS, MAX_OPENS, PER_DAY, PER_NETWORK_DAY };
+export { handlePreviewCreate, handlePreviewView, handlePreviewHandoff, publicPreviewPage, PREVIEW_HOURS, MAX_OPENS, PER_DAY, PER_NETWORK_DAY, PER_EMAIL };
