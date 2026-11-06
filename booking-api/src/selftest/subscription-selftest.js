@@ -16,16 +16,17 @@ import { nowIso, parseJsonOrNull } from "../lib/http.js";
 import { payTestCheckout, stripeTest, updateTest } from "./menu-qr-selftest.js";
 import { dailyClock } from "./daily-clock.js";
 import { billingPortalLink } from "../subscriptions/portal.js";
+import { resolvePlan } from "../subscriptions/plans.js";
 
 const KIND = "SUBSCRIPTION_GROWTH";
 const GROWTH_PLANS = ["ACCESSIBILITY_MONITORING", "GOOGLE_PROFILE_CARE", "MENU_CARE", "REVIEW_REPLIES"];
 // What each kind buys and expects (included plans sorted). minute = its daily start in the 15:00 UTC hour.
 const RUNS = {
   // Growth cancels the way the billing portal does (at the end of the period: still producing until then).
-  SUBSCRIPTION_GROWTH: { plan: "BUNDLE_GROWTH", label: "Growth", cents: 17900, plans: GROWTH_PLANS, minute: 30, cancelAtPeriodEnd: true },
-  SUBSCRIPTION_STARTER: { plan: "BUNDLE_STARTER", label: "Starter", cents: 7900, plans: ["ACCESSIBILITY_MONITORING", "MENU_CARE", "REVIEW_REPLIES"], minute: 40,
-    lifecycle: { switchTo: "BUNDLE_GROWTH", switchCents: 17900, switchPlans: GROWTH_PLANS } },
-  SUBSCRIPTION_PRO: { plan: "BUNDLE_PRO", label: "Pro", cents: 29900, plans: ["ACCESSIBILITY_MONITORING", "GOOGLE_PROFILE_CARE", "MENU_CARE", "REVIEW_REPLIES", "SOCIAL_POSTS", "WEBSITE_CARE"], minute: 50 }
+  SUBSCRIPTION_GROWTH: { plan: "BUNDLE_GROWTH", label: "Growth", plans: GROWTH_PLANS, minute: 30, cancelAtPeriodEnd: true },
+  SUBSCRIPTION_STARTER: { plan: "BUNDLE_STARTER", label: "Starter", plans: ["ACCESSIBILITY_MONITORING", "MENU_CARE", "REVIEW_REPLIES"], minute: 40,
+    lifecycle: { switchTo: "BUNDLE_GROWTH", switchPlans: GROWTH_PLANS } },
+  SUBSCRIPTION_PRO: { plan: "BUNDLE_PRO", label: "Pro", plans: ["ACCESSIBILITY_MONITORING", "GOOGLE_PROFILE_CARE", "MENU_CARE", "REVIEW_REPLIES", "SOCIAL_POSTS", "WEBSITE_CARE"], minute: 50 }
 };
 const KINDS = Object.keys(RUNS);
 const runOf = (test) => RUNS[test.kind] || RUNS[KIND];
@@ -140,7 +141,9 @@ async function stageStart(env, app, test) {
   }
   const order = await env.DB.prepare(`SELECT stripe_checkout_session_id, total_cents FROM orders WHERE id = ?`).bind(checkout.body.order_id).first();
   const run = runOf(test);
-  if (order?.total_cents !== run.cents) throw new Error(`Expected a $${run.cents / 100} ${run.label} order, got ${order?.total_cents}`);
+  // The expected price is the catalog's current monthly price (Nov 6, 2026: Growth moved to $169), never a typed number.
+  const cents = (await resolvePlan(run.plan, "MONTH", env, { requirePublic: false }))?.priceCents;
+  if (order?.total_cents !== cents) throw new Error(`Expected a $${cents / 100} ${run.label} order, got ${order?.total_cents}`);
   const paid = await payTestCheckout(env, order.stripe_checkout_session_id);
   return updateTest(env, test, { stage: "AWAIT_ACTIVE", order_id: checkout.body.order_id,
     state: { session_id: order.stripe_checkout_session_id },
@@ -197,7 +200,7 @@ async function switchPlan(env, test, run, base, n) {
   const product = await stripeTest(env, "/v1/products", "POST", { name: `${run.lifecycle.switchTo} (self-test switch)`, "metadata[plan_code]": run.lifecycle.switchTo, "metadata[self_test]": "1" });
   await stripeTest(env, `/v1/subscriptions/${base.stripe_subscription_id}`, "POST", {
     "items[0][id]": item.id, "items[0][price_data][currency]": "usd", "items[0][price_data][product]": product.id,
-    "items[0][price_data][unit_amount]": String(run.lifecycle.switchCents), "items[0][price_data][recurring][interval]": "month",
+    "items[0][price_data][unit_amount]": String((await resolvePlan(run.lifecycle.switchTo, "MONTH", env, { requirePublic: false }))?.priceCents), "items[0][price_data][recurring][interval]": "month",
     proration_behavior: proration, "metadata[plan_code]": run.lifecycle.switchTo
   });
   return updateTest(env, test, { stage: "AWAIT_SWITCHED", state: { ...base, product_id: product.id, proration },
