@@ -65,7 +65,7 @@ const OWN_APPS = [
     business: "Nino Battaglia",
     slug: "ninos-ts",
     bundle: "com.menumade.ninobattaglia",
-    logoUrl: "https://ninobattaglia.com/NinoLogo2024OB.png",
+    logoUrl: "https://menu-made.com/assets/own-apps/nino-logo.png", // NinoLogo2024OB.png at 1024 px (the original is over 1.5 MB)
     data: {
       app_name: "Nino Battaglia",
       short_name: "Nino's Ts",
@@ -108,6 +108,21 @@ async function fetchLogo(url, fetchImpl) {
   } catch { return null; }
 }
 
+// The logo as the intake form stores one (app_image = logo), so the build draws the icons from it.
+async function attachLogo(env, spec, { customerId, businessId, projectId }, fetchImpl) {
+  const logo = env.ASSETS ? await fetchLogo(spec.logoUrl, fetchImpl) : null;
+  if (!logo) return false;
+  const t = nowIso();
+  const assetId = crypto.randomUUID();
+  const key = ["customers", customerId, "projects", projectId, "app-images", `logo-${assetId}.${logo.type.ext}`].join("/");
+  await env.ASSETS.put(key, logo.bytes, { httpMetadata: { contentType: logo.type.mime } });
+  await env.DB.prepare(`
+      INSERT INTO assets (id, business_id, customer_id, project_id, asset_type, storage_provider, storage_key, original_filename, mime_type, size_bytes, checksum, status, uploaded_at, validated_at, approved_for_use, is_customer_supplied, rights_confirmed, metadata_json)
+      VALUES (?, ?, ?, ?, 'LOGO', 'R2', ?, ?, ?, ?, ?, 'VALID', ?, ?, 1, 1, 1, ?)
+    `).bind(assetId, businessId, customerId, projectId, key, spec.logoUrl.split("/").pop().slice(0, 100), logo.type.mime, logo.bytes.length, await sha256Hex(logo.bytes), t, t, JSON.stringify({ app_image: "logo" })).run();
+  return true;
+}
+
 async function createOwnApp(env, spec, { fetchImpl = fetch } = {}) {
   const t = nowIso();
   const email = ownerEmailAddress(env);
@@ -139,18 +154,9 @@ async function createOwnApp(env, spec, { fetchImpl = fetch } = {}) {
   // Mobile App Care for the owner's own app: notifications and the update link, no subscription.
   await env.DB.prepare(`INSERT INTO entitlements (id, customer_id, business_id, order_item_id, entitlement_type, status, starts_at, created_at, updated_at) VALUES (?, ?, ?, ?, 'STORE_APP_CARE', 'ACTIVE', ?, ?, ?)`)
     .bind(crypto.randomUUID(), customer.id, ids.businessId, ids.itemId, t, t, t).run();
-  const logo = env.ASSETS ? await fetchLogo(spec.logoUrl, fetchImpl) : null;
-  if (logo) {
-    const assetId = crypto.randomUUID();
-    const key = ["customers", customer.id, "projects", ids.projectId, "app-images", `logo-${assetId}.${logo.type.ext}`].join("/");
-    await env.ASSETS.put(key, logo.bytes, { httpMetadata: { contentType: logo.type.mime } });
-    await env.DB.prepare(`
-        INSERT INTO assets (id, business_id, customer_id, project_id, asset_type, storage_provider, storage_key, original_filename, mime_type, size_bytes, checksum, status, uploaded_at, validated_at, approved_for_use, is_customer_supplied, rights_confirmed, metadata_json)
-        VALUES (?, ?, ?, ?, 'LOGO', 'R2', ?, ?, ?, ?, ?, 'VALID', ?, ?, 1, 1, 1, ?)
-      `).bind(assetId, ids.businessId, customer.id, ids.projectId, key, spec.logoUrl.split("/").pop().slice(0, 100), logo.type.mime, logo.bytes.length, await sha256Hex(logo.bytes), t, t, JSON.stringify({ app_image: "logo" })).run();
-  }
+  const logo = await attachLogo(env, spec, { customerId: customer.id, businessId: ids.businessId, projectId: ids.projectId }, fetchImpl);
   await refreshOnboardingState(ids.projectId, ids.orderId, customer.id, WORKFLOW, env);
-  return { ...ids, logo: Boolean(logo) };
+  return { ...ids, logo };
 }
 
 // From the 5-minute tick, at most once an hour: one read when both apps exist.
@@ -159,6 +165,16 @@ async function ensureOwnStoreApps(env, { now = new Date(), force = false, fetchI
   if (!force && now.getUTCMinutes() >= 5) return { created: [] };
   const have = new Set(((await env.DB.prepare(`SELECT bundle_id FROM store_apps WHERE own_app = 1`).all()).results || []).map((r) => r.bundle_id));
   const created = [];
+  // An own app whose logo couldn't be fetched when it was made gets it now, while its content isn't approved yet.
+  const bare = (await env.DB.prepare(`
+      SELECT s.bundle_id, s.project_id, s.business_id, s.customer_id FROM store_apps s
+      WHERE s.own_app = 1 AND s.status = 'WAITING_APP'
+        AND NOT EXISTS (SELECT 1 FROM assets a WHERE a.project_id = s.project_id AND a.status = 'VALID' AND json_extract(a.metadata_json, '$.app_image') = 'logo')
+    `).all()).results || [];
+  for (const row of bare) {
+    const spec = apps.find((a) => a.bundle === row.bundle_id);
+    if (spec) await attachLogo(env, spec, { customerId: row.customer_id, businessId: row.business_id, projectId: row.project_id }, fetchImpl).catch(() => false);
+  }
   for (const spec of apps) {
     if (have.has(spec.bundle)) continue;
     const taken = await env.DB.prepare(`SELECT 1 AS ok FROM guest_apps WHERE slug = ? UNION ALL SELECT 1 FROM website_sites WHERE slug = ? LIMIT 1`).bind(spec.slug, spec.slug).first();
