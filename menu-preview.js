@@ -65,6 +65,7 @@
       if (response.ok && result?.ok && result.url) {
         window.MenuMadeFunnel?.track?.('menu_preview_ready');
         if (rep) say(`Ready in ${esc(result.seconds ?? '?')} seconds. <a class="btn primary" href="${esc(result.url)}" target="_blank" rel="noopener">Show their menu<span class="mm-sr"> (opens in a new tab)</span></a> ${result.start ? `<a class="btn ghost" href="${esc(result.start)}">Start their order</a>` : ''} The link is emailed too.`);
+        else if (result.reused) say(`You already have a preview of this menu. <a class="btn primary" href="${esc(result.url)}" target="_blank" rel="noopener">Open my menu<span class="mm-sr"> (opens in a new tab)</span></a>`);
         else say(`Your preview is ready. <a class="btn primary" href="${esc(result.url)}" target="_blank" rel="noopener">Open my menu<span class="mm-sr"> (opens in a new tab)</span></a> We’ve emailed you the link too.`);
         return;
       }
