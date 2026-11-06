@@ -2911,9 +2911,13 @@ body.about-page .team-profile a{white-space:nowrap;font-size:clamp(11px,calc((10
 @media (max-width: 760px) { .mm-try { grid-template-columns: 1fr; width: auto; margin-inline: 12px; } }
 
 /* Home "What do you need?" shortcuts (owner, Nov 5, 2026: the website option was hard to find). */
-.hero-pick { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin-top: 22px; }
-.hero-pick p { flex-basis: 100%; margin: 0; font-weight: 700; color: var(--brand-soft); }
-.hero-pick a { padding: 9px 16px; border: 1px solid var(--brand-soft); border-radius: var(--button-radius); color: var(--brand-soft); font-weight: 700; text-decoration: none; background: transparent; }
+/* "What do you need?" chips: an even 2x2 grid of equal-width pills, so "Better Google listing" never sits alone
+   on a second row. !important beats the site-wide "text links become pills" rule, which sizes links to their text. */
+.hero-pick { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; max-width: 460px; margin-top: 22px; }
+.hero-pick p { grid-column: 1 / -1; margin: 0; font-weight: 700; color: var(--brand-soft); }
+.hero-pick a { display: flex !important; align-items: center; justify-content: center; justify-self: stretch !important; align-self: stretch !important; width: auto !important; margin: 0 !important; padding: 9px 12px !important; white-space: nowrap; text-align: center; border: 1px solid var(--brand-soft); border-radius: var(--button-radius); color: var(--brand-soft); font-weight: 700; text-decoration: none; background: transparent; }
+/* Phones: one full-width pill per row rather than squeezed two-line pills. */
+@media (max-width: 420px) { .hero-pick { grid-template-columns: 1fr; max-width: none; } }
 .hero-pick a:hover, .hero-pick a:focus-visible { background: rgba(0, 214, 230, .12); }
 
 /* 701-860px (Nov 5, 2026): the menu gained "Online Menu" and "Websites"; tighten it so "Start" stays on screen. */
