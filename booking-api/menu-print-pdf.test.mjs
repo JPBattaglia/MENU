@@ -74,7 +74,7 @@ test('the hosted menu has a print PDF at /print.pdf, drawn once per menu version
   assert.match(res.headers.get('content-disposition'), /proof-cafe-22222222-menu\.pdf/);
   const first = new Uint8Array(await res.arrayBuffer());
   assert.equal(await pagesOf(first), 1);
-  assert.ok(h.ASSETS.objects.has('k/menu-v1.html.print-v1.pdf'), 'kept next to the page it was drawn from');
+  assert.ok(h.ASSETS.objects.has('k/menu-v1.html.print-v2.pdf'), 'kept next to the page it was drawn from');
 
   // A Menu Care update is a new menu version: the PDF follows it.
   h.sql(`INSERT INTO assets (id, business_id, customer_id, project_id, asset_type, storage_key, original_filename, mime_type, size_bytes, status, uploaded_at) VALUES ('a2', 'biz', 'cust', ?, 'DELIVERABLE', 'k/menu-v2.html', 'menu.html', 'text/html', 1, 'VALID', ?)`, PROJECT, h.t);
@@ -82,7 +82,7 @@ test('the hosted menu has a print PDF at /print.pdf, drawn once per menu version
   await h.ASSETS.put('k/menu-v2.html', designed({ sections: Array.from({ length: 12 }, (_, i) => section(`Section ${i + 1}`, 14)), notes: '' }));
   const updated = new Uint8Array(await (await h.call('/api/menu/proof-cafe-22222222/print.pdf')).arrayBuffer());
   assert.ok(await pagesOf(updated) > 1, 'the new, longer menu');
-  assert.ok(h.ASSETS.objects.has('k/menu-v2.html.print-v1.pdf'));
+  assert.ok(h.ASSETS.objects.has('k/menu-v2.html.print-v2.pdf'));
 });
 
 test('print PDF: unknown menus are not found, and a page that is not in the designed format gets a friendly note', async () => {
@@ -92,4 +92,68 @@ test('print PDF: unknown menus are not found, and a page that is not in the desi
   assert.equal(res.status, 200);
   assert.match(res.headers.get('content-type'), /text\/html/);
   assert.match(await res.text(), /Print version not available/);
+});
+
+// ---- Diet marks, tri-fold, table tent and TV screen (owner, Nov 5, 2026) ----
+const { splitMarks, markItems } = await import('./src/producers/menu-qr/dietary.js');
+const { buildTriFoldPdf, buildTableTentPdf } = await import('./src/producers/menu-qr/print-pdf.js');
+const { buildTvMenuHtml } = await import('./src/producers/menu-qr/tv-menu.js');
+
+test('diet marks are read only from brackets the menu already uses; other brackets stay as text', () => {
+  assert.deepEqual(splitMarks('Garden Salad (V, GF)'), { text: 'Garden Salad', marks: ['V', 'GF'] });
+  assert.deepEqual(splitMarks('Sorbetto [vegan]'), { text: 'Sorbetto', marks: ['VG'] });
+  assert.deepEqual(splitMarks('Diavola (spicy)'), { text: 'Diavola', marks: ['HOT'] });
+  assert.deepEqual(splitMarks('Wings (6 pieces)'), { text: 'Wings (6 pieces)', marks: [] });
+  assert.deepEqual(splitMarks('Burger (add bacon)'), { text: 'Burger (add bacon)', marks: [] });
+  assert.deepEqual(splitMarks('Pad Thai, peanuts'), { text: 'Pad Thai, peanuts', marks: [] }, 'nothing guessed from ingredients');
+  const { menu, used } = markItems({ sections: [{ name: 'Mains', items: [{ name: 'Tofu Bowl (VG)', description: 'Rice, greens (GF)', price: '$14' }, { name: 'Steak', price: '$30' }] }] });
+  assert.deepEqual(menu.sections[0].items[0], { name: 'Tofu Bowl', description: 'Rice, greens', price: '$14', marks: ['VG', 'GF'] });
+  assert.deepEqual(menu.sections[0].items[1].marks, []);
+  assert.deepEqual(used, ['VG', 'GF']);
+});
+
+test('tri-fold: two landscape sides; too long for the inside and flap, it is refused rather than shrunk', async () => {
+  const fold = await buildTriFoldPdf({ businessName: 'Proof Cafe', primary: '#1f4e3d', menu: { sections: [section('Pizza (V)', 6), section('Drinks', 5, false)], notes: 'Ask about allergies.' }, qrModules: qr, qrUrl: HOSTED });
+  const doc = await PDFDocument.load(fold);
+  assert.equal(doc.getPageCount(), 2);
+  assert.deepEqual(doc.getPage(0).getSize(), { width: 792, height: 612 });
+  const huge = await buildTriFoldPdf({ businessName: 'Big Diner', menu: { sections: Array.from({ length: 12 }, (_, i) => section(`Section ${i + 1}`, 14)) }, qrModules: qr, qrUrl: HOSTED });
+  assert.equal(huge, null);
+});
+
+test('table tent: one letter page with the QR code; needs a QR code', async () => {
+  const tent = await buildTableTentPdf({ businessName: 'Proof Cafe', primary: '#1f4e3d', menu: { sections: [] }, qrModules: qr, qrUrl: HOSTED });
+  assert.equal(await pagesOf(tent), 1);
+  assert.equal(await buildTableTentPdf({ businessName: 'Proof Cafe', menu: { sections: [] }, qrModules: null, qrUrl: '' }), null);
+});
+
+test('TV screen: one screen when it fits, otherwise even screens; marks shown with a key', () => {
+  const one = buildTvMenuHtml({ businessName: 'Proof Cafe', primary: '#1f4e3d', menu: { sections: [{ name: 'Pizza', items: [{ name: 'Margherita (V)', price: '$18' }, { name: 'Diavola (spicy)', price: '$21' }] }] } });
+  assert.equal(one.pages, 1);
+  assert.match(one.html, /<span class="mk" title="Vegetarian">V<\/span>/);
+  assert.match(one.html, /class="mk hot"/);
+  assert.match(one.html, /Vegetarian<\/span>/);
+  assert.doesNotMatch(one.html, /<script/i);
+  const big = { sections: Array.from({ length: 8 }, (_, i) => section(`Section ${i + 1}`, 12)) };
+  const first = buildTvMenuHtml({ businessName: 'Big', menu: big, page: 1 });
+  assert.ok(first.pages > 1);
+  const counts = Array.from({ length: first.pages }, (_, i) => (buildTvMenuHtml({ businessName: 'Big', menu: big, page: i + 1 }).html.match(/class="it"/g) || []).length);
+  assert.equal(counts.reduce((a, b) => a + b, 0), 96, 'every item on some screen');
+  assert.ok(Math.max(...counts) - Math.min(...counts) <= 6, `screens are even: ${counts}`);
+});
+
+test('routes: tri-fold and table tent PDFs, and the TV screen with a refresh so updates appear by themselves', async () => {
+  const h = setup({ html: designed({ sections: [section('Pizza', 5)], notes: '' }) });
+  for (const [path, name] of [['tri-fold.pdf', 'tri-fold-menu'], ['table-tent.pdf', 'table-tent']]) {
+    const res = await h.call(`/api/menu/proof-cafe-22222222/${path}`);
+    assert.equal(res.status, 200, path);
+    assert.equal(res.headers.get('content-type'), 'application/pdf');
+    assert.match(res.headers.get('content-disposition'), new RegExp(`proof-cafe-22222222-${name}\\.pdf`));
+  }
+  const tv = await h.call('/api/menu/proof-cafe-22222222/tv');
+  assert.equal(tv.status, 200);
+  assert.match(tv.headers.get('refresh'), /^300; url=https:\/\/menu-made\.com\/api\/menu\/proof-cafe-22222222\/tv$/);
+  assert.match(tv.headers.get('content-security-policy'), /default-src 'none'/);
+  assert.match(await tv.text(), /Pizza item 1/);
+  assert.equal((await h.call('/api/menu/proof-cafe-22222222/menu.docx')).status, 404);
 });
