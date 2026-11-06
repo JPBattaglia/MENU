@@ -7,6 +7,7 @@ on:
   workflow_dispatch:
 permissions:
   contents: read
+  actions: read
   id-token: write
 jobs:
   numbers:
@@ -14,8 +15,15 @@ jobs:
     timeout-minutes: 5
     steps:
       - name: Ask the worker to send the Friday numbers
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
           set -eu
+          # GitHub's scheduler can run hours late. If Claude already sent today's email by hand, a late scheduled run skips (Nov 6, 2026).
+          if [ "${{ github.event_name }}" = "schedule" ]; then
+            done_today=$(gh api "repos/${{ github.repository }}/actions/workflows/weekly-numbers.yml/runs?status=success&created=>=$(date -u +%Y-%m-%d)" --jq '.total_count')
+            if [ "$done_today" != "0" ]; then echo "Already sent today; skipping."; exit 0; fi
+          fi
           token=$(curl -sSf -H "Authorization: Bearer $ACTIONS_ID_TOKEN_REQUEST_TOKEN" "$ACTIONS_ID_TOKEN_REQUEST_URL&audience=menu-made-weekly-numbers" | jq -r .value)
           res=$(curl -sS -X POST -H "Authorization: Bearer $token" -H "Content-Type: application/json" --data '{}' https://menu-made.com/api/system/weekly-numbers)
           echo "$res" | jq -c '{ok, lines, error}'
