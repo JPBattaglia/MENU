@@ -327,6 +327,11 @@ test('the menu uploaded at checkout is attached, and the hosted menu page goes l
     assert.equal(live.status, 200);
     assert.match(await live.text(), /Tomato Soup/);
     assert.match(f.emails[1].text, /Your menu is live at https:\/\/menu-made\.com\/api\/menu\//);
+    // The print-ready PDF (owner, Nov 5, 2026) is linked in the delivery email and drawn from the live menu.
+    assert.ok(f.emails[1].text.includes(`Download your print menu (PDF): ${hostedUrl}/print.pdf`));
+    const pdf = await call(f, `${hostedUrl}/print.pdf`);
+    assert.equal(pdf.status, 200);
+    assert.equal(pdf.headers.get('content-type'), 'application/pdf');
   });
 });
 

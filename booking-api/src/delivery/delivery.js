@@ -2,6 +2,9 @@ import { publicBaseUrl } from "../lib/config.js";
 import { simplePage } from "../lib/http.js";
 import { verifyLinkToken } from "../lib/links.js";
 import { menuHostingState } from "../producers/menu-qr/hosting-renewal.js";
+import { buildPrintMenuPdf } from "../producers/menu-qr/print-pdf.js";
+import { parseMenuHtml } from "../producers/menu-care/menu-edit.js";
+import QRCode from "qrcode/lib/browser.js";
 
 async function handleDeliveryDownload(request, env, deliverableId) {
   const url = new URL(request.url);
@@ -36,9 +39,9 @@ async function handleDeliveryDownload(request, env, deliverableId) {
   });
 }
 
-// Public menu page that each QR code opens. Shows the approved menu only; before approval, a holding page.
-async function handleHostedMenu(request, env, slug) {
-  if (!env.DB || !env.ASSETS) return simplePage(503, "Temporarily unavailable", "<p>Please try again in a minute.</p>");
+// Finds the live menu page for a hosted slug. Returns { object, row } when it can be shown, or { response } with the
+// page to show instead (offline, coming soon, not found).
+async function loadHostedMenu(env, slug) {
   const hostedUrl = `${publicBaseUrl(env)}/api/menu/${slug}`;
   const row = await env.DB.prepare(`
       SELECT a.storage_key, p0.business_id
@@ -57,18 +60,28 @@ async function handleHostedMenu(request, env, slug) {
   if (row?.business_id) {
     const state = await menuHostingState(env, row.business_id).catch(() => ({ live: true }));
     if (!state.live) {
-      return simplePage(200, "This menu isn't available right now",
-        `<p>This online menu is currently offline. Please ask a member of staff for a menu.</p><p style="font-size:14px">Is this your business? Reply to any email from Menu-Made, or sign in to <a href="${publicBaseUrl(env)}/account.html">your account</a>, to bring your menu back with Menu Care at this same address and QR code.</p>`);
+      return { response: simplePage(200, "This menu isn't available right now",
+        `<p>This online menu is currently offline. Please ask a member of staff for a menu.</p><p style="font-size:14px">Is this your business? Reply to any email from Menu-Made, or sign in to <a href="${publicBaseUrl(env)}/account.html">your account</a>, to bring your menu back with Menu Care at this same address and QR code.</p>`) };
     }
   }
   const object = row ? await env.ASSETS.get(row.storage_key) : null;
   if (!object) {
     const known = await env.DB.prepare(`SELECT 1 AS found FROM project_inputs WHERE input_key = 'qr_destination' AND value_text = ? LIMIT 1`).bind(hostedUrl).first();
-    return known
-      ? simplePage(200, "Menu coming soon", "<p>This menu is being prepared. Please check back shortly.</p>")
-      : simplePage(404, "Menu not found", "<p>This menu link isn't active.</p>");
+    return {
+      response: known
+        ? simplePage(200, "Menu coming soon", "<p>This menu is being prepared. Please check back shortly.</p>")
+        : simplePage(404, "Menu not found", "<p>This menu link isn't active.</p>")
+    };
   }
-  return new Response(object.body, {
+  return { object, row, hostedUrl };
+}
+
+// Public menu page that each QR code opens. Shows the approved menu only; before approval, a holding page.
+async function handleHostedMenu(request, env, slug) {
+  if (!env.DB || !env.ASSETS) return simplePage(503, "Temporarily unavailable", "<p>Please try again in a minute.</p>");
+  const found = await loadHostedMenu(env, slug);
+  if (found.response) return found.response;
+  return new Response(found.object.body, {
     status: 200,
     headers: {
       "Content-Type": "text/html; charset=utf-8",
@@ -79,7 +92,40 @@ async function handleHostedMenu(request, env, slug) {
   });
 }
 
+// Print-ready PDF of the same live menu, with a QR code back to it (owner, Nov 5, 2026: part of Online Menu + QR).
+// Built from the current menu page, so Menu Care updates reach it too. Each version is drawn once and kept in R2
+// next to the page it was made from.
+async function handleHostedMenuPdf(request, env, slug) {
+  if (!env.DB || !env.ASSETS) return simplePage(503, "Temporarily unavailable", "<p>Please try again in a minute.</p>");
+  const found = await loadHostedMenu(env, slug);
+  if (found.response) return found.response;
+  const pdfHeaders = {
+    "Content-Type": "application/pdf",
+    "Content-Disposition": `inline; filename="${slug}-menu.pdf"`,
+    "Cache-Control": "public, max-age=300",
+    "X-Content-Type-Options": "nosniff"
+  };
+  const cacheKey = `${found.row.storage_key}.print-v1.pdf`;
+  const cached = await env.ASSETS.get(cacheKey);
+  if (cached) return new Response(cached.body, { status: 200, headers: pdfHeaders });
+  let parsed;
+  try {
+    parsed = parseMenuHtml(await found.object.text());
+  } catch {
+    parsed = null;
+  }
+  const qrModules = parsed ? QRCode.create(found.hostedUrl, { errorCorrectionLevel: "M" }).modules : null;
+  const bytes = parsed ? await buildPrintMenuPdf({ ...parsed, qrModules, qrUrl: found.hostedUrl }) : null;
+  if (!bytes) {
+    return simplePage(200, "Print version not available",
+      `<p>This menu can't be turned into a print PDF automatically. <a href="${found.hostedUrl}">Open the online menu</a>, or reply to any email from Menu-Made and we'll make the print version for you.</p>`);
+  }
+  await env.ASSETS.put(cacheKey, bytes, { httpMetadata: { contentType: "application/pdf" } }).catch(() => {});
+  return new Response(bytes, { status: 200, headers: pdfHeaders });
+}
+
 export {
   handleDeliveryDownload,
-  handleHostedMenu
+  handleHostedMenu,
+  handleHostedMenuPdf
 };

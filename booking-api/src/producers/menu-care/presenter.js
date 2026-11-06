@@ -3,6 +3,7 @@ import { APPROVAL_TTL_DAYS } from "../../lib/config.js";
 import { brandedEmailHtml, escapeHtml } from "../../lib/email.js";
 import { parseJsonOrNull } from "../../lib/http.js";
 import { isTestOrder } from "../../approvals/release.js";
+import { publicBaseUrl } from "../../lib/config.js";
 
 const careOf = (files) => parseJsonOrNull(files?.[0]?.metadata_json)?.care || {};
 
@@ -48,6 +49,8 @@ const menuCareOverrides = {
     const business = context.business_name || "your business";
     const care = careOf(files);
     const url = await liveMenuUrl(env, context.business_id);
+    // Menus Menu-Made hosts also have a print PDF, rebuilt from the live page (owner, Nov 5, 2026).
+    const printUrl = url && url.startsWith(`${publicBaseUrl(env)}/api/menu/`) ? `${url}/print.pdf` : null;
     const changes = care.changes || [];
     return {
       recipient: context.customer_email,
@@ -58,11 +61,11 @@ const menuCareOverrides = {
         eyebrow: "MENU CARE",
         heading: "Your menu is updated",
         paragraphs: [`Hi ${escapeHtml(context.first_name || "there")}, your online menu now shows:`, `<ul>${changes.map((line) => `<li>${escapeHtml(line)}</li>`).join("")}</ul>`,
-          "Your QR code and menu address stay the same."],
-        buttons: url ? [{ label: "See your menu", url, primary: true }] : [],
+          "Your QR code and menu address stay the same.", ...printUrl ? ["Your print menu PDF has the changes too."] : []],
+        buttons: [...url ? [{ label: "See your menu", url, primary: true }] : [], ...printUrl ? [{ label: "Print menu (PDF)", url: printUrl }] : []],
         footnote: "Something not right? Reply to this email."
       }),
-      text: [`Hi ${context.first_name || "there"},`, "", "Your online menu now shows:", ...changes.map((line) => `- ${line}`), "", url ? `See your menu: ${url}` : "",
+      text: [`Hi ${context.first_name || "there"},`, "", "Your online menu now shows:", ...changes.map((line) => `- ${line}`), "", url ? `See your menu: ${url}` : "", ...printUrl ? [`Print menu (PDF): ${printUrl}`] : [],
         "Something not right? Reply to this email."].join("\n")
     };
   }
