@@ -61,17 +61,6 @@
   const still = () => window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   const EASE = 'cubic-bezier(.2,.8,.2,1)';
   const running = new WeakMap();
-  document.documentElement.classList.add('mm-js');
-
-  // Floating dropdowns get .mm-lifted while open, which fades their shadow in (see main.css).
-  const lift = (details, on) => {
-    if (!on) return details.classList.remove('mm-lifted');
-    requestAnimationFrame(() => requestAnimationFrame(() => { if (details.open) details.classList.add('mm-lifted'); }));
-  };
-  document.addEventListener('toggle', event => {
-    const details = event.target;
-    if (details instanceof HTMLDetailsElement && floatingPanel(details)) lift(details, details.open && details.dataset.mmTarget !== 'closed');
-  }, true);
 
   function floatingPanel(details) {
     const panel = details.querySelector(':scope > :not(summary)');
@@ -85,7 +74,6 @@
     let animation;
     if (opening) details.open = true;
     if (panel) {
-      lift(details, opening);
       const frames = [
         { opacity: 0, transform: 'translateY(-8px)', clipPath: 'inset(0 0 100% 0 round 20px)' },
         { opacity: 1, transform: 'none', clipPath: 'inset(0 0 0 0 round 20px)' }
