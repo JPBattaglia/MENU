@@ -2961,3 +2961,11 @@ body.about-page .team-profile a{white-space:nowrap;font-size:clamp(11px,calc((10
 .mm-steps .service-card .pill { align-self: flex-start; }
 .mm-steps .service-card .service-bottom { margin-top: auto; }
 .mm-apps-compare th[scope="row"] { text-align: left; }
+@media (max-width: 640px) {
+  .mm-apps-compare, .mm-apps-compare tbody, .mm-apps-compare tr, .mm-apps-compare th, .mm-apps-compare td { display: block; width: auto; }
+  .mm-apps-compare thead { display: none; }
+  .mm-apps-compare tr { padding: 14px 16px; border-bottom: 1px solid rgba(95, 242, 255, 0.2); }
+  .mm-apps-compare th[scope="row"] { padding: 0 0 8px; font-size: 17px; }
+  .mm-apps-compare td { padding: 4px 0; text-align: left; border: 0; }
+  .mm-apps-compare td::before { content: attr(data-label) ": "; font-weight: 700; color: var(--cyan); }
+}
