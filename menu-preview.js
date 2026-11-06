@@ -78,7 +78,7 @@
     } catch (error) {
       say(esc(error?.message || 'Something went wrong. Please try again.'), true);
     } finally {
-      busy = false; button.disabled = false; button.textContent = 'Show me my menu';
+      busy = false; button.disabled = false; button.textContent = 'Generate menu';
     }
   });
 })();
