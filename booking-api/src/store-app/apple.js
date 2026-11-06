@@ -78,4 +78,29 @@ async function checkPushKey(creds, bundleId, { fetchImpl = fetch } = {}) {
   return { ok: null, note: `Apple's push service answered ${res.status}${reason ? ` (${reason})` : ""}; the key could not be confirmed.` };
 }
 
-export { apnsToken, ascToken, checkApiKey, checkPushKey, importP8 };
+
+// Registers an App ID with Push Notifications in the API key's team, when it isn't there yet (the owner's own Mobile
+// Apps, own-apps.js; a restaurant's App ID is made in its own team by the owner). Xcode's automatic signing would make
+// it at the first build, but App Store Connect's New App needs it before that. Returns { ok, created?, note }.
+async function ensureBundleId(creds, bundleId, name, { fetchImpl = fetch } = {}) {
+  let token;
+  try { token = await ascToken(creds); } catch (error) { return { ok: false, note: String(error.message) }; }
+  const headers = { Authorization: `Bearer ${token}`, "Content-Type": "application/json" };
+  const found = await fetchImpl(`${ASC_API}/bundleIds?filter[identifier]=${encodeURIComponent(bundleId)}&limit=5`, { headers }).catch(() => null);
+  if (!found?.ok) return { ok: false, note: `Apple answered ${found?.status || "nothing"} looking up ${bundleId}` };
+  let id = ((await found.json().catch(() => ({}))).data || []).find((b) => b.attributes?.identifier === bundleId)?.id || null;
+  let created = false;
+  if (!id) {
+    const made = await fetchImpl(`${ASC_API}/bundleIds`, { method: "POST", headers, body: JSON.stringify({ data: { type: "bundleIds", attributes: { identifier: bundleId, name: String(name || bundleId).replace(/[^A-Za-z0-9 ]/g, " ").replace(/\s+/g, " ").trim().slice(0, 60) || "App", platform: "IOS" } } }) }).catch(() => null);
+    if (!made?.ok) return { ok: false, note: `Apple answered ${made?.status || "nothing"} registering ${bundleId}` };
+    id = (await made.json().catch(() => ({}))).data?.id || null;
+    created = true;
+  }
+  if (!id) return { ok: false, note: `Apple didn't return an id for ${bundleId}` };
+  const cap = await fetchImpl(`${ASC_API}/bundleIdCapabilities`, { method: "POST", headers, body: JSON.stringify({ data: { type: "bundleIdCapabilities", attributes: { capabilityType: "PUSH_NOTIFICATIONS" }, relationships: { bundleId: { data: { type: "bundleIds", id } } } } }) }).catch(() => null);
+  // 409 = push is already on.
+  if (cap && !cap.ok && cap.status !== 409) return { ok: false, created, note: `App ID ${bundleId} is registered, but Apple answered ${cap.status} turning on Push Notifications` };
+  return { ok: true, created, note: `App ID ${bundleId} is registered with Push Notifications` };
+}
+
+export { ensureBundleId, apnsToken, ascToken, checkApiKey, checkPushKey, importP8 };

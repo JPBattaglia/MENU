@@ -300,3 +300,16 @@ test('Apple refuses to reuse a version string that is already in App Store Conne
   assert.match(f.row(`SELECT submit_error FROM store_app_listings`).submit_error, /1\.0\.0 is already in App Store Connect/);
   assert.equal(stores.seen.newVersion, undefined);
 });
+
+test('listing text for a shop or a services business: no hours, directions or menu wording, still within store limits', () => {
+  const shop = listing.listingText({ app_name: 'Nino Battaglia', business_type: 'shop', menu: '# T-shirts\nSunset | Tee | $32\n# Hoodies\nWave | Hoodie | $58', order_url: 'https://ninobattaglia.com/' }, { businessName: 'Nino Battaglia', baseUrl: 'https://menu-made.com', year: 2026 });
+  assert.equal(shop.subtitle, 'Shop and news');
+  assert.match(shop.description, /Browse the shop, see what's new and shop online in one tap\./);
+  assert.match(shop.description, /In the shop: T-shirts, Hoodies\./);
+  assert.doesNotMatch(`${shop.description} ${shop.keywords} ${shop.play_short}`, /menu|restaurant|hours|directions|specials/i);
+  assert.ok(shop.keywords.length <= 100 && shop.play_short.length <= 80 && shop.subtitle.length <= 30);
+  const services = listing.listingText({ app_name: 'Menu-made', business_type: 'services', menu: '# Plans\nStarter | x | $79/mo', phone: '(415) 555-0100' }, { businessName: 'Menu-Made LLC', baseUrl: 'https://menu-made.com', year: 2026 });
+  assert.equal(services.subtitle, 'Services and news');
+  assert.match(services.description, /See our services and prices, see what's new and call us in one tap\./);
+  assert.equal(services.copyright, '2026 Menu-Made LLC');
+});

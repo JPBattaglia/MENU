@@ -117,4 +117,49 @@ async function checkPlay(sa, packageName, { fetchImpl = fetch } = {}) {
   }
 }
 
-export { FCM_SCOPE, PLAY_SCOPE, accessToken, checkFirebase, checkPlay, fcmSend, parseGoogleServices, parseServiceAccount, tokenCache };
+
+// Firebase Management API: adds an Android app to the Firebase project (owner's own Mobile Apps, own-apps.js) and reads
+// its google-services.json, so the owner doesn't have to click through the Firebase console. Needs the service account
+// to have Firebase admin rights in the project; when it hasn't, { ok: false, denied: true } and the owner does it by hand.
+// One call per tick: list; create when missing (Google finishes it in seconds, so the next tick reads the config).
+const FIREBASE_SCOPE = "https://www.googleapis.com/auth/firebase";
+const FIREBASE_API = "https://firebase.googleapis.com/v1beta1";
+
+async function firebaseAndroidConfig(sa, projectId, packageName, displayName, { fetchImpl = fetch } = {}) {
+  let token;
+  try { token = await accessToken(sa, FIREBASE_SCOPE, { fetchImpl }); } catch (error) { return { ok: false, denied: Boolean(error?.auth), note: String(error?.message || error).slice(0, 160) }; }
+  const headers = { Authorization: `Bearer ${token}`, "Content-Type": "application/json" };
+  const project = `${FIREBASE_API}/projects/${encodeURIComponent(projectId)}`;
+  const list = await fetchImpl(`${project}/androidApps?pageSize=100`, { headers }).catch(() => null);
+  if (!list) return { ok: false, note: "Firebase couldn't be reached" };
+  if (list.status === 401 || list.status === 403) return { ok: false, denied: true, note: `Firebase refused the service account (${list.status})` };
+  if (!list.ok) return { ok: false, note: `Firebase answered ${list.status} listing Android apps` };
+  const apps = (await list.json().catch(() => ({}))).apps || [];
+  const app = apps.find((a) => a.packageName === packageName);
+  if (!app) {
+    const made = await fetchImpl(`${project}/androidApps`, { method: "POST", headers, body: JSON.stringify({ packageName, displayName: String(displayName || packageName).slice(0, 60) }) }).catch(() => null);
+    if (made && (made.status === 401 || made.status === 403)) return { ok: false, denied: true, note: `Firebase refused to add the Android app (${made.status})` };
+    if (!made?.ok) return { ok: false, note: `Firebase answered ${made?.status || "nothing"} adding the Android app` };
+    return { ok: false, pending: true, note: "Android app added in Firebase; its config is read next time" };
+  }
+  const cfg = await fetchImpl(`${project}/androidApps/${encodeURIComponent(app.appId)}/config`, { headers }).catch(() => null);
+  if (!cfg?.ok) return { ok: false, note: `Firebase answered ${cfg?.status || "nothing"} for the app config` };
+  const body = await cfg.json().catch(() => ({}));
+  let text;
+  try { text = new TextDecoder().decode(Uint8Array.from(atob(String(body.configFileContents || "")), (c) => c.charCodeAt(0))); } catch { text = ""; }
+  const parsed = parseGoogleServices(text);
+  if (!parsed?.packages.includes(packageName)) return { ok: false, note: "Firebase's config file doesn't include the app" };
+  return { ok: true, text };
+}
+
+// Adds the clients of `extra` that `base` lacks (both google-services.json texts of the same Firebase project).
+function mergeGoogleServices(base, extra) {
+  let a, b;
+  try { a = JSON.parse(base); b = JSON.parse(extra); } catch { return null; }
+  if (a?.project_info?.project_id !== b?.project_info?.project_id) return null;
+  const have = new Set((a.client || []).map((c) => c?.client_info?.android_client_info?.package_name));
+  for (const c of b.client || []) if (!have.has(c?.client_info?.android_client_info?.package_name)) (a.client ||= []).push(c);
+  return JSON.stringify(a, null, 2);
+}
+
+export { firebaseAndroidConfig, mergeGoogleServices, FCM_SCOPE, PLAY_SCOPE, accessToken, checkFirebase, checkPlay, fcmSend, parseGoogleServices, parseServiceAccount, tokenCache };

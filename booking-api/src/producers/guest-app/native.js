@@ -7,7 +7,7 @@
 // origin; POSTs (rewards) are limited in engage.js to the app's own page and the two native origins.
 // Read cost: one D1 row + one R2 object per answer, cached at the edge for CONTENT_TTL seconds.
 import { parseHours, parseOfferings } from "../website/build.js";
-import { brandOf } from "./build.js";
+import { brandOf, labelsOf } from "./build.js";
 import { loadLiveApp } from "./app-step.js";
 import { NATIVE_ORIGINS, engagementSettings, nativeCors } from "./engage.js";
 
@@ -23,8 +23,12 @@ function contentOf(live, appBaseUrl) {
   const data = live.data || {};
   const address = clean(data.address, 200);
   const hasIcon = (live.build?.icons || []).some((i) => i.path === "icons/icon-192.png");
+  const labels = labelsOf(data);
   return {
     ok: true,
+    // Labels for the business kind (menu = food & bev, the default; shop; services). Older app builds ignore these.
+    kind: labels.kind,
+    labels: { section: labels.section, order: labels.order, news: labels.news, push: labels.pushNote },
     name: clean(data.app_name, 60),
     address,
     phone: clean(data.phone, 40),

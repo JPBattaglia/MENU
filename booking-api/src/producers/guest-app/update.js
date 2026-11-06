@@ -14,7 +14,7 @@ import { checkApp } from "./check.js";
 import { FIELDS, formPage, readValues, validate } from "./intake.js";
 import { engagementSettings, queuePush } from "./engage.js";
 
-const UPDATE_FIELDS = FIELDS.filter((f) => !["subdomain", "brand_color"].includes(f.key));
+const UPDATE_FIELDS = FIELDS.filter((f) => !["subdomain", "brand_color", "business_type"].includes(f.key));
 
 async function planActive(env, businessId) {
   const row = await env.DB.prepare(`SELECT 1 AS ok FROM entitlements WHERE business_id = ? AND entitlement_type IN ('GUEST_APP', 'STORE_APP_CARE') AND status = 'ACTIVE' LIMIT 1`).bind(businessId).first();
@@ -67,7 +67,7 @@ async function handleAppUpdate(request, env, appId) {
   const page = (values, error) => formPage(action, t, values, { error, fields: UPDATE_FIELDS, logo: false, heading: "Update your Guest App", intro });
   if (request.method === "GET") return page(live.data, null);
   const values = readValues(form, UPDATE_FIELDS);
-  const problem = validate(values, UPDATE_FIELDS);
+  const problem = validate(values, UPDATE_FIELDS, live.data);
   if (problem) return page(values, problem);
   const result = await publishUpdate(env, live, values);
   if (result.problems.length) return page(values, `We couldn't publish this update: ${result.problems[0]}`);

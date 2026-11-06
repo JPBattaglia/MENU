@@ -60,7 +60,13 @@
     if (c.brand_color) brand(c.brand_color);
     if (c.icon_url) { $("logo").src = c.icon_url; $("logo").hidden = false; }
     var actions = $("actions"); clear(actions);
-    [["Call", c.tel ? "tel:" + c.tel : ""], ["Directions", c.map_url], ["Order online", c.order_url], ["Book a table", c.reserve_url]].forEach(function (a) {
+    // Labels for the business kind; a restaurant (or content from before labels existed) keeps the original wording.
+    var labels = c.labels || {};
+    var restaurant = !c.kind || c.kind === "menu";
+    $("t-menu").textContent = labels.section || "Menu";
+    $("specials-h").textContent = restaurant ? "Today's specials" : (labels.news || "News");
+    $("push-note").textContent = labels.push || "Get a notification when there's a new special.";
+    [["Call", c.tel ? "tel:" + c.tel : ""], ["Directions", c.map_url], [labels.order || "Order online", c.order_url], ["Book a table", c.reserve_url]].forEach(function (a) {
       if (!a[1]) return;
       var li = el("li"); li.appendChild(el("a", { href: a[1] }, a[0])); actions.appendChild(li);
     });
@@ -68,8 +74,9 @@
     $("specials-box").hidden = !c.specials;
     var hours = $("hours"); clear(hours);
     (c.hours || []).forEach(function (h) { hours.appendChild(el("dt", null, h.day || "Hours")); hours.appendChild(el("dd", null, h.time)); });
+    $("hours-box").hidden = !restaurant && !(c.hours || []).length;
     var menu = $("menu"); clear(menu);
-    if (!(c.menu || []).length) menu.appendChild(el("div", { "class": "card" }, "The menu will appear here soon."));
+    if (!(c.menu || []).length) menu.appendChild(el("div", { "class": "card" }, restaurant ? "The menu will appear here soon." : "This will appear here soon."));
     (c.menu || []).forEach(function (s) {
       var card = el("div", { "class": "card" });
       if (s.name) card.appendChild(el("h2", null, s.name));
@@ -83,6 +90,8 @@
       card.appendChild(ul); menu.appendChild(card);
     });
     var loyalty = c.loyalty || {};
+    // A shop or services business has no counter for rewards codes, so the tab is hidden while rewards are off.
+    $("t-rewards").hidden = !restaurant && !loyalty.enabled;
     $("rewards-on").hidden = !loyalty.enabled;
     $("rewards-off").hidden = !!loyalty.enabled;
     if (loyalty.enabled) $("reward-text").textContent = "Collect " + loyalty.goal + " visits for " + loyalty.reward + ".";

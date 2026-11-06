@@ -291,3 +291,36 @@ test('with no app-form or website logo, the logo uploaded with the Online Menu +
     });
   }
 });
+
+test('a shop or services app: no address or hours needed, its own labels, and restaurant apps are unchanged', async () => {
+  const { missingAnswers, labelsOf } = await import('./src/producers/guest-app/build.js');
+  const { validate, FIELDS } = await import('./src/producers/guest-app/intake.js');
+  const { UPDATE_FIELDS } = await import('./src/producers/guest-app/update.js');
+  const SHOP = { app_name: 'Nino Battaglia', business_type: 'shop', menu: '# T-shirts\nSunset | Unisex tee | $32', specials: 'New fall designs', phone: '', address: '', hours: '', order_url: 'https://ninobattaglia.com/shop', reserve_url: '', brand_color: '#111111' };
+  const built = buildApp(SHOP, { version: 'v1', hasLogo: true });
+  const html = built.files['index.html'];
+  assert.deepEqual(checkApp({ files: built.files, icons: ICON_SIZES, app: SHOP }), []);
+  assert.match(html, /<h2 id="menu-h">Shop<\/h2>/); assert.match(html, />Shop online</); assert.match(html, /<h2 id="specials-h">News<\/h2>/);
+  assert.ok(!/Directions|Call<|Hours and location|maps\/search/.test(html), 'no address, phone or hours shown');
+  assert.match(JSON.parse(built.files['manifest.webmanifest']).description, /shop, news and contact/);
+  assert.deepEqual(missingAnswers(SHOP), []);
+  assert.deepEqual(missingAnswers({ ...SHOP, order_url: '' }), ['phone or order_url']);
+  assert.deepEqual(missingAnswers({ ...SHOP, order_url: '', phone: '(415) 555-0100' }), []);
+  // Services: phone shown, label changes.
+  const SERVICES = { ...SHOP, business_type: 'services', app_name: 'Menu-made', phone: '(415) 555-0100', order_url: 'https://menu-made.com/plans.html' };
+  const s = buildApp(SERVICES, { version: 'v1', hasLogo: true }).files['index.html'];
+  assert.match(s, /<h2 id="menu-h">Services<\/h2>/); assert.match(s, />Get started</); assert.match(s, /tel:4155550100/); assert.match(s, /<h2 id="hours-h">Contact<\/h2>/);
+  assert.equal(labelsOf({}).kind, 'menu'); assert.equal(labelsOf({ business_type: 'bogus' }).kind, 'menu');
+  // A restaurant still needs phone, address and hours (missing business_type = restaurant, as for every older app).
+  assert.deepEqual(missingAnswers({ ...APP, address: '' }), ['address']);
+  const answers = { app_name: 'A', menu: 'x | y | $1', phone: '', address: '', hours: '', order_url: 'https://a.test/x', reserve_url: '', brand_color: '', subdomain: '', loyalty_visits: '', push_specials: '', specials: '', short_name: '', loyalty_reward: '' };
+  assert.equal(validate({ ...answers, business_type: 'menu' }, FIELDS), 'Phone number is required.');
+  assert.equal(validate({ ...answers, business_type: 'shop' }, FIELDS), null);
+  assert.equal(validate({ ...answers, business_type: 'shop', order_url: '' }, FIELDS), 'Please give a phone number or an online ordering or shop link.');
+  assert.equal(validate({ ...answers, business_type: 'what' }, FIELDS), 'Please choose what your business does.');
+  // The update form doesn't change the kind; it reads it from the saved answers.
+  assert.ok(!UPDATE_FIELDS.some((f) => f.key === 'business_type'));
+  const update = Object.fromEntries(UPDATE_FIELDS.map((f) => [f.key, answers[f.key] ?? '']));
+  assert.equal(validate(update, UPDATE_FIELDS, { business_type: 'shop' }), null);
+  assert.equal(validate(update, UPDATE_FIELDS, {}), 'Phone number is required.');
+});
