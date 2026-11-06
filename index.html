@@ -11,9 +11,9 @@
   <link rel="icon" type="image/png" href="MENU=.png">
   <link rel="shortcut icon" href="MENU=.png">
   <link rel="apple-touch-icon" href="MENU=.png">
-  <link rel="stylesheet" href="main.css?v=20261105-gutter">
+  <link rel="stylesheet" href="main.css?v=20261105-smooth">
   <script src="funnel.js?v=20261016-service-measurement" defer></script>
-  <script src="site-nav.js?v=20261016-accessible-navigation" defer></script>
+  <script src="site-nav.js?v=20261105-smooth" defer></script>
   <script src="site-catalog.js?v=20261103-prices" defer></script>
   <link rel="canonical" href="https://menu-made.com/">
   <meta property="og:type" content="website">
@@ -80,8 +80,9 @@
         (function () {
           var d = document.querySelector('.hero-pick');
           if (!d) return;
-          document.addEventListener('click', function (e) { if (d.open && !d.contains(e.target)) d.open = false; });
-          document.addEventListener('keydown', function (e) { if (e.key === 'Escape' && d.open) { d.open = false; d.querySelector('summary').focus(); } });
+          var close = function () { d.dispatchEvent(new Event('mm:close')); };
+          document.addEventListener('click', function (e) { if (d.open && !d.contains(e.target)) close(); });
+          document.addEventListener('keydown', function (e) { if (e.key === 'Escape' && d.open) { close(); d.querySelector('summary').focus(); } });
           d.querySelectorAll('.hero-pick-menu a').forEach(function (a) { a.addEventListener('click', function () { d.open = false; }); });
         })();
       </script>
