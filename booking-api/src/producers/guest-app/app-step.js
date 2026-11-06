@@ -16,7 +16,7 @@ import { completeStep } from "../../workflows/runner.js";
 import { finishRun } from "../menu-care/care-step.js";
 import { storeDeliverable } from "../shared/deliverables.js";
 import { queueRender } from "../social-posts/render-jobs.js";
-import { ICONS, buildApp, iconSpecs } from "./build.js";
+import { ICONS, buildApp, iconSpecs, missingAnswers } from "./build.js";
 import { checkApp } from "./check.js";
 import { counterLink, pushLink } from "./engage.js";
 
@@ -95,7 +95,7 @@ async function runGuestAppSetupStep(targetStep, env) {
   };
   const row = await env.DB.prepare(`SELECT id, slug, data_json FROM guest_apps WHERE project_id = ?`).bind(context.id).first();
   const app = parseJsonOrNull(row?.data_json);
-  if (!row || !app?.app_name || !app.menu || !app.phone || !app.address || !app.hours) return blocked("the app details are incomplete", ["The intake form is missing required answers."]);
+  if (!row || !app || missingAnswers(app).length) return blocked("the app details are incomplete", ["The intake form is missing required answers."]);
 
   const logo = await findAppLogo(env, context);
   const logoObject = logo ? await env.ASSETS.get(logo.storage_key) : null;

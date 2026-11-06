@@ -28,7 +28,8 @@ const MAX_FILE_BYTES = 16384;
 
 // The owner's own test app (Sample Cafe, com.menumade.samplecafe) is the test restaurant: a Mobile App with that bundle
 // id uses the owner's keys, so the whole per-restaurant path can be proven on the owner's accounts.
-const storeScope = (storeApp) => (storeApp?.bundle_id === OWNER_BUNDLE_ID ? OWNER : storeApp?.business_id || null);
+// The owner's own apps (own-apps.js, store_apps.own_app = 1) are published on his accounts, so they use his keys too.
+const storeScope = (storeApp) => (storeApp?.bundle_id === OWNER_BUNDLE_ID || Number(storeApp?.own_app) === 1 ? OWNER : storeApp?.business_id || null);
 
 async function loadStoreApp(env, id) {
   const row = await env.DB.prepare(`SELECT * FROM store_apps WHERE id = ?`).bind(id).first();
@@ -53,7 +54,10 @@ async function keysReady(env, storeApp) {
   if (api?.check_status !== "VERIFIED") missing.push("a working App Store Connect API key");
   const push = await credentialRow(env, scope, "APPLE_PUSH_KEY");
   if (!push || push.check_status === "FAILED") missing.push("the Apple push key");
-  if (!(env.ASSETS && await loadGoogleServices(env, scope))) missing.push("google-services.json");
+  const services = env.ASSETS ? await loadGoogleServices(env, scope) : null;
+  if (!services) missing.push("google-services.json");
+  // The owner's file is shared by his own apps, so it must name this one (a restaurant's upload is checked on its page).
+  else if (scope === OWNER && !(parseGoogleServices(services)?.packages || []).includes(storeApp.bundle_id)) missing.push(`google-services.json with the Android app ${storeApp.bundle_id}`);
   return { ready: missing.length === 0, missing };
 }
 

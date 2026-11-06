@@ -21,6 +21,10 @@ import { signLinkToken, verifyLinkToken } from "../lib/links.js";
 import { loadDeliveryContext } from "../approvals/release.js";
 import { runGuestAppMonthStep, runGuestAppSetupStep } from "../producers/guest-app/app-step.js";
 import { keysReady } from "./restaurant-keys.js";
+import { OWNER, loadCredential } from "./keys.js";
+import { ensureBundleId } from "./apple.js";
+import { firebaseAndroidConfig, mergeGoogleServices, parseGoogleServices } from "./google.js";
+import { loadGoogleServices, servicesKey } from "./google-keys.js";
 
 const BUYER_KIND = "storeapp-buyer";
 const OWNER_KIND = "storeapp-owner";
@@ -110,6 +114,69 @@ async function emailOwner(env, storeApp, context, reminder) {
   });
 }
 
+// ---------- The owner's own apps (own-apps.js, own_app = 1) ----------
+// No buyer step: the app is published on the owner's own accounts with his keys. What the worker can do for him it does
+// first: the Apple App ID with Push Notifications (App Store Connect API key) and the Android app in Firebase with its
+// google-services.json (Firebase service account). Each is retried by the tick until it works or is done by hand.
+async function ownAppPrep(env, storeApp, appName, { fetchImpl = fetch } = {}) {
+  const out = { apple: null, firebase: null };
+  try {
+    const api = await loadCredential(env, OWNER, "APPLE_API_KEY");
+    out.apple = api ? await ensureBundleId({ p8: api.p8, keyId: api.keyId, issuerId: api.issuerId }, storeApp.bundle_id, appName, { fetchImpl }) : { ok: false, note: "No App Store Connect key on file" };
+  } catch (error) { out.apple = { ok: false, note: String(error?.message || error).slice(0, 160) }; }
+  try {
+    const current = env.ASSETS ? await loadGoogleServices(env, OWNER) : null;
+    if (current && (parseGoogleServices(current)?.packages || []).includes(storeApp.bundle_id)) {
+      out.firebase = { ok: true, note: "already in google-services.json" };
+    } else {
+      const cred = await loadCredential(env, OWNER, "FIREBASE_ACCOUNT");
+      const sa = cred ? JSON.parse(cred.p8) : null;
+      const projectId = cred?.teamId || sa?.project_id;
+      if (!sa || !projectId) out.firebase = { ok: false, note: "No Firebase service account on file" };
+      else {
+        out.firebase = await firebaseAndroidConfig(sa, projectId, storeApp.bundle_id, appName, { fetchImpl });
+        if (out.firebase.ok) {
+          const merged = current ? mergeGoogleServices(current, out.firebase.text) : out.firebase.text;
+          if (merged) await env.ASSETS.put(servicesKey(OWNER), merged, { httpMetadata: { contentType: "application/json" } });
+          else out.firebase = { ok: false, note: "The new google-services.json is for another Firebase project" };
+        }
+      }
+    }
+  } catch (error) { out.firebase = { ok: false, note: String(error?.message || error).slice(0, 160) }; }
+  const note = `Prep: Apple ${out.apple?.ok ? "done" : `not done (${out.apple?.note || "?"})`}; Firebase ${out.firebase?.ok ? "done" : `not done (${out.firebase?.note || "?"})`}`;
+  await env.DB.prepare(`UPDATE store_apps SET note = ?, updated_at = ? WHERE id = ?`).bind(note.slice(0, 400), nowIso(), storeApp.id).run();
+  return out;
+}
+
+async function emailOwnerOwnApp(env, storeApp, reminder, prep) {
+  const { appName } = await appInfo(env, storeApp);
+  const link = await doneLink(env, storeApp, OWNER_KIND);
+  const b = escapeHtml(storeApp.bundle_id);
+  const n = escapeHtml(appName);
+  const privacy = `${publicBaseUrl(env)}/privacy.html`;
+  const terms = `${publicBaseUrl(env)}/terms.html#app-users`;
+  const appleDone = prep?.apple?.ok;
+  const firebaseDone = prep?.firebase?.ok;
+  const steps = [
+    `${n} is your own app, published on your Apple developer account and Menu-made's Google Play account. Apple and Google only allow these steps on their websites. Everything else (builds, icons, screenshots, store text, submission) is automatic. About 20 minutes per app.`,
+    appleDone ? "Already done for you: the Apple App ID <strong>" + b + "</strong> with Push Notifications." : `<strong>First, the Apple App ID</strong> (couldn't be done automatically: ${escapeHtml(prep?.apple?.note || "unknown")}). Go to <a href="https://developer.apple.com/account/resources/identifiers/add/bundleId">developer.apple.com/account/resources/identifiers/add/bundleId</a>. Choose <strong>App IDs</strong>, Continue, <strong>App</strong>, Continue. Description: ${n}. Bundle ID: Explicit, <strong>${b}</strong>. Scroll to Capabilities and tick <strong>Push Notifications</strong>. Continue, Register.`,
+    `<strong>1. App Store Connect: make the app.</strong> Go to <a href="https://appstoreconnect.apple.com/apps">appstoreconnect.apple.com/apps</a>. Click the blue <strong>+</strong> next to "Apps" at the top left, then <strong>New App</strong>. Tick <strong>iOS</strong>. Name: <strong>${n}</strong> (if Apple says the name is taken, add " App" to the end). Primary Language: English (U.S.). Bundle ID: pick <strong>${b}</strong> from the list. SKU: <strong>${b}</strong>. User Access: Full Access. Click <strong>Create</strong>.`,
+    `<strong>2. App Store Connect: the three forms.</strong> Still in the app: (a) left menu <strong>App Privacy</strong>, Get Started, answer <strong>No, we do not collect data from this app</strong>, Save, then <strong>Publish</strong> at the top right. (b) left menu <strong>App Information</strong>, Age Rating, Set Up Age Rating, answer <strong>None</strong> or <strong>No</strong> to every question, Done, then <strong>Save</strong>. (c) left menu <strong>Pricing and Availability</strong>, Price: <strong>Free</strong>, Availability: all countries, <strong>Save</strong>.`,
+    `<strong>3. Google Play Console: make the app.</strong> Go to <a href="https://play.google.com/console">play.google.com/console</a> (signed in as menu.automate@gmail.com). Click <strong>Create app</strong> at the top right. App name: <strong>${n}</strong>. Default language: English (United States). App or game: <strong>App</strong>. Free or paid: <strong>Free</strong>. Tick both declarations, click <strong>Create app</strong>. The package name ${b} is set by the first upload.`,
+    `<strong>4. Play Console: the app content forms.</strong> In the new app, left menu <strong>Policy and programs</strong>, <strong>App content</strong>, and complete each card: Privacy policy: <strong>${escapeHtml(privacy)}</strong>. App access: <strong>All functionality is available without any special access</strong>. Ads: <strong>No</strong>. Content rating: Start questionnaire, email info@menu-made.com, category <strong>All other app types</strong>, answer <strong>No</strong> to every question, Save, Submit. Target audience: <strong>18 and over</strong> only. Data safety: <strong>No</strong> to "collect or share" user data, Save. Government apps, Financial features, Health apps: <strong>No</strong> / <strong>none</strong>. If asked for trader status: <strong>trader</strong>, Terms of Service URL <strong>${escapeHtml(terms)}</strong>.`,
+    `<strong>5. Play Console: let Menu-made's builder upload.</strong> Left menu (all apps view) <strong>Users and permissions</strong>. Click <strong>firebase-adminsdk-fbsvc@menu-made-apps.iam.gserviceaccount.com</strong>, tab <strong>App permissions</strong>, <strong>Add app</strong>, tick <strong>${n}</strong>, Apply, tick <strong>Admin (all permissions)</strong>, Apply, then <strong>Save changes</strong> at the bottom.`,
+    firebaseDone ? "Already done for you: the Android app " + b + " in Firebase (for notifications)." : `<strong>6. Firebase</strong> (couldn't be done automatically: ${escapeHtml(prep?.firebase?.note || "unknown")}). Go to <a href="https://console.firebase.google.com">console.firebase.google.com</a>, open <strong>Menu-made apps</strong>, click <strong>Add app</strong>, the Android icon. Package name: <strong>${b}</strong>. Nickname: ${n}. Click Register app, then <strong>Download google-services.json</strong>, and upload it on <a href="${escapeHtml(publicBaseUrl(env))}/api/store-keys/google">menu-made.com/api/store-keys/google</a> (it emails you the upload link).`,
+    "Press Done when the steps above are finished. The builds start by themselves. Google only takes a new app's first file by hand: you'll get an email with that file and where to drop it, and then a preview of the store listing to approve before anything is submitted."
+  ];
+  return sendTransactionalEmail(env, {
+    to: ownerEmailAddress(env),
+    subject: reminder ? `Reminder: store setup for ${appName}` : `Your own Mobile App: store setup for ${appName}`,
+    html: brandedEmailHtml({ preheader: "The website-only steps for your own app.", eyebrow: "MOBILE APP", heading: `Set up ${appName} in the stores`, paragraphs: steps, rows: [["App name", appName], ["Bundle id / package name", storeApp.bundle_id]], buttons: [{ label: "Done", url: link, primary: true }] }),
+    text: `${steps.map((p) => p.replace(/<[^>]+>/g, "").replace(/&amp;/g, "&")).join("\n\n")}\n\nDone: ${link}`,
+    idempotencyKey: `store-app-owner-own/${storeApp.id}/${storeApp.reminders}/${appleDone ? 1 : 0}${firebaseDone ? 1 : 0}`, purpose: "OWNER_ACTION", templateKey: "store_app_owner_own_v1"
+  });
+}
+
 async function appApproved(env, projectId) {
   return Boolean(await env.DB.prepare(`SELECT 1 AS ok FROM deliverables WHERE project_id = ? AND deliverable_type = 'APP_BUILD' AND status = 'FINAL' AND customer_visible = 1 LIMIT 1`).bind(projectId).first());
 }
@@ -124,7 +191,25 @@ async function advanceStoreApps(env, now = Date.now(), { only = null } = {}) {
   let moved = 0;
   for (const row of rows) {
     const since = row.last_email_at ? now - Date.parse(row.last_email_at) : Infinity;
-    if (row.status === "WAITING_APP") {
+    if (row.status === "WAITING_APP" && Number(row.own_app) === 1) {
+      if (!(await appApproved(env, row.project_id))) continue;
+      const { appName } = await appInfo(env, row);
+      const prep = await ownAppPrep(env, row, appName);
+      const sent = await emailOwnerOwnApp(env, { ...row, reminders: 0 }, false, prep).catch(() => ({ ok: false }));
+      if (!sent?.ok) continue;
+      await env.DB.prepare(`UPDATE store_apps SET status = 'WAITING_OWNER_SETUP', last_email_at = ?, reminders = 0, updated_at = ? WHERE id = ? AND status = 'WAITING_APP'`).bind(nowIso(), nowIso(), row.id).run();
+      moved++;
+    } else if (row.status === "WAITING_OWNER_SETUP" && Number(row.own_app) === 1) {
+      // Keep trying what the worker can do itself (until both are done), and remind every 2 days.
+      // At most once an hour (each try is a few Apple and Google calls and one write).
+      if (!/Apple done; Firebase done/.test(row.note || "") && now - Date.parse(row.updated_at || 0) > 3600000) await ownAppPrep(env, row, (await appInfo(env, row)).appName).catch(() => null);
+      if (since > OWNER_REMIND_DAYS * DAY && row.reminders < MAX_REMINDERS) {
+        const fresh = await env.DB.prepare(`SELECT note FROM store_apps WHERE id = ?`).bind(row.id).first();
+        const done = (what) => new RegExp(`${what} done`).test(fresh?.note || "");
+        const sent = await emailOwnerOwnApp(env, { ...row, reminders: row.reminders + 1 }, true, { apple: { ok: done("Apple") }, firebase: { ok: done("Firebase") } }).catch(() => ({ ok: false }));
+        if (sent?.ok) await env.DB.prepare(`UPDATE store_apps SET last_email_at = ?, reminders = reminders + 1, updated_at = ? WHERE id = ?`).bind(nowIso(), nowIso(), row.id).run();
+      }
+    } else if (row.status === "WAITING_APP") {
       if (!(await appApproved(env, row.project_id))) continue;
       const context = await loadDeliveryContext(row.project_id, env);
       if (!context?.customer_email) continue;
@@ -180,4 +265,4 @@ async function handleStoreAppDone(request, env, id) {
   return simplePage(200, "Thank you", buyer ? "<p>We'll accept the invites and set up your app in both stores. You'll get an email when it's submitted to Apple and Google.</p>" : "<p>Marked done. The build step picks it up next.</p>");
 }
 
-export { BUYER_KIND, OWNER_KIND, advanceStoreApps, bundleIdFor, handleStoreAppDone, runStoreAppCareStep, runStoreAppSetupStep };
+export { ownAppPrep, emailOwnerOwnApp, BUYER_KIND, OWNER_KIND, advanceStoreApps, bundleIdFor, handleStoreAppDone, runStoreAppCareStep, runStoreAppSetupStep };

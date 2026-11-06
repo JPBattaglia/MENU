@@ -178,3 +178,88 @@ test('self-test STORE_APP_RUN passes through the real steps, reaches no store or
   for (const table of ['store_apps', 'store_app_listings', 'store_app_builds', 'store_credentials']) assert.equal(f.row(`SELECT COUNT(*) AS n FROM ${table}`).n, 0, `${table} left behind`);
   assert.equal(f.row(`SELECT COUNT(*) AS n FROM guest_apps`).n, 0);
 });
+
+test("owner's own apps: made once by the tick at no charge, owner keys, no buyer step, Apple App ID and Firebase done for him, then Done -> ready to build", async () => {
+  const f = setup();
+  f.DB.raw.exec(read('0040_own_store_apps.sql'));
+  for (const m of ['0026_store_app_builds.sql']) f.DB.raw.exec(read(m));
+  const own = await import('./src/store-app/own-apps.js');
+  const scope = await import('./src/store-app/restaurant-keys.js');
+  const google = await import('./src/store-app/google.js');
+  const { generateKeyPairSync } = await import('node:crypto');
+  const LOGO = Uint8Array.from(atob('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg=='), (c) => c.charCodeAt(0));
+  const logoFetch = async (url) => (String(url).includes('menu-made.com') || String(url).includes('ninobattaglia.com') ? new Response(LOGO) : new Response('no', { status: 404 }));
+  // Not on the hour: nothing. Forced: both apps, once.
+  assert.deepEqual((await own.ensureOwnStoreApps(f.env, { now: new Date('2026-11-07T10:30:00Z'), fetchImpl: logoFetch })).created, []);
+  const first = await own.ensureOwnStoreApps(f.env, { force: true, fetchImpl: logoFetch });
+  assert.deepEqual(first.created.map((c) => [c.key, c.logo]), [['menumade', true], ['nino', true]]);
+  assert.deepEqual((await own.ensureOwnStoreApps(f.env, { force: true, fetchImpl: logoFetch })).created, [], 'never twice');
+  const apps = DB_rows(f, `SELECT bundle_id, status, own_app FROM store_apps ORDER BY bundle_id`);
+  assert.deepEqual(apps, [{ bundle_id: 'com.menumade.menumade', status: 'WAITING_APP', own_app: 1 }, { bundle_id: 'com.menumade.ninobattaglia', status: 'WAITING_APP', own_app: 1 }]);
+  assert.deepEqual(DB_rows(f, `SELECT total_cents, payment_status, stripe_checkout_session_id FROM orders`), [{ total_cents: 0, payment_status: 'PAID', stripe_checkout_session_id: null }, { total_cents: 0, payment_status: 'PAID', stripe_checkout_session_id: null }], 'no charge and not a test order, so it reaches the real stores');
+  assert.equal(f.row(`SELECT COUNT(*) AS n FROM projects WHERE workflow_key = 'STORE_APP_SETUP_V1' AND status = 'READY'`).n, 2, 'released to production like a filled-in intake');
+  assert.equal(f.row(`SELECT COUNT(*) AS n FROM workflow_runs WHERE workflow_key = 'STORE_APP_SETUP_V1'`).n, 2);
+  assert.equal(f.row(`SELECT COUNT(*) AS n FROM entitlements WHERE entitlement_type = 'STORE_APP_CARE' AND status = 'ACTIVE'`).n, 2);
+  const nino = f.row(`SELECT s.*, g.data_json FROM store_apps s JOIN guest_apps g ON g.project_id = s.project_id WHERE s.bundle_id = 'com.menumade.ninobattaglia'`);
+  assert.equal(JSON.parse(nino.data_json).business_type, 'shop');
+  assert.equal(scope.storeScope(nino), 'owner', "his own apps use his keys");
+
+  // Content approved: no buyer email; the worker registers the App ID and adds the Firebase Android app, then emails the owner.
+  f.sql(`INSERT INTO assets (id, business_id, customer_id, project_id, asset_type, storage_provider, storage_key, original_filename, mime_type, size_bytes, checksum, status, uploaded_at) VALUES ('a9', ?, ?, ?, 'DELIVERABLE', 'R2', 'k', 'build.json', 'application/json', 1, 'x', 'VALID', 'x')`, nino.business_id, nino.customer_id, nino.project_id);
+  f.sql(`INSERT INTO deliverables (id, project_id, asset_id, deliverable_type, version, status, customer_visible, delivered_at, created_at) VALUES ('d9', ?, 'a9', 'APP_BUILD', 1, 'FINAL', 1, 'x', 'x')`, nino.project_id);
+  const ec = generateKeyPairSync('ec', { namedCurve: 'P-256' }).privateKey.export({ type: 'pkcs8', format: 'pem' });
+  const rsa = generateKeyPairSync('rsa', { modulusLength: 2048 }).privateKey.export({ type: 'pkcs8', format: 'pem' });
+  await keys.saveCredential(f.env, 'owner', 'APPLE_API_KEY', { keyId: 'API1234567', issuerId: 'iss', teamId: 'TEAM', p8: ec, status: 'VERIFIED', note: 'ok' });
+  await keys.saveCredential(f.env, 'owner', 'APPLE_PUSH_KEY', { keyId: 'PUSH123456', teamId: 'TEAM', p8: ec, status: 'VERIFIED', note: 'ok' });
+  await keys.saveCredential(f.env, 'owner', 'FIREBASE_ACCOUNT', { keyId: 'fb@menu-made-apps.iam.gserviceaccount.com', teamId: 'menu-made-apps', p8: JSON.stringify({ type: 'service_account', client_email: 'fb@menu-made-apps.iam.gserviceaccount.com', private_key: rsa, project_id: 'menu-made-apps', token_uri: 'https://oauth2.googleapis.com/token' }), status: 'VERIFIED', note: 'ok' });
+  const sample = { project_info: { project_id: 'menu-made-apps' }, client: [{ client_info: { android_client_info: { package_name: 'com.menumade.samplecafe' } } }] };
+  await f.ASSETS.put(gkeys.servicesKey('owner'), JSON.stringify(sample));
+  const calls = [];
+  let firebaseApps = [];
+  globalThis.fetch = async (url, init = {}) => {
+    const u = String(url);
+    if (u.startsWith('https://api.resend.com/')) { emails.push(JSON.parse(init.body)); return Response.json({ id: `em_${emails.length}` }); }
+    calls.push(`${init.method || 'GET'} ${u.replace(/\?.*$/, '')}`);
+    if (u.startsWith('https://oauth2.googleapis.com/token')) return Response.json({ access_token: 'ya29.x', expires_in: 3600 });
+    if (u.includes('/bundleIds?')) return Response.json({ data: [] });
+    if (u.endsWith('/bundleIds')) return Response.json({ data: { id: 'BID1' } }, { status: 201 });
+    if (u.endsWith('/bundleIdCapabilities')) return Response.json({}, { status: 201 });
+    if (u.includes('/androidApps?')) return Response.json({ apps: firebaseApps });
+    if (u.endsWith('/androidApps') && init.method === 'POST') { firebaseApps = [{ appId: '1:2:android:3', packageName: JSON.parse(init.body).packageName }]; return Response.json({ name: 'operations/x' }); }
+    if (u.endsWith('/config')) { const cfg = { project_info: { project_id: 'menu-made-apps' }, client: [sample.client[0], { client_info: { android_client_info: { package_name: 'com.menumade.ninobattaglia' } } }] }; return Response.json({ configFileContents: btoa(JSON.stringify(cfg)) }); }
+    return new Response('unexpected', { status: 500 });
+  };
+  try {
+    google.tokenCache?.clear?.();
+    emails.length = 0;
+    await flow.advanceStoreApps(f.env);
+    const after1 = f.row(`SELECT status, note FROM store_apps WHERE id = ?`, nino.id);
+    assert.equal(after1.status, 'WAITING_OWNER_SETUP', 'straight to the owner: no buyer step');
+    assert.match(after1.note, /Apple done; Firebase not done \(Android app added in Firebase/);
+    assert.ok(calls.includes('POST https://api.appstoreconnect.apple.com/v1/bundleIds') && calls.includes('POST https://api.appstoreconnect.apple.com/v1/bundleIdCapabilities'));
+    assert.equal(emails.length, 1);
+    assert.deepEqual(emails[0].to, ['info@menu-made.com']);
+    assert.match(emails[0].subject, /Your own Mobile App: store setup for Nino Battaglia/);
+    assert.match(emails[0].html, /Already done for you: the Apple App ID/);
+    assert.match(emails[0].html, /New App/); assert.match(emails[0].html, /Create app/); assert.match(emails[0].html, /firebase-adminsdk-fbsvc/);
+    assert.doesNotMatch(emails[0].html, /D-U-N-S|invite/i, 'no buyer account steps');
+    // Done is refused until google-services.json names the app.
+    const ownerToken = await signLinkToken(f.env, { kind: flow.OWNER_KIND, id: nino.id, ttlDays: 30 });
+    const press = () => { const fd = new FormData(); fd.set('t', ownerToken); return call(f, `https://menu-made.com/api/store-app/${nino.id}/done`, { method: 'POST', body: fd }); };
+    const refused = await press();
+    assert.equal(refused.status, 409);
+    assert.match(await refused.text(), /google-services\.json with the Android app com\.menumade\.ninobattaglia/);
+    // An hour later the tick reads the Firebase config and merges it into the owner's file (Sample Cafe kept).
+    await flow.advanceStoreApps(f.env, Date.now() + 2 * 3600000);
+    assert.match(f.row(`SELECT note FROM store_apps WHERE id = ?`, nino.id).note, /Apple done; Firebase done/);
+    const merged = google.parseGoogleServices(await (await f.ASSETS.get(gkeys.servicesKey('owner'))).text());
+    assert.deepEqual(merged.packages, ['com.menumade.samplecafe', 'com.menumade.ninobattaglia']);
+    await press();
+    assert.equal(f.row(`SELECT status FROM store_apps WHERE id = ?`, nino.id).status, 'READY_TO_BUILD');
+  } finally {
+    globalThis.fetch = async (url, init) => {
+      if (String(url).startsWith('https://api.resend.com/')) { const body = JSON.parse(init.body); emails.push(body); return Response.json({ id: `em_${emails.length}` }); }
+      return realFetch(url, init);
+    };
+  }
+});

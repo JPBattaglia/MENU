@@ -4,6 +4,7 @@
 // manifest, Apple icon and script; the owner's phone, address and hours are on the page; sizes stay small.
 import { scanHtml } from "../accessibility/scan.js";
 import { parseHours } from "../website/build.js";
+import { kindOf } from "./build.js";
 
 const PLACEHOLDER = /lorem ipsum|\bTODO\b|\bTBD\b|\[(?:name|business|phone|address)\]|your (?:business|company) name|example\.com|undefined|\bnull\b|__LOGO_DATA_URI__/i;
 const MAX_FILE_BYTES = 200_000;
@@ -24,8 +25,10 @@ function checkApp({ files, icons = {}, app }) {
   for (const needed of ['rel="manifest" href="manifest.webmanifest"', 'rel="apple-touch-icon" href="icons/apple-touch-icon.png"', 'src="app.js"', 'name="viewport"', 'name="theme-color"']) {
     if (!html.includes(needed)) problems.push(`index.html: missing ${needed}`);
   }
-  if (!html.includes(`tel:${String(app.phone).replace(/[^\d+]/g, "")}`)) problems.push("index.html: the phone number is missing");
-  if (!html.includes(esc(app.address))) problems.push("index.html: the address is missing");
+  const restaurant = kindOf(app) === "menu";
+  if ((restaurant || String(app.phone || "").trim()) && !html.includes(`tel:${String(app.phone).replace(/[^\d+]/g, "")}`)) problems.push("index.html: the phone number is missing");
+  if ((restaurant || String(app.address || "").trim()) && !html.includes(esc(app.address))) problems.push("index.html: the address is missing");
+  if (!restaurant && String(app.order_url || "").trim() && !html.includes(esc(String(app.order_url).trim()))) problems.push("index.html: the order link is missing");
   for (const h of parseHours(app.hours)) if (!html.includes(esc(h.time))) problems.push(`index.html: hours line "${h.time}" is missing`);
   if (!/navigator\.serviceWorker\.register\("sw\.js"/.test(files["app.js"])) problems.push("app.js: does not register the service worker");
   if (!/addEventListener\("fetch"/.test(files["sw.js"])) problems.push("sw.js: has no fetch handler, so the app would not work offline");

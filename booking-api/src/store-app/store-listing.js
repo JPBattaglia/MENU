@@ -24,6 +24,7 @@ import { buildTarget, nextVersion, rebuildLink } from "./store-build.js";
 import { engagementSettings } from "../producers/guest-app/engage.js";
 import { parseOfferings } from "../producers/website/build.js";
 import { storeScope } from "./restaurant-keys.js";
+import { kindOf } from "../producers/guest-app/build.js";
 import { loadCredential } from "./keys.js";
 import { parseServiceAccount } from "./google.js";
 import { appleStatus, googleLive, submitApple, submitGoogle } from "./store-submit.js";
@@ -48,8 +49,39 @@ function cut(text, max) {
   return t.slice(0, at > max * 0.6 ? at : max).replace(/[\s,;:-]+$/, "");
 }
 
+// A shop or a services business (Guest App business_type): no counter, so no hours, directions or "come in" wording.
+function nonRestaurantListing(data, { businessName, baseUrl, kind, year }) {
+  const name = cut(data.app_name || businessName || "Our app", 30);
+  let sections = [];
+  try { sections = parseOfferings(data.menu).map((s) => String(s.name || "").trim()).filter(Boolean).slice(0, 4); } catch { sections = []; }
+  const order = /^https:\/\//.test(String(data.order_url || ""));
+  const shop = kind === "shop";
+  const features = [shop ? "Browse the shop" : "See our services and prices", "see what's new",
+    ...(order ? [shop ? "shop online in one tap" : "get started in one tap"] : []), ...(String(data.phone || "").trim() ? ["call us in one tap"] : [])];
+  const list = `${features.slice(0, -1).join(", ")} and ${features.at(-1)}`;
+  const description = [
+    `The official app of ${name}.`,
+    `${list[0].toUpperCase()}${list.slice(1)}.`,
+    sections.length ? `${shop ? "In the shop" : "Services"}: ${sections.join(", ")}.` : "",
+    "Turn on notifications to hear what's new first."
+  ].filter(Boolean).join("\n\n");
+  const nameWords = new Set(String(name).toLowerCase().split(/[^a-z0-9']+/));
+  const keywordParts = (shop ? ["shop", "store", "designs", "news"] : ["services", "pricing", "news"]).concat(order ? [shop ? "buy" : "order"] : [])
+    .filter((w, i, a) => w && !nameWords.has(w) && a.indexOf(w) === i);
+  let keywords = "";
+  for (const w of keywordParts) if ((keywords ? `${keywords},${w}` : w).length <= 100) keywords = keywords ? `${keywords},${w}` : w;
+  return {
+    name, subtitle: shop ? "Shop and news" : "Services and news", keywords, description: description.slice(0, 4000),
+    promo: cut(shop ? "The full shop and our latest news, always up to date." : "Our services and latest news, always up to date.", 170),
+    play_title: name, play_short: cut(`${name}: ${shop ? "shop" : "services"} and news.`, 80), play_full: description.slice(0, 4000),
+    support_url: `${baseUrl}/contact.html`, marketing_url: "", privacy_url: `${baseUrl}/privacy.html`, copyright: `${year} ${cut(businessName || name, 60)}`
+  };
+}
+
 // data = the Guest App's answers (guest_apps.data_json); rewards = its rewards card is on.
 function listingText(data, { businessName, baseUrl, rewards = false, year = new Date().getUTCFullYear() }) {
+  const kind = kindOf(data);
+  if (kind !== "menu") return nonRestaurantListing(data, { businessName, baseUrl, kind, year });
   const name = cut(data.app_name || businessName || "Our restaurant", 30);
   let sections = [];
   try { sections = parseOfferings(data.menu).map((s) => String(s.name || "").trim()).filter(Boolean).slice(0, 4); } catch { sections = []; }

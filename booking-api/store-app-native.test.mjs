@@ -105,3 +105,17 @@ test('contentOf is pure and leaves out a missing icon', () => {
   assert.deepEqual(c.menu, []);
   assert.equal(c.loyalty.enabled, false);
 });
+
+test('content carries the business kind and its labels; a restaurant keeps the menu wording', () => {
+  const live = (data) => ({ data, build: { icons: [] }, updated_at: null });
+  const restaurant = native.contentOf(live(DATA), 'https://joes.menu-made.com/app/');
+  assert.equal(restaurant.kind, 'menu'); assert.equal(restaurant.labels.section, 'Menu'); assert.equal(restaurant.labels.order, 'Order online');
+  const shop = native.contentOf(live({ app_name: 'Nino Battaglia', business_type: 'shop', menu: 'Tee | x | $30', order_url: 'https://ninobattaglia.com/' }), 'https://nino.menu-made.com/app/');
+  assert.equal(shop.kind, 'shop'); assert.equal(shop.labels.section, 'Shop'); assert.equal(shop.labels.order, 'Shop online');
+  assert.equal(shop.map_url, ''); assert.deepEqual(shop.hours, []);
+  const shell = readFileSync(new URL('../app-shell/www/app.js', import.meta.url), 'utf8');
+  for (const id of ['t-menu', 'specials-h', 'push-note', 'hours-box', 't-rewards']) {
+    assert.ok(readFileSync(new URL('../app-shell/www/index.html', import.meta.url), 'utf8').includes(`id="${id}"`), `index.html has #${id}`);
+    assert.ok(shell.includes(`$("${id}")`), `app.js uses #${id}`);
+  }
+});

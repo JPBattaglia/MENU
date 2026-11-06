@@ -14,6 +14,7 @@ import { sha256Hex } from "../../lib/util.js";
 import { refreshOnboardingState } from "../../onboarding/onboarding.js";
 import { loadDeliveryContext } from "../../approvals/release.js";
 import { hexOk } from "../website/styles.js";
+import { KINDS, kindOf } from "./build.js";
 import { slugify, sniffImage, validSlug } from "../website/intake.js";
 
 const LINK_KIND = "appintake";
@@ -23,13 +24,14 @@ const APP_WORKFLOWS = new Set([WORKFLOW, "STORE_APP_SETUP_V1"]);
 const MAX_LOGO = 1_500_000;
 const FIELDS = [
   { key: "app_name", label: "App name", type: "text", required: true, max: 45, help: "Usually your business name. Shown at the top of the app." },
+  { key: "business_type", label: "What does your business do?", type: "select", options: [["menu", "Food or drink: the app shows a menu"], ["shop", "Sells products: the app shows a shop"], ["services", "Offers services: the app shows services"]], required: false, max: 8, help: "For a shop or services, address and hours are optional." },
   { key: "short_name", label: "Name under the icon (optional, up to 12 characters)", type: "text", required: false, max: 12, help: "Phones cut long names under home-screen icons. Leave blank and we'll shorten the app name." },
-  { key: "menu", label: "Your menu", type: "textarea", required: true, max: 4000, help: 'One per line: Name | short description | $price. Start a section with "# Section name". Example: # Pizza  then  Margherita | Mozzarella and basil | $15' },
+  { key: "menu", label: "Your menu, products or services", type: "textarea", required: true, max: 4000, help: 'One per line: Name | short description | $price. Start a section with "# Section name". Example: # Pizza  then  Margherita | Mozzarella and basil | $15' },
   { key: "specials", label: "Specials or news (optional)", type: "textarea", required: false, max: 600, help: "Shown near the top. You can change this every month." },
-  { key: "phone", label: "Phone number", type: "text", required: true, max: 30 },
-  { key: "address", label: "Street address", type: "text", required: true, max: 160 },
-  { key: "hours", label: "Opening hours", type: "textarea", required: true, max: 400, help: "One line per day or range. Example: Mon-Fri: 11am-9pm" },
-  { key: "order_url", label: "Online ordering link (optional)", type: "text", required: false, max: 300, help: "Starts with https://" },
+  { key: "phone", label: "Phone number", type: "text", required: false, max: 30, help: "Required for food and drink businesses." },
+  { key: "address", label: "Street address", type: "text", required: false, max: 160, help: "Required for food and drink businesses." },
+  { key: "hours", label: "Opening hours", type: "textarea", required: false, max: 400, help: "One line per day or range. Example: Mon-Fri: 11am-9pm. Required for food and drink businesses." },
+  { key: "order_url", label: "Online ordering or shop link (optional)", type: "text", required: false, max: 300, help: "Starts with https://" },
   { key: "reserve_url", label: "Reservations link (optional)", type: "text", required: false, max: 300, help: "Starts with https://" },
   { key: "loyalty_reward", label: "Rewards: what a regular gets (optional)", type: "text", required: false, max: 80, help: "For example: a free coffee. Guests collect a visit in the app by typing the code on your counter screen. Leave blank to keep rewards off." },
   { key: "loyalty_visits", label: "Visits needed for the reward (3 to 30)", type: "text", required: false, max: 2, help: "Leave blank for 10." },
@@ -98,7 +100,7 @@ function readValues(form, fields) {
   return values;
 }
 
-function validate(values, fields = FIELDS) {
+function validate(values, fields = FIELDS, context = {}) {
   for (const f of fields) if (f.required && !values[f.key]) return `${f.label} is required.`;
   if (values.brand_color && !hexOk(values.brand_color)) return "Brand colour must look like #b3261e, or be left blank.";
   if (values.subdomain && !validSlug(values.subdomain.toLowerCase())) return "The app address can use letters, numbers and dashes (3-30 characters) and can't be a reserved word.";
@@ -107,8 +109,20 @@ function validate(values, fields = FIELDS) {
   }
   if (values.loyalty_visits && !(/^\d{1,2}$/.test(values.loyalty_visits) && Number(values.loyalty_visits) >= 3 && Number(values.loyalty_visits) <= 30)) return "Visits needed for the reward must be a number from 3 to 30, or left blank.";
   if (values.push_specials && !["yes", "no"].includes(values.push_specials)) return "Please choose whether to notify guests about new specials.";
-  if (!/\d{7}/.test(String(values.phone || "").replace(/\D/g, ""))) return "Phone number needs at least 7 digits.";
-  if (!/\d{3,}/.test(String(values.hours || "").replace(/\D/g, "")) && !/closed|daily|open/i.test(values.hours || "")) return "Please write your opening hours, for example Mon-Fri: 11am-9pm.";
+  if (values.business_type && !Object.hasOwn(KINDS, values.business_type)) return "Please choose what your business does.";
+  // Food & bev (the default kind) needs phone, address and hours; a shop or services business needs a phone or a link.
+  // context = answers already saved (the update form doesn't carry business_type or the fixed fields).
+  const all = { ...context, ...values };
+  const restaurant = kindOf(all) === "menu";
+  if (restaurant) {
+    for (const [k, label] of [["phone", "Phone number"], ["address", "Street address"], ["hours", "Opening hours"]]) {
+      if (fields.some((f) => f.key === k) && !values[k]) return `${label} is required.`;
+    }
+  } else if (fields.some((f) => f.key === "phone") && !values.phone && !values.order_url) {
+    return "Please give a phone number or an online ordering or shop link.";
+  }
+  if ((restaurant || values.phone) && fields.some((f) => f.key === "phone") && !/\d{7}/.test(String(values.phone || "").replace(/\D/g, ""))) return "Phone number needs at least 7 digits.";
+  if ((restaurant || values.hours) && fields.some((f) => f.key === "hours") && !/\d{3,}/.test(String(values.hours || "").replace(/\D/g, "")) && !/closed|daily|open/i.test(values.hours || "")) return "Please write your opening hours, for example Mon-Fri: 11am-9pm.";
   return null;
 }
 

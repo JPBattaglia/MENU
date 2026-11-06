@@ -22,6 +22,30 @@ const esc = (value) => String(value ?? "").replace(/&/g, "&amp;").replace(/</g, 
 const digits = (phone) => String(phone || "").replace(/[^\d+]/g, "");
 const brandOf = (app) => (hexOk(app.brand_color) ? app.brand_color.trim().toLowerCase() : DEFAULT_BRAND);
 
+// What kind of business the app is for (intake field business_type). "menu" is a food & bev business and the default,
+// so every app made before this field existed is unchanged. "shop" (sells products) and "services" have no counter:
+// address and hours are optional, there is no rewards counter, and the labels change.
+const KINDS = {
+  menu: { section: "Menu", order: "Order online", news: "Specials", pushNote: "Get a notification when there's a new special." },
+  shop: { section: "Shop", order: "Shop online", news: "News", pushNote: "Get a notification when there's something new." },
+  services: { section: "Services", order: "Get started", news: "News", pushNote: "Get a notification when there's something new." }
+};
+const kindOf = (app) => (Object.hasOwn(KINDS, String(app?.business_type || "")) ? String(app.business_type) : "menu");
+const labelsOf = (app) => ({ kind: kindOf(app), ...KINDS[kindOf(app)] });
+
+// The answers an app can't be built without. A food & bev business needs phone, address and hours; a shop or a
+// services business needs a way to reach it: a phone number or an https link (the order link).
+function missingAnswers(app) {
+  const missing = [];
+  for (const k of ["app_name", "menu"]) if (!String(app?.[k] || "").trim()) missing.push(k);
+  if (kindOf(app) === "menu") {
+    for (const k of ["phone", "address", "hours"]) if (!String(app?.[k] || "").trim()) missing.push(k);
+  } else if (!String(app?.phone || "").trim() && !/^https:\/\/\S+$/i.test(String(app?.order_url || "").trim())) {
+    missing.push("phone or order_url");
+  }
+  return missing;
+}
+
 // The name under the home-screen icon: the owner's short name, else the app name cut at a word to 12 characters.
 function shortNameOf(app) {
   const own = String(app.short_name || "").trim();
@@ -70,12 +94,18 @@ function storeIconSvg(app, { hasLogo, pad = 0.14 }) {
   return `<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 512 512"><rect width="512" height="512" fill="${brand}"/>${art}</svg>`;
 }
 
+function descriptionOf(app) {
+  const kind = kindOf(app);
+  if (kind === "menu") return `${app.app_name}: menu, specials, hours and location.`;
+  return `${app.app_name}: ${kind === "shop" ? "shop" : "services"}, news and contact.`;
+}
+
 function manifest(app) {
   const brand = brandOf(app);
   return JSON.stringify({
     name: String(app.app_name).slice(0, 45),
     short_name: shortNameOf(app),
-    description: `${app.app_name}: menu, specials, hours and location.`,
+    description: descriptionOf(app),
     id: "./",
     start_url: "./",
     scope: "./",
@@ -140,29 +170,39 @@ a{color:#0b5d7a}`;
 
 function buildApp(app, { version, hasLogo }) {
   const brand = brandOf(app);
+  const labels = labelsOf(app);
   const sections = parseOfferings(app.menu);
   const hours = parseHours(app.hours);
-  const map = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(app.address)}`;
+  const address = String(app.address || "").trim();
+  const phone = String(app.phone || "").trim();
+  const map = address ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(address)}` : "";
   const actions = [
-    `<li><a href="tel:${esc(digits(app.phone))}">Call</a></li>`,
-    `<li><a href="${esc(map)}" rel="noopener">Directions</a></li>`,
-    app.order_url ? `<li><a href="${esc(app.order_url)}" rel="noopener">Order online</a></li>` : "",
+    phone ? `<li><a href="tel:${esc(digits(phone))}">Call</a></li>` : "",
+    map ? `<li><a href="${esc(map)}" rel="noopener">Directions</a></li>` : "",
+    app.order_url ? `<li><a href="${esc(app.order_url)}" rel="noopener">${esc(labels.order)}</a></li>` : "",
     app.reserve_url ? `<li><a href="${esc(app.reserve_url)}" rel="noopener">Book a table</a></li>` : ""
   ].join("");
   const specials = String(app.specials || "").trim()
-    ? `<section class="specials" aria-labelledby="specials-h"><h2 id="specials-h">Specials</h2><p>${esc(app.specials)}</p></section>` : "";
-  const menu = sections.length ? `<section class="menu" aria-labelledby="menu-h"><h2 id="menu-h">Menu</h2>${sections.map((s) => `${s.name ? `<h3>${esc(s.name)}</h3>` : ""}<ul>${s.items.map((i) => `<li><span class="n">${esc(i.name)}</span>${i.price ? `<span class="p">${esc(i.price)}</span>` : ""}${i.description ? `<span class="d">${esc(i.description)}</span>` : ""}</li>`).join("")}</ul>`).join("")}</section>` : "";
+    ? `<section class="specials" aria-labelledby="specials-h"><h2 id="specials-h">${esc(labels.news)}</h2><p>${esc(app.specials)}</p></section>` : "";
+  const menu = sections.length ? `<section class="menu" aria-labelledby="menu-h"><h2 id="menu-h">${esc(labels.section)}</h2>${sections.map((s) => `${s.name ? `<h3>${esc(s.name)}</h3>` : ""}<ul>${s.items.map((i) => `<li><span class="n">${esc(i.name)}</span>${i.price ? `<span class="p">${esc(i.price)}</span>` : ""}${i.description ? `<span class="d">${esc(i.description)}</span>` : ""}</li>`).join("")}</ul>`).join("")}</section>` : "";
+  // Restaurants always get this block (unchanged). Other kinds get it only with something to show.
+  const contactLines = [address ? `<a href="${esc(map)}" rel="noopener">${esc(address)}</a>` : "", phone ? `<a href="tel:${esc(digits(phone))}">${esc(phone)}</a>` : ""].filter(Boolean).join("<br>");
+  const visit = labels.kind === "menu"
+    ? `<section aria-labelledby="hours-h"><h2 id="hours-h">Hours and location</h2><dl>${hours.map((h) => `<dt>${esc(h.day || "Hours")}</dt><dd>${esc(h.time)}</dd>`).join("")}</dl>
+<p>${contactLines}</p></section>`
+    : (hours.length || contactLines)
+      ? `<section aria-labelledby="hours-h"><h2 id="hours-h">${hours.length ? (address ? "Hours and location" : "Hours and contact") : "Contact"}</h2>${hours.length ? `<dl>${hours.map((h) => `<dt>${esc(h.day || "Hours")}</dt><dd>${esc(h.time)}</dd>`).join("")}</dl>` : ""}${contactLines ? `
+<p>${contactLines}</p>` : ""}</section>` : "";
   const html = `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>${esc(app.app_name)}</title><meta name="description" content="${esc(`${app.app_name}: menu, specials, hours and location.`)}">
+<title>${esc(app.app_name)}</title><meta name="description" content="${esc(descriptionOf(app))}">
 <meta name="theme-color" content="${brand}"><link rel="manifest" href="manifest.webmanifest"><link rel="icon" href="icons/icon-192.png" type="image/png">
 <link rel="apple-touch-icon" href="icons/apple-touch-icon.png"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="${esc(shortNameOf(app))}"><meta name="apple-mobile-web-app-status-bar-style" content="default">
 <style>${css(brand)}</style><script src="app.js" defer></script></head>
 <body><a class="skip" href="#content">Skip to content</a>
-<header>${hasLogo ? `<img src="icons/icon-192.png" alt="" width="64" height="64">` : ""}<h1>${esc(app.app_name)}</h1><p>${esc(app.address)}</p></header>
-<main id="content"><ul class="actions" aria-label="Quick actions">${actions}</ul>${specials}${menu}
-<section aria-labelledby="hours-h"><h2 id="hours-h">Hours and location</h2><dl>${hours.map((h) => `<dt>${esc(h.day || "Hours")}</dt><dd>${esc(h.time)}</dd>`).join("")}</dl>
-<p><a href="${esc(map)}" rel="noopener">${esc(app.address)}</a><br><a href="tel:${esc(digits(app.phone))}">${esc(app.phone)}</a></p></section></main>
+<header>${hasLogo ? `<img src="icons/icon-192.png" alt="" width="64" height="64">` : ""}<h1>${esc(app.app_name)}</h1>${labels.kind === "menu" || address ? `<p>${esc(address)}</p>` : ""}</header>
+<main id="content">${actions ? `<ul class="actions" aria-label="Quick actions">${actions}</ul>` : ""}${specials}${menu}
+${visit}</main>
 <footer>Add this app to your home screen to keep it one tap away.</footer></body></html>`;
   return {
     files: { "index.html": html, "manifest.webmanifest": manifest(app), "app.js": APP_JS, "sw.js": serviceWorker(workerVersion(version)) },
@@ -170,4 +210,4 @@ function buildApp(app, { version, hasLogo }) {
   };
 }
 
-export { storeIconSvg, APP_JS, DEFAULT_BRAND, ICONS, LOGO_PLACEHOLDER, brandOf, buildApp, iconSpecs, initials, serviceWorker, shortNameOf, workerVersion };
+export { storeIconSvg, APP_JS, DEFAULT_BRAND, ICONS, KINDS, kindOf, labelsOf, missingAnswers, LOGO_PLACEHOLDER, brandOf, buildApp, iconSpecs, initials, serviceWorker, shortNameOf, workerVersion };

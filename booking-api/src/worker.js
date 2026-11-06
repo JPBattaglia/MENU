@@ -38,6 +38,7 @@ import { countingDb, saveTickCount } from "./lib/query-count.js";
 import { advanceMoneyPathsSelfTests } from "./selftest/money-paths.js";
 import { advanceEmailHealthSelfTests } from "./selftest/email-health.js";
 import { advanceStoreApps, handleStoreAppDone } from "./store-app/store-flow.js";
+import { ensureOwnStoreApps } from "./store-app/own-apps.js";
 import { advanceGuestAppPushSelfTests } from "./selftest/guest-app-push-selftest.js";
 import { advanceStoreAppSelfTests } from "./selftest/store-app-selftest.js";
 import { customHostSlug, runDomainWatch } from "./producers/website/domains.js";
@@ -426,6 +427,7 @@ const mmWorkerWithBooking = {
       await sendQueuedPushes(env).catch((error) => console.error("Guest App notifications failed:", error instanceof Error ? error.message : String(error)));
       await nudgeNativePushes(env).catch((error) => console.error("Native push nudge failed:", error instanceof Error ? error.message : String(error)));
       await sendAndroidPushes(env).catch((error) => console.error("Android notifications failed:", error instanceof Error ? error.message : String(error)));
+      await ensureOwnStoreApps(env).catch((error) => console.error("Own Mobile Apps failed:", error instanceof Error ? error.message : String(error)));
       await advanceStoreApps(env).catch((error) => console.error("Mobile App steps failed:", error instanceof Error ? error.message : String(error)));
       await scheduleYearlyRebuilds(env).catch((error) => console.error("Mobile App yearly rebuilds failed:", error instanceof Error ? error.message : String(error)));
       await advanceStoreBuilds(env).catch((error) => console.error("Mobile App builds failed:", error instanceof Error ? error.message : String(error)));
