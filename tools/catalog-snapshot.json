@@ -26,8 +26,8 @@
       "on_sale": true,
       "price_cents": null,
       "prices": {
-        "month": 17900,
-        "year": 179000
+        "month": 16900,
+        "year": 169000
       }
     },
     {
@@ -56,7 +56,7 @@
       "code": "CONVERSION_FIX",
       "kind": "ONE_TIME",
       "menu_package": null,
-      "on_sale": true,
+      "on_sale": false,
       "price_cents": 29900,
       "prices": null
     },
@@ -170,7 +170,7 @@
       "code": "SITE_FILES",
       "kind": "ONE_TIME",
       "menu_package": null,
-      "on_sale": false,
+      "on_sale": true,
       "price_cents": 29900,
       "prices": null
     },
@@ -227,7 +227,7 @@
       "code": "WEBSITE_PACKAGE",
       "kind": "ONE_TIME",
       "menu_package": null,
-      "on_sale": true,
+      "on_sale": false,
       "price_cents": 49900,
       "prices": null
     }
