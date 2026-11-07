@@ -1515,6 +1515,21 @@ body:not(.sample-menu-page).services-page .premium-media .hospitality-photo {
     :where(body.start-page) .qty button:hover{ filter: brightness(1.1); }
     :where(body.start-page) .qty button{min-width:44px;min-height:44px;}
     :where(body.start-page) .cart-item .remove-item{width:auto;padding:8px 12px;font-weight:600;}
+    /* Add-ons when a generated website is in the order (Nov 6, 2026). */
+    :where(body.start-page) .site-addons[hidden]{display:none;}
+    :where(body.start-page) .site-addons{margin:16px 0 6px;padding:16px;border:2px solid var(--brand);border-radius:14px;background:rgba(0,214,230,.06);}
+    :where(body.start-page) .site-addons h4{margin:0 0 6px;font-size:18px;}
+    :where(body.start-page) .site-addon{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 0;border-top:1px solid rgba(255,255,255,.1);}
+    :where(body.start-page) .site-addon small{display:block;color:var(--muted);margin-top:2px;}
+    :where(body.start-page) .site-addon .site-addon-price,:where(body.start-page) .site-addon-own label span{color:var(--brand);font-weight:700;white-space:nowrap;}
+    :where(body.start-page) .site-addon .btn{width:auto;min-height:44px;padding:8px 16px;white-space:nowrap;}
+    :where(body.start-page) .site-addon.is-selected{background:rgba(0,214,230,.08);margin:0 -10px;padding:12px 10px;border-radius:10px;}
+    :where(body.start-page) .site-addon-own{margin:0;padding:12px 0 0;border:0;border-top:1px solid rgba(255,255,255,.1);display:grid;gap:8px;}
+    :where(body.start-page) .site-addon-own legend{padding:0 0 6px;}
+    :where(body.start-page) .site-addon-own legend small{display:block;color:var(--muted);font-weight:400;}
+    :where(body.start-page) .site-addon-own label{display:flex;align-items:center;gap:10px;min-height:40px;cursor:pointer;}
+    :where(body.start-page) .site-addon-own input{width:20px;height:20px;accent-color:var(--brand);}
+    :where(body.start-page) .site-addon-note:empty{display:none;}
     :where(body.start-page) .menu-config[hidden]{display:none;}
     :where(body.start-page) .menu-config{padding:16px 0 4px;}
     :where(body.start-page) .menu-config input{max-width:160px;min-height:44px;}
