@@ -72,12 +72,12 @@ async function stageAwaitDone(env, app, test) {
   if (await env.DB.prepare(`SELECT 1 AS w FROM approvals WHERE project_id = ? LIMIT 1`).bind(s.projectId).first()) throw new Error("The delivery waited for an owner approval; it should go out by itself");
   const entries = readZip(new Uint8Array(await (await env.ASSETS.get(zip.storage_key)).arrayBuffer()));
   const names = entries.map((e) => e.name.split("/").pop()).sort().join(",");
-  if (names !== "README.txt,index.html,styles.css") throw new Error(`The zip holds ${names}`);
-  const html = new TextDecoder().decode(entries.find((e) => e.name.endsWith("index.html")).data);
+  if (names !== "README.txt,about.html,contact.html,index.html,menu.html,styles.css") throw new Error(`The zip holds ${names}`);
+  const html = new TextDecoder().decode(entries.find((e) => e.name.endsWith("menu.html")).data);
   if (!html.includes("Egg Sandwich") || !html.includes("Caveat")) throw new Error("The zip's page isn't the chosen design with the menu");
   const site = await env.DB.prepare(`SELECT slug FROM website_sites WHERE business_id = ?`).bind(s.businessId).first();
   if (!site?.slug) throw new Error("With Website Care the site should have an address");
-  const live = await app(new Request(`${publicBaseUrl(env)}/api/site/${site.slug}/`));
+  const live = await app(new Request(`${publicBaseUrl(env)}/api/site/${site.slug}/menu.html`));
   const page = await live.text();
   if (live.status !== 200 || !page.includes("Egg Sandwich")) throw new Error(`The live site answered ${live.status}`);
   const sent = await env.DB.prepare(`SELECT 1 AS ok FROM communications WHERE template_key = 'delivery_site_files_v1' AND project_id = ? LIMIT 1`).bind(s.projectId).first();

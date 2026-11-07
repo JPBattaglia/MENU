@@ -25,8 +25,8 @@ main{max-width:1060px;margin:0 auto;padding:0 20px}h2{font:800 clamp(32px,5vw,48
 .about{max-width:680px;margin:0 auto;text-align:center;font-size:19px}
 .visit{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:28px;background:#fff;border:1px solid ${ink}22;padding:36px;margin:0 0 80px}.visit h3{font:600 22px 'Playfair Display',serif;margin:0 0 12px}.hours{display:grid;grid-template-columns:auto 1fr;gap:6px 20px}.hours .wide{grid-column:1/3}.visit a{color:${acc}}
 footer{text-align:center;padding:28px;background:${ink};color:#e8dccb;font-size:15px}`;
-    const body = `<nav class="top" aria-label="Main"><a href="#main">Home</a>${nav(d)}</nav>
-<header class="hero" id="main">${photo(d, 0, "bg")}<div class="in">${logoImg(d, "logo", 84)}<span class="orn"></span><h1>${esc(d.name)}</h1><p>${esc(d.tagline)}</p>${menuBtn(d, "btn fill")}${orderBtn(d, "btn")}${callBtn(d, "btn")}</div></header>
+    const body = `<nav class="top" aria-label="Main">${nav(d)}</nav>
+<header class="hero" id="main" data-hero>${photo(d, 0, "bg")}<div class="in">${logoImg(d, "logo", 84)}<span class="orn"></span><h1>${esc(d.name)}</h1><p>${esc(d.tagline)}</p>${menuBtn(d, "btn fill")}${orderBtn(d, "btn")}${callBtn(d, "btn")}</div></header>
 <main>${d.sections.length ? `<section id="menu"><h2>${d.menuLabel}</h2><p class="sub">${esc(d.intro)}</p><div class="menu-grid">${sections(d, (s) => `<div class="msec">${s.name ? `<h3>${esc(s.name)}</h3>` : ""}<ul>${s.items.map((i) => item(i, { leader: true })).join("")}</ul></div>`)}</div></section>` : ""}
 <section id="about"><h2>Our story</h2><p class="sub">${esc(d.name)}</p><div class="about">${aboutHtml(d)}</div></section>
 <section id="visit"><h2>${d.address ? "Visit us" : "Get in touch"}</h2><p class="sub">${d.address ? "We’d love to see you" : "We’d love to hear from you"}</p><div class="visit">${d.hours.length || d.phone ? `<div><h3>Hours</h3>${hoursList(d)}</div>` : ""}<div><h3>Find us</h3>${contactLines(d)}</div></div></section></main>
@@ -59,7 +59,7 @@ main{max-width:1180px;margin:0 auto;padding:0 20px}h2{font:clamp(34px,4.5vw,52px
 footer{margin-top:96px;border-top:1px solid #e6e8ec;padding:28px 20px;text-align:center;color:#5b616d;font-size:15px}
 @media(max-width:820px){.split,.two{grid-template-columns:1fr}.bar nav{display:none}.split .art{min-height:260px}}`;
     const body = `<header class="bar"><div class="in"><a class="brand" href="#main">${logoImg(d, "logo", 38)}<span>${esc(d.name)}</span></a><nav aria-label="Main">${nav(d)}</nav>${d.order ? orderBtn(d, "cta") : d.phone ? `<a class="cta" href="tel:${esc(d.tel)}">Call</a>` : ""}</div></header>
-<div class="split" id="main"><div class="words"><span class="kicker">${esc(d.address ? d.address.split(",").slice(-2, -1)[0] || "Welcome" : "Welcome")}</span><h1>${esc(d.tagline || d.name)}</h1><p class="lead">${esc(d.intro)}</p><div class="btns">${menuBtn(d, "b1")}${d.phone ? `<a class="b2" href="tel:${esc(d.tel)}">Call us</a>` : ""}</div></div>
+<div class="split" id="main" data-hero><div class="words"><span class="kicker">${esc(d.address ? d.address.split(",").slice(-2, -1)[0] || "Welcome" : "Welcome")}</span><h1>${esc(d.tagline || d.name)}</h1><p class="lead">${esc(d.intro)}</p><div class="btns">${menuBtn(d, "b1")}${d.phone ? `<a class="b2" href="tel:${esc(d.tel)}">Call us</a>` : ""}</div></div>
 <div class="art" aria-hidden="true">${d.photos[0] ? photo(d, 0) : `<span class="ring r1"></span><span class="ring r2"></span><span class="big">${esc(d.name)}</span>`}</div></div>
 <main>${d.sections.length ? `<section id="menu"><h2>${d.menuLabel}</h2>${d.sections.length > 1 ? `<nav class="tabs" aria-label="${d.menuLabel} sections">${sections(d, (s, i) => `<a href="#m${i}">${esc(s.name || d.menuLabel)}</a>`)}</nav>` : ""}${sections(d, (s, i) => `<h3 class="mhead" id="m${i}">${esc(s.name || d.menuLabel)}</h3><ul class="cards">${s.items.map((x) => item(x)).join("")}</ul>`)}</section>` : ""}
 <section id="about" class="two"><div><h2>About us</h2>${aboutHtml(d)}</div>${d.photos[1] ? photo(d, 1) : ""}</section>
@@ -83,7 +83,7 @@ header.top nav{display:flex;gap:22px}header.top nav a{color:${ink};text-decorati
 .hero h1{position:relative;font:clamp(72px,15vw,200px)/.88 'Bebas Neue',Impact,sans-serif;margin:0;text-transform:uppercase;letter-spacing:.01em}.hero h1 span{color:${acc}}
 .hero p{position:relative;font-size:clamp(19px,2.4vw,24px);max-width:38ch;color:#cfcfd4;margin:22px 0 28px}
 .go{display:inline-block;background:${acc};color:${on};font:26px/1 'Bebas Neue',sans-serif;letter-spacing:.06em;padding:16px 26px;text-decoration:none;margin:0 10px 10px 0}.go.ghost{background:transparent;color:${ink};box-shadow:inset 0 0 0 2px ${ink}}
-.strip{white-space:nowrap;overflow:hidden;border-block:1px solid #ffffff1a;font:28px/1 'Bebas Neue',sans-serif;letter-spacing:.08em;color:${acc};padding:14px 0}
+.strip{white-space:nowrap;overflow:hidden;border-block:1px solid #ffffff1a;margin:0 calc(-1 * clamp(18px,4vw,48px));font:28px/1 'Bebas Neue',sans-serif;letter-spacing:.08em;color:${acc};padding:14px 0}
 main{padding:0 clamp(18px,4vw,48px)}h2{font:clamp(56px,9vw,120px)/.9 'Bebas Neue',sans-serif;margin:90px 0 30px;text-transform:uppercase}
 .msec{display:grid;grid-template-columns:minmax(160px,280px) 1fr;gap:24px;border-top:1px solid #ffffff22;padding:28px 0}.msec h3{font:36px/1 'Bebas Neue',sans-serif;letter-spacing:.04em;color:${acc};margin:0}
 .msec ol{margin:0;padding:0;counter-reset:n}.msec .item{counter-increment:n;padding:12px 0;border-bottom:1px dashed #ffffff22}.msec .item-name:before{content:counter(n,decimal-leading-zero) "  ";color:#77777f;font-weight:600}.msec .item-price{color:${acc}}
@@ -94,9 +94,8 @@ footer{padding:26px;text-align:center;color:#8a8a92;border-top:1px solid #ffffff
     const words = String(d.name).split(/\s+/);
     const title = words.length > 1 ? `${esc(words.slice(0, -1).join(" "))} <span>${esc(words.at(-1))}</span>` : `<span>${esc(d.name)}</span>`;
     const body = `<header class="top"><a class="brand" href="#main">${logoImg(d, "logo", 40)}${esc(d.name)}</a><nav aria-label="Main">${nav(d)}</nav></header>
-<div class="hero" id="main"><h1>${title}</h1><p>${esc(d.tagline)}${d.intro ? ` ${esc(d.intro)}` : ""}</p>${menuBtn(d, "go")}${orderBtn(d, "go ghost")}${callBtn(d, "go ghost")}</div>
-${d.sections.length ? `<div class="strip" aria-hidden="true">${esc(sections(d, (s) => `${s.name || d.menuLabel} ★ `).repeat(4))}</div>` : ""}
-<main>${d.sections.length ? `<section id="menu"><h2>${d.menuLabel}</h2>${sections(d, (s) => `<div class="msec"><h3>${esc(s.name || d.menuLabel)}</h3><ol>${s.items.map((x) => item(x)).join("")}</ol></div>`)}</section>` : ""}
+<div class="hero" id="main" data-hero><h1>${title}</h1><p>${esc(d.tagline)}${d.intro ? ` ${esc(d.intro)}` : ""}</p>${menuBtn(d, "go")}${orderBtn(d, "go ghost")}${callBtn(d, "go ghost")}</div>
+<main>${d.sections.length ? `<section id="menu"><div class="strip" aria-hidden="true">${esc(sections(d, (s) => `${s.name || d.menuLabel} ★ `).repeat(4))}</div><h2>${d.menuLabel}</h2>${sections(d, (s) => `<div class="msec"><h3>${esc(s.name || d.menuLabel)}</h3><ol>${s.items.map((x) => item(x)).join("")}</ol></div>`)}</section>` : ""}
 <section id="about"><h2>The story</h2><div class="about">${aboutHtml(d)}</div></section>
 <section id="visit"><h2>${d.address ? "Pull up" : "Holler"}</h2><div class="visit">${d.hours.length || d.phone ? `<div><h3>Hours</h3>${hoursList(d)}</div>` : ""}<div><h3>${d.address ? "Where" : "Contact"}</h3>${contactLines(d)}</div></div></section></main>
 <footer>© ${year()} ${esc(d.name)}</footer>`;
@@ -123,8 +122,8 @@ main{max-width:1100px;margin:0 auto;padding:0 20px}h2{font:700 clamp(46px,7vw,72
 .about{max-width:720px;margin:0 auto;background:#fffaf0;padding:28px 32px;box-shadow:0 6px 16px #0002;transform:rotate(.4deg)}
 .visit{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:24px;margin-bottom:70px}.card{background:#fffaf0;padding:24px;border-radius:4px;box-shadow:0 6px 16px #0002}.card h3{font:700 34px Caveat,cursive;margin:0 0 8px}.hours{display:grid;grid-template-columns:auto 1fr;gap:6px 20px}.hours .wide{grid-column:1/3}.card a{color:${acc}}
 footer{text-align:center;padding:24px;font:700 24px Caveat,cursive}`;
-    const body = `<header class="top" id="main">${logoImg(d, "logo", 90)}<p class="name">${esc(d.name)}</p><p class="tag">${esc(d.tagline)}</p><nav aria-label="Main">${nav(d)}</nav></header>
-<div class="welcome">${photo(d, 0)}<div><p>${esc(d.intro)}</p>${menuBtn(d, "btn")}${orderBtn(d, "btn")}${callBtn(d, "btn")}</div></div>
+    const body = `<header class="top">${logoImg(d, "logo", 90)}<p class="name">${esc(d.name)}</p><p class="tag">${esc(d.tagline)}</p><nav aria-label="Main">${nav(d)}</nav></header>
+<div class="welcome" id="main" data-hero>${photo(d, 0)}<div><p>${esc(d.intro)}</p>${menuBtn(d, "btn")}${orderBtn(d, "btn")}${callBtn(d, "btn")}</div></div>
 <main>${d.sections.length ? `<section id="menu"><h2>On the ${d.services ? "list" : "board"} today</h2><div class="board">${sections(d, (s) => `<div>${s.name ? `<h3>${esc(s.name)}</h3>` : ""}<ul>${s.items.map((x) => item(x, { leader: true })).join("")}</ul></div>`)}</div></section>` : ""}
 <section id="about"><h2>Our story</h2><div class="about">${aboutHtml(d)}</div></section>
 <section id="visit"><h2>${d.address ? "Come on in" : "Say hello"}</h2><div class="visit">${d.hours.length || d.phone ? `<div class="card"><h3>Hours</h3>${hoursList(d)}</div>` : ""}<div class="card"><h3>${d.address ? "Find us" : "Contact"}</h3>${contactLines(d)}</div></div></section></main>
@@ -154,7 +153,7 @@ main{max-width:760px;margin:0 auto;padding:0 20px;text-align:center}h2{font:400 
 footer{text-align:center;padding:30px;font:500 11px Jost,sans-serif;letter-spacing:.3em;text-transform:uppercase;border-top:1px solid ${ink}22}
 @media(max-width:720px){header.top{grid-template-columns:1fr}.top nav,.top .r{display:none}.visit{grid-template-columns:1fr}}`;
     const body = `<header class="top"><nav aria-label="Main">${nav(d)}</nav><a class="mark" href="#main">${logoImg(d, "logo", 44)}${esc(d.name)}</a><div class="r">${d.phone ? `<a href="tel:${esc(d.tel)}">${esc(d.phone)}</a>` : ""}</div></header>
-<div class="hero" id="main">${photo(d, 0)}<div class="in"><span class="eyebrow">${d.address ? esc(d.address.split(",")[0]) : "Welcome"}</span><h1>${esc(d.name)}</h1><p>${esc(d.tagline)}</p>${menuBtn(d, "line")}${orderBtn(d, "line")}</div></div>
+<div class="hero" id="main" data-hero>${photo(d, 0)}<div class="in"><span class="eyebrow">${d.address ? esc(d.address.split(",")[0]) : "Welcome"}</span><h1>${esc(d.name)}</h1><p>${esc(d.tagline)}</p>${menuBtn(d, "line")}${orderBtn(d, "line")}</div></div>
 <main>${d.sections.length ? `<section id="menu"><h2>${d.menuLabel}</h2><span class="rule"></span>${sections(d, (s) => `<div class="course">${s.name ? `<h3>${esc(s.name)}</h3>` : ""}<ul>${s.items.map((x) => item(x)).join("")}</ul></div>`)}</section>` : ""}
 <section id="about" class="about"><h2>The house</h2><span class="rule"></span><p>${esc(d.intro)}</p>${aboutHtml(d)}</section>
 <section id="visit"><h2>${d.address ? "Visit" : "Contact"}</h2><span class="rule"></span><div class="visit">${d.hours.length || d.phone ? `<div><h3>Hours</h3>${hoursList(d)}</div>` : ""}<div><h3>${d.address ? "Address" : "Contact"}</h3>${contactLines(d)}</div></div></section></main>
@@ -185,7 +184,7 @@ main{max-width:1180px;margin:0 auto;padding:0 20px}h2{font:800 clamp(32px,4.5vw,
 footer{text-align:center;padding:28px;color:#4d5a51;font-size:15px}
 @media(max-width:820px){header.top nav{display:none}.hero{grid-template-columns:1fr}}`;
     const body = `<header class="top"><a class="brand" href="#main">${logoImg(d, "logo", 36)}${esc(d.name)}</a><nav aria-label="Main">${nav(d)}</nav>${d.order ? orderBtn(d, "pill") : ""}</header>
-<div class="hero" id="main"><div><h1>${esc(d.tagline || d.name)}</h1><p>${esc(d.intro)}</p>${menuBtn(d, "pill")}${callBtn(d, "pill alt")}</div>${photo(d, 0)}</div>
+<div class="hero" id="main" data-hero><div><h1>${esc(d.tagline || d.name)}</h1><p>${esc(d.intro)}</p>${menuBtn(d, "pill")}${callBtn(d, "pill alt")}</div>${photo(d, 0)}</div>
 <main>${d.sections.length ? `<section id="menu"><h2>${d.menuLabel}</h2>${sections(d, (s) => `${s.name ? `<h3 class="badge">${esc(s.name)}</h3>` : ""}<ul class="grid">${s.items.map((x) => item(x)).join("")}</ul>`)}</section>` : ""}
 <section id="about"><h2 class="vh">About</h2><div class="aboutbox"><h2>About ${esc(d.name)}</h2>${aboutHtml(d)}</div></section>
 <section id="visit"><h2>${d.address ? "Visit us" : "Contact us"}</h2><div class="visit">${d.hours.length || d.phone ? `<div><h3>Hours</h3>${hoursList(d)}</div>` : ""}<div><h3>${d.address ? "Where we are" : "Reach us"}</h3>${contactLines(d)}</div></div></section></main>
@@ -208,7 +207,7 @@ header.top{display:flex;align-items:center;justify-content:space-between;gap:16p
 header.top nav{display:flex;gap:10px}header.top nav a{font:600 17px Fredoka,sans-serif;color:${ink};text-decoration:none;background:#fff;padding:8px 16px;border-radius:14px;box-shadow:0 3px 0 ${ink}22}
 .hero{text-align:center;padding:40px 20px 70px;background:${pastels[0]}}.hero h1{font:700 clamp(46px,9vw,100px)/1 Fredoka,sans-serif;margin:10px 0 12px;color:${ink}}.hero p{font-size:21px;max-width:36ch;margin:0 auto 24px}
 .blob{display:inline-block;background:${b};color:${on};font:600 20px Fredoka,sans-serif;padding:14px 26px;border-radius:22px;text-decoration:none;margin:6px;box-shadow:0 5px 0 ${mix(b, "#000000", .3)}}.blob.w{background:#fff;color:${ink};box-shadow:0 5px 0 ${ink}33}
-.wave{display:block;width:100%;height:46px}.band{padding:30px 20px 70px}.band .in{max-width:1080px;margin:0 auto}
+.wave{display:block;width:calc(100% + 40px);height:46px;margin:-76px -20px 30px}.band{padding:30px 20px 70px;margin-top:46px}.band .in{max-width:1080px;margin:0 auto}
 h2{font:700 clamp(36px,6vw,58px) Fredoka,sans-serif;text-align:center;margin:10px 0 30px}
 .stickers{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:22px}.sticker{background:#fff;border-radius:28px;padding:24px;box-shadow:0 6px 0 ${ink}1f;border:3px solid ${ink}}
 .sticker h3{font:700 26px Fredoka,sans-serif;margin:0 0 8px;display:inline-block;background:${pastels[3]};padding:2px 12px;border-radius:10px;transform:rotate(-2deg)}.sticker ul{margin:0;padding:0}.sticker .item{padding:8px 0;border-bottom:2px dotted ${ink}33}.sticker .item:last-child{border:0}.sticker .item-price{color:${acc}}
@@ -221,8 +220,8 @@ footer{text-align:center;padding:26px;font:600 18px Fredoka,sans-serif;backgroun
     bands.push(["about", `<h2>Hello from ${esc(d.name)}</h2><div class="about">${aboutHtml(d)}</div>`]);
     bands.push(["visit", `<h2>${d.address ? "Come say hi" : "Say hi"}</h2><div class="visit">${d.hours.length || d.phone ? `<div><h3>Hours</h3>${hoursList(d)}</div>` : ""}<div><h3>${d.address ? "Find us" : "Contact"}</h3>${contactLines(d)}</div></div>`]);
     const body = `<header class="top" style="background:${pastels[0]}"><a class="brand" href="#main">${logoImg(d, "logo", 46)}${esc(d.name)}</a><nav aria-label="Main">${nav(d)}</nav></header>
-<div class="hero" id="main"><h1>${esc(d.name)}</h1><p>${esc(d.tagline)}${d.intro ? `. ${esc(d.intro)}` : ""}</p>${menuBtn(d, "blob")}${orderBtn(d, "blob w")}${callBtn(d, "blob w")}</div>
-<main>${bands.map(([id, html], i) => `<div style="background:${pastels[(i + 1) % pastels.length]}">${wave(pastels[(i + 1) % pastels.length])}</div><section id="${id}" class="band" style="background:${pastels[(i + 1) % pastels.length]}"><div class="in">${html}</div></section>`).join("")}</main>
+<div class="hero" id="main" data-hero><h1>${esc(d.name)}</h1><p>${esc(d.tagline)}${d.intro ? `. ${esc(d.intro)}` : ""}</p>${menuBtn(d, "blob")}${orderBtn(d, "blob w")}${callBtn(d, "blob w")}</div>
+<main>${bands.map(([id, html], i) => `<section id="${id}" class="band" style="background:${pastels[(i + 1) % pastels.length]}">${wave(pastels[(i + 1) % pastels.length])}<div class="in">${html}</div></section>`).join("")}</main>
 <footer>Made with love by ${esc(d.name)} · ${year()}</footer>`;
     return { css, body, theme: pastels[0] };
   }
@@ -248,8 +247,8 @@ const coastal = {
 .visit{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:24px;margin-bottom:80px}.visit>div{background:#fff;padding:26px;border-radius:14px;border-left:6px solid ${b}}.visit h3{font:700 16px Montserrat,sans-serif;letter-spacing:.12em;text-transform:uppercase;margin:0 0 10px}.hours{display:grid;grid-template-columns:auto 1fr;gap:6px 20px}.hours .wide{grid-column:1/3}.visit a{color:${acc}}
 footer{padding:24px clamp(24px,6vw,80px);font:500 13px Montserrat,sans-serif;color:#5b6775}
 @media(max-width:900px){.rail{position:static;width:auto;flex-direction:row;flex-wrap:wrap;align-items:center;padding:18px}.rail nav{flex-direction:row;gap:14px}.rail nav a{border:0;padding:4px 0}.rail .tag,.rail .callme{display:none}.content{margin-left:0}}`;
-    const body = `<aside class="rail">${logoImg(d, "logo", 72)}<div><p class="name">${esc(d.name)}</p><p class="tag">${esc(d.tagline)}</p></div><nav aria-label="Main"><a href="#main">Home</a>${nav(d)}</nav>${d.phone ? `<a class="callme" href="tel:${esc(d.tel)}">Call ${esc(d.phone)}</a>` : d.order ? orderBtn(d, "callme") : ""}</aside>
-<div class="content"><div class="hero" id="main">${photo(d, 0)}<div class="in"><h1>${esc(d.tagline || d.name)}</h1><p>${esc(d.intro)}</p>${menuBtn(d, "tide")}${orderBtn(d, "tide")}</div><svg viewBox="0 0 1440 70" preserveAspectRatio="none" aria-hidden="true"><path d="M0 40 C 240 0 480 70 720 40 S 1200 10 1440 40 V70 H0Z" fill="${sand}"/></svg></div>
+    const body = `<aside class="rail">${logoImg(d, "logo", 72)}<div><p class="name">${esc(d.name)}</p><p class="tag">${esc(d.tagline)}</p></div><nav aria-label="Main">${nav(d)}</nav>${d.phone ? `<a class="callme" href="tel:${esc(d.tel)}">Call ${esc(d.phone)}</a>` : d.order ? orderBtn(d, "callme") : ""}</aside>
+<div class="content"><div class="hero" id="main" data-hero>${photo(d, 0)}<div class="in"><h1>${esc(d.tagline || d.name)}</h1><p>${esc(d.intro)}</p>${menuBtn(d, "tide")}${orderBtn(d, "tide")}</div><svg viewBox="0 0 1440 70" preserveAspectRatio="none" aria-hidden="true"><path d="M0 40 C 240 0 480 70 720 40 S 1200 10 1440 40 V70 H0Z" fill="${sand}"/></svg></div>
 <main class="wrap">${d.sections.length ? `<section id="menu"><h2>${d.menuLabel}</h2><div class="ledger">${sections(d, (s) => `${s.name ? `<h3>${esc(s.name)}</h3>` : ""}<ul>${s.items.map((x) => item(x)).join("")}</ul>`)}</div></section>` : ""}
 <section id="about"><h2>About</h2>${aboutHtml(d)}</section>
 <section id="visit"><h2>${d.address ? "Visit" : "Contact"}</h2><div class="visit">${d.hours.length || d.phone ? `<div><h3>Hours</h3>${hoursList(d)}</div>` : ""}<div><h3>${d.address ? "Location" : "Contact"}</h3>${contactLines(d)}</div></div></section></main>
@@ -286,7 +285,7 @@ main{max-width:1120px;margin:0 auto;padding:0 20px}h2{font:clamp(36px,5.5vw,60px
 footer{text-align:center;padding:24px;border-top:3px double ${brass}66;color:#b9b09c;font-size:15px}
 @media(max-width:720px){header.top nav{display:none}}`;
     const body = `<header class="top"><a class="brand" href="#main">${logoImg(d, "logo", 40)}${esc(d.name)}</a><nav aria-label="Main">${nav(d)}</nav></header>
-<div class="hero" id="main">${photo(d, 0, "bg")}<div class="in"><div class="crest">${logoImg(d, "logo", 80)}<small>${d.address ? esc(d.address.split(",").slice(-2, -1)[0] || "Est. here") : "Welcome in"}</small><h1>${esc(d.name)}</h1><p>${esc(d.tagline)}</p></div>
+<div class="hero" id="main" data-hero>${photo(d, 0, "bg")}<div class="in"><div class="crest">${logoImg(d, "logo", 80)}<small>${d.address ? esc(d.address.split(",").slice(-2, -1)[0] || "Est. here") : "Welcome in"}</small><h1>${esc(d.name)}</h1><p>${esc(d.tagline)}</p></div>
 ${today.length ? `<p class="hours-strip">${today.map((h) => `<span>${h.day ? `<b>${esc(h.day)}</b>` : ""}${esc(h.time)}</span>`).join("")}</p>` : ""}<div>${menuBtn(d, "go")}${orderBtn(d, "go out")}${callBtn(d, "go out")}</div></div></div>
 <main>${d.sections.length ? `<section id="menu"><h2>${d.services ? "Services" : "On tap and on the menu"}</h2><p class="sub">${esc(d.name)}</p><div class="boards">${sections(d, (s) => `<div class="board">${s.name ? `<h3>${esc(s.name)}</h3>` : ""}<ul>${s.items.map((x) => item(x)).join("")}</ul></div>`)}</div></section>` : ""}
 ${d.intro ? `<p class="tonight">${esc(d.intro)}</p>` : ""}

@@ -21,16 +21,21 @@ test('every design builds a complete, escaped one-page site from the same busine
   assert.deepEqual(DESIGNS.map((d) => d.key), ['trattoria', 'bistro', 'night', 'farmhouse', 'fine', 'fresh', 'pop', 'coastal', 'taproom']);
   for (const d of DESIGNS) {
     const files = buildDesignSite({ ...SITE, name: 'Oliva <b>Kitchen</b>' }, COPY, d.key);
+    assert.deepEqual(Object.keys(files), ['index.html', 'menu.html', 'about.html', 'contact.html', 'styles.css'], d.key);
     const html = files['index.html'];
     assert.ok(html.startsWith('<!doctype html>'), d.key);
-    for (const words of ['Cacio e Pepe', '$21', 'Tiramisù', 'tel:4155550142', 'Tue-Sun', 'id="menu"', 'id="about"', 'id="visit"', 'href="styles.css"', 'class="skip"']) assert.ok(html.includes(words), `${d.key}: ${words}`);
-    assert.ok(!html.includes('<b>Kitchen</b>'), `${d.key} escapes what the business typed`);
+    for (const words of ['tel:4155550142', 'Tue-Sun', 'id="about"', 'id="visit"', 'href="menu.html"', 'href="styles.css"', 'class="skip"']) assert.ok(html.includes(words), `${d.key}: ${words}`);
+    assert.ok(!html.includes('Cacio e Pepe') && !html.includes('id="menu"'), `${d.key}: the menu is on its own page, not the home page`);
+    for (const words of ['Cacio e Pepe', '$21', 'Tiramisù', 'id="menu"', 'aria-current="page" href="menu.html"']) assert.ok(files['menu.html'].includes(words), `${d.key} menu: ${words}`);
+    assert.ok(!files['menu.html'].includes('data-hero'), `${d.key}: no hero on inner pages`);
+    assert.ok(files['contact.html'].includes('Columbus Ave') && !files['contact.html'].includes('Cacio'), d.key);
+    for (const [name, page] of Object.entries(files)) if (name.endsWith('.html')) assert.ok(!page.includes('<b>Kitchen</b>'), `${d.key} ${name} escapes what the business typed`);
     assert.ok(files['styles.css'].length > 1000, d.key);
   }
   // No phone, no address, no hours: nothing broken or empty is shown.
   for (const d of DESIGNS) {
-    const html = buildDesignSite({ ...SITE, phone: '', address: '', hours: '' }, COPY, d.key)['index.html'];
-    assert.ok(!/tel:"|maps\/search|undefined|null/.test(html), d.key);
+    for (const html of Object.values(buildDesignSite({ ...SITE, phone: '', address: '', hours: '' }, COPY, d.key))) assert.ok(!/tel:"|maps\/search|undefined|>null</.test(html), d.key);
+    assert.ok(!('menu.html' in buildDesignSite({ ...SITE, offerings: '' }, COPY, d.key)), `${d.key}: no menu page without a menu`);
   }
 });
 
@@ -75,8 +80,8 @@ test('paid: the chosen design is zipped and emailed at once, with no owner appro
   assert.equal(zipRow.original_filename, 'oliva-kitchen-website.zip');
   const entries = readZip(new Uint8Array(await (await f.ASSETS.get(zipRow.storage_key)).arrayBuffer()));
   const names = entries.map((e) => e.name).sort();
-  assert.deepEqual(names, ['oliva-kitchen/README.txt', 'oliva-kitchen/index.html', 'oliva-kitchen/styles.css']);
-  const html = new TextDecoder().decode(entries.find((e) => e.name.endsWith('index.html')).data);
+  assert.deepEqual(names, ['oliva-kitchen/README.txt', 'oliva-kitchen/about.html', 'oliva-kitchen/contact.html', 'oliva-kitchen/index.html', 'oliva-kitchen/menu.html', 'oliva-kitchen/styles.css']);
+  const html = new TextDecoder().decode(entries.find((e) => e.name.endsWith('menu.html')).data);
   assert.match(html, /Cacio e Pepe/); assert.match(html, /Alfa\+Slab\+One/, 'the chosen design (Taproom), not another');
   assert.equal(f.row(`SELECT COUNT(*) AS n FROM approvals`).n, 0, 'nothing waits for the owner');
   assert.equal(f.row(`SELECT COUNT(*) AS n FROM website_sites`).n, 0, 'not hosted without Website Care');
@@ -92,7 +97,9 @@ test('paid with Website Care: the same site also goes live at its own address', 
   await runOrder(f);
   const site = f.row(`SELECT slug FROM website_sites WHERE business_id = 'biz'`);
   assert.equal(site.slug, 'oliva-kitchen');
-  const live = await api.default.fetch(new Request('https://menu-made.com/api/site/oliva-kitchen/'), f.env, f.ctx);
+  const home = await api.default.fetch(new Request('https://menu-made.com/api/site/oliva-kitchen/'), f.env, f.ctx);
+  assert.equal(home.status, 200);
+  const live = await api.default.fetch(new Request('https://menu-made.com/api/site/oliva-kitchen/menu.html'), f.env, f.ctx);
   assert.equal(live.status, 200);
   const html = await live.text();
   assert.match(html, /Cacio e Pepe/); assert.match(html, /<style>/, 'styles inside the page');
