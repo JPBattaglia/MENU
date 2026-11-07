@@ -1,3 +1,4 @@
+import { DESIGN_KEYS } from "../producers/website/templates/index.js";
 import { insertFunnelEvent } from "./funnel.js";
 import { createPendingOrder } from "./orders.js";
 import { CheckoutValidationError, appendCheckoutLineItem, normalizeCheckoutItems } from "./quote.js";
@@ -10,6 +11,15 @@ import { pausedForSale, pausedMessage } from "../lib/switches.js";
 // One checkout for both environments. "sandbox" uses the Stripe test key and inline prices;
 // "live" uses the live key and the catalog's live price IDs. A cart with a plan or bundle
 // becomes a subscription-mode session (stage 3); anything else stays a one-time payment.
+// A site generator choice: a finished preview and one of the nine designs.
+async function siteChoice(env, choice) {
+  const token = String(choice?.token || "");
+  const design = String(choice?.design || "");
+  if (!/^[a-f0-9]{36}$/.test(token) || !DESIGN_KEYS.includes(design)) return null;
+  const row = await env.DB.prepare(`SELECT status FROM website_previews WHERE token = ?`).bind(token).first();
+  return row?.status === "READY" ? { token, design } : null;
+}
+
 async function createCheckout(request, env, environment) {
   const live = environment === "live";
   try {
@@ -47,6 +57,13 @@ async function createCheckout(request, env, environment) {
     }
     if (cart.plan && !normalizeName(data?.customer?.business || data?.business)) {
       return jsonResponse({ ok: false, error: "Business name is required for a monthly plan" }, 400);
+    }
+    // Your Website (site files): the design chosen in the site generator rides on the order item.
+    const siteItem = normalizedItems.find((item) => String(item.offerCode).toUpperCase() === "SITE_FILES");
+    if (siteItem) {
+      const choice = await siteChoice(env, data?.site_choice);
+      if (!choice) return jsonResponse({ ok: false, error: "Choose your design in the site generator first: menu-made.com/website-design.html" }, 400);
+      siteItem.extraMetadata = { ...(siteItem.extraMetadata || {}), site_preview: choice.token, site_design: choice.design };
     }
     // Orders started on ninobattaglia.com (Nino design services) return there after Stripe.
     const returnTo = data?.return_to === "nino" ? "nino" : null;

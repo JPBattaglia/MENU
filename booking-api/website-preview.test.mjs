@@ -60,15 +60,22 @@ test('an upload becomes a watermarked, unindexed website preview with its own pa
   const res = await f.create({ request_id: await f.upload(), email: 'Owner@Pizza.example', business: 'Sample Pizza', phone: '(415) 555-0100', hours: 'Mon-Sun: 11am-9pm' });
   const out = await res.json();
   assert.equal(res.status, 200, JSON.stringify(out));
-  assert.match(out.url, /^https:\/\/menu-made\.com\/api\/website-preview\/view\/[a-f0-9]{36}\/index\.html$/);
-  const home = await f.get(new URL(out.url).pathname);
+  // The site generator: the link opens design 1; Generate site walks the nine designs; Choose this site goes to checkout.
+  assert.match(out.url, /^https:\/\/menu-made\.com\/api\/website-preview\/view\/[a-f0-9]{36}\/d\/trattoria\.html$/);
+  const first = await (await f.get(new URL(out.url).pathname)).text();
+  for (const words of ['Design 1 of 9: Trattoria', 'Sample Pizza', 'Margherita', 'PREVIEW%20%C2%B7%20NOT%20LIVE', '@media print', 'noindex', `d/bistro.html">Generate site`, `service=sitefiles&amp;wpreview=${out.token}&amp;design=trattoria`, 'Choose this site: $299']) assert.ok(first.includes(words), words);
+  assert.doesNotMatch(first, /href="styles\.css"/, 'styles are inside the page');
+  const last = await (await f.get(`/api/website-preview/view/${out.token}/d/taproom.html`)).text();
+  assert.ok(last.includes('Design 9 of 9: Taproom') && last.includes('d/trattoria.html">Generate site'), 'the last design wraps to the first');
+  assert.equal((await f.get(`/api/website-preview/view/${out.token}/d/nope.html`)).status, 410);
+  const home = await f.get(new URL(out.url).pathname.replace('d/trattoria.html', 'index.html'));
   assert.equal(home.status, 200);
   assert.equal(home.headers.get('X-Robots-Tag'), 'noindex, nofollow');
   const html = await home.text();
   for (const words of ['Sample Pizza', 'PREVIEW%20%C2%B7%20NOT%20LIVE', '@media print', 'Make it live: $499', 'service=website&amp;wpreview=', 'href="menu.html"', 'tel:']) assert.ok(html.includes(words), words);
-  const menu = await (await f.get(new URL(out.url).pathname.replace('index.html', 'menu.html'))).text();
+  const menu = await (await f.get(new URL(out.url).pathname.replace('d/trattoria.html', 'menu.html'))).text();
   assert.match(menu, /Margherita/); assert.match(menu, /\$15/);
-  assert.equal((await f.get(new URL(out.url).pathname.replace('index.html', 'secret.txt'))).status, 404, 'only page files are served');
+  assert.equal((await f.get(new URL(out.url).pathname.replace('d/trattoria.html', 'secret.txt'))).status, 404, 'only page files are served');
   assert.equal(calls.menu, 1); assert.equal(calls.copy, 1); assert.equal(calls.email, 1);
   const handoff = await (await f.get(`/api/website-preview/handoff/${out.token}`)).json();
   assert.deepEqual(handoff, { ok: true, business: 'Sample Pizza', email: 'owner@pizza.example' });

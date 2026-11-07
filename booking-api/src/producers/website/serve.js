@@ -6,7 +6,8 @@
 import { simplePage } from "../../lib/http.js";
 import { verifyLinkToken } from "../../lib/links.js";
 
-const CSP = "default-src 'none'; img-src 'self' data:; style-src 'unsafe-inline'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'";
+// Generator sites (site-files) load their typefaces from Google Fonts.
+const CSP = "default-src 'none'; img-src 'self' data:; style-src 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; base-uri 'none'; form-action 'none'; frame-ancestors 'none'";
 
 async function loadBuild(env, storageKey) {
   const object = await env.ASSETS.get(storageKey);

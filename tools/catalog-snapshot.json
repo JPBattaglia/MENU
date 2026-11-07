@@ -167,6 +167,14 @@
       }
     },
     {
+      "code": "SITE_FILES",
+      "kind": "ONE_TIME",
+      "menu_package": null,
+      "on_sale": false,
+      "price_cents": 29900,
+      "prices": null
+    },
+    {
       "code": "SOCIAL_POSTS",
       "kind": "PLAN",
       "menu_package": null,
