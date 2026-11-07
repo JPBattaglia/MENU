@@ -8,7 +8,7 @@ import { parseJsonOrNull, simplePage } from "../../lib/http.js";
 import { signLinkToken, verifyLinkToken } from "../../lib/links.js";
 import { isTestOrder, loadDeliveryContext } from "../../approvals/release.js";
 import { DELIVERY_LINK_TTL_DAYS } from "../../lib/config.js";
-import { MAX_PHOTOS, applyOwnForm } from "../../marketing/website-preview.js";
+import { MAX_PHOTOS, applyOwnForm, detailFields } from "../../marketing/website-preview.js";
 import { makeSiteFiles } from "./files-step.js";
 import { hasSamplePhotos, ownPhotoCount } from "../website/mood.js";
 
@@ -26,16 +26,18 @@ async function downloadLink(env, deliverableId) {
   return `${publicBaseUrl(env)}/api/delivery/${deliverableId}?t=${token}&download=1`;
 }
 
-function formHtml(action, site, note = "") {
+function formHtml(action, site, note = "", copy = {}) {
   const n = ownPhotoCount(site);
   const have = [site.logo ? "your logo" : "", n ? `${n} photo${n === 1 ? "" : "s"}` : "", site.brand ? "your colour" : ""].filter(Boolean);
   const sample = hasSamplePhotos(site) ? " Your site shows sample photos for now; your own photos replace them." : "";
-  return `${note}<p>${have.length ? `Your site uses ${escapeHtml(have.join(", "))}. New files replace them.` : "Add your logo, photos and brand colour. We rebuild your website with them, free."}${sample}</p>
+  return `${note}<p>${have.length ? `Your site uses ${escapeHtml(have.join(", "))}. New files replace them.` : "Add your logo, photos, brand colour and details (motto, About, contact, social and order links). We rebuild your website with them, free."}${sample}</p>
 <form method="post" enctype="multipart/form-data" action="${escapeHtml(action)}" style="display:grid;gap:14px">
 <label style="display:grid;gap:4px;font-weight:bold">Logo (PNG, JPG or WebP)<input type="file" name="logo" accept="image/png,image/jpeg,image/webp"></label>
 <label style="display:grid;gap:4px;font-weight:bold">Photos (up to ${MAX_PHOTOS}, 5 MB each)<input type="file" name="photos" accept="image/png,image/jpeg,image/webp" multiple></label>
 <label style="display:flex;gap:10px;align-items:center;font-weight:bold">Brand colour <input type="color" name="brand" value="${escapeHtml(site.brand || "#00a7b5")}"></label>
 <label style="display:flex;gap:10px;align-items:center"><input type="checkbox" name="use_brand" value="1"${site.brand ? " checked" : ""}> Use this colour</label>
+<style>.own-details details{border-top:1px solid #dce8ec;padding:10px 0}.own-details summary{font-weight:bold;cursor:pointer;color:#071f2c}.own-details label{display:grid;gap:4px;font-weight:bold;margin-top:10px}.own-details small{font-weight:normal;color:#45616c}.own-details input,.own-details textarea,.own-details select{font:15px Arial,sans-serif;padding:10px;border:1px solid #c5d6dc;border-radius:6px;width:100%;box-sizing:border-box}</style>
+<div class="own-details">${detailFields(site, copy)}</div>
 <button type="submit">Update my website</button><p style="margin:0;font-size:14px;color:#45616c">After you tap it, updating takes up to a minute. Keep this page open until it says your website is updated.</p>
 </form>`;
 }
@@ -55,11 +57,11 @@ async function handleSiteFilesOwn(request, env, projectId) {
   if (!data?.site || !data?.copy) return denied();
   const action = `${url.pathname}?t=${encodeURIComponent(url.searchParams.get("t"))}`;
   const title = `Make ${context.business_name || "your website"} yours`;
-  if (request.method !== "POST") return simplePage(200, title, formHtml(action, data.site));
+  if (request.method !== "POST") return simplePage(200, title, formHtml(action, data.site, "", data.copy));
 
   const delivered = await env.DB.prepare(`SELECT 1 AS ok FROM deliverables WHERE project_id = ? AND deliverable_type = 'SITE_ZIP' AND status = 'FINAL'`).bind(projectId).first();
   if (!delivered) return simplePage(409, "Your website is still being made", "<p>Your download arrives by email in a few minutes. Use the link in that email.</p>");
-  const again = (text) => simplePage(400, title, formHtml(action, data.site, `<p style="color:#a4161a;font-weight:bold">${escapeHtml(text)}</p>`));
+  const again = (text) => simplePage(400, title, formHtml(action, data.site, `<p style="color:#a4161a;font-weight:bold">${escapeHtml(text)}</p>`, data.copy));
   if (Number(data.updates_after || 0) >= MAX_UPDATES) return again("This link has been used as many times as it allows. Reply to your delivery email and we'll make further changes.");
   const form = await request.formData().catch(() => null);
   if (!form) return again("We couldn't read the upload.");

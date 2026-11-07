@@ -136,6 +136,43 @@ test('Make it yours: a logo, photos and a brand colour rebuild all nine designs,
   assert.equal((await f.get(`/api/website-preview/view/${out.token}/d/farmhouse/img/logo.png`)).status, 404);
 });
 
+test('Customize details: motto, About, contact details, social and order links go into every design; bad links are refused', async (t) => {
+  const f = setup();
+  stubApis(t);
+  const out = await (await f.create({ request_id: await f.upload(), email: 'owner@pizza.example', business: 'Sample Pizza', phone: '(415) 555-0100' })).json();
+  const first = await (await f.get(`/api/website-preview/view/${out.token}/d/bistro/index.html`)).text();
+  for (const name of ['motto', 'about', 'phone', 'email', 'address', 'hours', 'instagram', 'facebook', 'tiktok', 'yelp', 'order_url', 'order_label']) assert.match(first, new RegExp(`name="${name}"`), name);
+  assert.match(first, /name="phone" value="\(415\) 555-0100"/, 'fields start with what we have');
+  const post = (form) => f.call(`/api/website-preview/customize/${out.token}`, { method: 'POST', body: form });
+  const form = new FormData();
+  form.set('design', 'fresh');
+  form.set('motto', 'Wood-fired since 1998');
+  form.set('about', 'Family-run on Columbus Ave.\n\nDough rests 48 hours.');
+  form.set('phone', '(415) 555-0199'); form.set('email', 'Hello@SamplePizza.example'); form.set('address', '1 Grant Ave, San Francisco, CA'); form.set('hours', 'Mon-Sun: 11am-10pm');
+  form.set('instagram', '@samplepizza'); form.set('facebook', 'facebook.com/samplepizza'); form.set('tiktok', ''); form.set('yelp', 'https://www.yelp.com/biz/sample-pizza');
+  form.set('order_url', 'https://order.toasttab.com/online/sample-pizza'); form.set('order_label', 'Order online');
+  assert.equal((await post(form)).status, 303);
+  const data = JSON.parse(await (await f.env.ASSETS.get(`website-previews/${out.token}/data.json`)).text());
+  assert.equal(data.site.instagram, 'https://www.instagram.com/samplepizza');
+  assert.equal(data.site.facebook, 'https://facebook.com/samplepizza');
+  assert.equal(data.site.email, 'hello@samplepizza.example');
+  for (const key of ['trattoria', 'bistro', 'night', 'farmhouse', 'fine', 'fresh', 'pop', 'coastal', 'taproom']) {
+    const pages = (await Promise.all(['index', 'about', 'contact'].map(async (p) => (await f.get(`/api/website-preview/view/${out.token}/d/${key}/${p}.html`)).text()))).join('');
+    for (const words of ['Wood-fired since 1998', 'Dough rests 48 hours.', 'tel:4155550199', '1 Grant Ave', 'mailto:hello@samplepizza.example', 'https://www.instagram.com/samplepizza', 'https://www.yelp.com/biz/sample-pizza', 'href="https://order.toasttab.com/online/sample-pizza"', 'class="foot-social"']) assert.ok(pages.includes(words), `${key}: ${words}`);
+    assert.ok(!pages.includes('tiktok.com'), `${key}: an empty link is left out`);
+  }
+  // Booking label; then bad input is refused and nothing changes.
+  const book = new FormData(); book.set('design', 'fine'); book.set('order_url', 'opentable.com/r/sample'); book.set('order_label', 'Book a table');
+  assert.equal((await post(book)).status, 303);
+  assert.match(await (await f.get(`/api/website-preview/view/${out.token}/d/bistro/index.html`)).text(), />Book a table</);
+  for (const [field, value] of [['instagram', 'https://evil.example/x'], ['facebook', 'javascript:alert(1)'], ['order_url', 'not a link at all'], ['email', 'nope']]) {
+    const bad = new FormData(); bad.set(field, value);
+    assert.equal((await post(bad)).status, 400, `${field}: ${value}`);
+  }
+  const after = JSON.parse(await (await f.env.ASSETS.get(`website-previews/${out.token}/data.json`)).text());
+  assert.equal(after.site.instagram, 'https://www.instagram.com/samplepizza'); assert.equal(after.site.email, 'hello@samplepizza.example');
+});
+
 test('a current website adds its about text, phone and address; the public limits hold', async (t) => {
   const f = setup();
   const calls = stubApis(t);

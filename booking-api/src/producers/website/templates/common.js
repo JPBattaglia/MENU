@@ -30,10 +30,13 @@ function siteData(site, copy) {
   const services = site.kind === "services";
   const map = site.address ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${site.name} ${site.address}`)}` : "";
   return {
-    name: site.name, tagline: copy.tagline, intro: copy.intro, about: copy.about || [], meta: copy.meta_description,
+    // Customize (owner, Nov 6, 2026): the buyer's own motto and About text replace what we wrote.
+    name: site.name, tagline: site.motto || copy.tagline, intro: copy.intro, meta: copy.meta_description,
+    about: site.about_text ? String(site.about_text).split(/\n\s*\n/).map((p) => p.trim()).filter(Boolean).slice(0, 4) : copy.about || [],
     sections, hours, address: site.address || "", phone: site.phone || "", tel: digits(site.phone), email: site.email || "", map,
-    social: [site.facebook && ["Facebook", site.facebook], site.instagram && ["Instagram", site.instagram]].filter(Boolean),
+    social: [["Instagram", site.instagram], ["Facebook", site.facebook], ["TikTok", site.tiktok], ["Yelp", site.yelp]].filter(([, u]) => /^https:\/\//.test(String(u || ""))),
     order: /^https:\/\//.test(String(site.order_url || "")) ? site.order_url : "",
+    orderLabel: ["Order online", "Book a table", "Book now"].includes(site.order_label) ? site.order_label : "",
     logo: site.logo || null, photos: site.photos || [], menuLabel: services ? "Services" : "Menu", services
   };
 }
@@ -42,7 +45,7 @@ const nav = (d, extra = "") => [["#main", "Home"], ["#menu", d.menuLabel], ["#ab
   .map(([h, t]) => `<a href="${h}"${extra}>${esc(t)}</a>`).join("");
 
 const callBtn = (d, cls) => (d.phone ? `<a class="${cls}" href="tel:${esc(d.tel)}">Call ${esc(d.phone)}</a>` : "");
-const orderBtn = (d, cls) => (d.order ? `<a class="${cls}" href="${esc(d.order)}" rel="noopener">${d.services ? "Book now" : "Order online"}</a>` : "");
+const orderBtn = (d, cls) => (d.order ? `<a class="${cls}" href="${esc(d.order)}" rel="noopener">${esc(d.orderLabel || (d.services ? "Book now" : "Order online"))}</a>` : "");
 const menuBtn = (d, cls) => (d.sections.length ? `<a class="${cls}" href="#menu">See the ${esc(d.menuLabel.toLowerCase())}</a>` : "");
 
 function item(i, { leader = false } = {}) {

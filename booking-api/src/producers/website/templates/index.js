@@ -113,6 +113,7 @@ function buildDesignSite(site, copy, key, { formAction = "" } = {}) {
     if (file === "about.html") body = appendInside(body, 'id="about"', gallery(d));
     if (file === "contact.html") body = appendInside(body, 'id="visit"', contactForm(d, formAction));
     if (d.logo) body = body.replace(/<footer([^>]*)>/, (m) => `${m}<img class="foot-logo" src="${esc(d.logo.path)}" alt="">`);
+    if (d.social.length) body = body.replace(/<footer([^>]*)>((?:<img class="foot-logo"[^>]*>)?)/, (m) => `${m}<p class="foot-social">${d.social.map(([n, u]) => `<a href="${esc(u)}" rel="noopener">${n}</a>`).join("")}</p>`);
     let html = page({ ...d, pageTitle: title }, { fonts: design.fonts, body, theme: out.theme });
     // The skip link needs a target on every page: without the hero, the page's own section.
     if (!/\sid="main"/.test(html)) html = html.replace('<a class="skip" href="#main">', `<a class="skip" href="#${{ "menu.html": "menu", "about.html": "about", "contact.html": "visit" }[file]}">`);
@@ -135,6 +136,7 @@ const PARTS_CSS = (brand) => `.page-band{position:relative;display:flex;align-it
 .cform textarea{resize:vertical}.cform .hp{position:absolute;left:-9999px;width:1px;height:1px;overflow:hidden}
 .cform button{justify-self:start;padding:14px 26px;border:0;border-radius:8px;background:${brand};color:${inkOn(brand)};font:inherit;font-weight:700;cursor:pointer}.cform fieldset[disabled]{opacity:.7}
 .cform-note{margin:10px 0 0;font-size:.9em;opacity:.8}
+.foot-social{display:flex;flex-wrap:wrap;justify-content:center;gap:8px 18px;margin:0 0 12px}.foot-social a{color:inherit;font-weight:700;text-decoration:underline;text-underline-offset:3px}
 .foot-logo{display:block;height:72px;width:auto;max-width:240px;object-fit:contain;margin:0 auto 12px;background:#fff;border-radius:12px;padding:8px}
 @media(max-width:600px){.brand .logo{height:44px;max-width:140px}.mark .logo{height:56px}.top .logo{height:96px}.crest .logo,.hero .logo{height:96px}.rail .logo{height:84px}header a.cta{white-space:nowrap}.brand{font-size:min(1em,20px)}}`;
 
