@@ -81,7 +81,7 @@ test('a preview with no photos shows sample mood photos; the buyer\'s own replac
   assert.deepEqual(data.site.photos.map((p) => [p.path, p.sample, p.mood.split('-')[0]]), [['img/mood-1.jpg', true, 'pizza'], ['img/mood-2.jpg', true, 'pizza'], ['img/mood-3.jpg', true, 'pizza']]);
   const page = await (await call(`/api/website-preview/view/${out.token}/d/trattoria/index.html`)).text();
   assert.ok(page.includes('img/mood-1.jpg'), 'the hero uses the mood photo');
-  assert.ok(page.includes('Sample photos: add your own in Make it yours.'));
+  assert.ok(page.includes('Sample photos: add your own with Customize.'));
   assert.ok(page.includes('The photos are samples until you add yours.'));
   assert.doesNotMatch(page, /Using [^.]*photo/, 'samples are not counted as the buyer\'s photos');
   const img = await call(`/api/website-preview/view/${out.token}/d/trattoria/img/mood-1.jpg`);

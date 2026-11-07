@@ -36,7 +36,7 @@ function formHtml(action, site, note = "") {
 <label style="display:grid;gap:4px;font-weight:bold">Photos (up to ${MAX_PHOTOS}, 5 MB each)<input type="file" name="photos" accept="image/png,image/jpeg,image/webp" multiple></label>
 <label style="display:flex;gap:10px;align-items:center;font-weight:bold">Brand colour <input type="color" name="brand" value="${escapeHtml(site.brand || "#00a7b5")}"></label>
 <label style="display:flex;gap:10px;align-items:center"><input type="checkbox" name="use_brand" value="1"${site.brand ? " checked" : ""}> Use this colour</label>
-<button type="submit">Update my website</button>
+<button type="submit">Update my website</button><p style="margin:0;font-size:14px;color:#45616c">After you tap it, updating takes up to a minute. Keep this page open until it says your website is updated.</p>
 </form>`;
 }
 
