@@ -12,6 +12,28 @@ const [base, out] = process.argv.slice(2);
 if (!base || !out || !process.env.PW_DIR) throw new Error("Usage: PW_DIR=... store-screenshots.mjs <url> <out dir>");
 const { chromium } = createRequire(join(process.env.PW_DIR, "noop.js"))("playwright");
 const cfg = JSON.parse(await readFile(new URL("../../app-shell/www/config.json", import.meta.url), "utf8"));
+// A site app (own-apps.js) is the business's website inside the app: its pictures are those pages, as a phone shows them.
+if (cfg.site_url) {
+  const origin = new URL(cfg.site_url).origin;
+  const pages = (cfg.site_screens?.length ? cfg.site_screens : [new URL(cfg.site_url).pathname]).map((p) => origin + p);
+  await mkdir(out, { recursive: true });
+  const browser = await chromium.launch();
+  let shots = 0;
+  for (const [prefix, viewport] of [["ios", { width: 430, height: 932 }], ["android", { width: 360, height: 640 }]]) {
+    const context = await browser.newContext({ viewport, deviceScaleFactor: 3, isMobile: true, hasTouch: true });
+    const page = await context.newPage();
+    for (const [i, url] of pages.entries()) {
+      await page.goto(url, { waitUntil: "networkidle", timeout: 60000 }).catch(() => page.goto(url, { waitUntil: "load" }));
+      await page.waitForTimeout(1200);
+      await page.screenshot({ path: join(out, `${prefix}-${i + 1}.png`) });
+      shots++;
+    }
+    await context.close();
+  }
+  await browser.close();
+  console.log(`Screenshots: ${shots}`);
+  process.exit(0);
+}
 const content = await (await fetch(`${cfg.api_base}/content`)).json();
 if (!content.ok) throw new Error("The app's content didn't load");
 const rewards = Boolean(content.loyalty?.enabled);

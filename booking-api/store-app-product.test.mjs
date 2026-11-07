@@ -207,6 +207,7 @@ test("owner's own apps: made once by the tick at no charge, owner keys, no buyer
   const nino = f.row(`SELECT s.*, g.data_json FROM store_apps s JOIN guest_apps g ON g.project_id = s.project_id WHERE s.bundle_id = 'com.menumade.ninobattaglia'`);
   assert.equal(JSON.parse(nino.data_json).business_type, 'shop');
   assert.equal(scope.storeScope(nino), 'owner', "his own apps use his keys");
+  const mm = f.row(`SELECT id FROM store_apps WHERE bundle_id = 'com.menumade.menumade'`);
 
   // Content approved: no buyer email; the worker registers the App ID and adds the Firebase Android app, then emails the owner.
   f.sql(`INSERT INTO assets (id, business_id, customer_id, project_id, asset_type, storage_provider, storage_key, original_filename, mime_type, size_bytes, checksum, status, uploaded_at) VALUES ('a9', ?, ?, ?, 'DELIVERABLE', 'R2', 'k', 'build.json', 'application/json', 1, 'x', 'VALID', 'x')`, nino.business_id, nino.customer_id, nino.project_id);
@@ -229,7 +230,7 @@ test("owner's own apps: made once by the tick at no charge, owner keys, no buyer
     if (u.endsWith('/bundleIds')) return Response.json({ data: { id: 'BID1' } }, { status: 201 });
     if (u.endsWith('/bundleIdCapabilities')) return Response.json({}, { status: 201 });
     if (u.includes('/androidApps?')) return Response.json({ apps: firebaseApps });
-    if (u.endsWith('/androidApps') && init.method === 'POST') { firebaseApps = [{ appId: '1:2:android:3', packageName: JSON.parse(init.body).packageName }]; return Response.json({ name: 'operations/x' }); }
+    if (u.endsWith('/androidApps') && init.method === 'POST') { firebaseApps = [...firebaseApps, { appId: `1:2:android:${firebaseApps.length}`, packageName: JSON.parse(init.body).packageName }]; return Response.json({ name: 'operations/x' }); }
     if (u.endsWith('/config')) { const cfg = { project_info: { project_id: 'menu-made-apps' }, client: [sample.client[0], { client_info: { android_client_info: { package_name: 'com.menumade.ninobattaglia' } } }] }; return Response.json({ configFileContents: btoa(JSON.stringify(cfg)) }); }
     return new Response('unexpected', { status: 500 });
   };
@@ -241,12 +242,14 @@ test("owner's own apps: made once by the tick at no charge, owner keys, no buyer
     assert.equal(after1.status, 'WAITING_OWNER_SETUP', 'straight to the owner: no buyer step');
     assert.match(after1.note, /Apple done; Firebase not done \(Android app added in Firebase/);
     assert.ok(calls.includes('POST https://api.appstoreconnect.apple.com/v1/bundleIds') && calls.includes('POST https://api.appstoreconnect.apple.com/v1/bundleIdCapabilities'));
-    assert.equal(emails.length, 1);
-    assert.deepEqual(emails[0].to, ['info@menu-made.com']);
-    assert.match(emails[0].subject, /Your own Mobile App: store setup for Nino Battaglia/);
-    assert.match(emails[0].html, /Already done for you: the Apple App ID/);
-    assert.match(emails[0].html, /New App/); assert.match(emails[0].html, /Create app/); assert.match(emails[0].html, /firebase-adminsdk-fbsvc/);
-    assert.doesNotMatch(emails[0].html, /D-U-N-S|invite/i, 'no buyer account steps');
+    // Both are site apps (the whole website in the app), so neither waits for app screens to be approved.
+    assert.equal(emails.length, 2);
+    const ninoMail = emails.find((e) => /Nino Battaglia/.test(e.subject));
+    assert.deepEqual(ninoMail.to, ['info@menu-made.com']);
+    assert.match(ninoMail.subject, /Your own Mobile App: store setup for Nino Battaglia/);
+    assert.match(ninoMail.html, /Already done for you: the Apple App ID/);
+    assert.match(ninoMail.html, /New App/); assert.match(ninoMail.html, /Create app/); assert.match(ninoMail.html, /firebase-adminsdk-fbsvc/);
+    assert.doesNotMatch(ninoMail.html, /D-U-N-S|invite|Guest App/i, 'no buyer account steps');
     // Done is refused until google-services.json names the app.
     const ownerToken = await signLinkToken(f.env, { kind: flow.OWNER_KIND, id: nino.id, ttlDays: 30 });
     const press = () => { const fd = new FormData(); fd.set('t', ownerToken); return call(f, `https://menu-made.com/api/store-app/${nino.id}/done`, { method: 'POST', body: fd }); };
@@ -260,6 +263,13 @@ test("owner's own apps: made once by the tick at no charge, owner keys, no buyer
     assert.deepEqual(merged.packages, ['com.menumade.samplecafe', 'com.menumade.ninobattaglia']);
     await press();
     assert.equal(f.row(`SELECT status FROM store_apps WHERE id = ?`, nino.id).status, 'READY_TO_BUILD');
+    // A site app: the build config carries the website and its three screenshot pages.
+    const { buildConfigFor } = await import('./src/store-app/store-build.js');
+    f.DB.raw.exec(read('0027_store_app_listings.sql'));
+    f.DB.raw.exec(read('0029_store_app_live_version.sql'));
+    const cfg = await buildConfigFor(f.env, { ...nino, status: 'READY_TO_BUILD' });
+    assert.equal(cfg.body.config.site_url, 'https://ninobattaglia.com/shop.html');
+    assert.deepEqual(cfg.body.config.site_screens, ['/shop.html', '/shirts/skull-wave.html', '/']);
   } finally {
     globalThis.fetch = async (url, init) => {
       if (String(url).startsWith('https://api.resend.com/')) { const body = JSON.parse(init.body); emails.push(body); return Response.json({ id: `em_${emails.length}` }); }

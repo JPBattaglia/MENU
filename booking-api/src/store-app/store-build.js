@@ -77,6 +77,8 @@ async function appRow(env, storeApp) {
   try { data = JSON.parse(row?.data_json || "{}"); } catch { data = {}; }
   return { row, data };
 }
+const siteUrlOf = (data) => (/^https:\/\/[a-z0-9.-]+\.[a-z]{2,}(\/\S*)?$/i.test(String(data.site_url || "")) ? String(data.site_url) : "");
+const siteScreensOf = (data) => (Array.isArray(data.site_screens) ? data.site_screens : []).filter((p) => /^\/[A-Za-z0-9._\/-]*$/.test(String(p))).slice(0, 3);
 const appNameOf = (data) => String(data.app_name || "").trim().slice(0, 30);
 
 // The build config answer for one store app (the self-test calls this directly). -> { status, body }
@@ -94,7 +96,9 @@ async function buildConfigFor(env, storeApp, packageId = storeApp.bundle_id) {
       app_name: appNameOf(data),
       brand_color: brandOf(data),
       api_base: `${appUrl({ ...env, SITE_WILDCARD: "1" }, row.slug)}api`,
-      version: nextVersion(await liveVersionOf(env, storeApp.id))
+      version: nextVersion(await liveVersionOf(env, storeApp.id)),
+      // A site app (own-apps.js) opens this website inside the app; its store screenshots are these pages.
+      ...(siteUrlOf(data) ? { site_url: siteUrlOf(data), site_screens: siteScreensOf(data) } : {})
     },
     icon_svg: draw(0.14),
     android_foreground_svg: draw(0.24),
@@ -284,4 +288,4 @@ async function handleRebuild(request, env, id) {
   return simplePage(200, "Queued", "<p>The build starts within 5 minutes. You'll get an email only if something needs a look.</p>");
 }
 
-export { BUILD_AUDIENCE, BUILD_WORKFLOW, REBUILD_KIND, YEARLY_MS, advanceStoreBuilds, scheduleYearlyRebuilds, buildConfigFor, liveVersionOf, nextVersion, rebuildLink, recordBuildResult, buildTarget, handleBuildConfig, handleBuildResult, handleRebuild };
+export { siteUrlOf, BUILD_AUDIENCE, BUILD_WORKFLOW, REBUILD_KIND, YEARLY_MS, advanceStoreBuilds, scheduleYearlyRebuilds, buildConfigFor, liveVersionOf, nextVersion, rebuildLink, recordBuildResult, buildTarget, handleBuildConfig, handleBuildResult, handleRebuild };

@@ -177,6 +177,11 @@ async function emailOwnerOwnApp(env, storeApp, reminder, prep) {
   });
 }
 
+async function isSiteApp(env, projectId) {
+  const row = await env.DB.prepare(`SELECT json_extract(data_json, '$.site_url') AS site FROM guest_apps WHERE project_id = ?`).bind(projectId).first();
+  return /^https:\/\//.test(String(row?.site || ""));
+}
+
 async function appApproved(env, projectId) {
   return Boolean(await env.DB.prepare(`SELECT 1 AS ok FROM deliverables WHERE project_id = ? AND deliverable_type = 'APP_BUILD' AND status = 'FINAL' AND customer_visible = 1 LIMIT 1`).bind(projectId).first());
 }
@@ -192,7 +197,8 @@ async function advanceStoreApps(env, now = Date.now(), { only = null } = {}) {
   for (const row of rows) {
     const since = row.last_email_at ? now - Date.parse(row.last_email_at) : Infinity;
     if (row.status === "WAITING_APP" && Number(row.own_app) === 1) {
-      if (!(await appApproved(env, row.project_id))) continue;
+      // A site app shows the business's own website, so there are no app screens to approve.
+      if (!(await isSiteApp(env, row.project_id)) && !(await appApproved(env, row.project_id))) continue;
       const { appName } = await appInfo(env, row);
       const prep = await ownAppPrep(env, row, appName);
       const sent = await emailOwnerOwnApp(env, { ...row, reminders: 0 }, false, prep).catch(() => ({ ok: false }));

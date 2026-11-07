@@ -29,6 +29,9 @@ const OWN_APPS = [
       app_name: "MENU-MADE",
       short_name: "MENU-MADE",
       business_type: "services",
+      // The app is the whole website (owner decision Nov 6: "Whole site in an app"); menu below is only a fallback.
+      site_url: "https://menu-made.com/",
+      site_screens: ["/", "/plans.html", "/online-menu.html"],
       menu: [
         "# Plans",
         "Starter | Menu Care, Review Replies and Accessibility Monitoring | $79/mo",
@@ -70,6 +73,8 @@ const OWN_APPS = [
       app_name: "Nino Battaglia",
       short_name: "Nino's Ts",
       business_type: "shop",
+      site_url: "https://ninobattaglia.com/shop.html",
+      site_screens: ["/shop.html", "/shirts/skull-wave.html", "/"],
       // Nino's own designs only (no third-party names in a store listing). Prices from the shop: $25, 2XL $27.
       menu: [
         "# Nino's Picks",
