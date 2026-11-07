@@ -1,6 +1,7 @@
 import { handleAdminQueue } from "./admin/queue.js";
 import { handlePreviewCreate, handlePreviewView, handlePreviewHandoff, handleRepLink } from "./marketing/public-preview.js";
 import { handleSiteForm } from "./producers/site-files/site-form.js";
+import { handleDomainLookup } from "./producers/website/registrar.js";
 import { handleWebsitePreviewCreate, handleWebsitePreviewView, handleWebsitePreviewHandoff, handleWebsitePreviewCustomize, handleWebsitePreviewImage, handleProspectSiteDemo } from "./marketing/website-preview.js";
 import { handleOrderCancel } from "./account/cancel.js";
 import { handleBuyerRevision } from "./approvals/buyer-revision.js";
@@ -142,6 +143,8 @@ var worker_default = {
     // Free Website Package previews (owner, Nov 5, 2026).
     const siteForm = url.pathname.match(/^\/api\/site-form\/([A-Za-z0-9._%-]{20,1200})$/);
     if (siteForm) return handleSiteForm(request, env, siteForm[1]);
+    // Domain purchase at checkout (owner, Nov 7, 2026): search and live check through Cloudflare Registrar.
+    if (url.pathname === "/api/domains" && request.method === "GET") return handleDomainLookup(request, env);
     if (url.pathname === "/api/website-preview/create" && (request.method === "POST" || request.method === "OPTIONS")) return handleWebsitePreviewCreate(request, env);
     const ownSite = url.pathname.match(/^\/api\/website-preview\/customize\/([a-f0-9]{36})$/);
     if (ownSite && request.method === "POST") return handleWebsitePreviewCustomize(request, env, ownSite[1]);
