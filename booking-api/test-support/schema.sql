@@ -606,3 +606,13 @@ CREATE TABLE IF NOT EXISTS website_previews (
 CREATE INDEX IF NOT EXISTS website_previews_email ON website_previews (email, created_at DESC);
 CREATE INDEX IF NOT EXISTS website_previews_created ON website_previews (created_at);
 ALTER TABLE prospect_demos ADD COLUMN kind TEXT NOT NULL DEFAULT 'menu';
+
+-- 0042 (Nov 6, 2026)
+CREATE TABLE IF NOT EXISTS site_form_messages (
+  id TEXT PRIMARY KEY,
+  project_id TEXT NOT NULL,
+  ip_hash TEXT NOT NULL,
+  created_at TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_site_form_messages_project ON site_form_messages (project_id, created_at);
+CREATE INDEX IF NOT EXISTS idx_site_form_messages_ip ON site_form_messages (ip_hash, created_at);

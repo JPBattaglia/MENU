@@ -28,12 +28,12 @@ function library(index = INDEX) {
 test('the menu picks the category; a weak side match (iced tea at a burger place) does not take the second photo', () => {
   const pizza = { name: "Tony's Pizza", offerings: 'Margherita pizza | $15\nPepperoni | $17\nChianti by the glass | $12\nCabernet | $14\nPinot noir | $13\nIced tea | $3' };
   assert.deepEqual(moodCategories(pizza).slice(0, 2), ['pizza', 'wine']);
-  assert.deepEqual(pickMood(INDEX, pizza).map((e) => e.cat), ['pizza', 'wine'], 'a real wine list earns the second photo');
+  assert.deepEqual(pickMood(INDEX, pizza).map((e) => e.cat), ['pizza', 'wine', 'pizza'], 'a real wine list earns the second photo');
   const burgers = { name: 'Big Al', offerings: 'Cheeseburger | $12\nFries | $5\nMilkshake | $6\nIced tea | $3' };
-  assert.deepEqual(pickMood(INDEX, burgers).map((e) => e.cat), ['burgers', 'burgers']);
+  assert.deepEqual(pickMood(INDEX, burgers).map((e) => e.cat), ['burgers', 'burgers', 'burgers']);
   const plain = { name: 'Golden Gate Grill', offerings: 'Chicken plate | $14\nRice bowl | $11' };
-  assert.deepEqual(pickMood(INDEX, plain).map((e) => e.cat), ['restaurant', 'restaurant'], 'no match: general restaurant photos');
-  assert.equal(new Set(pickMood(INDEX, burgers).map((e) => e.file)).size, 2, 'two different photos');
+  assert.deepEqual(pickMood(INDEX, plain).map((e) => e.cat), ['restaurant', 'restaurant', 'restaurant'], 'no match: general restaurant photos');
+  assert.equal(new Set(pickMood(INDEX, burgers).map((e) => e.file)).size, 3, 'three different photos');
   assert.deepEqual(pickMood(INDEX, burgers), pickMood(INDEX, { ...burgers }), 'the same business gets the same photos');
   assert.equal(moodCategories({ name: 'Granola Bar Cafe', offerings: 'Latte | $5\nGranola bar | $4' })[0], 'coffee', '"granola bar" is not a cocktail bar');
   // Only CC0 / public domain files, with safe names.
@@ -44,7 +44,7 @@ test('photos are copied beside the preview and marked sample; services and failu
   const env = { ASSETS: createR2() };
   const { fetcher } = library();
   const photos = await addMoodPhotos(env, 'tok', { name: 'Big Al', kind: 'restaurant', offerings: 'Cheeseburger, fries' }, { fetcher });
-  assert.deepEqual(photos.map((p) => p.path), ['img/mood-1.jpg', 'img/mood-2.jpg']);
+  assert.deepEqual(photos.map((p) => p.path), ['img/mood-1.jpg', 'img/mood-2.jpg', 'img/mood-3.jpg']);
   assert.ok(photos.every((p) => p.sample && /^burgers-\d\.jpg$/.test(p.mood)));
   assert.ok(await env.ASSETS.get('website-previews/tok/img/mood-1.jpg'));
   assert.deepEqual(await addMoodPhotos(env, 'tok', { name: 'Fixit', kind: 'services', offerings: 'Repairs' }, { fetcher }), []);
@@ -78,7 +78,7 @@ test('a preview with no photos shows sample mood photos; the buyer\'s own replac
   const out = await (await call('/api/website-preview/create', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ request_id: id, email: 'owner@pizza.example', business: 'Sample Pizza', phone: '(415) 555-0100' }) })).json();
   assert.ok(out.ok, JSON.stringify(out));
   const data = JSON.parse(await (await env.ASSETS.get(`website-previews/${out.token}/data.json`)).text());
-  assert.deepEqual(data.site.photos.map((p) => [p.path, p.sample, p.mood.split('-')[0]]), [['img/mood-1.jpg', true, 'pizza'], ['img/mood-2.jpg', true, 'pizza']]);
+  assert.deepEqual(data.site.photos.map((p) => [p.path, p.sample, p.mood.split('-')[0]]), [['img/mood-1.jpg', true, 'pizza'], ['img/mood-2.jpg', true, 'pizza'], ['img/mood-3.jpg', true, 'pizza']]);
   const page = await (await call(`/api/website-preview/view/${out.token}/d/trattoria/index.html`)).text();
   assert.ok(page.includes('img/mood-1.jpg'), 'the hero uses the mood photo');
   assert.ok(page.includes('Sample photos: add your own in Make it yours.'));

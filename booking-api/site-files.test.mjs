@@ -183,3 +183,61 @@ test('self-test SITE_FILES_RUN passes through the real steps and frees its addre
   assert.equal(st.status, 'PASSED', st.error);
   assert.equal(f.row(`SELECT COUNT(*) AS n FROM website_sites WHERE slug LIKE 'site-files-self-test%'`).n, 0, 'address freed');
 });
+
+test('contact form: the zip posts to Menu-made, which emails the buyer; honeypot, bad input and limits are handled', async () => {
+  const f = setup({ hosted: true });
+  await runOrder(f);
+  const zipRow = f.row(`SELECT a.storage_key FROM deliverables d JOIN assets a ON a.id = d.asset_id WHERE d.deliverable_type = 'SITE_ZIP'`);
+  const entries = readZip(new Uint8Array(await (await f.ASSETS.get(zipRow.storage_key)).arrayBuffer()));
+  const contact = new TextDecoder().decode(entries.find((e) => e.name.endsWith('contact.html')).data);
+  const action = contact.match(/<form class="cform" method="post" action="([^"]+)"/)?.[1];
+  assert.ok(action && action.startsWith('https://menu-made.com/api/site-form/'), 'the zip form posts to Menu-made');
+  assert.doesNotMatch(contact, /disabled|data-preview/, 'a bought site\'s form is switched on');
+  assert.match(new TextDecoder().decode(entries.find((e) => e.name.endsWith('README.txt')).data), /The contact form/);
+  const live = await api.default.fetch(new Request('https://menu-made.com/api/site/oliva-kitchen/contact.html'), f.env, f.ctx);
+  assert.match(live.headers.get('Content-Security-Policy'), /form-action https:\/\/menu-made\.com/);
+  assert.ok((await live.text()).includes(action.replace(/&/g, '&amp;')), 'the hosted site has the same working form');
+
+  const path = new URL(action.replace(/&amp;/g, '&')).pathname;
+  const post = (fields, ip = '203.0.113.9') => withFetch(f.fetch, () => api.default.fetch(new Request(`https://menu-made.com${path}`, { method: 'POST', headers: { 'CF-Connecting-IP': ip, Referer: 'https://oliva-kitchen.menu-made.com/contact.html' }, body: new URLSearchParams(fields) }), f.env, f.ctx));
+  const before = f.emails.length;
+  const ok = await post({ name: 'Maria', email: 'maria@guest.example', phone: '', message: 'Do you take bookings for 8 on Friday?' });
+  assert.equal(ok.status, 200);
+  const okPage = await ok.text();
+  assert.match(okPage, /on its way to Oliva Kitchen/); assert.match(okPage, /href="https:\/\/oliva-kitchen\.menu-made\.com\/contact\.html"/);
+  const msg = f.emails.at(-1);
+  assert.equal(f.emails.length, before + 1);
+  assert.deepEqual(msg.to, ['owner@oliva.example']); assert.equal(msg.reply_to, 'maria@guest.example');
+  assert.match(msg.subject, /New message from your website: Maria/); assert.match(msg.html, /bookings for 8 on Friday/);
+  // Honeypot: looks sent, nothing is.
+  assert.equal((await post({ name: 'Bot', email: 'b@x.example', message: 'buy now', website: 'http://spam.example' })).status, 200);
+  assert.equal(f.emails.length, before + 1);
+  // Missing pieces.
+  assert.equal((await post({ name: '', email: 'a@b.example', message: 'hi there' })).status, 400);
+  assert.equal((await post({ name: 'Al', email: '', phone: '', message: 'hi there' })).status, 400);
+  assert.equal((await post({ name: 'Al', email: 'not-an-email', message: 'hi there' })).status, 400);
+  // Five an hour from one network.
+  for (let i = 0; i < 4; i++) assert.equal((await post({ name: `N${i}`, phone: '415 555 0100', message: 'hello' })).status, 200);
+  assert.equal((await post({ name: 'Six', phone: '415 555 0100', message: 'hello' })).status, 429);
+  assert.equal((await post({ name: 'Other', phone: '415 555 0100', message: 'hello' }, '198.51.100.7')).status, 200, 'another network still can');
+  // A forged or tampered token is refused.
+  assert.equal((await withFetch(f.fetch, () => api.default.fetch(new Request(`${path.slice(0, -4)}AAAA`.replace(/^/, 'https://menu-made.com'), { method: 'POST', body: new URLSearchParams({ name: 'x', phone: '1', message: 'hi' }) }), f.env, f.ctx))).status, 404);
+});
+
+test('preview: the contact form is shown but switched off; inner pages get a photo band, the logo goes in the footer', () => {
+  const site = { ...SITE, logo: { path: 'img/logo.png' }, photos: [1, 2, 3, 4].map((n) => ({ path: `img/photo-${n}.jpg`, alt: '' })) };
+  for (const d of DESIGNS) {
+    const files = buildDesignSite(site, COPY, d.key);
+    assert.match(files['contact.html'], /<fieldset disabled>/, d.key);
+    assert.match(files['contact.html'], /the form sends to your email once your site is live/, d.key);
+    assert.doesNotMatch(files['index.html'], /class="cform"/, `${d.key}: the form is on the Contact page only`);
+    for (const [page, img] of [['menu.html', 'photo-3'], ['about.html', 'photo-4'], ['contact.html', 'photo-2']]) assert.match(files[page], new RegExp(`class="page-band[^"]*"[^>]*><img class="pb-img" src="img/${img}\\.jpg"`), `${d.key} ${page}`);
+    assert.match(files['about.html'], /class="gallery"><img src="img\/photo-3\.jpg"/, `${d.key}: the buyer's other photos on About`);
+    assert.match(files['menu.html'], /<footer[^>]*><img class="foot-logo" src="img\/logo\.png"/, d.key);
+  }
+  // Trattoria's header is only the navigation, so its band carries the logo and name; the others' headers already do.
+  assert.match(buildDesignSite(site, COPY, 'trattoria')['menu.html'], /class="pb-logo"[^>]*><p class="pb-name">Oliva Kitchen/);
+  assert.doesNotMatch(buildDesignSite(site, COPY, 'bistro')['menu.html'], /pb-name/);
+  // No photos and the header shows the name: no band at all.
+  assert.doesNotMatch(buildDesignSite(SITE, COPY, 'bistro')['menu.html'], /page-band/);
+});

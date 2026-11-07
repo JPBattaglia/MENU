@@ -6,7 +6,7 @@
 // the hosted site carry them like any other photo.
 
 const LIBRARY = "https://menu-made.com/assets/mood/";
-const COUNT = 2;   // the designs show photos[0] (hero) and photos[1] (about)
+const COUNT = 3;   // photos[0] hero, [1] about, [2] the Menu page band (each inner page shows one)
 
 // Menu words -> category. Order breaks ties (more specific first).
 const WORDS = {
@@ -80,7 +80,7 @@ function pickMood(index, site, cuisine = "") {
   const at = (cat, k) => { const list = byCat.get(cat); return list[(seed + k) % list.length]; };
   const top = scores[0];
   const runner = scores.slice(1).find((s) => s.score >= 2 && top && s.score * 2 >= top.score);
-  const order = [[cats[0], 0], ...(runner ? [[runner.cat, 0]] : []), [cats[0], 1], ...cats.slice(1).map((c) => [c, 0])];
+  const order = [[cats[0], 0], ...(runner ? [[runner.cat, 0]] : []), [cats[0], 1], [cats[0], 2], ...cats.slice(1).map((c) => [c, 0])];
   const picked = [];
   for (const [cat, k] of order) {
     if (picked.length >= COUNT) break;
