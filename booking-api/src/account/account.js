@@ -65,7 +65,7 @@ async function findBuyer(env, email) {
 async function handleSignIn(request, env) {
   const body = await request.json().catch(() => ({}));
   const email = normalizeEmail(body?.email);
-  const answer = privateJson({ ok: true, message: "If that email has bought from Menu-Made, a sign-in link is on its way. It works once, for 20 minutes." });
+  const answer = privateJson({ ok: true, message: "Check your email. If it has a purchase, there's a sign-in link (it works once, for 20 minutes). If it only has a free preview, there's a link to your preview." });
   if (!email || !looksLikeEmail(email) || email.length > 150) {
     return privateJson({ ok: false, error: "Enter the email address you used at checkout." }, 400);
   }
@@ -84,28 +84,48 @@ async function handleSignIn(request, env) {
   return sent.ok ? answer : privateJson({ ok: false, error: "We couldn't send the email just now. Please try again in a minute." }, 502);
 }
 
-// No usable link: the row only counts the note for the hourly limit (customer_id '' matches no customer).
+// No purchases under this email (owner, Nov 6, 2026): say that an account is made only with a purchase, and send
+// them straight to their free preview when they have one (it goes to their inbox, so the page still reveals nothing).
+// The row only counts the note for the hourly limit (customer_id '' matches no customer, so it can't sign anyone in).
+async function latestPreviews(env, email, now) {
+  const t = new Date(now).toISOString();
+  const site = await env.DB.prepare(`SELECT token, business FROM website_previews WHERE email = ? AND status = 'READY' AND expires_at > ? ORDER BY created_at DESC LIMIT 1`).bind(email, t).first().catch(() => null);
+  const menu = await env.DB.prepare(`SELECT token, business FROM menu_previews WHERE email = ? AND status = 'READY' AND expires_at > ? ORDER BY created_at DESC LIMIT 1`).bind(email, t).first().catch(() => null);
+  return { site, menu };
+}
+
 async function sendNoAccountNote(env, email) {
   const now = nowIso();
   await env.DB.prepare(`INSERT INTO account_sign_ins (id, customer_id, email, created_at, expires_at, used_at) VALUES (?, '', ?, ?, ?, ?)`)
     .bind(crypto.randomUUID(), email, now, now, now).run();
   const base = publicBaseUrl(env);
+  const { site, menu } = await latestPreviews(env, email, Date.now());
+  const buttons = [
+    ...(site ? [{ label: "See your website preview", url: `${base}/api/website-preview/view/${site.token}/d/trattoria/index.html`, primary: true }] : []),
+    ...(menu ? [{ label: "See your menu preview", url: `${base}/api/menu-preview/view/${menu.token}`, primary: !site }] : []),
+    { label: site || menu ? "Sign in with another email" : "Try another email", url: `${base}/account.html`, primary: !site && !menu },
+    ...(site || menu ? [] : [{ label: "See plans", url: `${base}/plans.html` }])
+  ];
+  const preview = site || menu
+    ? `You don't need an account to see your free preview${site?.business || menu?.business ? ` for ${escapeHtml(site?.business || menu?.business)}` : ""}: it's one tap below. When you choose your site and check out, your account is made for you.`
+    : "If you bought with a different email address, sign in with that one.";
   return sendTransactionalEmail(env, {
     to: email,
-    subject: "Signing in to Menu-Made",
+    subject: site || menu ? "Your Menu-Made preview" : "Signing in to Menu-Made",
     html: brandedEmailHtml({
-      preheader: "We don't have a purchase under this email address.",
+      preheader: "Accounts are made when you buy something.",
       eyebrow: "Your account",
-      heading: "No purchases under this email",
+      heading: "Your account starts with your first purchase",
       paragraphs: [
-        `Someone asked to sign in to Menu-Made with ${escapeHtml(email)}, but we don't have a purchase under this address. Your account opens with the email you used at checkout.`,
-        "A free preview doesn't need an account: its link is in the email we sent with it. If you didn't ask to sign in, you can ignore this email."
+        `Someone asked to sign in to Menu-Made with ${escapeHtml(email)}. We make an account only when something is bought, and there isn't a purchase under this address yet.`,
+        preview,
+        "If you didn't ask to sign in, you can ignore this email."
       ],
-      buttons: [{ label: "Try another email", url: `${base}/account.html`, primary: true }, { label: "See plans", url: `${base}/plans.html` }]
+      buttons
     }),
-    text: `We don't have a Menu-Made purchase under ${email}. Your account opens with the email you used at checkout: ${base}/account.html\nA free preview doesn't need an account: its link is in the email we sent with it.`,
+    text: `We make a Menu-Made account only when something is bought, and there isn't a purchase under ${email} yet.\n${buttons.map((b) => `${b.label}: ${b.url}`).join("\n")}`,
     purpose: "ACCOUNT_SIGN_IN",
-    templateKey: "account_no_purchase_v1"
+    templateKey: "account_no_purchase_v2"
   });
 }
 
