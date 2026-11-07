@@ -35,6 +35,7 @@
     rr.closest('.mm-pick').classList.toggle('is-covered', gpc.checked);
     $('[data-note="REVIEW_REPLIES"]').hidden = !gpc.checked;
     const site = box('WEBSITE_PACKAGE'), care = box('WEBSITE_CARE');
+    if (!site || !care) return;
     const otherMonthly = boxes().some(b => b.dataset.kind === 'month' && b.checked && b !== care && !b.disabled);
     if (site.checked && otherMonthly && !care.checked && changed !== care) care.checked = true;
     if (site.checked && otherMonthly && changed === care && !care.checked) site.checked = false;

@@ -11,6 +11,15 @@ if (TEST_CHECKOUT) document.addEventListener('DOMContentLoaded', () => {
   document.body.prepend(note);
 });
 
+// Your Website (Nov 6, 2026): websites start in the site generator, where the buyer picks one of 9 designs.
+// Old "Website Package" and Conversion Fix links go there; test mode still opens the old package for existing orders.
+{
+  const q = new URLSearchParams(location.search);
+  if (!TEST_CHECKOUT && /^(website|conversion|conversion_fix|CONVERSION_FIX|WEBSITE_PACKAGE)$/.test(q.get('service') || '') && !q.get('wpreview')) {
+    location.replace('website-design.html#try-free');
+  }
+}
+
 const Catalog = window.MenuMadeCatalog;
 const $ = id => document.getElementById(id);
 const MENU = 'ONLINE_MENU_QR';
@@ -421,6 +430,8 @@ async function checkout() {
 }
 
 document.querySelectorAll('.js-add').forEach(button => button.addEventListener('click', () => {
+  // Your Website needs a design picked in the generator first.
+  if (button.closest('.service-card').dataset.code === 'SITE_FILES' && !siteChoice) { location.href = 'website-design.html#try-free'; return; }
   if (add(button.closest('.service-card').dataset.code)) showDetails();
 }));
 els.items.addEventListener('click', event => {

@@ -75,7 +75,7 @@ test('an upload becomes a watermarked, unindexed website preview with its own pa
   assert.equal(home.status, 200);
   assert.equal(home.headers.get('X-Robots-Tag'), 'noindex, nofollow');
   const html = await home.text();
-  for (const words of ['Sample Pizza', 'PREVIEW%20%C2%B7%20NOT%20LIVE', '@media print', 'Make it live: $499', 'service=website&amp;wpreview=', 'href="menu.html"', 'tel:']) assert.ok(html.includes(words), words);
+  for (const words of ['Sample Pizza', 'PREVIEW%20%C2%B7%20NOT%20LIVE', '@media print', 'See it in 9 designs', '$299', 'href="menu.html"', 'tel:']) assert.ok(html.includes(words), words);
   const menu = await (await f.get(new URL(out.url).pathname.replace('d/trattoria/index.html', 'menu.html'))).text();
   assert.match(menu, /Margherita/); assert.match(menu, /\$15/);
   assert.equal((await f.get(new URL(out.url).pathname.replace('d/trattoria/index.html', 'secret.txt'))).status, 404, 'only page files are served');

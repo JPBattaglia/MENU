@@ -54,7 +54,7 @@ async function page(route = '', { catalogFails = false } = {}) {
   const sent = [], documents = [], tracking = [], cartSection = element();
   let failing = false;
   const [query = '', hash = ''] = route.split('#');
-  const location = { search: query, hash: hash ? '#' + hash : '', href: 'https://menu-made.com/contact.html' + route, hostname: 'menu-made.com' };
+  const location = { search: query, hash: hash ? '#' + hash : '', href: 'https://menu-made.com/contact.html' + route, hostname: 'menu-made.com', replace(url) { this.replaced = url; } };
   let interval = 'month'; const renders = [];
   const offers = new Map(OFFERS.map(o => [o.code, o]));
   const money = c => '$' + (c / 100).toLocaleString('en-US', { minimumFractionDigits: c % 100 ? 2 : 0 });
@@ -88,7 +88,7 @@ async function page(route = '', { catalogFails = false } = {}) {
   await new Promise(r => setTimeout(r, 0));
   const state = () => JSON.parse(vm.runInNewContext('JSON.stringify({ plan: order.plan, once: [...order.once] })', context));
   const fill = () => { for (const [id, v] of Object.entries({ lead_name: 'Test Buyer', lead_business: 'Test Cafe', lead_email: 'test@example.com', conversionUrl: 'https://example.com', conversionGoal: 'More reservations', googleMode: 'existing' })) get(id).value = v; get('scopeConfirm').checked = true; };
-  return { get, state, fill, sent, documents, tracking, buttons, cards, setInterval: Catalog.setInterval, fail() { failing = true; }, recover() { failing = false; } };
+  return { location, get, state, fill, sent, documents, tracking, buttons, cards, setInterval: Catalog.setInterval, fail() { failing = true; }, recover() { failing = false; } };
 }
 
 test('an empty Start page charges nothing and sends nothing', async () => {
@@ -135,18 +135,17 @@ test('Guest App brings its setup, and removing the plan removes the setup', asyn
   assert.deepEqual(p.state(), { plan: null, once: [] });
 });
 
-test('Website Package alone starts Website Care on a trial; with a plan lacking Website Care it is refused', async () => {
-  const p = await page('?service=website');
-  assert.equal(p.get('cartTotal').textContent, '$499.00');
-  assert.match(p.get('recurringTotal').textContent, /Website Care free for 3 months, then \$49\/mo/);
-  await p.buttons.get('BUNDLE_STARTER').fire('click');
-  assert.equal(p.get('orderProblem').hidden, false);
-  assert.equal(p.get('checkoutBtn').disabled, true);
-  const q = await page('?plan=WEBSITE_CARE');
-  await q.buttons.get('WEBSITE_PACKAGE').fire('click');
-  assert.deepEqual(q.state(), { plan: null, once: ['WEBSITE_PACKAGE'] });
-  await q.buttons.get('WEBSITE_CARE').fire('click');
-  assert.deepEqual(q.state(), { plan: null, once: ['WEBSITE_PACKAGE'] });
+test('websites start in the site generator: old Website Package links and Your Website without a design go there', async () => {
+  for (const service of ['website', 'conversion', 'conversion_fix']) {
+    const p = await page('?service=' + service);
+    assert.equal(p.location.replaced, 'website-design.html#try-free', service);
+  }
+  const t = await page('?service=website&checkout=test');
+  assert.equal(t.location.replaced, undefined);
+  const p = await page('');
+  await p.buttons.get('SITE_FILES').fire('click');
+  assert.equal(p.location.href, 'website-design.html#try-free');
+  assert.deepEqual(p.state(), { plan: null, once: [] });
 });
 
 test('an offer that is not on sale cannot be bought live, but can in test mode', async () => {
@@ -213,7 +212,7 @@ test('briefs are validated before payment', async () => {
 });
 
 test('old service links still work', async () => {
-  for (const [service, code] of [['menu', 'ONLINE_MENU_QR'], ['conversion', 'WEBSITE_PACKAGE'], ['conversion_fix', 'WEBSITE_PACKAGE'], ['google', 'GOOGLE_VISIBILITY'], ['accessibility', 'ACCESSIBILITY_MONITORING'], ['app', 'GUEST_APP'], ['__proto__', null]]) {
+  for (const [service, code] of [['menu', 'ONLINE_MENU_QR'], ['google', 'GOOGLE_VISIBILITY'], ['accessibility', 'ACCESSIBILITY_MONITORING'], ['app', 'GUEST_APP'], ['__proto__', null]]) {
     const p = await page('?service=' + service);
     const s = p.state();
     assert.equal(s.plan === code || s.once.includes(code) || (code === null && !s.plan && !s.once.length), true, service);

@@ -1,10 +1,10 @@
 // Free Website Package preview (owner, Nov 5, 2026): like the free menu preview, a business sees its own phone-friendly
-// website before paying $499. Built with the paid product's own builder (producers/website/build.js) and copy writer,
+// website before paying ($299 since Nov 6, 2026: the generator shows 9 designs and "Choose this site" opens checkout). Built with the paid product's own builder (producers/website/build.js) and copy writer,
 // from what we can read, never invented: their menu (uploaded, or the menu file on their site), their current website's
 // text, or their public listing (prospects with no website). It can't stand in for the product: every page carries a
 // "Preview, not live" watermark and a bar, it can't be printed, it's noindex, and it ends (public: PREVIEW_HOURS or
-// MAX_OPENS opens; prospect emails: PROSPECT_DAYS). "Make it live" opens Website Package checkout with the business and
-// email filled in; after payment the intake form starts filled in from the preview (prefillFromPreview).
+// MAX_OPENS opens; prospect emails: PROSPECT_DAYS). "Choose this site" opens Your Website checkout with the business and
+// email filled in and the chosen design attached (site_choice).
 //
 //   POST /api/website-preview/create   { request_id, email, business, website?, phone?, address?, hours?, rep?, tracking? }
 //                                      request_id = the menu upload made a moment earlier through /api/inquiry
@@ -36,7 +36,6 @@ const REP_PER_DAY = 40;
 const UPLOAD_MAX_AGE_SECONDS = 2 * 3600;
 const HANDOFF_DAYS = 14;
 const SITE = "https://menu-made.com";
-const PRICE = "$499";
 const MENU_TYPES = new Set(["application/pdf", "image/png", "image/jpeg", "image/webp"]);
 const SCANNER = /bot|crawl|spider|slurp|preview|scanner|proofpoint|mimecast|barracuda|safelinks|urldefense|headless|python|curl|wget|java\/|go-http|facebookexternalhit|slackbot|whatsapp|discord|skypeuripreview|outlook-ios-linkpreview/i;
 const PAGE = /^(index|menu|services|about|gallery|contact)\.html$|^d\/[a-z]+(\/(index|menu|about|contact))?\.html$/;
@@ -46,7 +45,6 @@ const json = (data, status = 200) => Response.json(data, { status, headers: { "C
 const cleanText = (value, max) => String(value || "").replace(/[\r\x00]/g, "").trim().slice(0, max);
 const oneLine = (value, max) => cleanText(value, max).replace(/\n/g, " ");
 const hoursFromNow = (hours, now) => new Date(now + hours * 3600000).toISOString();
-const startUrl = (token) => `${SITE}/contact.html?service=website&wpreview=${token}`;
 const viewUrl = (token) => `${SITE}/api/website-preview/view/${token}/d/${DESIGNS[0].key}/index.html`;
 const designUrl = (token, key) => `${SITE}/api/website-preview/view/${token}/d/${key}/index.html`;
 const chooseUrl = (token, key) => `${SITE}/contact.html?service=sitefiles&wpreview=${token}&design=${key}`;
@@ -116,8 +114,8 @@ async function factsFromWebsite(env, url, scope, deps = {}) {
 function wrapPage(html, token, { prospect = false } = {}) {
   const mark = encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" width="260" height="160"><text x="130" y="90" text-anchor="middle" transform="rotate(-24 130 80)" font-family="system-ui,sans-serif" font-size="22" font-weight="700" fill="#071f2c" fill-opacity=".13">PREVIEW · NOT LIVE</text></svg>`);
   const bar = `<aside class="mm-preview" role="note" aria-label="About this preview">
-  <p><strong>${prospect ? "A private preview made for you by Menu-made." : "Your free website preview."}</strong> It isn't live and ends ${prospect ? `in ${PROSPECT_DAYS} days` : `in ${PREVIEW_HOURS / 24} days`}. Live, it gets your own web address, your photos and your colours.</p>
-  <a href="${escapeHtml(startUrl(token))}">Make it live: ${PRICE}</a>
+  <p><strong>${prospect ? "A private preview made for you by Menu-made." : "Your free website preview."}</strong> It isn't live and ends ${prospect ? `in ${PROSPECT_DAYS} days` : `in ${PREVIEW_HOURS / 24} days`}. Pick the design you like: ${SITE_FILES_PRICE} for the whole site, or we host it.</p>
+  <a href="${escapeHtml(viewUrl(token))}">See it in 9 designs</a>
 </aside>`;
   const style = `<style>
   body { padding-bottom: 150px; }
@@ -226,7 +224,7 @@ async function handleWebsitePreviewCreate(request, env, { now = Date.now(), deps
       .bind(email, new Date(now - EMAIL_DAYS * 86400000).toISOString()).first();
     if (existing?.status === "BUILDING") return json({ ok: false, error: "Your website preview is still being made. Give it a minute." }, 409);
     if (existing?.status === "READY" && existing.expires_at > t) return json({ ok: true, url: viewUrl(existing.token), token: existing.token, reused: true });
-    if (existing?.status === "READY") return json({ ok: false, used: true, error: "You've already had a free website preview with this email. Start your order and we'll build the real thing.", start: startUrl(existing.token) }, 409);
+    if (existing?.status === "READY") return json({ ok: false, used: true, error: "You've already had a free website preview with this email. Open the link in our email to pick your design.", start: viewUrl(existing.token) }, 409);
     if (await count(env, `SELECT COUNT(*) AS n FROM website_previews WHERE ip_hash = ? AND created_at > ?`, upload.ip_hash || "", dayAgo) >= PER_NETWORK_DAY) return json({ ok: false, error: "This connection has made its free previews for today. Please try again tomorrow." }, 429);
     if (await count(env, `SELECT COUNT(*) AS n FROM website_previews WHERE source = 'public' AND created_at > ?`, dayAgo) >= PER_DAY) return json({ ok: false, error: "We've made all of today's free website previews. Please try again tomorrow, or start your order now." }, 429);
   }
@@ -273,17 +271,17 @@ async function handleWebsitePreviewCreate(request, env, { now = Date.now(), deps
     subject: "Your free website preview",
     html: brandedEmailHtml({
       preheader: "See your business as a phone-friendly website.",
-      eyebrow: "WEBSITE PACKAGE",
+      eyebrow: "YOUR WEBSITE",
       heading: `Here's ${business} as a website`,
       paragraphs: [
         `Open it on your phone: <a href="${escapeHtml(url)}">see your website preview</a>. It's only a preview and ends in ${PREVIEW_HOURS / 24} days.`,
-        `Like it? <a href="${escapeHtml(startUrl(token))}">Make it live for ${PRICE}</a>: up to 5 pages on your own web address, with your photos, your colours and 3 months of updates. Your details carry over, so checkout takes a minute.`
+        `Tap <strong>Generate site</strong> to see it in the next of 9 designs. When one feels right, tap <strong>Choose this site</strong>: ${SITE_FILES_PRICE} for the whole site as files you own, or add Website Care and we host it for you.`
       ]
     }),
-    text: `Your website preview: ${url}\nIt ends in ${PREVIEW_HOURS / 24} days.\nMake it live (${PRICE}): ${startUrl(token)}`,
+    text: `Your website preview: ${url}\nIt ends in ${PREVIEW_HOURS / 24} days.\nTap Generate site to see the next of 9 designs, then Choose this site (${SITE_FILES_PRICE}) on the one you want.`,
     idempotencyKey: `website-preview/${token}`, purpose: "WEBSITE_PREVIEW", templateKey: "website_preview_v1"
   }).catch((error) => console.error("Website preview email failed:", error instanceof Error ? error.message : String(error)));
-  return json({ ok: true, url, token, seconds, pages: built.pages, ...(rep ? { start: startUrl(token) } : {}) });
+  return json({ ok: true, url, token, seconds, pages: built.pages, ...(rep ? { start: url } : {}) });
 }
 
 async function plainGone(status, title, body) {
@@ -301,7 +299,7 @@ async function handleWebsitePreviewView(request, env, token, page, { now = Date.
   const agent = request.headers.get("User-Agent") || "";
   const counted = request.method === "GET" && agent && !SCANNER.test(agent) && (page === "index.html" || page.startsWith("d/"));
   if (counted && row.source !== "prospect" && Number(row.open_count || 0) >= MAX_OPENS) {
-    return plainGone(410, "This preview has ended", `It's been opened ${MAX_OPENS} times, which is the limit for a free preview. <a href="${escapeHtml(startUrl(token))}">Make it live</a> to keep it.`);
+    return plainGone(410, "This preview has ended", `It's been opened ${MAX_OPENS} times, which is the limit for a free preview. <a href="https://menu-made.com/website-design.html#try-free">Start a new one</a> or reply to our email and we’ll help.`);
   }
   const object = await env.ASSETS.get(`website-previews/${token}/${page}`);
   if (!object) return gone();

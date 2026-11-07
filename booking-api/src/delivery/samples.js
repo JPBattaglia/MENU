@@ -106,7 +106,7 @@ async function proxied(request, env, kind, path) {
   if (!/^(text\/|application\/(json|manifest\+json|javascript))/i.test(type)) return response;
   let body = scrub(await response.text(), [live.name, live.short_name && live.short_name !== live.name ? live.short_name : null]);
   if (/^text\/html/i.test(type) && /<body[^>]*>/i.test(body)) {
-    body = body.replace(/<body[^>]*>/i, (m) => m + banner(kind === "website" ? "Website Package" : "Guest App"));
+    body = body.replace(/<body[^>]*>/i, (m) => m + banner(kind === "website" ? "Your Website" : "Guest App"));
   }
   const out = new Headers(response.headers);
   out.set("X-Robots-Tag", "noindex");
