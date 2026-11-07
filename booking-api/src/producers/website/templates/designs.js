@@ -258,37 +258,46 @@ footer{padding:24px clamp(24px,6vw,80px);font:500 13px Montserrat,sans-serif;col
   }
 };
 
-// 9. Mono: black and white, an oversized type grid, the menu as a table, one bold accent block.
-const mono = {
-  key: "mono", label: "Mono", blurb: "Black and white, oversized type, menu as a grid", defaultBrand: "#ff4f1f",
-  fonts: "family=Space+Grotesk:wght@400;500;700&family=IBM+Plex+Mono:wght@400;500",
+// 9. Taproom: a bar. Deep green and brass, a crest hero with the hours right under it, the menu as a tap board
+// (each section a board with rows), and a "Tonight" strip. Slab type.
+const taproom = {
+  key: "taproom", label: "Taproom", blurb: "A bar: crest sign, tap-board menu, hours up front", defaultBrand: "#c9a227",
+  fonts: "family=Alfa+Slab+One&family=Source+Sans+3:wght@400;600;700",
   render(d, brandIn) {
-    const b = brandOr(brandIn, this.defaultBrand), bg = "#ffffff", ink = "#000000", on = inkOn(b);
-    const css = `body{background:${bg};color:${ink};font:17px/1.6 'Space Grotesk',system-ui,sans-serif}
-header.top{display:grid;grid-template-columns:1fr auto;border-bottom:2px solid ${ink}}.top .brand{padding:16px 20px;font:700 20px 'Space Grotesk',sans-serif;color:${ink};text-decoration:none;display:flex;gap:10px;align-items:center}.top .logo{width:30px;height:30px;object-fit:contain}
-.top nav{display:flex}.top nav a{border-left:2px solid ${ink};padding:16px 22px;color:${ink};text-decoration:none;font:500 14px 'IBM Plex Mono',monospace;text-transform:uppercase}.top nav a:hover{background:${ink};color:#fff}
-.hero{display:grid;grid-template-columns:2fr 1fr;border-bottom:2px solid ${ink}}.hero h1{font:700 clamp(56px,11vw,168px)/.9 'Space Grotesk',sans-serif;letter-spacing:-.04em;margin:0;padding:clamp(24px,4vw,48px) 20px;border-right:2px solid ${ink}}
-.hero .side{display:flex;flex-direction:column}.hero .side p{margin:0;padding:24px 20px;border-bottom:2px solid ${ink};font-size:19px}.hero .accent{flex:1;background:${b};color:${on};padding:24px 20px;display:flex;flex-direction:column;justify-content:flex-end;gap:10px;min-height:180px}
-.hero .accent a{color:${on};font:500 15px 'IBM Plex Mono',monospace;text-transform:uppercase}
-.label{font:500 13px 'IBM Plex Mono',monospace;text-transform:uppercase;letter-spacing:.06em}
-main section{border-bottom:2px solid ${ink}}.sec-head{display:grid;grid-template-columns:1fr 2fr;border-bottom:2px solid ${ink}}.sec-head h2{font:700 clamp(36px,6vw,80px)/1 'Space Grotesk',sans-serif;letter-spacing:-.03em;margin:0;padding:24px 20px;border-right:2px solid ${ink}}.sec-head p{margin:0;padding:24px 20px;align-self:end}
-.mtable{display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr))}.mcell{border-right:2px solid ${ink};border-bottom:2px solid ${ink};padding:20px;margin:-2px -2px 0 0}.mcell h3{font:500 13px 'IBM Plex Mono',monospace;text-transform:uppercase;margin:0 0 10px;background:${ink};color:#fff;display:inline-block;padding:4px 8px}
-.mcell ul{margin:0;padding:0}.mcell .item{padding:10px 0;border-bottom:1px solid ${ink}33}.mcell .item-price{font-family:'IBM Plex Mono',monospace}
-.prose{padding:24px 20px;max-width:46em;font-size:20px}
-.visit{display:grid;grid-template-columns:1fr 1fr}.visit>div{padding:24px 20px}.visit>div+div{border-left:2px solid ${ink}}.hours{display:grid;grid-template-columns:auto 1fr;gap:6px 20px;font-family:'IBM Plex Mono',monospace;font-size:15px}.hours .wide{grid-column:1/3}.visit a{color:${ink}}
-footer{display:flex;justify-content:space-between;padding:18px 20px;font:500 13px 'IBM Plex Mono',monospace;text-transform:uppercase}
-@media(max-width:760px){.hero,.sec-head,.visit{grid-template-columns:1fr}.hero h1,.sec-head h2{border-right:0;border-bottom:2px solid ${ink}}.top nav{display:none}.visit>div+div{border-left:0;border-top:2px solid ${ink}}}`;
-    const body = `<header class="top"><a class="brand" href="#main">${logoImg(d, "logo", 30)}${esc(d.name)}</a><nav aria-label="Main">${nav(d)}</nav></header>
-<div class="hero" id="main"><h1>${esc(d.name)}</h1><div class="side"><p>${esc(d.tagline)}</p><div class="accent"><span class="label">${esc(d.intro).slice(0, 140)}</span>${d.sections.length ? `<a href="#menu">→ ${esc(d.menuLabel)}</a>` : ""}${d.order ? `<a href="${esc(d.order)}" rel="noopener">→ ${d.services ? "Book" : "Order online"}</a>` : ""}${d.phone ? `<a href="tel:${esc(d.tel)}">→ ${esc(d.phone)}</a>` : ""}</div></div></div>
-<main>${d.sections.length ? `<section id="menu"><div class="sec-head"><h2>${d.menuLabel}</h2><p class="label">${d.sections.length} section${d.sections.length > 1 ? "s" : ""} · ${d.sections.reduce((n, s) => n + s.items.length, 0)} items</p></div><div class="mtable">${sections(d, (s) => `<div class="mcell">${s.name ? `<h3>${esc(s.name)}</h3>` : ""}<ul>${s.items.map((x) => item(x)).join("")}</ul></div>`)}</div></section>` : ""}
-<section id="about"><div class="sec-head"><h2>About</h2><p class="label">${esc(d.name)}</p></div><div class="prose">${aboutHtml(d)}</div></section>
-<section id="visit"><div class="sec-head"><h2>${d.address ? "Visit" : "Contact"}</h2><p class="label">${esc(d.address || d.email || "")}</p></div><div class="visit">${d.hours.length || d.phone ? `<div><p class="label">Hours</p>${hoursList(d)}</div>` : ""}<div><p class="label">${d.address ? "Find us" : "Reach us"}</p>${contactLines(d)}</div></div></section></main>
-<footer><span>© ${year()} ${esc(d.name)}</span><a href="#main" style="color:inherit">Top ↑</a></footer>`;
-    return { css, body, theme: bg };
+    const b = brandOr(brandIn, this.defaultBrand), green = "#13261f", panel = "#1b3329", cream = "#f3ead6", brass = textOn(b, green, "#e6c45a"), on = inkOn(brass);
+    const today = d.hours.slice(0, 3);
+    const css = `body{background:${green};color:${cream};font:18px/1.65 'Source Sans 3',system-ui,sans-serif}
+header.top{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:14px clamp(16px,4vw,44px);border-bottom:3px double ${brass}66}
+.brand{display:flex;align-items:center;gap:10px;font:22px 'Alfa Slab One',Georgia,serif;color:${cream};text-decoration:none;letter-spacing:.02em}.brand .logo{width:40px;height:40px;object-fit:contain}
+header.top nav{display:flex;gap:22px}header.top nav a{color:${cream};text-decoration:none;font-weight:700;letter-spacing:.14em;text-transform:uppercase;font-size:14px}header.top nav a:hover{color:${brass}}
+.hero{position:relative;text-align:center;padding:clamp(48px,8vw,100px) 20px clamp(40px,6vw,70px);${d.photos[0] ? "overflow:hidden" : `background:radial-gradient(ellipse at 50% 0,${panel},${green} 70%)`}}
+.hero img.bg{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:.3}.hero .in{position:relative}
+.crest{display:inline-block;border:3px solid ${brass};outline:1px solid ${brass};outline-offset:6px;border-radius:24px;padding:clamp(22px,4vw,40px) clamp(24px,6vw,64px);background:${green}cc}
+.crest .logo{margin:0 auto 10px;width:80px;height:80px;object-fit:contain}.crest small{display:block;color:${brass};font-weight:700;letter-spacing:.3em;text-transform:uppercase;font-size:13px}
+.crest h1{font:clamp(44px,8vw,92px)/1 'Alfa Slab One',Georgia,serif;margin:12px 0;color:${cream};text-shadow:0 3px 0 #0007}.crest p{margin:0;font-size:20px;color:#d8cfbb}
+.hours-strip{display:flex;flex-wrap:wrap;justify-content:center;gap:10px 28px;margin:28px auto 0;max-width:900px}.hours-strip span{font-weight:700}.hours-strip b{color:${brass};margin-right:6px;text-transform:uppercase;letter-spacing:.1em;font-size:14px}
+.go{display:inline-block;margin:24px 6px 0;padding:14px 24px;border-radius:999px;text-decoration:none;font-weight:700;letter-spacing:.06em;text-transform:uppercase;font-size:15px;background:${brass};color:${on}}.go.out{background:transparent;color:${cream};box-shadow:inset 0 0 0 2px ${cream}}
+main{max-width:1120px;margin:0 auto;padding:0 20px}h2{font:clamp(36px,5.5vw,60px) 'Alfa Slab One',Georgia,serif;text-align:center;margin:80px 0 10px}.sub{text-align:center;color:${brass};letter-spacing:.24em;text-transform:uppercase;font-weight:700;font-size:14px;margin:0 0 34px}
+.boards{display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:22px}.board{background:${panel};border:2px solid ${brass}55;border-radius:14px;overflow:hidden}
+.board h3{margin:0;padding:14px 20px;font:22px 'Alfa Slab One',Georgia,serif;background:${brass};color:${on}}.board ul{margin:0;padding:6px 20px 14px}.board .item{padding:12px 0;border-bottom:1px solid ${cream}22}.board .item:last-child{border:0}.board .item-price{color:${brass};font-size:19px}.board .item-desc{color:#cfc6b1}
+.tonight{margin:70px 0 0;border-block:3px double ${brass}66;padding:22px;text-align:center;font:clamp(22px,3vw,30px) 'Alfa Slab One',serif}
+.about{max-width:720px;margin:0 auto;font-size:20px;text-align:center}
+.visit{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:22px;margin-bottom:70px}.visit>div{background:${panel};border:2px solid ${brass}55;border-radius:14px;padding:24px}.visit h3{font:22px 'Alfa Slab One',serif;color:${brass};margin:0 0 10px}.hours{display:grid;grid-template-columns:auto 1fr;gap:6px 20px}.hours .wide{grid-column:1/3}.visit a{color:${cream}}
+footer{text-align:center;padding:24px;border-top:3px double ${brass}66;color:#b9b09c;font-size:15px}
+@media(max-width:720px){header.top nav{display:none}}`;
+    const body = `<header class="top"><a class="brand" href="#main">${logoImg(d, "logo", 40)}${esc(d.name)}</a><nav aria-label="Main">${nav(d)}</nav></header>
+<div class="hero" id="main">${photo(d, 0, "bg")}<div class="in"><div class="crest">${logoImg(d, "logo", 80)}<small>${d.address ? esc(d.address.split(",").slice(-2, -1)[0] || "Est. here") : "Welcome in"}</small><h1>${esc(d.name)}</h1><p>${esc(d.tagline)}</p></div>
+${today.length ? `<p class="hours-strip">${today.map((h) => `<span>${h.day ? `<b>${esc(h.day)}</b>` : ""}${esc(h.time)}</span>`).join("")}</p>` : ""}<div>${menuBtn(d, "go")}${orderBtn(d, "go out")}${callBtn(d, "go out")}</div></div></div>
+<main>${d.sections.length ? `<section id="menu"><h2>${d.services ? "Services" : "On tap and on the menu"}</h2><p class="sub">${esc(d.name)}</p><div class="boards">${sections(d, (s) => `<div class="board">${s.name ? `<h3>${esc(s.name)}</h3>` : ""}<ul>${s.items.map((x) => item(x)).join("")}</ul></div>`)}</div></section>` : ""}
+${d.intro ? `<p class="tonight">${esc(d.intro)}</p>` : ""}
+<section id="about"><h2>The bar</h2><p class="sub">Our story</p><div class="about">${aboutHtml(d)}</div></section>
+<section id="visit"><h2>${d.address ? "Pull up a stool" : "Get in touch"}</h2><p class="sub">${d.address ? "Hours and directions" : "Contact"}</p><div class="visit">${d.hours.length || d.phone ? `<div><h3>Hours</h3>${hoursList(d)}</div>` : ""}<div><h3>${d.address ? "Find us" : "Reach us"}</h3>${contactLines(d)}</div></div></section></main>
+<footer>© ${year()} ${esc(d.name)} · Please drink responsibly</footer>`;
+    return { css, body, theme: green };
   }
 };
 
-const DESIGNS = [trattoria, bistro, nightMarket, farmhouse, fineDining, fresh, cafePop, coastal, mono];
+const DESIGNS = [trattoria, bistro, nightMarket, farmhouse, fineDining, fresh, cafePop, coastal, taproom];
 const DESIGN_KEYS = DESIGNS.map((x) => x.key);
 const designFor = (key) => DESIGNS.find((x) => x.key === key) || null;
 
