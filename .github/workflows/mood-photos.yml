@@ -1,0 +1,50 @@
+# Mood photos for the site generator (owner, Nov 6, 2026): CC0 / public-domain photos from Openverse (no API key),
+# shown in generated websites when the business gave no photos. Claude's workspace can't reach Openverse, so this
+# job does the fetching. On a mood-photos-* branch: with no assets/mood/picks.json it gathers candidates and commits
+# contact sheets (mood-candidates/) for review; with picks.json it publishes the chosen photos to assets/mood/ and
+# removes the candidates. Commits go back to the same branch (GITHUB_TOKEN pushes don't start this job again).
+name: Mood photos
+on:
+  push:
+    branches: ["mood-photos-*"]
+    paths: ["tools/mood-photos/**", "assets/mood/picks.json", ".github/workflows/mood-photos.yml"]
+  workflow_dispatch:
+    inputs:
+      only:
+        description: "Only these categories (comma separated, blank = all)"
+        required: false
+permissions:
+  contents: write
+concurrency:
+  group: mood-photos-${{ github.ref }}
+  cancel-in-progress: false
+jobs:
+  photos:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: ImageMagick
+        run: command -v montage || (sudo apt-get update -qq && sudo apt-get install -y -qq imagemagick)
+      - name: Gather or publish
+        env:
+          MOOD_ONLY: ${{ inputs.only }}
+        run: |
+          if [ -f assets/mood/picks.json ] && [ -f mood-candidates/candidates.json ]; then
+            node tools/mood-photos/publish.mjs
+          else
+            node tools/mood-photos/candidates.mjs
+          fi
+      - name: Commit back to the branch
+        if: startsWith(github.ref, 'refs/heads/mood-photos-')
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A mood-candidates assets/mood 2>/dev/null || true
+          git add -A
+          git diff --cached --quiet && { echo "Nothing to commit"; exit 0; }
+          git commit -m "Mood photos: $( [ -f assets/mood/index.json ] && echo publish || echo candidates ) [skip ci]"
+          git push

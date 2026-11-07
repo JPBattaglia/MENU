@@ -18,7 +18,7 @@ import { OWN_DAYS, ownLink } from "./own.js";
 
 const enc = new TextEncoder();
 
-function readme(name, design, hosted) {
+function readme(name, design, hosted, samples = false) {
   return [
     `${name}: your website`,
     "",
@@ -31,6 +31,7 @@ function readme(name, design, hosted) {
     "  contact.html   hours, address and phone",
     "  styles.css     the design",
     "  img/           your logo and photos (when you added them)",
+    ...(samples ? ["  img/mood-*.jpg sample photos we added so the site isn't bare. They're free-licence (CC0, public domain),", "                 so you may keep them, but your own photos look better: add them with the link in our email."] : []),
     "",
     "Putting it online yourself",
     "  Any web host works. Upload all the files to the top folder of your site (often called public_html or www).",
@@ -104,7 +105,7 @@ async function makeSiteFiles(env, context, meta, { replace = false } = {}) {
   const zip = createZip([
     ...Object.entries(files).map(([name, text]) => ({ name: `${folder}/${name}`, data: enc.encode(text) })),
     ...images.map((i) => ({ name: `${folder}/${i.path}`, data: i.bytes })),
-    { name: `${folder}/README.txt`, data: enc.encode(readme(site.name, design, hosted)) }
+    { name: `${folder}/README.txt`, data: enc.encode(readme(site.name, design, hosted, site.photos.some((p) => p.sample))) }
   ]);
   const supersede = (type) => env.DB.prepare(`UPDATE deliverables SET status = 'SUPERSEDED' WHERE project_id = ? AND deliverable_type = ? AND status != 'SUPERSEDED'`).bind(context.id, type).run();
   if (replace) await supersede("SITE_ZIP");
