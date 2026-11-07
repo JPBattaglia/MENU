@@ -12,6 +12,7 @@ import { runGoogleVisibilityProduceStep } from "./google-visibility/visibility-s
 import { runNinoDesignProduceStep } from "./nino-design/produce.js";
 import { runStaffMerchProduceStep } from "./staff-merch/produce.js";
 import { runStoreAppCareStep, runStoreAppSetupStep } from "../store-app/store-flow.js";
+import { runSiteFilesProduceStep } from "./site-files/files-step.js";
 
 const PRODUCERS = {
   MENU_CARE_V1: runMenuCareProduceStep,
@@ -31,7 +32,8 @@ const PRODUCERS = {
   NINO_LOGO_V1: runNinoDesignProduceStep,
   STAFF_MERCH_V1: runStaffMerchProduceStep,
   STORE_APP_SETUP_V1: runStoreAppSetupStep,
-  STORE_APP_CARE_V1: runStoreAppCareStep
+  STORE_APP_CARE_V1: runStoreAppCareStep,
+  SITE_FILES_V1: runSiteFilesProduceStep
 };
 
 async function runProduceStep(targetStep, env, deps = {}) {

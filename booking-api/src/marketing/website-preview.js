@@ -17,6 +17,7 @@ import { brandedEmailHtml, escapeHtml, sendTransactionalEmail } from "../lib/ema
 import { readMenuWithClaude } from "../producers/menu-qr/claude-reader.js";
 import { extractReadableText } from "../producers/menu-qr/inputs.js";
 import { buildSite } from "../producers/website/build.js";
+import { DESIGNS, buildDesignSite } from "../producers/website/templates/index.js";
 import { writeCopy } from "../producers/website/copy.js";
 import { generate } from "../ai/generate.js";
 import { pausedForSale } from "../lib/switches.js";
@@ -38,14 +39,17 @@ const SITE = "https://menu-made.com";
 const PRICE = "$499";
 const MENU_TYPES = new Set(["application/pdf", "image/png", "image/jpeg", "image/webp"]);
 const SCANNER = /bot|crawl|spider|slurp|preview|scanner|proofpoint|mimecast|barracuda|safelinks|urldefense|headless|python|curl|wget|java\/|go-http|facebookexternalhit|slackbot|whatsapp|discord|skypeuripreview|outlook-ios-linkpreview/i;
-const PAGE = /^(index|menu|services|about|gallery|contact)\.html$/;
+const PAGE = /^(index|menu|services|about|gallery|contact)\.html$|^d\/[a-z]+\.html$/;
+const SITE_FILES_PRICE = "$299";
 
 const json = (data, status = 200) => Response.json(data, { status, headers: { "Cache-Control": "no-store", "Access-Control-Allow-Origin": "*" } });
 const cleanText = (value, max) => String(value || "").replace(/[\r\x00]/g, "").trim().slice(0, max);
 const oneLine = (value, max) => cleanText(value, max).replace(/\n/g, " ");
 const hoursFromNow = (hours, now) => new Date(now + hours * 3600000).toISOString();
 const startUrl = (token) => `${SITE}/contact.html?service=website&wpreview=${token}`;
-const viewUrl = (token) => `${SITE}/api/website-preview/view/${token}/index.html`;
+const viewUrl = (token) => `${SITE}/api/website-preview/view/${token}/d/${DESIGNS[0].key}.html`;
+const designUrl = (token, key) => `${SITE}/api/website-preview/view/${token}/d/${key}.html`;
+const chooseUrl = (token, key) => `${SITE}/contact.html?service=sitefiles&wpreview=${token}&design=${key}`;
 
 function newToken() {
   const bytes = crypto.getRandomValues(new Uint8Array(18));
@@ -126,6 +130,29 @@ function wrapPage(html, token, { prospect = false } = {}) {
   return html.replace("</head>", () => `<meta name="robots" content="noindex,nofollow">\n${style}\n</head>`).replace(/<body([^>]*)>/, (match, attrs) => `<body${attrs}>\n${bar}`);
 }
 
+// The site generator (owner, Nov 6, 2026): the same business in each of the nine designs. "Generate site" goes to the
+// next design, "Choose this site" goes to checkout with that design. Same watermark, noindex and no-print rules.
+function wrapDesign(html, css, token, index, { prospect = false } = {}) {
+  const d = DESIGNS[index];
+  const next = DESIGNS[(index + 1) % DESIGNS.length];
+  const mark = encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" width="260" height="160"><text x="130" y="90" text-anchor="middle" transform="rotate(-24 130 80)" font-family="system-ui,sans-serif" font-size="22" font-weight="700" fill="#071f2c" fill-opacity=".13">PREVIEW · NOT LIVE</text></svg>`);
+  const bar = `<aside class="mm-gen" role="note" aria-label="Site generator">
+  <p><strong>Design ${index + 1} of ${DESIGNS.length}: ${escapeHtml(d.label)}</strong><span> · ${escapeHtml(d.blurb)}. ${prospect ? `A private preview made for you by Menu-made, ends in ${PROSPECT_DAYS} days.` : `Free preview, ends in ${PREVIEW_HOURS / 24} days.`}</span></p>
+  <a class="mm-gen-next" href="${escapeHtml(designUrl(token, next.key))}">Generate site</a>
+  <a class="mm-gen-pick" href="${escapeHtml(chooseUrl(token, d.key))}">Choose this site: ${SITE_FILES_PRICE}</a>
+</aside>`;
+  const style = `<style>${css}
+  body { padding-bottom: 170px; }
+  body::after { content: ""; position: fixed; inset: 0; z-index: 40; pointer-events: none; background-image: url("data:image/svg+xml,${mark}"); }
+  .mm-gen { position: fixed; left: 0; right: 0; bottom: 0; z-index: 41; display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 10px 14px; padding: 12px 16px calc(12px + env(safe-area-inset-bottom)); background: #071f2c; color: #e8f6f7; font: 14px/1.45 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; box-shadow: 0 -4px 18px rgba(0,0,0,.25); }
+  .mm-gen p { margin: 0; max-width: 520px; } .mm-gen a { flex: none; padding: 12px 18px; border-radius: 8px; font-weight: 700; text-decoration: none; font-size: 15px; }
+  .mm-gen-next { background: #ffffff1f; color: #fff; box-shadow: inset 0 0 0 2px #ffffff66; } .mm-gen-pick { background: #00a7b5; color: #fff; }
+  @media (max-width: 600px) { .mm-gen p span { display: none; } }
+  @media print { body > * { display: none !important; } body::before { content: "This is a preview from menu-made.com and can't be printed."; display: block; padding: 40px; font: 18px system-ui, sans-serif; } }
+</style>`;
+  return html.replace('<link rel="stylesheet" href="styles.css">', () => `<meta name="robots" content="noindex,nofollow">${style}`).replace(/<body([^>]*)>/, (match, attrs) => `<body${attrs}>\n${bar}`);
+}
+
 // Copy for when the AI copy fails its checks twice: plain, factual, nothing claimed.
 function fallbackCopy(site, place) {
   const where = place ? ` in ${place}` : "";
@@ -157,6 +184,12 @@ async function buildAndStore(env, token, business, facts, { scope, prospect = fa
   for (const [file, html] of Object.entries(pages)) {
     await env.ASSETS.put(`website-previews/${token}/${file}`, wrapPage(html, token, { prospect }), { httpMetadata: { contentType: "text/html; charset=utf-8" } });
   }
+  // The generator's nine designs, and what they were built from (the paid site is rebuilt from this after checkout).
+  for (const [i, design] of DESIGNS.entries()) {
+    const files = buildDesignSite(site, copy, design.key);
+    await env.ASSETS.put(`website-previews/${token}/d/${design.key}.html`, wrapDesign(files["index.html"], files["styles.css"], token, i, { prospect }), { httpMetadata: { contentType: "text/html; charset=utf-8" } });
+  }
+  await env.ASSETS.put(`website-previews/${token}/data.json`, JSON.stringify({ site, copy }), { httpMetadata: { contentType: "application/json" } });
   return { pages: Object.keys(pages).length, site };
 }
 
@@ -263,7 +296,7 @@ async function handleWebsitePreviewView(request, env, token, page, { now = Date.
   const row = await env.DB.prepare(`SELECT token, source, prospect_id, status, expires_at, open_count FROM website_previews WHERE token = ?`).bind(token).first();
   if (!row || row.status !== "READY" || row.expires_at <= new Date(now).toISOString()) return gone();
   const agent = request.headers.get("User-Agent") || "";
-  const counted = request.method === "GET" && agent && !SCANNER.test(agent) && page === "index.html";
+  const counted = request.method === "GET" && agent && !SCANNER.test(agent) && (page === "index.html" || page.startsWith("d/"));
   if (counted && row.source !== "prospect" && Number(row.open_count || 0) >= MAX_OPENS) {
     return plainGone(410, "This preview has ended", `It's been opened ${MAX_OPENS} times, which is the limit for a free preview. <a href="${escapeHtml(startUrl(token))}">Make it live</a> to keep it.`);
   }
@@ -340,4 +373,4 @@ async function prefillFromPreview(env, email) {
   return out;
 }
 
-export { handleWebsitePreviewCreate, handleWebsitePreviewView, handleWebsitePreviewHandoff, handleProspectSiteDemo, prefillFromPreview, offeringsFromMenu, wrapPage, fallbackCopy, PREVIEW_HOURS, PER_NETWORK_DAY };
+export { designUrl, chooseUrl, wrapDesign, handleWebsitePreviewCreate, handleWebsitePreviewView, handleWebsitePreviewHandoff, handleProspectSiteDemo, prefillFromPreview, offeringsFromMenu, wrapPage, fallbackCopy, PREVIEW_HOURS, PER_NETWORK_DAY };

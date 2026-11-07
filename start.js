@@ -20,7 +20,9 @@ const ALIASES = {
   menu: MENU, online_menu_qr: MENU, 'online-menu-qr': MENU,
   // Conversion Fix is folded into the Website Package (Nov 6, 2026): its old links open the Website Package.
   conversion: WEBSITE, conversion_fix: WEBSITE, CONVERSION_FIX: WEBSITE, google: 'GOOGLE_VISIBILITY',
-  accessibility: 'ACCESSIBILITY_MONITORING', website: WEBSITE, app: 'GUEST_APP'
+  accessibility: 'ACCESSIBILITY_MONITORING', website: WEBSITE, app: 'GUEST_APP',
+  // The site generator's "Choose this site" (Nov 6, 2026): the chosen design rides along as site_choice.
+  sitefiles: 'SITE_FILES'
 };
 const BRIEFS = {
   CONVERSION_FIX: { panel: 'conversionBrief', fields: ['conversionUrl', 'conversionGoal'], required: ['conversionUrl', 'conversionGoal'] },
@@ -404,7 +406,7 @@ async function checkout() {
     window.MenuMadeFunnel?.track('checkout_attempt');
     const response = await fetch((Catalog?.API || '') + (TEST_CHECKOUT ? '/api/create-checkout-test' : '/api/create-checkout'), {
       method: 'POST', signal: controller.signal, headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ items, interval: interval(), ...(quote ? { menu_pages: quote.pages } : {}), tracking: window.MenuMadeFunnel?.tracking(), customer })
+      body: JSON.stringify({ items, interval: interval(), ...(quote ? { menu_pages: quote.pages } : {}), ...(siteChoice && order.once.has('SITE_FILES') ? { site_choice: siteChoice } : {}), tracking: window.MenuMadeFunnel?.tracking(), customer })
     });
     const result = await response.json();
     if (!response.ok) { window.MenuMadeFunnel?.track('checkout_error'); showStatus(result?.error?.message || result?.error || 'Checkout error. Please refresh and try again.'); return; }
@@ -492,6 +494,8 @@ if (previewToken && /^[a-f0-9]{36}$/.test(previewToken)) {
 // "Make it live" from a free website preview (Nov 5, 2026): prefill the business and email. The intake form after
 // payment starts from what the preview was built from.
 const sitePreviewToken = params.get('wpreview');
+const siteDesign = params.get('design');
+const siteChoice = sitePreviewToken && /^[a-f0-9]{36}$/.test(sitePreviewToken) && /^[a-z]+$/.test(siteDesign || '') ? { token: sitePreviewToken, design: siteDesign } : null;
 if (sitePreviewToken && /^[a-f0-9]{36}$/.test(sitePreviewToken)) {
   fetch((Catalog?.API || '') + '/api/website-preview/handoff/' + sitePreviewToken).then(r => r.json()).then(data => {
     if (!data?.ok) return;

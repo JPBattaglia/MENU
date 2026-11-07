@@ -138,7 +138,7 @@ var worker_default = {
     if (cancelMatch && (request.method === "GET" || request.method === "POST")) return handleOrderCancel(request, env, cancelMatch[1].toLowerCase());
     // Free Website Package previews (owner, Nov 5, 2026).
     if (url.pathname === "/api/website-preview/create" && (request.method === "POST" || request.method === "OPTIONS")) return handleWebsitePreviewCreate(request, env);
-    const sitePreview = url.pathname.match(/^\/api\/website-preview\/(view|handoff)\/([a-f0-9]{36})(?:\/([a-z]+\.html))?$/);
+    const sitePreview = url.pathname.match(/^\/api\/website-preview\/(view|handoff)\/([a-f0-9]{36})(?:\/((?:d\/)?[a-z]+\.html))?$/);
     if (sitePreview && (request.method === "GET" || request.method === "HEAD")) {
       return sitePreview[1] === "view" ? handleWebsitePreviewView(request, env, sitePreview[2], sitePreview[3] || "index.html") : handleWebsitePreviewHandoff(env, sitePreview[2]);
     }

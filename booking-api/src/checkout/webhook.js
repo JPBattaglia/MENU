@@ -552,6 +552,17 @@ async function handleCheckoutCompleted(event, env) {
       console.error("Website intake start failed:", startError instanceof Error ? startError.message : String(startError));
     }
   }
+  // Your Website (site files): everything was chosen in the site generator, so production starts at once.
+  const siteFileProjects = await env.DB.prepare(`
+      SELECT id FROM projects WHERE order_id = ? AND workflow_key = 'SITE_FILES_V1' AND status = 'AWAITING_INPUTS'
+    `).bind(orderId).all();
+  for (const siteProject of siteFileProjects.results || []) {
+    try {
+      await refreshOnboardingState(siteProject.id, orderId, order.customer_id, "SITE_FILES_V1", env);
+    } catch (startError) {
+      console.error("Site files start failed:", startError instanceof Error ? startError.message : String(startError));
+    }
+  }
   const appProjects = await env.DB.prepare(`
       SELECT id FROM projects WHERE order_id = ? AND workflow_key IN ('GUEST_APP_SETUP_V1', 'STORE_APP_SETUP_V1') AND status = 'AWAITING_INPUTS'
     `).bind(orderId).all();
