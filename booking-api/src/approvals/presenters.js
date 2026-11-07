@@ -9,7 +9,7 @@ import { conversionOverrides } from "../producers/conversion/presenter.js";
 import { websiteCareOverrides } from "../producers/website-care/presenter.js";
 import { websiteOverrides } from "../producers/website/presenter.js";
 import { menuCareOverrides } from "../producers/menu-care/presenter.js";
-import { guestAppOverrides } from "../producers/guest-app/presenter.js";
+import { guestAppOverrides, mobileAppOverrides } from "../producers/guest-app/presenter.js";
 import { reviewRepliesOverrides } from "../producers/review-replies/deliver.js";
 import { googleCareOverrides } from "../producers/google-care/care-step.js";
 import { googleVisibilityOverrides } from "../producers/google-visibility/visibility-step.js";
@@ -107,7 +107,8 @@ function presenterFor(workflowKey) {
   if (workflowKey === "MENU_CARE_V1") return { ...genericPresenter, ...menuCareOverrides };
   if (workflowKey === "WEBSITE_CARE_V1") return { ...genericPresenter, ...websiteCareOverrides };
   if (workflowKey === "WEBSITE_PACKAGE_V1") return { ...genericPresenter, ...websiteOverrides };
-  if (workflowKey === "GUEST_APP_SETUP_V1" || workflowKey === "STORE_APP_SETUP_V1") return { ...genericPresenter, ...guestAppOverrides };
+  if (workflowKey === "GUEST_APP_SETUP_V1") return { ...genericPresenter, ...guestAppOverrides };
+  if (workflowKey === "STORE_APP_SETUP_V1") return { ...genericPresenter, ...mobileAppOverrides };
   if (workflowKey === "CONVERSION_FIX_V1") return { ...genericPresenter, ...conversionOverrides };
   if (workflowKey === "REVIEW_REPLIES_V1") return { ...genericPresenter, ...reviewRepliesOverrides };
   if (workflowKey === "GOOGLE_PROFILE_CARE_V1") return { ...genericPresenter, ...googleCareOverrides };

@@ -267,3 +267,15 @@ test("owner's own apps: made once by the tick at no charge, owner keys, no buyer
     };
   }
 });
+
+test('the Mobile App approval and delivery emails never call it a Guest App', async () => {
+  const { presenterFor } = await import('./src/approvals/presenters.js');
+  const p = presenterFor('STORE_APP_SETUP_V1');
+  const context = { id: 'p1', business_name: 'Nino Battaglia', customer_email: 'info@menu-made.com', first_name: 'JP', stripe_checkout_session_id: null };
+  const files = [{ deliverable_type: 'APP_BUILD', metadata_json: JSON.stringify({ app: { name: 'Nino Battaglia', slug: 'ninos-ts', has_logo: true } }) }];
+  const owner = await p.ownerEmail({ context, files, previews: [{ label: 'Preview the app screens', url: 'https://x' }], approveUrl: 'https://y' });
+  const buyer = await p.buyerEmail({ context, files, env: {} });
+  for (const text of [owner.subject, owner.html, owner.text, buyer.subject, buyer.html, buyer.text]) assert.doesNotMatch(text, /Guest App|home screen|QR/i);
+  assert.match(owner.subject, /Mobile App/);
+  assert.match(presenterFor('GUEST_APP_SETUP_V1').ownerLabel(context), /Guest App/, 'the Guest App product keeps its own wording');
+});

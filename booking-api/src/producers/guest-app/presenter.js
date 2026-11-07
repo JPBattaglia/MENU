@@ -75,4 +75,54 @@ const guestAppOverrides = {
   }
 };
 
-export { appPreviewUrl, guestAppOverrides };
+// The Mobile App (STORE_APP_SETUP_V1) builds the same content first, but it is NOT a Guest App: nothing here mentions
+// a Guest App, a QR code or adding to the home screen. Approving it only sets what the App Store / Google Play app
+// shows; the store steps (store-app/store-flow.js) follow on their own.
+const mobileAppOverrides = {
+  ...guestAppOverrides,
+  name: "MOBILE_APP",
+  ownerLabel(context) { return `${context.business_name || "A customer"} - Mobile App`; },
+  async previewLinks({ files, env }) {
+    const build = files.find((f) => f.deliverable_type === "APP_BUILD");
+    return build ? [{ label: "Preview the app screens", url: await appPreviewUrl(env, build.id, APPROVAL_TTL_DAYS) }] : [];
+  },
+  async ownerEmail({ context, files, previews, approveUrl }) {
+    const test = isTestOrder(context);
+    const business = context.business_name || "A customer";
+    const info = infoOf(files);
+    return {
+      subject: `${test ? "[TEST] " : ""}Approve ${business}'s Mobile App screens`,
+      templateKey: "owner_approval_mobile_app_v1",
+      html: brandedEmailHtml({
+        preheader: `The screens for ${business}'s App Store and Google Play app are ready.`,
+        eyebrow: test ? "TEST · MOBILE APP" : "MOBILE APP",
+        heading: `${business}'s Mobile App screens are ready to review`,
+        paragraphs: [
+          `This is what the App Store and Google Play app "${escapeHtml(info.name || business)}" will show${info.has_logo ? ", with its icon made from the logo" : ""}. Open the preview, then approve.`,
+          "After you approve, the store setup starts: you get one email with the App Store Connect and Google Play steps, then the builds run by themselves."
+        ],
+        buttons: [...previews, { label: "Review and approve", url: approveUrl, primary: true }],
+        footnote: "If something is off, choose request changes and say what to change."
+      }),
+      text: [`${business}'s Mobile App screens are ready for review.`, "", ...previews.map((p) => `${p.label}: ${p.url}`), `Review and approve: ${approveUrl}`].join("\n")
+    };
+  },
+  async buyerEmail({ context }) {
+    const business = context.business_name || "your business";
+    return {
+      recipient: context.customer_email,
+      subject: `${isTestOrder(context) ? "[TEST] " : ""}Your Mobile App screens are approved`,
+      templateKey: "delivery_mobile_app_content_v1",
+      html: brandedEmailHtml({
+        preheader: `Next for ${business}: the App Store and Google Play setup.`,
+        eyebrow: "MOBILE APP",
+        heading: `${business}'s app screens are approved`,
+        paragraphs: [`Hi ${escapeHtml(context.first_name || "there")}, the screens for your App Store and Google Play app are set. Next is the store setup: watch for one email with the steps.`],
+        footnote: "Questions? Reply to this email."
+      }),
+      text: `Hi ${context.first_name || "there"}, the screens for your App Store and Google Play app are set. Next is the store setup: watch for one email with the steps.`
+    };
+  }
+};
+
+export { appPreviewUrl, guestAppOverrides, mobileAppOverrides };
