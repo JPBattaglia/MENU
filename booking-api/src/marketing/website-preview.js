@@ -32,7 +32,7 @@ import { addMoodPhotos, hasSamplePhotos, ownPhotoCount } from "../producers/webs
 
 const PREVIEW_HOURS = 72;
 const PROSPECT_DAYS = 21;
-const MAX_OPENS = 40;            // a whole site is clicked through: more page views than a one-page menu
+const MAX_OPENS = 120;           // design home pages opened (Nov 6, 2026: every page used to count, and 40 ran out in ten minutes of clicking through)
 const PER_DAY = 20;              // each build is 1 to 3 Claude calls
 const PER_NETWORK_DAY = 2;
 const EMAIL_DAYS = 30;
@@ -346,8 +346,10 @@ async function handleWebsitePreviewView(request, env, token, page, { now = Date.
   const row = await env.DB.prepare(`SELECT token, source, prospect_id, status, expires_at, open_count FROM website_previews WHERE token = ?`).bind(token).first();
   if (!row || row.status !== "READY" || row.expires_at <= new Date(now).toISOString()) return gone();
   const agent = request.headers.get("User-Agent") || "";
-  const counted = request.method === "GET" && agent && !SCANNER.test(agent) && (page === "index.html" || page.startsWith("d/"));
-  if (counted && row.source !== "prospect" && Number(row.open_count || 0) >= MAX_OPENS) {
+  // Only a design's home page counts as an open (not its menu, about and contact pages); prospect and rep previews
+  // (shown by the owner on visits) have no cap.
+  const counted = request.method === "GET" && agent && !SCANNER.test(agent) && (page === "index.html" || /^d\/[a-z]+\/index\.html$/.test(page));
+  if (counted && row.source === "public" && Number(row.open_count || 0) >= MAX_OPENS) {
     return plainGone(410, "This preview has ended", `It's been opened ${MAX_OPENS} times, which is the limit for a free preview. <a href="https://menu-made.com/website-design.html#try-free">Start a new one</a> or reply to our email and we’ll help.`);
   }
   const object = await env.ASSETS.get(`website-previews/${token}/${page}`);
