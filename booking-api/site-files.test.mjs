@@ -63,8 +63,8 @@ function setup({ hosted }) {
 }
 async function withFetch(fake, fn) { const o = globalThis.fetch; globalThis.fetch = fake; try { return await fn(); } finally { globalThis.fetch = o; } }
 
-async function runOrder(f) {
-  await f.ASSETS.put(`website-previews/${TOKEN}/data.json`, JSON.stringify({ site: SITE, copy: COPY }));
+async function runOrder(f, site = SITE) {
+  await f.ASSETS.put(`website-previews/${TOKEN}/data.json`, JSON.stringify({ site, copy: COPY }));
   await withFetch(f.fetch, async () => {
     await refreshOnboardingState(f.PID, 'o1', 'cust', 'SITE_FILES_V1', f.env);
     for (let i = 0; i < 4; i++) { await api.runScheduledProduction(f.env); await Promise.all(f.pending); }
@@ -106,6 +106,22 @@ test('paid with Website Care: the same site also goes live at its own address', 
   assert.match(live.headers.get('Content-Security-Policy'), /fonts\.googleapis\.com/);
   const mail = f.emails.find((e) => /Your website is ready/.test(e.subject));
   assert.match(mail.html, /https:\/\/oliva-kitchen\.menu-made\.com\//);
+});
+
+test('the logo and photos added in the generator are in the zip and on the live site; a missing one is left out', async () => {
+  const f = setup({ hosted: true });
+  const PNG = new Uint8Array([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0, 0, 0, 13, 0x49, 0x48, 0x44, 0x52]);
+  await f.ASSETS.put(`website-previews/${TOKEN}/img/logo.png`, PNG);
+  await f.ASSETS.put(`website-previews/${TOKEN}/img/photo-1.png`, PNG);
+  await runOrder(f, { ...SITE, logo: { path: 'img/logo.png' }, photos: [{ path: 'img/photo-1.png', alt: 'Photo 1' }, { path: 'img/photo-2.jpg', alt: 'Photo 2' }] });
+  const zipRow = f.row(`SELECT a.storage_key FROM deliverables d JOIN assets a ON a.id = d.asset_id WHERE d.deliverable_type = 'SITE_ZIP'`);
+  const names = readZip(new Uint8Array(await (await f.ASSETS.get(zipRow.storage_key)).arrayBuffer())).map((e) => e.name);
+  assert.ok(names.includes('oliva-kitchen/img/logo.png') && names.includes('oliva-kitchen/img/photo-1.png'), names.join());
+  assert.ok(!names.some((n) => n.includes('photo-2')), 'the missing photo is left out');
+  const logo = await api.default.fetch(new Request('https://menu-made.com/api/site/oliva-kitchen/img/logo.png'), f.env, f.ctx);
+  assert.equal(logo.status, 200); assert.equal(logo.headers.get('Content-Type'), 'image/png');
+  const pages = await Promise.all(['', 'menu.html', 'about.html', 'contact.html'].map(async (p) => (await api.default.fetch(new Request(`https://menu-made.com/api/site/oliva-kitchen/${p}`), f.env, f.ctx)).text()));
+  assert.ok(pages.join('').includes('img/logo.png')); assert.ok(!pages.join('').includes('photo-2'));
 });
 
 test('a missing preview never sends the buyer anything; the owner is told', async () => {

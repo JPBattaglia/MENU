@@ -1,6 +1,6 @@
 import { handleAdminQueue } from "./admin/queue.js";
 import { handlePreviewCreate, handlePreviewView, handlePreviewHandoff, handleRepLink } from "./marketing/public-preview.js";
-import { handleWebsitePreviewCreate, handleWebsitePreviewView, handleWebsitePreviewHandoff, handleProspectSiteDemo } from "./marketing/website-preview.js";
+import { handleWebsitePreviewCreate, handleWebsitePreviewView, handleWebsitePreviewHandoff, handleWebsitePreviewCustomize, handleWebsitePreviewImage, handleProspectSiteDemo } from "./marketing/website-preview.js";
 import { handleOrderCancel } from "./account/cancel.js";
 import { handleBuyerRevision } from "./approvals/buyer-revision.js";
 import { handleApprovalRequest, handleBatchApprovalRequest } from "./approvals/approvals.js";
@@ -139,6 +139,10 @@ var worker_default = {
     if (cancelMatch && (request.method === "GET" || request.method === "POST")) return handleOrderCancel(request, env, cancelMatch[1].toLowerCase());
     // Free Website Package previews (owner, Nov 5, 2026).
     if (url.pathname === "/api/website-preview/create" && (request.method === "POST" || request.method === "OPTIONS")) return handleWebsitePreviewCreate(request, env);
+    const ownSite = url.pathname.match(/^\/api\/website-preview\/customize\/([a-f0-9]{36})$/);
+    if (ownSite && request.method === "POST") return handleWebsitePreviewCustomize(request, env, ownSite[1]);
+    const ownImage = url.pathname.match(/^\/api\/website-preview\/view\/([a-f0-9]{36})\/d\/[a-z]+\/img\/([a-z0-9-]+\.[a-z]+)$/);
+    if (ownImage && (request.method === "GET" || request.method === "HEAD")) return handleWebsitePreviewImage(env, ownImage[1], ownImage[2]);
     const sitePreview = url.pathname.match(/^\/api\/website-preview\/(view|handoff)\/([a-f0-9]{36})(?:\/((?:d\/[a-z]+\/|d\/)?[a-z]+\.html))?$/);
     if (sitePreview && (request.method === "GET" || request.method === "HEAD")) {
       return sitePreview[1] === "view" ? handleWebsitePreviewView(request, env, sitePreview[2], sitePreview[3] || "index.html") : handleWebsitePreviewHandoff(env, sitePreview[2]);

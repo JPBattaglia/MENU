@@ -29,6 +29,7 @@ function readme(name, design, hosted) {
     "  about.html     your story",
     "  contact.html   hours, address and phone",
     "  styles.css     the design",
+    "  img/           your logo and photos (when you added them)",
     "",
     "Putting it online yourself",
     "  Any web host works. Upload all the files to the top folder of your site (often called public_html or www).",
@@ -88,6 +89,20 @@ async function runSiteFilesProduceStep(targetStep, env) {
     return output;
   }
   const site = { ...data.site, name: data.site.name || context.business_name };
+  // The logo and photos added with "Make it yours" sit beside the preview; one that can't be read is left out.
+  const images = [];
+  const fetchImage = async (ref) => {
+    if (!ref?.path || !/^img\/[a-z0-9-]+\.(png|jpg|webp)$/.test(ref.path)) return false;
+    const object = await env.ASSETS.get(`website-previews/${meta.site_preview}/${ref.path}`);
+    if (!object) return false;
+    const bytes = new Uint8Array(await object.arrayBuffer());
+    images.push({ path: ref.path, bytes, mime: { png: "image/png", jpg: "image/jpeg", webp: "image/webp" }[ref.path.split(".").pop()] });
+    return true;
+  };
+  if (site.logo && !(await fetchImage(site.logo))) site.logo = null;
+  const photos = [];
+  for (const p of site.photos || []) if (await fetchImage(p)) photos.push(p);
+  site.photos = photos;
   const files = buildDesignSite(site, data.copy, design.key);
   const hosted = Boolean(await env.DB.prepare(`
       SELECT 1 AS ok FROM order_items WHERE order_id = ? AND json_extract(metadata_json, '$.plan_code') = 'WEBSITE_CARE' LIMIT 1
@@ -95,6 +110,7 @@ async function runSiteFilesProduceStep(targetStep, env) {
   const folder = (slugify(site.name) || "website").slice(0, 40);
   const zip = createZip([
     ...Object.entries(files).map(([name, text]) => ({ name: `${folder}/${name}`, data: enc.encode(text) })),
+    ...images.map((i) => ({ name: `${folder}/${i.path}`, data: i.bytes })),
     { name: `${folder}/README.txt`, data: enc.encode(readme(site.name, design, hosted)) }
   ]);
   const stored = await storeDeliverable(env, context, { type: "SITE_ZIP", filename: `${folder}-website.zip`, mime: "application/zip", bytes: zip, folder: "site-zip", metadata: { site_files: { design: design.key, preview: meta.site_preview } } });
@@ -102,13 +118,20 @@ async function runSiteFilesProduceStep(targetStep, env) {
   if (hosted) {
     const slug = await reserveSlug(env, context, site.name);
     const pages = Object.fromEntries(Object.keys(files).filter((f) => f.endsWith(".html")).map((f) => [f, inlined(files, f)]));
-    const build = { version: 1, slug, style: `generator:${design.key}`, built_at: nowIso(), pages, images: [], site, copy: data.copy };
-    const b = await storeDeliverable(env, context, { type: "SITE_BUILD", filename: `${slug}-site.json`, mime: "application/json", bytes: enc.encode(JSON.stringify(build)), folder: "site-build", metadata: { website: { slug, style: `generator:${design.key}`, pages: Object.keys(pages).length, images: 0 } } });
+    // The live server reads images from R2 by key, so they're copied out of the preview into the project's own storage.
+    const liveImages = [];
+    for (const i of images) {
+      const key = ["customers", context.customer_id, "projects", context.id, "site-images", i.path.slice(4)].join("/");
+      await env.ASSETS.put(key, i.bytes, { httpMetadata: { contentType: i.mime } });
+      liveImages.push({ path: i.path, storage_key: key, mime: i.mime, size: i.bytes.length });
+    }
+    const build = { version: 1, slug, style: `generator:${design.key}`, built_at: nowIso(), pages, images: liveImages, site, copy: data.copy };
+    const b = await storeDeliverable(env, context, { type: "SITE_BUILD", filename: `${slug}-site.json`, mime: "application/json", bytes: enc.encode(JSON.stringify(build)), folder: "site-build", metadata: { website: { slug, style: `generator:${design.key}`, pages: Object.keys(pages).length, images: liveImages.length } } });
     // Live at once: the buyer chose this exact design, so there is nothing more to approve.
     await env.DB.prepare(`UPDATE deliverables SET status = 'FINAL', customer_visible = 1, delivered_at = ? WHERE id = ?`).bind(nowIso(), b.deliverableId).run();
     live = `https://${slug}.menu-made.com/`;
   }
-  const output = { outcome: "PRODUCED", design: design.key, zip_deliverable: stored.deliverableId, hosted, ...(live ? { live_url: live } : {}) };
+  const output = { outcome: "PRODUCED", design: design.key, zip_deliverable: stored.deliverableId, hosted, images: images.length, ...(live ? { live_url: live } : {}) };
   await completeStep(targetStep, output, env);
   return output;
 }

@@ -18,6 +18,8 @@ import { readMenuWithClaude } from "../producers/menu-qr/claude-reader.js";
 import { extractReadableText } from "../producers/menu-qr/inputs.js";
 import { buildSite } from "../producers/website/build.js";
 import { DESIGNS, buildDesignSite } from "../producers/website/templates/index.js";
+import { sniffImage } from "../producers/website/intake.js";
+import { hexOk } from "../producers/website/styles.js";
 import { writeCopy } from "../producers/website/copy.js";
 import { generate } from "../ai/generate.js";
 import { pausedForSale } from "../lib/switches.js";
@@ -40,6 +42,12 @@ const MENU_TYPES = new Set(["application/pdf", "image/png", "image/jpeg", "image
 const SCANNER = /bot|crawl|spider|slurp|preview|scanner|proofpoint|mimecast|barracuda|safelinks|urldefense|headless|python|curl|wget|java\/|go-http|facebookexternalhit|slackbot|whatsapp|discord|skypeuripreview|outlook-ios-linkpreview/i;
 const PAGE = /^(index|menu|services|about|gallery|contact)\.html$|^d\/[a-z]+(\/(index|menu|about|contact))?\.html$/;
 const SITE_FILES_PRICE = "$299";
+// "Make it yours" (owner, Nov 6, 2026): a logo, up to MAX_PHOTOS photos and a brand colour, applied to all nine designs.
+const MAX_PHOTOS = 6;
+const MAX_OWN_IMAGE = 5 * 1024 * 1024;
+const MAX_CUSTOMIZE = 15;        // rebuilds per preview (no AI involved, just storage)
+const IMG = /^(logo|photo-[1-6])\.(png|jpg|webp)$/;
+const IMG_MIME = { png: "image/png", jpg: "image/jpeg", webp: "image/webp" };
 
 const json = (data, status = 200) => Response.json(data, { status, headers: { "Cache-Control": "no-store", "Access-Control-Allow-Origin": "*" } });
 const cleanText = (value, max) => String(value || "").replace(/[\r\x00]/g, "").trim().slice(0, max);
@@ -130,7 +138,22 @@ function wrapPage(html, token, { prospect = false } = {}) {
 
 // The site generator (owner, Nov 6, 2026): the same business in each of the nine designs. "Generate site" goes to the
 // next design, "Choose this site" goes to checkout with that design. Same watermark, noindex and no-print rules.
-function wrapDesign(html, css, token, index, { prospect = false } = {}) {
+function ownPanel(token, key, site = {}) {
+  const n = (site.photos || []).length, brand = hexOk(site.brand) ? String(site.brand).toLowerCase() : "";
+  const have = [site.logo ? "your logo" : "", n ? `${n} photo${n === 1 ? "" : "s"}` : "", brand ? "your colour" : ""].filter(Boolean);
+  return `<details class="mm-own"><summary>Make it yours</summary>
+  <form method="post" enctype="multipart/form-data" action="/api/website-preview/customize/${token}">
+  <input type="hidden" name="design" value="${escapeHtml(key)}">
+  <p class="mm-own-now">${have.length ? `Using ${escapeHtml(have.join(", "))}. New files replace them.` : "Add your logo, photos and colour. Every design updates."}</p>
+  <label>Logo <small>(PNG, JPG or WebP)</small><input type="file" name="logo" accept="image/png,image/jpeg,image/webp"></label>
+  <label>Photos <small>(up to ${MAX_PHOTOS}, 5 MB each)</small><input type="file" name="photos" accept="image/png,image/jpeg,image/webp" multiple></label>
+  <label class="mm-own-colour">Brand colour <input type="color" name="brand" value="${brand || "#00a7b5"}"></label>
+  <label class="mm-own-check"><input type="checkbox" name="use_brand" value="1"${brand ? " checked" : ""}> Use this colour</label>
+  <button type="submit">Update all 9 designs</button>
+  </form></details>`;
+}
+
+function wrapDesign(html, css, token, index, { prospect = false, site = null } = {}) {
   const d = DESIGNS[index];
   const next = DESIGNS[(index + 1) % DESIGNS.length];
   const mark = encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" width="260" height="160"><text x="130" y="90" text-anchor="middle" transform="rotate(-24 130 80)" font-family="system-ui,sans-serif" font-size="22" font-weight="700" fill="#071f2c" fill-opacity=".13">PREVIEW · NOT LIVE</text></svg>`);
@@ -138,6 +161,7 @@ function wrapDesign(html, css, token, index, { prospect = false } = {}) {
   <p><strong>Design ${index + 1} of ${DESIGNS.length}: ${escapeHtml(d.label)}</strong><span> · ${escapeHtml(d.blurb)}. ${prospect ? `A private preview made for you by Menu-made, ends in ${PROSPECT_DAYS} days.` : `Free preview, ends in ${PREVIEW_HOURS / 24} days.`}</span></p>
   <a class="mm-gen-next" href="${escapeHtml(designUrl(token, next.key))}">Generate site</a>
   <a class="mm-gen-pick" href="${escapeHtml(chooseUrl(token, d.key))}">Choose this site: ${SITE_FILES_PRICE}</a>
+  ${ownPanel(token, d.key, site || {})}
 </aside>`;
   const style = `<style>${css}
   body { padding-bottom: 170px; }
@@ -145,6 +169,11 @@ function wrapDesign(html, css, token, index, { prospect = false } = {}) {
   .mm-gen { position: fixed; left: 0; right: 0; bottom: 0; z-index: 41; display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 10px 14px; padding: 12px 16px calc(12px + env(safe-area-inset-bottom)); background: #071f2c; color: #e8f6f7; font: 14px/1.45 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; box-shadow: 0 -4px 18px rgba(0,0,0,.25); }
   .mm-gen p { margin: 0; max-width: 520px; } .mm-gen a { flex: none; padding: 12px 18px; border-radius: 8px; font-weight: 700; text-decoration: none; font-size: 15px; }
   .mm-gen-next { background: #ffffff1f; color: #fff; box-shadow: inset 0 0 0 2px #ffffff66; } .mm-gen-pick { background: #00a7b5; color: #fff; }
+  .mm-own { flex-basis: 100%; max-width: 560px; } .mm-own summary { cursor: pointer; text-align: center; font-weight: 700; color: #9eeef3; text-decoration: underline; padding: 4px; }
+  .mm-own form { display: grid; gap: 10px; margin-top: 8px; max-height: 55vh; overflow: auto; padding: 12px; border-radius: 8px; background: #ffffff12; }
+  .mm-own label { display: grid; gap: 4px; font-weight: 600; } .mm-own small { font-weight: 400; opacity: .8; } .mm-own input[type=file] { color: #e8f6f7; max-width: 100%; }
+  .mm-own .mm-own-colour, .mm-own .mm-own-check { display: flex; align-items: center; gap: 10px; } .mm-own input[type=color] { width: 52px; height: 36px; border: 0; padding: 0; background: none; }
+  .mm-own p { margin: 0; } .mm-own button { padding: 12px 18px; border: 0; border-radius: 8px; background: #00a7b5; color: #fff; font: 700 15px system-ui, sans-serif; cursor: pointer; }
   @media (max-width: 600px) { .mm-gen p span { display: none; } }
   @media print { body > * { display: none !important; } body::before { content: "This is a preview from menu-made.com and can't be printed."; display: block; padding: 40px; font: 18px system-ui, sans-serif; } }
 </style>`;
@@ -182,16 +211,20 @@ async function buildAndStore(env, token, business, facts, { scope, prospect = fa
   for (const [file, html] of Object.entries(pages)) {
     await env.ASSETS.put(`website-previews/${token}/${file}`, wrapPage(html, token, { prospect }), { httpMetadata: { contentType: "text/html; charset=utf-8" } });
   }
-  // The generator's nine designs, and what they were built from (the paid site is rebuilt from this after checkout).
+  await storeDesigns(env, token, site, copy, { prospect });
+  return { pages: Object.keys(pages).length, site };
+}
+
+// The generator's nine designs, and what they were built from (the paid site is rebuilt from this after checkout).
+async function storeDesigns(env, token, site, copy, { prospect = false, extra = {} } = {}) {
   for (const [i, design] of DESIGNS.entries()) {
     const files = buildDesignSite(site, copy, design.key);
     for (const [file, html] of Object.entries(files)) {
       if (!file.endsWith(".html")) continue;
-      await env.ASSETS.put(`website-previews/${token}/d/${design.key}/${file}`, wrapDesign(html, files["styles.css"], token, i, { prospect }), { httpMetadata: { contentType: "text/html; charset=utf-8" } });
+      await env.ASSETS.put(`website-previews/${token}/d/${design.key}/${file}`, wrapDesign(html, files["styles.css"], token, i, { prospect, site }), { httpMetadata: { contentType: "text/html; charset=utf-8" } });
     }
   }
-  await env.ASSETS.put(`website-previews/${token}/data.json`, JSON.stringify({ site, copy }), { httpMetadata: { contentType: "application/json" } });
-  return { pages: Object.keys(pages).length, site };
+  await env.ASSETS.put(`website-previews/${token}/data.json`, JSON.stringify({ ...extra, site, copy }), { httpMetadata: { contentType: "application/json" } });
 }
 
 const factsJson = (site) => JSON.stringify({ kind: site.kind, about: site.about, offerings: site.offerings, phone: site.phone, address: site.address, hours: site.hours });
@@ -311,6 +344,60 @@ async function handleWebsitePreviewView(request, env, token, page, { now = Date.
   return new Response(request.method === "HEAD" ? null : object.body, { status: 200, headers: { "Content-Type": "text/html; charset=utf-8", "Cache-Control": "no-store", "X-Robots-Tag": "noindex, nofollow", "Referrer-Policy": "no-referrer" } });
 }
 
+// "Make it yours": POST multipart { design, logo?, photos?[], brand?, use_brand? } -> stores the images beside the
+// preview, rebuilds all nine designs from the stored copy (no AI call) and returns to the design the buyer was on.
+// New photos replace the old set; no new files keeps what was there. The paid site is built from the same data.json.
+async function handleWebsitePreviewCustomize(request, env, token, { now = Date.now() } = {}) {
+  const gone = () => plainGone(410, "This preview has ended", `<a href="${escapeHtml(`${SITE}/website-design.html#try-free`)}">Start a new one</a>.`);
+  const oops = (text) => plainGone(400, "Those files didn't work", `${escapeHtml(text)} <a href="javascript:history.back()">Go back</a> and try again.`);
+  if (!/^[a-f0-9]{36}$/.test(token) || !env.DB || !env.ASSETS) return gone();
+  const row = await env.DB.prepare(`SELECT token, source, status, expires_at FROM website_previews WHERE token = ?`).bind(token).first();
+  if (!row || row.status !== "READY" || row.expires_at <= new Date(now).toISOString()) return gone();
+  const data = parseJsonOrNull(await (await env.ASSETS.get(`website-previews/${token}/data.json`))?.text());
+  if (!data?.site || !data?.copy) return gone();
+  if (Number(data.customized || 0) >= MAX_CUSTOMIZE) return oops("This preview has been updated as many times as a free preview allows.");
+  const form = await request.formData().catch(() => null);
+  if (!form) return oops("We couldn't read the upload.");
+  const design = DESIGNS.find((d) => d.key === form.get("design")) || DESIGNS[0];
+  const site = { ...data.site };
+  const files = (name) => form.getAll(name).filter((f) => f && typeof f === "object" && typeof f.arrayBuffer === "function" && f.size > 0);
+  const read = async (file) => {
+    if (file.size > MAX_OWN_IMAGE) return { error: `${file.name || "An image"} is over 5 MB.` };
+    const bytes = new Uint8Array(await file.arrayBuffer());
+    const type = sniffImage(bytes);
+    return type ? { bytes, type } : { error: `${file.name || "A file"} isn't a PNG, JPG or WebP image.` };
+  };
+  const logoFile = files("logo")[0];
+  const photoFiles = files("photos");
+  if (photoFiles.length > MAX_PHOTOS) return oops(`Choose up to ${MAX_PHOTOS} photos.`);
+  const logo = logoFile ? await read(logoFile) : null;
+  if (logo?.error) return oops(logo.error);
+  const photos = [];
+  for (const f of photoFiles) { const r = await read(f); if (r.error) return oops(r.error); photos.push(r); }
+  const put = (name, img) => env.ASSETS.put(`website-previews/${token}/img/${name}.${img.type.ext}`, img.bytes, { httpMetadata: { contentType: img.type.mime } });
+  if (logo) { await put("logo", logo); site.logo = { path: `img/logo.${logo.type.ext}` }; }
+  if (photos.length) {
+    for (const [i, p] of photos.entries()) await put(`photo-${i + 1}`, p);
+    site.photos = photos.map((p, i) => ({ path: `img/photo-${i + 1}.${p.type.ext}`, alt: `Photo ${i + 1} of ${site.name}` }));
+  }
+  const brand = String(form.get("brand") || "").trim().toLowerCase();
+  if (form.get("use_brand") === "1" && hexOk(brand) && /^#[0-9a-f]{6}$/.test(brand)) site.brand = brand;
+  else if (form.get("use_brand") !== "1") site.brand = "";
+  await storeDesigns(env, token, site, data.copy, { prospect: row.source === "prospect", extra: { customized: Number(data.customized || 0) + 1 } });
+  return new Response(null, { status: 303, headers: { Location: designUrl(token, design.key), "Cache-Control": "no-store" } });
+}
+
+// The logo and photos added with "Make it yours", served beside each design's pages (img/<name> from any page).
+async function handleWebsitePreviewImage(env, token, file, { now = Date.now() } = {}) {
+  const m = IMG.exec(file);
+  if (!/^[a-f0-9]{36}$/.test(token) || !m || !env.DB || !env.ASSETS) return new Response("Not found", { status: 404 });
+  const row = await env.DB.prepare(`SELECT status, expires_at FROM website_previews WHERE token = ?`).bind(token).first();
+  if (!row || row.status !== "READY" || row.expires_at <= new Date(now).toISOString()) return new Response("Not found", { status: 404 });
+  const object = await env.ASSETS.get(`website-previews/${token}/img/${file}`);
+  if (!object) return new Response("Not found", { status: 404 });
+  return new Response(object.body, { status: 200, headers: { "Content-Type": IMG_MIME[m[2]], "Cache-Control": "private, max-age=300", "X-Content-Type-Options": "nosniff", "X-Robots-Tag": "noindex, nofollow" } });
+}
+
 async function handleWebsitePreviewHandoff(env, token, { now = Date.now() } = {}) {
   if (!/^[a-f0-9]{36}$/.test(token) || !env.DB) return json({ ok: false }, 404);
   const row = await env.DB.prepare(`SELECT email, business, status, created_at FROM website_previews WHERE token = ?`).bind(token).first();
@@ -374,4 +461,4 @@ async function prefillFromPreview(env, email) {
   return out;
 }
 
-export { designUrl, chooseUrl, wrapDesign, handleWebsitePreviewCreate, handleWebsitePreviewView, handleWebsitePreviewHandoff, handleProspectSiteDemo, prefillFromPreview, offeringsFromMenu, wrapPage, fallbackCopy, PREVIEW_HOURS, PER_NETWORK_DAY };
+export { designUrl, chooseUrl, wrapDesign, storeDesigns, handleWebsitePreviewCreate, handleWebsitePreviewView, handleWebsitePreviewHandoff, handleWebsitePreviewCustomize, handleWebsitePreviewImage, handleProspectSiteDemo, prefillFromPreview, offeringsFromMenu, wrapPage, fallbackCopy, PREVIEW_HOURS, PER_NETWORK_DAY };
