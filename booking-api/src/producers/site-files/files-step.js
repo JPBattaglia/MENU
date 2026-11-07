@@ -83,6 +83,11 @@ async function tellOwner(env, context, problem) {
 
 // Builds the chosen design from the preview's data.json: the zip (SITE_ZIP) and, with Website Care, the live site
 // (SITE_BUILD, FINAL at once). Used by PRODUCE and again when the buyer adds a logo or photos after paying (own.js).
+// Hosted when the order's plan includes Website Care: Website Care itself, the Pro plan, or your own plan with it
+// (Nov 6, 2026: plans are offered beside the site at checkout).
+const HOSTED_SQL = `SELECT 1 AS ok FROM order_items WHERE order_id = ? AND (json_extract(metadata_json, '$.plan_code') = 'WEBSITE_CARE'
+  OR EXISTS (SELECT 1 FROM json_each(COALESCE(json_extract(metadata_json, '$.includes'), '[]')) WHERE value = 'WEBSITE_CARE')) LIMIT 1`;
+
 async function makeSiteFiles(env, context, meta, { replace = false } = {}) {
   const design = designFor(meta.site_design);
   const data = /^[a-f0-9]{36}$/.test(String(meta.site_preview || "")) ? parseJsonOrNull(await (await env.ASSETS.get(`website-previews/${meta.site_preview}/data.json`))?.text()) : null;
@@ -105,7 +110,7 @@ async function makeSiteFiles(env, context, meta, { replace = false } = {}) {
   // The Contact page form sends to the buyer's inbox through Menu-made (site-form.js), wherever the site is hosted.
   const files = buildDesignSite(site, data.copy, design.key, { formAction: await formAction(env, context.id) });
   const hosted = Boolean(await env.DB.prepare(`
-      SELECT 1 AS ok FROM order_items WHERE order_id = ? AND json_extract(metadata_json, '$.plan_code') = 'WEBSITE_CARE' LIMIT 1
+      ${HOSTED_SQL}
     `).bind(context.order_id).first());
   const folder = (slugify(site.name) || "website").slice(0, 40);
   const zip = createZip([
@@ -173,7 +178,7 @@ const siteFilesOverrides = {
     const business = context.business_name || "your business";
     const zip = await linkFor(files[0], { download: true });
     const site = await env.DB.prepare(`SELECT slug FROM website_sites WHERE business_id = ? ORDER BY created_at ASC LIMIT 1`).bind(context.business_id).first();
-    const hosted = Boolean(await env.DB.prepare(`SELECT 1 AS ok FROM order_items WHERE order_id = ? AND json_extract(metadata_json, '$.plan_code') = 'WEBSITE_CARE' LIMIT 1`).bind(context.order_id).first());
+    const hosted = Boolean(await env.DB.prepare(HOSTED_SQL).bind(context.order_id).first());
     const live = hosted && site?.slug ? `https://${site.slug}.menu-made.com/` : null;
     const own = await ownLink(env, context.id);
     const paragraphs = [

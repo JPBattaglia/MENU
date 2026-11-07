@@ -39,7 +39,7 @@ test('every design builds a complete, escaped one-page site from the same busine
   }
 });
 
-function setup({ hosted }) {
+function setup({ hosted, viaPlan = '' }) {
   const DB = createD1(); const ASSETS = createR2();
   const sql = (q, ...a) => DB.raw.prepare(q).run(...a);
   const t = '2026-11-07T00:00:00.000Z';
@@ -53,6 +53,7 @@ function setup({ hosted }) {
     sql(`INSERT INTO offer_versions (id, offer_id, version_number, created_at, effective_from, status, price_cents, scope_json) VALUES ('ov_wc', 'offer_wc', 1, ?, ?, 'ACTIVE', 4900, '{}')`, t, t);
     sql(`INSERT INTO order_items (id, order_id, offer_id, offer_version_id, unit_price_cents, line_total_cents, metadata_json) VALUES ('i2', 'o1', 'offer_wc', 'ov_wc', 0, 0, '{"billing":"RECURRING","plan_code":"WEBSITE_CARE"}')`);
   }
+  if (viaPlan) sql(`INSERT INTO order_items (id, order_id, offer_id, offer_version_id, unit_price_cents, line_total_cents, metadata_json) VALUES ('i3', 'o1', 'offer_site_files', 'offerv1_site_files', 0, 0, ?)`, JSON.stringify({ billing: 'RECURRING', plan_code: viaPlan, includes: ['MENU_CARE', 'WEBSITE_CARE'] }));
   sql(`INSERT INTO projects (id, order_id, order_item_id, business_id, customer_id, project_type, status, workflow_key, workflow_version, created_at, updated_at) VALUES ('22222222-2222-4333-8444-555555555555', 'o1', 'i1', 'biz', 'cust', 'WEBSITE', 'AWAITING_INPUTS', 'SITE_FILES_V1', 1, ?, ?)`, t, t);
   const emails = [];
   const fetch = async (url, init = {}) => { if (String(url) === 'https://api.resend.com/emails') { emails.push(JSON.parse(init.body)); return Response.json({ id: `e${emails.length}` }); } throw new Error(`Unexpected fetch ${url}`); };
@@ -240,4 +241,14 @@ test('preview: the contact form is shown but switched off; inner pages get a pho
   assert.doesNotMatch(buildDesignSite(site, COPY, 'bistro')['menu.html'], /pb-name/);
   // No photos and the header shows the name: no band at all.
   assert.doesNotMatch(buildDesignSite(SITE, COPY, 'bistro')['menu.html'], /page-band/);
+});
+
+test('a plan that includes Website Care (Pro, or your own plan with it) also puts the site online', async () => {
+  const f = setup({ hosted: false, viaPlan: 'BUNDLE_PRO' });
+  await runOrder(f);
+  assert.equal(f.row(`SELECT slug FROM website_sites WHERE business_id = 'biz'`)?.slug, 'oliva-kitchen');
+  const g = setup({ hosted: false, viaPlan: 'BUNDLE_GROWTH' });
+  g.DB.raw.prepare(`UPDATE order_items SET metadata_json = ? WHERE id = 'i3'`).run(JSON.stringify({ billing: 'RECURRING', plan_code: 'BUNDLE_GROWTH', includes: ['MENU_CARE', 'GOOGLE_PROFILE_CARE'] }));
+  await runOrder(g);
+  assert.equal(g.row(`SELECT COUNT(*) AS n FROM website_sites`).n, 0, 'a plan without Website Care: zip only');
 });

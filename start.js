@@ -250,7 +250,57 @@ function render(openEmptyChoices = true) {
   }
   updateBriefs();
   updateCards();
+  renderSiteAddons();
 }
+
+// "Choose this site" lands here with the site in the order (owner, Nov 6, 2026): Website Care, the Pro plan, or
+// Website Care plus other monthly services (your own plan, 10% / 20% off) are one tap away. One plan per order.
+const SITE_ADDON_EXTRAS = ['MENU_CARE', 'REVIEW_REPLIES', 'GOOGLE_PROFILE_CARE', 'SOCIAL_POSTS', 'ACCESSIBILITY_MONITORING'];
+function renderSiteAddons() {
+  const panel = $('siteAddons');
+  if (!panel) return;
+  panel.hidden = !order.once.has('SITE_FILES') || !offers;
+  if (panel.hidden) return;
+  panel.querySelectorAll('[data-price]').forEach(el => { const o = offer(el.dataset.price); el.textContent = o ? Catalog.label(o, interval()) : ''; });
+  const extras = order.plan === CUSTOM && order.custom.includes('WEBSITE_CARE') ? order.custom.filter(c => c !== 'WEBSITE_CARE') : [];
+  panel.querySelectorAll('[data-addon]').forEach(row => {
+    const code = row.dataset.addon, on = order.plan === code;
+    row.classList.toggle('is-selected', on);
+    const button = row.querySelector('button');
+    button.textContent = on ? 'Added' : 'Add';
+    button.setAttribute('aria-pressed', String(on));
+    button.disabled = checkoutInFlight || !sellable(offer(code));
+  });
+  panel.querySelectorAll('.site-addon-own input').forEach(box => { box.checked = extras.includes(box.value); box.disabled = checkoutInFlight || !sellable(offer(box.value)); });
+  const note = $('siteAddonNote');
+  if (order.plan === CUSTOM && order.custom.includes('WEBSITE_CARE')) {
+    const q = customQuote();
+    note.textContent = `Your plan: ${order.custom.map(nameOf).join(', ')}, ${planLabel(CUSTOM)}${q?.pct ? ` (${q.pct}% off)` : ''}.`;
+  } else if (order.plan === 'WEBSITE_CARE' || order.plan === 'BUNDLE_PRO') {
+    note.textContent = 'Your site goes live at its own web address once it is made.';
+  } else if (order.plan) {
+    note.textContent = `${nameOf(order.plan)} doesn't include hosting: you get the zip to put online yourself. Choose an option above to have us host it instead.`;
+  } else {
+    note.textContent = '';
+  }
+}
+$('siteAddons')?.addEventListener('click', event => {
+  const button = event.target.closest('[data-addon-add]');
+  if (!button || flowBusy()) return;
+  const code = button.dataset.addonAdd;
+  if (order.plan === code) remove(code); else add(code, { quiet: true });
+  clearStatus();
+  render(false);
+});
+$('siteAddons')?.addEventListener('change', event => {
+  const box = event.target.closest('.site-addon-own input');
+  if (!box || flowBusy()) return;
+  const ticked = [...document.querySelectorAll('.site-addon-own input')].filter(b => b.checked).map(b => b.value);
+  if (ticked.length) setCustom(['WEBSITE_CARE', ...ticked]);
+  else if (order.plan === CUSTOM) add('WEBSITE_CARE', { quiet: true });
+  clearStatus();
+  render(false);
+});
 
 function add(code, { quiet = false } = {}) {
   if (flowBusy() || !offers) return false;
