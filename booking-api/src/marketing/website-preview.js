@@ -28,6 +28,7 @@ import { verifyRenderer } from "../producers/social-posts/render-jobs.js";
 import { DRAFTS_AUDIENCE, DRAFTS_WORKFLOW } from "./prospects.js";
 import { readProspectMenu } from "./demo-menu.js";
 import { lookupListing } from "./listing-lookup.js";
+import { addMoodPhotos, hasSamplePhotos, ownPhotoCount } from "../producers/website/mood.js";
 
 const PREVIEW_HOURS = 72;
 const PROSPECT_DAYS = 21;
@@ -47,7 +48,7 @@ const SITE_FILES_PRICE = "$299";
 const MAX_PHOTOS = 6;
 const MAX_OWN_IMAGE = 5 * 1024 * 1024;
 const MAX_CUSTOMIZE = 15;        // rebuilds per preview (no AI involved, just storage)
-const IMG = /^(logo|photo-[1-6])\.(png|jpg|webp)$/;
+const IMG = /^(logo|photo-[1-6]|mood-[1-6])\.(png|jpg|webp)$/;
 const IMG_MIME = { png: "image/png", jpg: "image/jpeg", webp: "image/webp" };
 
 const json = (data, status = 200) => Response.json(data, { status, headers: { "Cache-Control": "no-store", "Access-Control-Allow-Origin": "*" } });
@@ -140,12 +141,13 @@ function wrapPage(html, token, { prospect = false } = {}) {
 // The site generator (owner, Nov 6, 2026): the same business in each of the nine designs. "Generate site" goes to the
 // next design, "Choose this site" goes to checkout with that design. Same watermark, noindex and no-print rules.
 function ownPanel(token, key, site = {}) {
-  const n = (site.photos || []).length, brand = hexOk(site.brand) ? String(site.brand).toLowerCase() : "";
+  const n = ownPhotoCount(site), brand = hexOk(site.brand) ? String(site.brand).toLowerCase() : "";
   const have = [site.logo ? "your logo" : "", n ? `${n} photo${n === 1 ? "" : "s"}` : "", brand ? "your colour" : ""].filter(Boolean);
+  const sample = hasSamplePhotos(site) ? " The photos are samples until you add yours." : "";
   return `<details class="mm-own"><summary>Make it yours</summary>
   <form method="post" enctype="multipart/form-data" action="/api/website-preview/customize/${token}">
   <input type="hidden" name="design" value="${escapeHtml(key)}">
-  <p class="mm-own-now">${have.length ? `Using ${escapeHtml(have.join(", "))}. New files replace them.` : "Add your logo, photos and colour. Every design updates."}</p>
+  <p class="mm-own-now">${have.length ? `Using ${escapeHtml(have.join(", "))}. New files replace them.` : "Add your logo, photos and colour. Every design updates."}${sample}</p>
   <label>Logo <small>(PNG, JPG or WebP)</small><input type="file" name="logo" accept="image/png,image/jpeg,image/webp"></label>
   <label>Photos <small>(up to ${MAX_PHOTOS}, 5 MB each)</small><input type="file" name="photos" accept="image/png,image/jpeg,image/webp" multiple></label>
   <label class="mm-own-colour">Brand colour <input type="color" name="brand" value="${brand || "#00a7b5"}"></label>
@@ -159,7 +161,7 @@ function wrapDesign(html, css, token, index, { prospect = false, site = null } =
   const next = DESIGNS[(index + 1) % DESIGNS.length];
   const mark = encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" width="260" height="160"><text x="130" y="90" text-anchor="middle" transform="rotate(-24 130 80)" font-family="system-ui,sans-serif" font-size="22" font-weight="700" fill="#071f2c" fill-opacity=".13">PREVIEW · NOT LIVE</text></svg>`);
   const bar = `<aside class="mm-gen" role="note" aria-label="Site generator">
-  <p><strong>Design ${index + 1} of ${DESIGNS.length}: ${escapeHtml(d.label)}</strong><span> · ${escapeHtml(d.blurb)}. ${prospect ? `A private preview made for you by Menu-made, ends in ${PROSPECT_DAYS} days.` : `Free preview, ends in ${PREVIEW_HOURS / 24} days.`}</span></p>
+  <p><strong>Design ${index + 1} of ${DESIGNS.length}: ${escapeHtml(d.label)}</strong><span> · ${escapeHtml(d.blurb)}. ${prospect ? `A private preview made for you by Menu-made, ends in ${PROSPECT_DAYS} days.` : `Free preview, ends in ${PREVIEW_HOURS / 24} days.`}${hasSamplePhotos(site) ? " Sample photos: add your own in Make it yours." : ""}</span></p>
   <a class="mm-gen-next" href="${escapeHtml(designUrl(token, next.key))}">Generate site</a>
   <a class="mm-gen-pick" href="${escapeHtml(chooseUrl(token, d.key))}">Choose this site: ${SITE_FILES_PRICE}</a>
   ${ownPanel(token, d.key, site || {})}
@@ -212,6 +214,8 @@ async function buildAndStore(env, token, business, facts, { scope, prospect = fa
   for (const [file, html] of Object.entries(pages)) {
     await env.ASSETS.put(`website-previews/${token}/${file}`, wrapPage(html, token, { prospect }), { httpMetadata: { contentType: "text/html; charset=utf-8" } });
   }
+  // No photos given: free-licence mood photos that suit the menu, marked sample (owner, Nov 6, 2026).
+  if (!site.photos.length) site.photos = await addMoodPhotos(env, token, site, { cuisine: facts.cuisine, fetcher: deps.moodFetch });
   await storeDesigns(env, token, site, copy, { prospect });
   return { pages: Object.keys(pages).length, site };
 }

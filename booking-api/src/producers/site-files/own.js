@@ -10,6 +10,7 @@ import { isTestOrder, loadDeliveryContext } from "../../approvals/release.js";
 import { DELIVERY_LINK_TTL_DAYS } from "../../lib/config.js";
 import { MAX_PHOTOS, applyOwnForm } from "../../marketing/website-preview.js";
 import { makeSiteFiles } from "./files-step.js";
+import { hasSamplePhotos, ownPhotoCount } from "../website/mood.js";
 
 const OWN_KIND = "siteown";
 const OWN_DAYS = 30;
@@ -26,9 +27,10 @@ async function downloadLink(env, deliverableId) {
 }
 
 function formHtml(action, site, note = "") {
-  const n = (site.photos || []).length;
+  const n = ownPhotoCount(site);
   const have = [site.logo ? "your logo" : "", n ? `${n} photo${n === 1 ? "" : "s"}` : "", site.brand ? "your colour" : ""].filter(Boolean);
-  return `${note}<p>${have.length ? `Your site uses ${escapeHtml(have.join(", "))}. New files replace them.` : "Add your logo, photos and brand colour. We rebuild your website with them, free."}</p>
+  const sample = hasSamplePhotos(site) ? " Your site shows sample photos for now; your own photos replace them." : "";
+  return `${note}<p>${have.length ? `Your site uses ${escapeHtml(have.join(", "))}. New files replace them.` : "Add your logo, photos and brand colour. We rebuild your website with them, free."}${sample}</p>
 <form method="post" enctype="multipart/form-data" action="${escapeHtml(action)}" style="display:grid;gap:14px">
 <label style="display:grid;gap:4px;font-weight:bold">Logo (PNG, JPG or WebP)<input type="file" name="logo" accept="image/png,image/jpeg,image/webp"></label>
 <label style="display:grid;gap:4px;font-weight:bold">Photos (up to ${MAX_PHOTOS}, 5 MB each)<input type="file" name="photos" accept="image/png,image/jpeg,image/webp" multiple></label>
