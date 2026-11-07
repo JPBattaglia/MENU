@@ -13,6 +13,7 @@ import { completeStep } from "../../workflows/runner.js";
 import { storeDeliverable } from "../shared/deliverables.js";
 import { createZip } from "../social-posts/zip.js";
 import { buildDesignSite, designFor } from "../website/templates/index.js";
+import { formAction } from "./site-form.js";
 import { slugify, validSlug } from "../website/intake.js";
 import { OWN_DAYS, ownLink } from "./own.js";
 
@@ -28,10 +29,14 @@ function readme(name, design, hosted, samples = false) {
     "  index.html     the home page",
     "  menu.html      the menu (when there is one)",
     "  about.html     your story",
-    "  contact.html   hours, address and phone",
+    "  contact.html   hours, address, phone and a contact form",
     "  styles.css     the design",
     "  img/           your logo and photos (when you added them)",
     ...(samples ? ["  img/mood-*.jpg sample photos we added so the site isn't bare. They're free-licence (CC0, public domain),", "                 so you may keep them, but your own photos look better: add them with the link in our email."] : []),
+    "",
+    "The contact form",
+    "  Messages from the form on contact.html come to the email you used at checkout, through Menu-Made, wherever",
+    "  the site is hosted. Reply to the email to answer the person who wrote.",
     "",
     "Putting it online yourself",
     "  Any web host works. Upload all the files to the top folder of your site (often called public_html or www).",
@@ -97,7 +102,8 @@ async function makeSiteFiles(env, context, meta, { replace = false } = {}) {
   const photos = [];
   for (const p of site.photos || []) if (await fetchImage(p)) photos.push(p);
   site.photos = photos;
-  const files = buildDesignSite(site, data.copy, design.key);
+  // The Contact page form sends to the buyer's inbox through Menu-made (site-form.js), wherever the site is hosted.
+  const files = buildDesignSite(site, data.copy, design.key, { formAction: await formAction(env, context.id) });
   const hosted = Boolean(await env.DB.prepare(`
       SELECT 1 AS ok FROM order_items WHERE order_id = ? AND json_extract(metadata_json, '$.plan_code') = 'WEBSITE_CARE' LIMIT 1
     `).bind(context.order_id).first());

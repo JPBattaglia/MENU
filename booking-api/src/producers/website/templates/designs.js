@@ -16,7 +16,7 @@ const trattoria = {
 .top{display:flex;justify-content:center;gap:28px;padding:14px 20px;background:${ink};font:600 14px/1 Lora,serif;letter-spacing:.12em;text-transform:uppercase}.top a{color:#f3e9da;text-decoration:none}.top a:hover{text-decoration:underline}
 .hero{position:relative;text-align:center;color:#fff;padding:110px 20px 120px;background:${d.photos[0] ? "#1c1410" : `radial-gradient(circle at 20% 20%,${mix(b, "#ffffff", .12)},transparent 55%),linear-gradient(160deg,${mix(b, "#000000", .15)},${mix(b, "#000000", .55)})`};overflow:hidden}
 .hero img.bg{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:.45}.hero .in{position:relative;max-width:820px;margin:0 auto}
-.hero .logo{margin:0 auto 18px;width:84px;height:84px;object-fit:contain;background:#fff;border-radius:50%;padding:8px}
+.hero .logo{margin:0 auto 22px;height:clamp(96px,14vw,140px);width:auto;max-width:300px;object-fit:contain;background:#fff;border-radius:16px;padding:10px}
 .hero h1{font:800 clamp(42px,8vw,86px)/1.05 'Playfair Display',Georgia,serif;margin:0 0 14px}.hero p{font-size:clamp(19px,2.6vw,24px);margin:0 auto 28px;max-width:34ch}
 .orn{display:block;margin:0 auto 18px;width:120px;height:2px;background:currentColor;opacity:.6}
 .btn{display:inline-block;margin:6px;padding:14px 26px;border:2px solid #fff;color:#fff;text-decoration:none;font-weight:600;letter-spacing:.05em}.btn.fill{background:${b};border-color:${b};color:${on}}
@@ -43,7 +43,7 @@ const bistro = {
     const b = brandOr(brandIn, this.defaultBrand), bg = "#ffffff", ink = "#15181d", acc = textOn(b, bg, ink), on = inkOn(b), soft = mix(b, "#ffffff", .9);
     const css = `body{background:${bg};color:${ink};font:17px/1.65 Inter,system-ui,sans-serif}
 .bar{position:sticky;top:0;z-index:10;background:#fffffff2;backdrop-filter:blur(8px);border-bottom:1px solid #e6e8ec}.bar .in{max-width:1180px;margin:0 auto;padding:12px 20px;display:flex;align-items:center;gap:24px}
-.brand{display:flex;align-items:center;gap:10px;font:24px 'DM Serif Display',serif;color:${ink};text-decoration:none;margin-right:auto}.brand .logo{width:38px;height:38px;object-fit:contain}
+.brand{display:flex;align-items:center;gap:10px;font:24px 'DM Serif Display',serif;color:${ink};text-decoration:none;margin-right:auto}.brand .logo{height:56px;width:auto;max-width:180px;object-fit:contain}
 .bar nav{display:flex;gap:20px}.bar nav a{color:${ink};text-decoration:none;font-weight:600;font-size:15px}.bar nav a:hover{color:${acc}}
 .cta{background:${b};color:${on};padding:10px 18px;border-radius:999px;text-decoration:none;font-weight:700;font-size:15px}
 .split{display:grid;grid-template-columns:1.05fr 1fr;min-height:min(78vh,720px)}.split .words{padding:clamp(40px,7vw,96px) clamp(20px,5vw,72px);display:flex;flex-direction:column;justify-content:center}
@@ -77,26 +77,26 @@ const nightMarket = {
     const b = brandOr(brandIn, this.defaultBrand), bg = "#0d0d0f", ink = "#f2f2f2", acc = textOn(b, bg, "#ffd166"), on = inkOn(acc);
     const css = `body{background:${bg};color:${ink};font:17px/1.6 Inter,system-ui,sans-serif}
 header.top{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:18px clamp(18px,4vw,48px);border-bottom:1px solid #ffffff1a}
-.brand{font:34px/1 'Bebas Neue',Impact,sans-serif;letter-spacing:.04em;color:${ink};text-decoration:none;display:flex;gap:12px;align-items:center}.brand .logo{width:40px;height:40px;object-fit:contain}
+.brand{font:34px/1 'Bebas Neue',Impact,sans-serif;letter-spacing:.04em;color:${ink};text-decoration:none;display:flex;gap:12px;align-items:center}.brand .logo{height:60px;width:auto;max-width:190px;object-fit:contain;background:#fff;border-radius:10px;padding:6px}
 header.top nav{display:flex;gap:22px}header.top nav a{color:${ink};text-decoration:none;font:22px 'Bebas Neue',sans-serif;letter-spacing:.06em}header.top nav a:hover{color:${acc}}
 .hero{padding:clamp(48px,9vw,120px) clamp(18px,4vw,48px) 64px;position:relative;overflow:hidden}.hero:before{content:"";position:absolute;width:60vw;height:60vw;max-width:760px;max-height:760px;right:-12vw;top:-20vw;background:radial-gradient(circle,${acc}55,transparent 65%);filter:blur(10px)}
-.hero h1{position:relative;font:clamp(72px,15vw,200px)/.88 'Bebas Neue',Impact,sans-serif;margin:0;text-transform:uppercase;letter-spacing:.01em}.hero h1 span{color:${acc}}
+.hero img.bg{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:.3}.hero h1{position:relative;font:clamp(72px,15vw,200px)/.88 'Bebas Neue',Impact,sans-serif;margin:0;text-transform:uppercase;letter-spacing:.01em}.hero h1 span{color:${acc}}
 .hero p{position:relative;font-size:clamp(19px,2.4vw,24px);max-width:38ch;color:#cfcfd4;margin:22px 0 28px}
 .go{display:inline-block;background:${acc};color:${on};font:26px/1 'Bebas Neue',sans-serif;letter-spacing:.06em;padding:16px 26px;text-decoration:none;margin:0 10px 10px 0}.go.ghost{background:transparent;color:${ink};box-shadow:inset 0 0 0 2px ${ink}}
 .strip{white-space:nowrap;overflow:hidden;border-block:1px solid #ffffff1a;margin:0 calc(-1 * clamp(18px,4vw,48px));font:28px/1 'Bebas Neue',sans-serif;letter-spacing:.08em;color:${acc};padding:14px 0}
 main{padding:0 clamp(18px,4vw,48px)}h2{font:clamp(56px,9vw,120px)/.9 'Bebas Neue',sans-serif;margin:90px 0 30px;text-transform:uppercase}
 .msec{display:grid;grid-template-columns:minmax(160px,280px) 1fr;gap:24px;border-top:1px solid #ffffff22;padding:28px 0}.msec h3{font:36px/1 'Bebas Neue',sans-serif;letter-spacing:.04em;color:${acc};margin:0}
 .msec ol{margin:0;padding:0;counter-reset:n}.msec .item{counter-increment:n;padding:12px 0;border-bottom:1px dashed #ffffff22}.msec .item-name:before{content:counter(n,decimal-leading-zero) "  ";color:#77777f;font-weight:600}.msec .item-price{color:${acc}}
-.about{font-size:clamp(20px,2.6vw,28px);line-height:1.5;max-width:30em;color:#e4e4e8}
+.about{font-size:clamp(20px,2.6vw,28px);line-height:1.5;max-width:30em;color:#e4e4e8}.story{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:40px;align-items:start}.story img{width:100%;aspect-ratio:4/3;object-fit:cover;filter:saturate(1.1) contrast(1.05)}
 .visit{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:2px;background:#ffffff22;margin-bottom:80px}.visit>div{background:${bg};padding:28px}.visit h3{font:32px 'Bebas Neue',sans-serif;color:${acc};margin:0 0 12px}.hours{display:grid;grid-template-columns:auto 1fr;gap:6px 20px}.hours .wide{grid-column:1/3}.visit a{color:${ink}}
 footer{padding:26px;text-align:center;color:#8a8a92;border-top:1px solid #ffffff1a;font-size:14px}
 @media(max-width:700px){header.top nav{display:none}.msec{grid-template-columns:1fr}}`;
     const words = String(d.name).split(/\s+/);
     const title = words.length > 1 ? `${esc(words.slice(0, -1).join(" "))} <span>${esc(words.at(-1))}</span>` : `<span>${esc(d.name)}</span>`;
     const body = `<header class="top"><a class="brand" href="#main">${logoImg(d, "logo", 40)}${esc(d.name)}</a><nav aria-label="Main">${nav(d)}</nav></header>
-<div class="hero" id="main" data-hero><h1>${title}</h1><p>${esc(d.tagline)}${d.intro ? ` ${esc(d.intro)}` : ""}</p>${menuBtn(d, "go")}${orderBtn(d, "go ghost")}${callBtn(d, "go ghost")}</div>
+<div class="hero" id="main" data-hero>${photo(d, 0, "bg")}<h1>${title}</h1><p>${esc(d.tagline)}${d.intro ? ` ${esc(d.intro)}` : ""}</p>${menuBtn(d, "go")}${orderBtn(d, "go ghost")}${callBtn(d, "go ghost")}</div>
 <main>${d.sections.length ? `<section id="menu"><div class="strip" aria-hidden="true">${esc(sections(d, (s) => `${s.name || d.menuLabel} ★ `).repeat(4))}</div><h2>${d.menuLabel}</h2>${sections(d, (s) => `<div class="msec"><h3>${esc(s.name || d.menuLabel)}</h3><ol>${s.items.map((x) => item(x)).join("")}</ol></div>`)}</section>` : ""}
-<section id="about"><h2>The story</h2><div class="about">${aboutHtml(d)}</div></section>
+<section id="about"><h2>The story</h2><div class="story"><div class="about">${aboutHtml(d)}</div>${photo(d, 1)}</div></section>
 <section id="visit"><h2>${d.address ? "Pull up" : "Holler"}</h2><div class="visit">${d.hours.length || d.phone ? `<div><h3>Hours</h3>${hoursList(d)}</div>` : ""}<div><h3>${d.address ? "Where" : "Contact"}</h3>${contactLines(d)}</div></div></section></main>
 <footer>© ${year()} ${esc(d.name)}</footer>`;
     return { css, body, theme: bg };
@@ -110,7 +110,7 @@ const farmhouse = {
   render(d, brandIn) {
     const b = brandOr(brandIn, this.defaultBrand), bg = "#efe4cf", ink = "#33261a", acc = textOn(b, bg, ink), chalk = "#2f3a33", on = inkOn(b);
     const css = `body{background:${bg} repeating-linear-gradient(45deg,#00000005 0 2px,transparent 2px 7px);color:${ink};font:18px/1.7 Nunito,system-ui,sans-serif}
-header.top{text-align:center;padding:36px 20px 10px}.top .logo{margin:0 auto 6px;width:90px;height:90px;object-fit:contain}
+header.top{text-align:center;padding:36px 20px 10px}.top .logo{margin:0 auto 8px;height:120px;width:auto;max-width:300px;object-fit:contain}
 .top .name{font:700 clamp(54px,9vw,96px)/1 Caveat,cursive;color:${ink};margin:0}.top .tag{font-size:20px;margin:6px 0 18px}
 .top nav{display:inline-flex;gap:8px;flex-wrap:wrap;justify-content:center;border-block:2px dashed ${ink}55;padding:10px 6px}.top nav a{font:700 26px Caveat,cursive;color:${ink};text-decoration:none;padding:0 12px}.top nav a:hover{color:${acc}}
 .welcome{max-width:900px;margin:30px auto 0;padding:0 20px;display:grid;grid-template-columns:${d.photos[0] ? "1fr 1fr" : "1fr"};gap:28px;align-items:center;text-align:${d.photos[0] ? "left" : "center"}}
@@ -140,7 +140,7 @@ const fineDining = {
     const b = brandOr(brandIn, this.defaultBrand), bg = "#f8f6f2", ink = "#1d1b19", acc = textOn(b, bg, ink);
     const css = `body{background:${bg};color:${ink};font:300 17px/1.8 Jost,system-ui,sans-serif}
 header.top{display:grid;grid-template-columns:1fr auto 1fr;align-items:center;padding:26px clamp(18px,5vw,64px)}.top nav{display:flex;gap:26px}.top nav a,.top .r a{color:${ink};text-decoration:none;font:500 12px Jost,sans-serif;letter-spacing:.28em;text-transform:uppercase}.top .r{text-align:right}
-.mark{text-align:center;font:600 22px 'Cormorant Garamond',serif;letter-spacing:.32em;text-transform:uppercase;color:${ink};text-decoration:none}.mark .logo{margin:0 auto 4px;width:44px;height:44px;object-fit:contain}
+.mark{text-align:center;font:600 22px 'Cormorant Garamond',serif;letter-spacing:.32em;text-transform:uppercase;color:${ink};text-decoration:none}.mark .logo{margin:0 auto 8px;height:72px;width:auto;max-width:220px;object-fit:contain}
 .hero{text-align:center;padding:clamp(60px,12vw,160px) 20px clamp(60px,10vw,130px);border-block:1px solid ${ink}22;${d.photos[0] ? "position:relative;color:#fff;background:#111;overflow:hidden" : ""}}
 .hero img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:.55}.hero .in{position:relative}
 .eyebrow{font:500 12px Jost,sans-serif;letter-spacing:.42em;text-transform:uppercase;color:${d.photos[0] ? "#fff" : acc}}
@@ -170,7 +170,7 @@ const fresh = {
     const b = brandOr(brandIn, this.defaultBrand), bg = "#ffffff", ink = "#17251b", acc = textOn(b, bg, ink), on = inkOn(b), tint = mix(b, "#ffffff", .88), tint2 = mix(b, "#ffffff", .94);
     const css = `body{background:${bg};color:${ink};font:17px/1.65 Poppins,system-ui,sans-serif}
 header.top{max-width:1180px;margin:14px auto 0;padding:10px 14px 10px 20px;display:flex;align-items:center;gap:20px;background:${tint2};border-radius:999px;width:calc(100% - 28px)}
-.brand{display:flex;gap:10px;align-items:center;font:800 20px Poppins,sans-serif;color:${ink};text-decoration:none;margin-right:auto}.brand .logo{width:36px;height:36px;object-fit:contain;border-radius:50%}
+.brand{display:flex;gap:10px;align-items:center;font:800 20px Poppins,sans-serif;color:${ink};text-decoration:none;margin-right:auto}.brand .logo{height:56px;width:auto;max-width:180px;object-fit:contain;border-radius:10px}
 header.top nav{display:flex;gap:6px}header.top nav a{color:${ink};text-decoration:none;font-weight:600;padding:8px 14px;border-radius:999px}header.top nav a:hover{background:${tint}}
 .pill{display:inline-block;background:${b};color:${on};text-decoration:none;font-weight:700;padding:13px 22px;border-radius:999px;margin:6px 8px 6px 0}.pill.alt{background:#fff;color:${ink};box-shadow:inset 0 0 0 2px ${ink}}
 .hero{max-width:1180px;margin:22px auto 0;width:calc(100% - 28px);border-radius:32px;background:${tint};padding:clamp(36px,7vw,90px) clamp(22px,6vw,80px);display:grid;grid-template-columns:${d.photos[0] ? "1.1fr .9fr" : "1fr"};gap:36px;align-items:center;position:relative;overflow:hidden}
@@ -203,9 +203,9 @@ const cafePop = {
     const wave = (fill) => `<svg class="wave" viewBox="0 0 1440 60" preserveAspectRatio="none" aria-hidden="true"><path d="M0 30 Q 120 0 240 30 T 480 30 T 720 30 T 960 30 T 1200 30 T 1440 30 V60 H0Z" fill="${fill}"/></svg>`;
     const css = `body{background:${cream};color:${ink};font:18px/1.65 Nunito,system-ui,sans-serif}
 header.top{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:16px clamp(16px,4vw,40px)}
-.brand{display:flex;align-items:center;gap:10px;font:700 26px Fredoka,sans-serif;color:${ink};text-decoration:none}.brand .logo{width:46px;height:46px;object-fit:contain;border-radius:14px;background:#fff;padding:4px}
+.brand{display:flex;align-items:center;gap:10px;font:700 26px Fredoka,sans-serif;color:${ink};text-decoration:none}.brand .logo{height:62px;width:auto;max-width:190px;object-fit:contain;border-radius:14px;background:#fff;padding:6px}
 header.top nav{display:flex;gap:10px}header.top nav a{font:600 17px Fredoka,sans-serif;color:${ink};text-decoration:none;background:#fff;padding:8px 16px;border-radius:14px;box-shadow:0 3px 0 ${ink}22}
-.hero{text-align:center;padding:40px 20px 70px;background:${pastels[0]}}.hero h1{font:700 clamp(46px,9vw,100px)/1 Fredoka,sans-serif;margin:10px 0 12px;color:${ink}}.hero p{font-size:21px;max-width:36ch;margin:0 auto 24px}
+.hero{text-align:center;padding:40px 20px 70px;background:${pastels[0]}}.pic{max-width:720px;margin:30px auto 0;border:3px solid ${ink};border-radius:28px;overflow:hidden;box-shadow:0 8px 0 ${ink}22}.pic img{width:100%;aspect-ratio:16/9;object-fit:cover}.pic.tilt{max-width:560px;transform:rotate(-1.5deg)}.hero h1{font:700 clamp(46px,9vw,100px)/1 Fredoka,sans-serif;margin:10px 0 12px;color:${ink}}.hero p{font-size:21px;max-width:36ch;margin:0 auto 24px}
 .blob{display:inline-block;background:${b};color:${on};font:600 20px Fredoka,sans-serif;padding:14px 26px;border-radius:22px;text-decoration:none;margin:6px;box-shadow:0 5px 0 ${mix(b, "#000000", .3)}}.blob.w{background:#fff;color:${ink};box-shadow:0 5px 0 ${ink}33}
 .wave{display:block;width:calc(100% + 40px);height:46px;margin:-76px -20px 30px}.band{padding:30px 20px 70px;margin-top:46px}.band .in{max-width:1080px;margin:0 auto}
 h2{font:700 clamp(36px,6vw,58px) Fredoka,sans-serif;text-align:center;margin:10px 0 30px}
@@ -217,10 +217,10 @@ footer{text-align:center;padding:26px;font:600 18px Fredoka,sans-serif;backgroun
 @media(max-width:700px){header.top nav{display:none}}`;
     const bands = [];
     if (d.sections.length) bands.push(["menu", `<h2>Our ${d.menuLabel.toLowerCase()}</h2><div class="stickers">${sections(d, (s) => `<div class="sticker">${s.name ? `<h3>${esc(s.name)}</h3>` : ""}<ul>${s.items.map((x) => item(x)).join("")}</ul></div>`)}</div>`]);
-    bands.push(["about", `<h2>Hello from ${esc(d.name)}</h2><div class="about">${aboutHtml(d)}</div>`]);
+    bands.push(["about", `<h2>Hello from ${esc(d.name)}</h2><div class="about">${aboutHtml(d)}</div>${d.photos[1] ? `<div class="pic tilt">${photo(d, 1)}</div>` : ""}`]);
     bands.push(["visit", `<h2>${d.address ? "Come say hi" : "Say hi"}</h2><div class="visit">${d.hours.length || d.phone ? `<div><h3>Hours</h3>${hoursList(d)}</div>` : ""}<div><h3>${d.address ? "Find us" : "Contact"}</h3>${contactLines(d)}</div></div>`]);
     const body = `<header class="top" style="background:${pastels[0]}"><a class="brand" href="#main">${logoImg(d, "logo", 46)}${esc(d.name)}</a><nav aria-label="Main">${nav(d)}</nav></header>
-<div class="hero" id="main" data-hero><h1>${esc(d.name)}</h1><p>${esc(d.tagline)}${d.intro ? `. ${esc(d.intro)}` : ""}</p>${menuBtn(d, "blob")}${orderBtn(d, "blob w")}${callBtn(d, "blob w")}</div>
+<div class="hero" id="main" data-hero><h1>${esc(d.name)}</h1><p>${esc(d.tagline)}${d.intro ? `. ${esc(d.intro)}` : ""}</p>${menuBtn(d, "blob")}${orderBtn(d, "blob w")}${callBtn(d, "blob w")}${d.photos[0] ? `<div class="pic">${photo(d, 0)}</div>` : ""}</div>
 <main>${bands.map(([id, html], i) => `<section id="${id}" class="band" style="background:${pastels[(i + 1) % pastels.length]}">${wave(pastels[(i + 1) % pastels.length])}<div class="in">${html}</div></section>`).join("")}</main>
 <footer>Made with love by ${esc(d.name)} · ${year()}</footer>`;
     return { css, body, theme: pastels[0] };
@@ -235,7 +235,7 @@ const coastal = {
     const b = brandOr(brandIn, this.defaultBrand), navy = mix(b, "#0b1a2b", .7), sand = "#f4efe6", ink = "#1b2633", acc = textOn(b, sand, ink), on = inkOn(b);
     const css = `body{background:${sand};color:${ink};font:300 17px/1.8 Merriweather,Georgia,serif}
 .rail{position:fixed;inset:0 auto 0 0;width:300px;background:${navy};color:#eef3f8;padding:36px 30px;display:flex;flex-direction:column;gap:26px;z-index:5}
-.rail .logo{width:72px;height:72px;object-fit:contain;background:#fff;border-radius:16px;padding:6px}.rail .name{font:800 30px/1.1 Montserrat,sans-serif;margin:0;color:#fff}.rail .tag{font-size:15px;color:#c6d3e1;margin:0}
+.rail .logo{height:110px;width:auto;max-width:100%;object-fit:contain;background:#fff;border-radius:16px;padding:8px;align-self:flex-start}.rail .name{font:800 30px/1.1 Montserrat,sans-serif;margin:0;color:#fff}.rail .tag{font-size:15px;color:#c6d3e1;margin:0}
 .rail nav{display:flex;flex-direction:column;gap:2px}.rail nav a{color:#eef3f8;text-decoration:none;font:700 14px Montserrat,sans-serif;letter-spacing:.14em;text-transform:uppercase;padding:10px 0;border-bottom:1px solid #ffffff22}.rail nav a:hover{color:#fff;padding-left:6px}
 .rail .callme{margin-top:auto;background:${b};color:${on};text-decoration:none;text-align:center;font:700 15px Montserrat,sans-serif;padding:14px;border-radius:10px}
 .content{margin-left:300px}.hero{min-height:72vh;display:flex;align-items:flex-end;padding:clamp(28px,6vw,80px);position:relative;color:#fff;background:${d.photos[0] ? "#122" : `linear-gradient(180deg,${mix(b, "#ffffff", .25)},${navy})`};overflow:hidden}
@@ -267,12 +267,12 @@ const taproom = {
     const today = d.hours.slice(0, 3);
     const css = `body{background:${green};color:${cream};font:18px/1.65 'Source Sans 3',system-ui,sans-serif}
 header.top{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:14px clamp(16px,4vw,44px);border-bottom:3px double ${brass}66}
-.brand{display:flex;align-items:center;gap:10px;font:22px 'Alfa Slab One',Georgia,serif;color:${cream};text-decoration:none;letter-spacing:.02em}.brand .logo{width:40px;height:40px;object-fit:contain}
+.brand{display:flex;align-items:center;gap:10px;font:22px 'Alfa Slab One',Georgia,serif;color:${cream};text-decoration:none;letter-spacing:.02em}.brand .logo{height:56px;width:auto;max-width:180px;object-fit:contain;background:#fff;border-radius:10px;padding:6px}
 header.top nav{display:flex;gap:22px}header.top nav a{color:${cream};text-decoration:none;font-weight:700;letter-spacing:.14em;text-transform:uppercase;font-size:14px}header.top nav a:hover{color:${brass}}
 .hero{position:relative;text-align:center;padding:clamp(48px,8vw,100px) 20px clamp(40px,6vw,70px);${d.photos[0] ? "overflow:hidden" : `background:radial-gradient(ellipse at 50% 0,${panel},${green} 70%)`}}
 .hero img.bg{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:.3}.hero .in{position:relative}
 .crest{display:inline-block;border:3px solid ${brass};outline:1px solid ${brass};outline-offset:6px;border-radius:24px;padding:clamp(22px,4vw,40px) clamp(24px,6vw,64px);background:${green}cc}
-.crest .logo{margin:0 auto 10px;width:80px;height:80px;object-fit:contain}.crest small{display:block;color:${brass};font-weight:700;letter-spacing:.3em;text-transform:uppercase;font-size:13px}
+.crest .logo{margin:0 auto 12px;height:clamp(100px,14vw,140px);width:auto;max-width:300px;object-fit:contain;background:#fff;border-radius:14px;padding:10px}.crest small{display:block;color:${brass};font-weight:700;letter-spacing:.3em;text-transform:uppercase;font-size:13px}
 .crest h1{font:clamp(44px,8vw,92px)/1 'Alfa Slab One',Georgia,serif;margin:12px 0;color:${cream};text-shadow:0 3px 0 #0007}.crest p{margin:0;font-size:20px;color:#d8cfbb}
 .hours-strip{display:flex;flex-wrap:wrap;justify-content:center;gap:10px 28px;margin:28px auto 0;max-width:900px}.hours-strip span{font-weight:700}.hours-strip b{color:${brass};margin-right:6px;text-transform:uppercase;letter-spacing:.1em;font-size:14px}
 .go{display:inline-block;margin:24px 6px 0;padding:14px 24px;border-radius:999px;text-decoration:none;font-weight:700;letter-spacing:.06em;text-transform:uppercase;font-size:15px;background:${brass};color:${on}}.go.out{background:transparent;color:${cream};box-shadow:inset 0 0 0 2px ${cream}}
