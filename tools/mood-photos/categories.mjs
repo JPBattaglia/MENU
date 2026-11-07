@@ -1,0 +1,36 @@
+// Mood photo categories for the site generator (owner, Nov 6, 2026: "mood photos when none are given").
+// Each category: Openverse search terms used to gather CC0 candidates (tools/mood-photos/candidates.mjs).
+// The menu words that choose a category live in booking-api/src/producers/website/mood.js.
+export const CATEGORIES = {
+  pizza: ["pizza", "pizza oven"],
+  italian: ["pasta", "italian food"],
+  sushi: ["sushi", "japanese food"],
+  ramen: ["ramen", "noodle soup"],
+  chinese: ["dumplings", "chinese food"],
+  thai: ["thai food", "curry"],
+  vietnamese: ["pho", "vietnamese food"],
+  korean: ["korean food", "bibimbap"],
+  indian: ["indian food", "naan"],
+  mexican: ["tacos", "mexican food"],
+  burgers: ["burger", "fries"],
+  bbq: ["barbecue", "grill"],
+  seafood: ["seafood", "oysters"],
+  steak: ["steak", "steakhouse"],
+  mediterranean: ["mediterranean food", "hummus"],
+  breakfast: ["breakfast", "pancakes"],
+  coffee: ["coffee", "latte art"],
+  bakery: ["bread bakery", "loaves"],
+  pastry: ["croissant", "pastry"],
+  donuts: ["donuts", "doughnut"],
+  icecream: ["ice cream", "gelato"],
+  dessert: ["cake", "dessert"],
+  salad: ["salad", "healthy bowl"],
+  sandwich: ["sandwich", "deli"],
+  juice: ["smoothie", "fresh juice"],
+  tea: ["tea", "bubble tea"],
+  cocktails: ["cocktail", "bar counter"],
+  beer: ["beer", "brewery"],
+  wine: ["wine glass", "wine bar"],
+  restaurant: ["restaurant interior", "restaurant table"],
+  food: ["food table", "fresh ingredients"]
+};
