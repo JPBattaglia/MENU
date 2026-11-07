@@ -24,11 +24,14 @@ function readme(name, design, hosted) {
     `Design: ${design.label}. Made by MENU-MADE (menu-made.com).`,
     "",
     "What's inside",
-    "  index.html   the whole site (one page: home, menu, about, visit)",
-    "  styles.css   the design",
+    "  index.html     the home page",
+    "  menu.html      the menu (when there is one)",
+    "  about.html     your story",
+    "  contact.html   hours, address and phone",
+    "  styles.css     the design",
     "",
     "Putting it online yourself",
-    "  Any web host works. Upload both files to the top folder of your site (often called public_html or www).",
+    "  Any web host works. Upload all the files to the top folder of your site (often called public_html or www).",
     "  Free and simple: drag this folder onto https://app.netlify.com/drop, or use Cloudflare Pages.",
     "  The fonts load from Google Fonts; with no internet they fall back to standard fonts.",
     "",
@@ -41,7 +44,7 @@ function readme(name, design, hosted) {
 }
 
 // The page as the live server serves it: one HTML page with its styles inside (the live CSP allows inline styles).
-const inlined = (files) => files["index.html"].replace('<link rel="stylesheet" href="styles.css">', () => `<style>${files["styles.css"]}</style>`);
+const inlined = (files, file = "index.html") => files[file].replace('<link rel="stylesheet" href="styles.css">', () => `<style>${files["styles.css"]}</style>`);
 
 async function reserveSlug(env, context, name) {
   const existing = await env.DB.prepare(`SELECT slug FROM website_sites WHERE business_id = ? ORDER BY created_at ASC LIMIT 1`).bind(context.business_id).first();
@@ -91,16 +94,16 @@ async function runSiteFilesProduceStep(targetStep, env) {
     `).bind(context.order_id).first());
   const folder = (slugify(site.name) || "website").slice(0, 40);
   const zip = createZip([
-    { name: `${folder}/index.html`, data: enc.encode(files["index.html"]) },
-    { name: `${folder}/styles.css`, data: enc.encode(files["styles.css"]) },
+    ...Object.entries(files).map(([name, text]) => ({ name: `${folder}/${name}`, data: enc.encode(text) })),
     { name: `${folder}/README.txt`, data: enc.encode(readme(site.name, design, hosted)) }
   ]);
   const stored = await storeDeliverable(env, context, { type: "SITE_ZIP", filename: `${folder}-website.zip`, mime: "application/zip", bytes: zip, folder: "site-zip", metadata: { site_files: { design: design.key, preview: meta.site_preview } } });
   let live = null;
   if (hosted) {
     const slug = await reserveSlug(env, context, site.name);
-    const build = { version: 1, slug, style: `generator:${design.key}`, built_at: nowIso(), pages: { "index.html": inlined(files) }, images: [], site, copy: data.copy };
-    const b = await storeDeliverable(env, context, { type: "SITE_BUILD", filename: `${slug}-site.json`, mime: "application/json", bytes: enc.encode(JSON.stringify(build)), folder: "site-build", metadata: { website: { slug, style: `generator:${design.key}`, pages: 1, images: 0 } } });
+    const pages = Object.fromEntries(Object.keys(files).filter((f) => f.endsWith(".html")).map((f) => [f, inlined(files, f)]));
+    const build = { version: 1, slug, style: `generator:${design.key}`, built_at: nowIso(), pages, images: [], site, copy: data.copy };
+    const b = await storeDeliverable(env, context, { type: "SITE_BUILD", filename: `${slug}-site.json`, mime: "application/json", bytes: enc.encode(JSON.stringify(build)), folder: "site-build", metadata: { website: { slug, style: `generator:${design.key}`, pages: Object.keys(pages).length, images: 0 } } });
     // Live at once: the buyer chose this exact design, so there is nothing more to approve.
     await env.DB.prepare(`UPDATE deliverables SET status = 'FINAL', customer_visible = 1, delivered_at = ? WHERE id = ?`).bind(nowIso(), b.deliverableId).run();
     live = `https://${slug}.menu-made.com/`;

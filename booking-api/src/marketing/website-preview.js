@@ -39,7 +39,7 @@ const SITE = "https://menu-made.com";
 const PRICE = "$499";
 const MENU_TYPES = new Set(["application/pdf", "image/png", "image/jpeg", "image/webp"]);
 const SCANNER = /bot|crawl|spider|slurp|preview|scanner|proofpoint|mimecast|barracuda|safelinks|urldefense|headless|python|curl|wget|java\/|go-http|facebookexternalhit|slackbot|whatsapp|discord|skypeuripreview|outlook-ios-linkpreview/i;
-const PAGE = /^(index|menu|services|about|gallery|contact)\.html$|^d\/[a-z]+\.html$/;
+const PAGE = /^(index|menu|services|about|gallery|contact)\.html$|^d\/[a-z]+(\/(index|menu|about|contact))?\.html$/;
 const SITE_FILES_PRICE = "$299";
 
 const json = (data, status = 200) => Response.json(data, { status, headers: { "Cache-Control": "no-store", "Access-Control-Allow-Origin": "*" } });
@@ -47,8 +47,8 @@ const cleanText = (value, max) => String(value || "").replace(/[\r\x00]/g, "").t
 const oneLine = (value, max) => cleanText(value, max).replace(/\n/g, " ");
 const hoursFromNow = (hours, now) => new Date(now + hours * 3600000).toISOString();
 const startUrl = (token) => `${SITE}/contact.html?service=website&wpreview=${token}`;
-const viewUrl = (token) => `${SITE}/api/website-preview/view/${token}/d/${DESIGNS[0].key}.html`;
-const designUrl = (token, key) => `${SITE}/api/website-preview/view/${token}/d/${key}.html`;
+const viewUrl = (token) => `${SITE}/api/website-preview/view/${token}/d/${DESIGNS[0].key}/index.html`;
+const designUrl = (token, key) => `${SITE}/api/website-preview/view/${token}/d/${key}/index.html`;
 const chooseUrl = (token, key) => `${SITE}/contact.html?service=sitefiles&wpreview=${token}&design=${key}`;
 
 function newToken() {
@@ -187,7 +187,10 @@ async function buildAndStore(env, token, business, facts, { scope, prospect = fa
   // The generator's nine designs, and what they were built from (the paid site is rebuilt from this after checkout).
   for (const [i, design] of DESIGNS.entries()) {
     const files = buildDesignSite(site, copy, design.key);
-    await env.ASSETS.put(`website-previews/${token}/d/${design.key}.html`, wrapDesign(files["index.html"], files["styles.css"], token, i, { prospect }), { httpMetadata: { contentType: "text/html; charset=utf-8" } });
+    for (const [file, html] of Object.entries(files)) {
+      if (!file.endsWith(".html")) continue;
+      await env.ASSETS.put(`website-previews/${token}/d/${design.key}/${file}`, wrapDesign(html, files["styles.css"], token, i, { prospect }), { httpMetadata: { contentType: "text/html; charset=utf-8" } });
+    }
   }
   await env.ASSETS.put(`website-previews/${token}/data.json`, JSON.stringify({ site, copy }), { httpMetadata: { contentType: "application/json" } });
   return { pages: Object.keys(pages).length, site };

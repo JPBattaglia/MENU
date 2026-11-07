@@ -38,7 +38,7 @@ function siteData(site, copy) {
   };
 }
 
-const nav = (d, extra = "") => [["#menu", d.menuLabel], ["#about", "About"], ["#visit", d.address ? "Visit" : "Contact"]].filter(([h]) => h !== "#menu" || d.sections.length)
+const nav = (d, extra = "") => [["#main", "Home"], ["#menu", d.menuLabel], ["#about", "About"], ["#visit", d.address ? "Visit" : "Contact"]].filter(([h]) => h !== "#menu" || d.sections.length)
   .map(([h, t]) => `<a href="${h}"${extra}>${esc(t)}</a>`).join("");
 
 const callBtn = (d, cls) => (d.phone ? `<a class="${cls}" href="tel:${esc(d.tel)}">Call ${esc(d.phone)}</a>` : "");
@@ -69,7 +69,7 @@ const aboutHtml = (d) => d.about.map((p) => `<p>${esc(p)}</p>`).join("");
 
 function page(d, { fonts, css, body, theme }) {
   const fontLink = fonts ? `<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link rel="stylesheet" href="https://fonts.googleapis.com/css2?${fonts}&display=swap">` : "";
-  return `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${esc(d.name)}${d.tagline ? ` | ${esc(d.tagline)}` : ""}</title><meta name="description" content="${esc(d.meta || d.intro)}"><meta name="theme-color" content="${theme}">${fontLink}<link rel="stylesheet" href="styles.css"></head>
+  return `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${d.pageTitle ? `${esc(d.pageTitle)} | ${esc(d.name)}` : `${esc(d.name)}${d.tagline ? ` | ${esc(d.tagline)}` : ""}`}</title><meta name="description" content="${esc(d.meta || d.intro)}"><meta name="theme-color" content="${theme}">${fontLink}<link rel="stylesheet" href="styles.css"></head>
 <body><a class="skip" href="#main">Skip to content</a>${body}</body></html>`;
 }
 
