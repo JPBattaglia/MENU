@@ -3,6 +3,7 @@
 # job does the fetching. On a mood-photos-* branch: with no assets/mood/picks.json it gathers candidates and commits
 # contact sheets (mood-candidates/) for review; with picks.json it publishes the chosen photos to assets/mood/ and
 # removes the candidates. Commits go back to the same branch (GITHUB_TOKEN pushes don't start this job again).
+# No "[skip ci]" in these commit messages: a squash merge copies them onto master and would skip its deploys.
 name: Mood photos
 on:
   push:
@@ -46,5 +47,5 @@ jobs:
           git add -A mood-candidates assets/mood 2>/dev/null || true
           git add -A
           git diff --cached --quiet && { echo "Nothing to commit"; exit 0; }
-          git commit -m "Mood photos: $( [ -f assets/mood/index.json ] && echo publish || echo candidates ) [skip ci]"
+          git commit -m "Mood photos: $( [ -f assets/mood/index.json ] && echo publish || echo candidates )"
           git push
