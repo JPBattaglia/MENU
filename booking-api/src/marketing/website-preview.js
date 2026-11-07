@@ -27,6 +27,7 @@ import { verifyLinkToken } from "../lib/links.js";
 import { verifyRenderer } from "../producers/social-posts/render-jobs.js";
 import { DRAFTS_AUDIENCE, DRAFTS_WORKFLOW } from "./prospects.js";
 import { readProspectMenu } from "./demo-menu.js";
+import { lookupListing } from "./listing-lookup.js";
 
 const PREVIEW_HOURS = 72;
 const PROSPECT_DAYS = 21;
@@ -232,7 +233,7 @@ const factsJson = (site) => JSON.stringify({ kind: site.kind, about: site.about,
 async function handleWebsitePreviewCreate(request, env, { now = Date.now(), deps = {} } = {}) {
   if (request.method === "OPTIONS") return new Response(null, { status: 204, headers: { "Access-Control-Allow-Origin": "*", "Access-Control-Allow-Methods": "POST", "Access-Control-Allow-Headers": "Content-Type" } });
   if (!env.DB || !env.ASSETS) return json({ ok: false, error: "Previews aren't available right now. Please try again later." }, 503);
-  if (await pausedForSale(env, ["WEBSITE_PACKAGE"]).catch(() => null)) return json({ ok: false, error: "The Website Package is paused right now, so previews are too." }, 409);
+  if (await pausedForSale(env, ["SITE_FILES"]).catch(() => null)) return json({ ok: false, error: "The site generator is paused right now. Please try again later." }, 409);
   const body = await request.json().catch(() => null);
   const requestId = String(body?.request_id || "").toLowerCase();
   const email = oneLine(body?.email, 150).toLowerCase();
@@ -278,15 +279,20 @@ async function handleWebsitePreviewCreate(request, env, { now = Date.now(), deps
     const block = mime === "application/pdf"
       ? { type: "document", source: { type: "base64", media_type: mime, data: bytesToBase64(bytes) } }
       : { type: "image", source: { type: "base64", media_type: mime, data: bytesToBase64(bytes) } };
-    const site = body?.website ? await factsFromWebsite(env, oneLine(body.website, 300), scope, deps).catch(() => null) : null;
+    // Auto-fill: with a city, the public listing fills what was left blank, and its website is read when none was given.
+    const city = oneLine(body?.city, 80);
+    const needsListing = city && !(body?.phone && body?.address && body?.hours && body?.website);
+    const listing = needsListing ? await lookupListing(business, city).catch(() => null) : null;
+    const website = oneLine(body?.website, 300) || listing?.website || "";
+    const site = website ? await factsFromWebsite(env, website, scope, deps).catch(() => null) : null;
     const read = await readMenuWithClaude(block, env);
     const facts = {
-      kind: "restaurant",
+      kind: "restaurant", city, cuisine: listing?.cuisine || "",
       offerings: offeringsFromMenu(read.menu) || site?.offerings || "",
       about: site?.about || "",
-      phone: oneLine(body?.phone, 30) || site?.phone || "",
-      address: oneLine(body?.address, 160) || site?.address || "",
-      hours: cleanText(body?.hours, 400) || site?.hours || ""
+      phone: oneLine(body?.phone, 30) || site?.phone || listing?.phone || "",
+      address: oneLine(body?.address, 160) || site?.address || listing?.address || "",
+      hours: cleanText(body?.hours, 400) || site?.hours || listing?.hours || ""
     };
     if (!facts.offerings) throw new Error("no menu items could be read");
     built = await buildAndStore(env, token, business, facts, { scope, deps });

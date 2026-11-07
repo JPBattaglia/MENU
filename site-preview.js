@@ -1,4 +1,4 @@
-// Free Website Package preview (owner, Nov 5, 2026). Uploads the menu the same way checkout does (stored, no emails),
+// Free site generator preview (owner, Nov 5, 2026). Uploads the menu the same way checkout does (stored, no emails),
 // then asks the worker to build the site. booking-api/src/marketing/website-preview.js holds the limits.
 // Rep mode (a signed link from the owner's email, kept on this device by menu-preview.js) skips the limits.
 (() => {
@@ -53,7 +53,7 @@
       const response = await fetch(API + '/api/website-preview/create', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ request_id: upload.requestId, email, business, phone: $('site_phone').value, address: $('site_address').value,
-          hours: $('site_hours').value, website: $('site_current').value, tracking: window.MenuMadeFunnel?.tracking?.() || {}, ...(rep ? { rep } : {}) })
+          hours: $('site_hours').value, website: $('site_current').value, city: $('site_city')?.value || '', tracking: window.MenuMadeFunnel?.tracking?.() || {}, ...(rep ? { rep } : {}) })
       });
       const result = await response.json().catch(() => null);
       if (response.ok && result?.ok && result.url) {
@@ -68,7 +68,7 @@
     } catch (error) {
       say(esc(error?.message || 'Something went wrong. Please try again.'), true);
     } finally {
-      busy = false; button.disabled = false; button.textContent = 'Show me my website';
+      busy = false; button.disabled = false; button.textContent = 'Generate my site';
     }
   });
 })();

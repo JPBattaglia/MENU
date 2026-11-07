@@ -31,6 +31,7 @@ const SERVICES = [
   { key: "ACCESSIBILITY_MONITORING", label: "Accessibility Monitoring", offers: ["ACCESSIBILITY_MONITORING"], workflows: ["ACCESSIBILITY_MONITORING_V1"] },
   { key: "CONVERSION_FIX", label: "Conversion Fix", offers: ["CONVERSION_FIX"], workflows: ["CONVERSION_FIX_V1"] },
   { key: "WEBSITE_PACKAGE", label: "Website Package", offers: ["WEBSITE_PACKAGE"], workflows: ["WEBSITE_PACKAGE_V1"] },
+  { key: "SITE_FILES", label: "Your Website (site generator)", offers: ["SITE_FILES"], workflows: ["SITE_FILES_V1"] },
   { key: "WEBSITE_CARE", label: "Website Care", offers: ["WEBSITE_CARE"], workflows: ["WEBSITE_CARE_V1"] },
   { key: "GUEST_APP", label: "Guest App", offers: ["GUEST_APP", "GUEST_APP_SETUP"], workflows: ["GUEST_APP_SETUP_V1", "GUEST_APP_V1"] },
   { key: "STORE_APP", label: "Mobile App", offers: ["STORE_APP_SETUP", "STORE_APP_CARE"], workflows: ["STORE_APP_SETUP_V1", "STORE_APP_CARE_V1"] },
