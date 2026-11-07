@@ -1,7 +1,7 @@
 // Shared pieces for the site generator's templates (owner, Nov 6, 2026: "generate site" shuffles real designs, the
 // buyer chooses one, pays, and gets the whole site as a zip). Each template is a genuinely different layout, not a
 // recolour: its own hero, menu layout, navigation, footer and type. Every site is one page (index.html) with sections
-// Home, Menu, About, Visit, plus its images. Facts come only from what the business gave us; copy from the AI step.
+// Home, Menu, About, Contact, plus its images. Facts come only from what the business gave us; copy from the AI step.
 import { parseHours, parseOfferings } from "../build.js";
 import { hexOk } from "../styles.js";
 
@@ -38,7 +38,7 @@ function siteData(site, copy) {
   };
 }
 
-const nav = (d, extra = "") => [["#main", "Home"], ["#menu", d.menuLabel], ["#about", "About"], ["#visit", d.address ? "Visit" : "Contact"]].filter(([h]) => h !== "#menu" || d.sections.length)
+const nav = (d, extra = "") => [["#main", "Home"], ["#menu", d.menuLabel], ["#about", "About"], ["#visit", "Contact"]].filter(([h]) => h !== "#menu" || d.sections.length)
   .map(([h, t]) => `<a href="${h}"${extra}>${esc(t)}</a>`).join("");
 
 const callBtn = (d, cls) => (d.phone ? `<a class="${cls}" href="tel:${esc(d.tel)}">Call ${esc(d.phone)}</a>` : "");

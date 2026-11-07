@@ -144,7 +144,9 @@ function ownPanel(token, key, site = {}) {
   const n = ownPhotoCount(site), brand = hexOk(site.brand) ? String(site.brand).toLowerCase() : "";
   const have = [site.logo ? "your logo" : "", n ? `${n} photo${n === 1 ? "" : "s"}` : "", brand ? "your colour" : ""].filter(Boolean);
   const sample = hasSamplePhotos(site) ? " The photos are samples until you add yours." : "";
-  return `<details class="mm-own"><summary>Make it yours</summary>
+  // A popup in the middle of the screen, opened by the "Make it yours" button in the bar (owner, Nov 6, 2026).
+  return `<dialog class="mm-own" id="mm-own" aria-labelledby="mm-own-title" onclick="if (event.target === this) this.close()"><div class="mm-own-box">
+  <div class="mm-own-head"><h2 id="mm-own-title">Make it yours</h2><button type="button" class="mm-own-x" aria-label="Close" onclick="this.closest('dialog').close()">&times;</button></div>
   <form method="post" enctype="multipart/form-data" action="/api/website-preview/customize/${token}">
   <input type="hidden" name="design" value="${escapeHtml(key)}">
   <p class="mm-own-now">${have.length ? `Using ${escapeHtml(have.join(", "))}. New files replace them.` : "Add your logo, photos and colour. Every design updates."}${sample}</p>
@@ -153,7 +155,7 @@ function ownPanel(token, key, site = {}) {
   <label class="mm-own-colour">Brand colour <input type="color" name="brand" value="${brand || "#00a7b5"}"></label>
   <label class="mm-own-check"><input type="checkbox" name="use_brand" value="1"${brand ? " checked" : ""}> Use this colour</label>
   <button type="submit">Update all 9 designs</button>
-  </form></details>`;
+  </form></div></dialog>`;
 }
 
 function wrapDesign(html, css, token, index, { prospect = false, site = null } = {}) {
@@ -163,6 +165,7 @@ function wrapDesign(html, css, token, index, { prospect = false, site = null } =
   const bar = `<aside class="mm-gen" role="note" aria-label="Site generator">
   <p><strong>Design ${index + 1} of ${DESIGNS.length}: ${escapeHtml(d.label)}</strong><span> · ${escapeHtml(d.blurb)}. ${prospect ? `A private preview made for you by Menu-made, ends in ${PROSPECT_DAYS} days.` : `Free preview, ends in ${PREVIEW_HOURS / 24} days.`}${hasSamplePhotos(site) ? " Sample photos: add your own in Make it yours." : ""}</span></p>
   <a class="mm-gen-next" href="${escapeHtml(designUrl(token, next.key))}">Generate site</a>
+  <button type="button" class="mm-gen-own" onclick="var d = document.getElementById('mm-own'); d.showModal ? d.showModal() : d.setAttribute('open', '')">Make it yours</button>
   <a class="mm-gen-pick" href="${escapeHtml(chooseUrl(token, d.key))}">Choose this site: ${SITE_FILES_PRICE}</a>
   ${ownPanel(token, d.key, site || {})}
 </aside>`;
@@ -170,14 +173,17 @@ function wrapDesign(html, css, token, index, { prospect = false, site = null } =
   body { padding-bottom: 170px; }
   body::after { content: ""; position: fixed; inset: 0; z-index: 40; pointer-events: none; background-image: url("data:image/svg+xml,${mark}"); }
   .mm-gen { position: fixed; left: 0; right: 0; bottom: 0; z-index: 41; display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 10px 14px; padding: 12px 16px calc(12px + env(safe-area-inset-bottom)); background: #071f2c; color: #e8f6f7; font: 14px/1.45 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; box-shadow: 0 -4px 18px rgba(0,0,0,.25); }
-  .mm-gen p { margin: 0; max-width: 520px; } .mm-gen a { flex: none; padding: 12px 18px; border-radius: 8px; font-weight: 700; text-decoration: none; font-size: 15px; }
-  .mm-gen-next { background: #ffffff1f; color: #fff; box-shadow: inset 0 0 0 2px #ffffff66; } .mm-gen-pick { background: #00a7b5; color: #fff; }
-  .mm-own { flex-basis: 100%; max-width: 560px; } .mm-own summary { cursor: pointer; text-align: center; font-weight: 700; color: #9eeef3; text-decoration: underline; padding: 4px; }
-  .mm-own form { display: grid; gap: 10px; margin-top: 8px; max-height: 55vh; overflow: auto; padding: 12px; border-radius: 8px; background: #ffffff12; }
+  .mm-gen p { margin: 0; max-width: 520px; } .mm-gen a, .mm-gen-own { flex: none; padding: 12px 18px; border: 0; border-radius: 8px; font: 700 15px/1.2 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; text-decoration: none; cursor: pointer; }
+  .mm-gen-next, .mm-gen-own { background: #ffffff1f; color: #fff; box-shadow: inset 0 0 0 2px #ffffff66; } .mm-gen-pick { background: #00a7b5; color: #fff; }
+  .mm-own { width: min(520px, calc(100vw - 32px)); max-height: calc(100vh - 48px); margin: auto; padding: 0; border: 0; border-radius: 14px; background: #071f2c; color: #e8f6f7; box-shadow: 0 24px 60px rgba(0,0,0,.45); font: 15px/1.45 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+  .mm-own::backdrop { background: rgba(4,16,24,.62); } .mm-own[open]:not(:modal) { position: fixed; inset: 0; z-index: 50; }
+  .mm-own-box { padding: 18px 20px 20px; } .mm-own-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 6px; }
+  .mm-own h2 { margin: 0; font: 700 20px/1.2 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; color: #fff; } .mm-own .mm-own-x { padding: 2px 10px; background: none; color: #e8f6f7; font-size: 26px; line-height: 1; }
+  .mm-own form { display: grid; gap: 12px; }
   .mm-own label { display: grid; gap: 4px; font-weight: 600; } .mm-own small { font-weight: 400; opacity: .8; } .mm-own input[type=file] { color: #e8f6f7; max-width: 100%; }
   .mm-own .mm-own-colour, .mm-own .mm-own-check { display: flex; align-items: center; gap: 10px; } .mm-own input[type=color] { width: 52px; height: 36px; border: 0; padding: 0; background: none; }
   .mm-own p { margin: 0; } .mm-own button { padding: 12px 18px; border: 0; border-radius: 8px; background: #00a7b5; color: #fff; font: 700 15px system-ui, sans-serif; cursor: pointer; }
-  @media (max-width: 600px) { .mm-gen p span { display: none; } }
+  @media (max-width: 600px) { .mm-gen p span { display: none; } .mm-gen a, .mm-gen-own { padding: 10px 13px; font-size: 14px; } }
   @media print { body > * { display: none !important; } body::before { content: "This is a preview from menu-made.com and can't be printed."; display: block; padding: 40px; font: 18px system-ui, sans-serif; } }
 </style>`;
   return html.replace('<link rel="stylesheet" href="styles.css">', () => `<meta name="robots" content="noindex,nofollow">${style}`).replace(/<body([^>]*)>/, (match, attrs) => `<body${attrs}>\n${bar}`);

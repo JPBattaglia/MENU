@@ -60,7 +60,7 @@ function setup() {
   return { env, call, signIn, emails, row, sql, linkIn, openAndPost, restore: () => { globalThis.fetch = realFetch; } };
 }
 
-test('sign-in sends a link only to buyers, and the answer never reveals which emails have accounts', async () => {
+test('sign-in sends a link only to buyers; other emails get a no-purchases note (once an hour); the answer never reveals which', async () => {
   const h = setup();
   try {
     const buyer = await h.signIn('Joe@JoesPizza.example');
@@ -68,8 +68,15 @@ test('sign-in sends a link only to buyers, and the answer never reveals which em
     const lead = await h.signIn('lead@example.com');
     assert.equal(buyer.status, 200); assert.equal(stranger.status, 200); assert.equal(lead.status, 200);
     assert.deepEqual(await buyer.json(), await stranger.json());
-    assert.equal(h.emails.length, 1);
-    assert.deepEqual([h.emails[0].to].flat(), ['joe@joespizza.example']);
+    assert.deepEqual(h.emails.map((e) => [e.to].flat()[0]), ['joe@joespizza.example', 'nobody@example.com', 'lead@example.com']);
+    assert.match(h.emails[0].html, /\/api\/account\/open\//);
+    for (const note of h.emails.slice(1)) {
+      assert.equal(note.subject, 'Signing in to Menu-Made');
+      assert.match(note.html, /No purchases under this email/);
+      assert.doesNotMatch(note.html + note.text, /\/api\/account\/open\//, 'a note never carries a sign-in link');
+    }
+    await h.signIn('nobody@example.com');
+    assert.equal(h.emails.length, 3, 'the note goes once an hour, so the page cannot flood an inbox');
     assert.equal((await h.signIn('not-an-email')).status, 400);
   } finally { h.restore(); }
 });
