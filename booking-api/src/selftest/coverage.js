@@ -39,6 +39,7 @@ const OFFER_TESTS = {
   ACCESSIBILITY_MONITORING: [["ACCESSIBILITY_RUN", "settings link, real scan, monthly report"]],
   CONVERSION_FIX: [["CONVERSION_RUN", "audit, AI recommendations, approval, report"]],
   WEBSITE_PACKAGE: [["WEBSITE_PACKAGE_RUN", "intake form, AI copy, approval, live site"], ["WEBSITE_TRIAL_RUN", "real checkout starts the Website Care trial; trial end charges the first month"]],
+  SITE_FILES: [["SITE_FILES_RUN", "chosen design zipped and emailed with no approval; with Website Care, live at its address"]],
   WEBSITE_CARE: [["WEBSITE_CARE_RUN", "change request, AI edit, approval, live site updated"]],
   GUEST_APP_SETUP: [["GUEST_APP_RUN", "intake form, icons, preview, approval, live app"]],
   GUEST_APP: [["GUEST_APP_PUSH_RUN", "notifications and the rewards card"]],

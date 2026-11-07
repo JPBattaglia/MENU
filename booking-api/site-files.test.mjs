@@ -111,3 +111,20 @@ test('a missing preview never sends the buyer anything; the owner is told', asyn
   assert.ok(f.emails.some((e) => /couldn't be found/.test(e.subject)));
   assert.ok(!f.emails.some((e) => /Your website is ready/.test(e.subject)));
 });
+
+test('self-test SITE_FILES_RUN passes through the real steps and frees its address', async () => {
+  const { advanceSiteFilesSelfTests } = await import('./src/selftest/site-files-selftest.js');
+  const f = setup({ hosted: false });
+  // The test inbox: self-test emails go there through the same sender.
+  const t = '2026-11-07T00:00:00.000Z';
+  f.DB.raw.prepare(`INSERT INTO offers (id, created_at, updated_at, code, name, category, status, billing_type, fulfillment_type, requires_approval, default_workflow_key) VALUES ('offer_wc', ?, ?, 'WEBSITE_CARE', 'Website Care', 'WEBSITE', 'ACTIVE', 'RECURRING', 'DIGITAL', 1, 'WEBSITE_CARE_V1')`).run(t, t);
+  f.DB.raw.prepare(`INSERT INTO offer_versions (id, offer_id, version_number, created_at, effective_from, status, price_cents, scope_json) VALUES ('ov_wc', 'offer_wc', 1, ?, ?, 'ACTIVE', 4900, '{}')`).run(t, t);
+  f.DB.raw.prepare(`INSERT INTO self_tests (id, kind, status, requested_by, created_at, updated_at) VALUES ('st1', 'SITE_FILES_RUN', 'REQUESTED', 'test', ?, ?)`).run(t, t);
+  const app = (req) => api.default.fetch(req, f.env, f.ctx);
+  await withFetch(f.fetch, async () => {
+    for (let i = 0; i < 5; i++) { await advanceSiteFilesSelfTests(f.env, app); await api.runScheduledProduction(f.env); await Promise.all(f.pending); }
+  });
+  const st = f.row(`SELECT status, error FROM self_tests WHERE id = 'st1'`);
+  assert.equal(st.status, 'PASSED', st.error);
+  assert.equal(f.row(`SELECT COUNT(*) AS n FROM website_sites WHERE slug LIKE 'site-files-self-test%'`).n, 0, 'address freed');
+});
