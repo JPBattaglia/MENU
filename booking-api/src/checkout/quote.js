@@ -50,6 +50,7 @@ function appendCheckoutLineItem(params, item, index, environment, { autoTax = fa
     params.append(`${prefix}[price_data][product_data][name]`, item.menuPackage
       ? `${item.offerName} — ${item.menuPackage.menu_pages} menu pages + first-year hosting`
       : item.ninoDesign ? `Nino Battaglia design: ${item.offerName}${item.extraMetadata?.design_pages ? ` (${item.extraMetadata.design_pages} pages)` : ""}`
+      : item.domain ? `${item.offerName} + ${item.domain.name} domain (first year)`
       : item.offerName);
     if (item.taxCode) {
       params.append(`${prefix}[price_data][tax_behavior]`, "exclusive");
@@ -60,6 +61,9 @@ function appendCheckoutLineItem(params, item, index, environment, { autoTax = fa
     }
     if (item.ninoDesign) {
       params.append(`${prefix}[price_data][product_data][description]`, "Designed by Nino Battaglia's studio. After payment you'll get a short brief form; you see the result before it's final.");
+    }
+    if (item.domain) {
+      params.append(`${prefix}[price_data][product_data][description]`, `Includes ${item.domain.name} for one year (${(item.domain.price_cents / 100).toFixed(2)} USD), registered in your name and managed by Menu-made. We email you before it renews (${(item.domain.renewal_cents / 100).toFixed(2)} USD a year); nothing renews without your OK.`);
     }
     if (item.menuPackage) {
       params.append(`${prefix}[price_data][product_data][description]`, "$129 setup includes up to 3 pages and two revisions; $20 per additional page; $15 first-year hosting. After the first year, hosting continues with Menu Care; without it the menu goes offline 30 days later.");

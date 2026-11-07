@@ -6,6 +6,7 @@ import { jsonResponse, normalizeName, normalizeNullableText, nowIso } from "../l
 import { stripeRequest } from "../lib/stripe.js";
 import { buildSubscriptionCart, appendSubscriptionParams } from "../subscriptions/checkout.js";
 import { pausedForSale, pausedMessage } from "../lib/switches.js";
+import { domainForCheckout } from "../producers/website/domain-purchase.js";
 
 
 // One checkout for both environments. "sandbox" uses the Stripe test key and inline prices;
@@ -64,6 +65,16 @@ async function createCheckout(request, env, environment) {
       const choice = await siteChoice(env, data?.site_choice);
       if (!choice) return jsonResponse({ ok: false, error: "Choose your design in the site generator first: menu-made.com/website-design.html" }, 400);
       siteItem.extraMetadata = { ...(siteItem.extraMetadata || {}), site_preview: choice.token, site_design: choice.design };
+      // A domain bought with the hosted site (Nov 7, 2026): checked live now, priced at cost + $5, charged on the same line.
+      if (data?.domain) {
+        const domain = await domainForCheckout(env, data.domain, { plan: cart.plan });
+        siteItem.priceCents += domain.price_cents;
+        siteItem.inlinePrice = true;
+        siteItem.domain = domain;
+        siteItem.extraMetadata.domain = domain;
+      }
+    } else if (data?.domain) {
+      return jsonResponse({ ok: false, error: "A domain comes with Your Website. Choose your design first: menu-made.com/website-design.html" }, 400);
     }
     // Orders started on ninobattaglia.com (Nino design services) return there after Stripe.
     const returnTo = data?.return_to === "nino" ? "nino" : null;
@@ -125,10 +136,13 @@ async function openStripeSession(env, environment, { cart, normalizedItems, orde
     if (tracking.campaign) params.append("metadata[campaign]", String(tracking.campaign));
     // Taxed items (the Nino flyer): Stripe Tax adds sales tax from the billing address collected at checkout.
     const autoTax = !cart.plan && normalizedItems.some((item) => item.taxCode);
+    // A domain is registered in the buyer's name: the registry needs their address and phone.
+    const domainBought = normalizedItems.some((item) => item.domain);
     normalizedItems.forEach((item, index) => appendCheckoutLineItem(params, item, index, environment, { autoTax }));
+    if (autoTax || domainBought) params.append("billing_address_collection", "required");
+    if (domainBought) params.append("phone_number_collection[enabled]", "true");
     if (autoTax) {
       params.append("automatic_tax[enabled]", "true");
-      params.append("billing_address_collection", "required");
       if (cart.stripeCustomerId) params.append("customer_update[address]", "auto");
     }
     if (cart.plan) {

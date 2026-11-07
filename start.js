@@ -61,6 +61,10 @@ let checkoutInFlight = false;
 let uploadedDocumentRequest = null;
 let previewDocumentId = ''; // a free preview's stored menu file, reused so the buyer doesn't upload it again
 let lockedFieldValues = null;
+// A domain bought with the hosted site (Nov 7, 2026): { name, price_cents, renewal_cents } from /api/domains.
+let domainPick = null;
+let domainsEnabled = false;
+let domainResults = [];
 
 const els = {
   items: $('cartItems'), total: $('cartTotal'), recurringRow: $('recurringRow'), recurring: $('recurringTotal'),
@@ -222,6 +226,11 @@ function render(openEmptyChoices = true) {
     els.items.append(lineFor(code, 'once'));
     today += code === MENU ? (quote?.totalCents || 0) : (Catalog.priceOf(offer(code), interval()) || 0);
   }
+  if (domainPick && !domainAllowed()) domainPick = null;
+  if (domainPick) {
+    els.items.append(domainLine());
+    today += domainPick.price_cents;
+  }
   const plan = effectivePlan();
   if (plan && !plan.trial) today += planCents(plan.code) || 0;
   els.recurringRow.hidden = !plan;
@@ -251,7 +260,97 @@ function render(openEmptyChoices = true) {
   updateBriefs();
   updateCards();
   renderSiteAddons();
+  renderDomain();
 }
+
+// Your own domain: shown under the add-ons once the site is hosted (Website Care, the Pro plan, or your own plan with it).
+const usd = cents => '$' + (cents / 100).toFixed(2);
+function siteHosted() {
+  return order.plan === 'WEBSITE_CARE' || order.plan === 'BUNDLE_PRO' || (order.plan === CUSTOM && order.custom.includes('WEBSITE_CARE'));
+}
+function domainAllowed() { return domainsEnabled && order.once.has('SITE_FILES') && siteHosted(); }
+function domainLine() {
+  const li = document.createElement('li');
+  li.className = 'cart-item';
+  const text = document.createElement('div');
+  const strong = document.createElement('strong');
+  strong.textContent = 'Domain: ' + domainPick.name;
+  const small = document.createElement('small');
+  small.textContent = `${usd(domainPick.price_cents)} · first year, in your name · renews at ${usd(domainPick.renewal_cents)}/yr only if you say so`;
+  text.append(strong, small);
+  const remove = document.createElement('button');
+  remove.className = 'btn secondary remove-item';
+  remove.type = 'button';
+  remove.dataset.removeDomain = '1';
+  remove.setAttribute('aria-label', 'Remove domain ' + domainPick.name);
+  remove.textContent = 'Remove';
+  li.append(text, remove);
+  return li;
+}
+function renderDomain() {
+  const box = $('siteDomain');
+  if (!box) return;
+  box.hidden = !domainAllowed();
+  if (box.hidden) return;
+  const query = $('domainQuery');
+  if (!query.value && els.business.value.trim()) query.value = els.business.value.trim();
+  const list = $('domainResults');
+  list.innerHTML = '';
+  for (const d of domainResults) {
+    const li = document.createElement('li');
+    const picked = domainPick?.name === d.name;
+    li.classList.toggle('is-selected', picked);
+    li.classList.toggle('is-off', !d.available);
+    const text = document.createElement('div');
+    const strong = document.createElement('strong');
+    strong.textContent = d.name;
+    const small = document.createElement('small');
+    small.textContent = d.available ? `${usd(d.price_cents)} first year · renews ${usd(d.renewal_cents)}/yr` : d.reason;
+    text.append(strong, small);
+    li.append(text);
+    if (d.available) {
+      const button = document.createElement('button');
+      button.type = 'button';
+      button.className = 'btn secondary';
+      button.dataset.domain = d.name;
+      button.textContent = picked ? 'Added' : 'Add';
+      button.setAttribute('aria-pressed', String(picked));
+      button.disabled = checkoutInFlight;
+      li.append(button);
+    }
+    list.append(li);
+  }
+}
+async function searchDomains() {
+  const q = $('domainQuery').value.trim();
+  const note = $('domainNote');
+  if (q.length < 2) { note.textContent = 'Type your business name or the domain you want.'; return; }
+  const button = $('domainSearchBtn');
+  button.disabled = true; note.textContent = 'Searching…';
+  try {
+    const response = await fetch((Catalog?.API || '') + '/api/domains?q=' + encodeURIComponent(q));
+    const data = await response.json();
+    if (!data?.ok) { note.textContent = data?.error || 'Domain search is not answering right now. Try again in a minute.'; return; }
+    domainResults = (data.results || []).slice(0, 8);
+    note.textContent = domainResults.some(d => d.available) ? 'Add one to your order. The price covers the first year.' : 'Nothing free for that name. Try a different spelling or ending.';
+    renderDomain();
+  } catch {
+    note.textContent = 'Domain search is not answering right now. Try again in a minute.';
+  } finally {
+    button.disabled = false;
+  }
+}
+$('domainSearchBtn')?.addEventListener('click', () => { if (!flowBusy()) searchDomains(); });
+$('domainQuery')?.addEventListener('keydown', event => { if (event.key === 'Enter') { event.preventDefault(); if (!flowBusy()) searchDomains(); } });
+$('domainResults')?.addEventListener('click', event => {
+  const button = event.target.closest('[data-domain]');
+  if (!button || flowBusy()) return;
+  const d = domainResults.find(r => r.name === button.dataset.domain);
+  domainPick = domainPick?.name === d?.name ? null : (d ? { name: d.name, price_cents: d.price_cents, renewal_cents: d.renewal_cents } : null);
+  clearStatus();
+  render(false);
+});
+fetch((Catalog?.API || '') + '/api/domains').then(r => r.json()).then(data => { domainsEnabled = Boolean(data?.enabled); render(false); }).catch(() => {});
 
 // "Choose this site" lands here with the site in the order (owner, Nov 6, 2026): Website Care, the Pro plan, or
 // Website Care plus other monthly services (your own plan, 10% / 20% off) are one tap away. One plan per order.
@@ -465,7 +564,7 @@ async function checkout() {
     window.MenuMadeFunnel?.track('checkout_attempt');
     const response = await fetch((Catalog?.API || '') + (TEST_CHECKOUT ? '/api/create-checkout-test' : '/api/create-checkout'), {
       method: 'POST', signal: controller.signal, headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ items, interval: interval(), ...(quote ? { menu_pages: quote.pages } : {}), ...(siteChoice && order.once.has('SITE_FILES') ? { site_choice: siteChoice } : {}), tracking: window.MenuMadeFunnel?.tracking(), customer })
+      body: JSON.stringify({ items, interval: interval(), ...(quote ? { menu_pages: quote.pages } : {}), ...(siteChoice && order.once.has('SITE_FILES') ? { site_choice: siteChoice } : {}), ...(domainPick && domainAllowed() ? { domain: domainPick.name } : {}), tracking: window.MenuMadeFunnel?.tracking(), customer })
     });
     const result = await response.json();
     if (!response.ok) { window.MenuMadeFunnel?.track('checkout_error'); showStatus(result?.error?.message || result?.error || 'Checkout error. Please refresh and try again.'); return; }
@@ -486,6 +585,7 @@ document.querySelectorAll('.js-add').forEach(button => button.addEventListener('
 }));
 els.items.addEventListener('click', event => {
   if (flowBusy()) return;
+  if (event.target.dataset?.removeDomain) { domainPick = null; render(false); return; }
   const code = event.target.dataset?.remove;
   if (code && (order.plan === code || order.once.has(code))) remove(code);
 });

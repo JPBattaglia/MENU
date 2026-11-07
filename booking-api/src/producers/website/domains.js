@@ -179,8 +179,10 @@ function overdue(site, now) {
 async function customHostSlug(env, hostname) {
   const root = rootHost(env);
   const host = String(hostname || "").toLowerCase();
-  if (!host || host === root || host.endsWith(`.${root}`) || !saasConfig(env) || !env.DB) return null;
-  const row = await env.DB.prepare(`SELECT slug FROM website_sites WHERE custom_domain = ? AND domain_status = 'ACTIVE' LIMIT 1`).bind(host).first();
+  if (!host || host === root || host.endsWith(`.${root}`) || !env.DB) return null;
+  // A domain bought at checkout (domain-purchase.js) answers on www.<domain> too.
+  const bare = host.startsWith("www.") ? host.slice(4) : host;
+  const row = await env.DB.prepare(`SELECT slug FROM website_sites WHERE custom_domain IN (?, ?) AND domain_status = 'ACTIVE' LIMIT 1`).bind(host, bare).first();
   return row?.slug || null;
 }
 

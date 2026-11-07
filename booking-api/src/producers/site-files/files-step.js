@@ -16,6 +16,7 @@ import { buildDesignSite, designFor } from "../website/templates/index.js";
 import { formAction } from "./site-form.js";
 import { slugify, validSlug } from "../website/intake.js";
 import { OWN_DAYS, ownLink } from "./own.js";
+import { domainForOrder, queueDomain } from "../website/domain-purchase.js";
 
 const enc = new TextEncoder();
 
@@ -122,9 +123,9 @@ async function makeSiteFiles(env, context, meta, { replace = false } = {}) {
   if (replace) await supersede("SITE_ZIP");
   const stored = await storeDeliverable(env, context, { type: "SITE_ZIP", filename: `${folder}-website.zip`, mime: "application/zip", bytes: zip, folder: "site-zip", metadata: { site_files: { design: design.key, preview: meta.site_preview } } });
   if (replace) await env.DB.prepare(`UPDATE deliverables SET status = 'FINAL', customer_visible = 1, delivered_at = ? WHERE id = ?`).bind(nowIso(), stored.deliverableId).run();
-  let live = null;
+  let live = null, slug = null;
   if (hosted) {
-    const slug = await reserveSlug(env, context, site.name);
+    slug = await reserveSlug(env, context, site.name);
     const pages = Object.fromEntries(Object.keys(files).filter((f) => f.endsWith(".html")).map((f) => [f, inlined(files, f)]));
     // The live server reads images from R2 by key, so they're copied out of the preview into the project's own storage.
     const liveImages = [];
@@ -140,7 +141,7 @@ async function makeSiteFiles(env, context, meta, { replace = false } = {}) {
     await env.DB.prepare(`UPDATE deliverables SET status = 'FINAL', customer_visible = 1, delivered_at = ? WHERE id = ?`).bind(nowIso(), b.deliverableId).run();
     live = `https://${slug}.menu-made.com/`;
   }
-  return { design, zipId: stored.deliverableId, hosted, live, images: images.length, site };
+  return { design, zipId: stored.deliverableId, hosted, live, slug, images: images.length, site };
 }
 
 async function runSiteFilesProduceStep(targetStep, env) {
@@ -156,7 +157,9 @@ async function runSiteFilesProduceStep(targetStep, env) {
     await completeStep(targetStep, output, env);
     return output;
   }
-  const output = { outcome: "PRODUCED", design: made.design.key, zip_deliverable: made.zipId, hosted: made.hosted, images: made.images, ...(made.live ? { live_url: made.live } : {}) };
+  // A domain bought at checkout: registered and pointed by the cron (domain-purchase.js). Test orders buy nothing.
+  const domain = made.hosted && made.slug && meta.domain ? await queueDomain(env, context, meta.domain, made.slug, { test: isTestOrder(context) }) : null;
+  const output = { outcome: "PRODUCED", design: made.design.key, zip_deliverable: made.zipId, hosted: made.hosted, images: made.images, ...(made.live ? { live_url: made.live } : {}), ...(domain ? { domain } : {}) };
   await completeStep(targetStep, output, env);
   return output;
 }
@@ -181,11 +184,13 @@ const siteFilesOverrides = {
     const hosted = Boolean(await env.DB.prepare(HOSTED_SQL).bind(context.order_id).first());
     const live = hosted && site?.slug ? `https://${site.slug}.menu-made.com/` : null;
     const own = await ownLink(env, context.id);
+    const domain = live ? await domainForOrder(env, context.order_id) : null;
     const paragraphs = [
       `Hi ${escapeHtml(context.first_name || "there")}, your website for ${escapeHtml(business)} is ready.`,
       "The download is a zip with the whole site. The README inside says how to put it online with any web host.",
       `Want your own logo and photos on it? <a href="${escapeHtml(own)}">Add them here</a> and we rebuild it for you, free, for the next ${OWN_DAYS} days.`,
-      live ? `We're hosting it for you on Website Care. It's live now at <a href="${escapeHtml(live)}">${escapeHtml(live)}</a>. To use your own web address, reply to this email with it and we'll send the two settings to change.` : `Want us to host it and keep it current? Add <a href="${escapeHtml(publicBaseUrl(env))}/plans.html">Website Care</a> for $49/mo.`
+      live && domain ? `We're hosting it for you on Website Care. It's live now at <a href="${escapeHtml(live)}">${escapeHtml(live)}</a>, and we're registering <strong>${escapeHtml(domain.domain)}</strong> for you. We'll email you the moment it's live there too (usually within the hour).`
+        : live ? `We're hosting it for you on Website Care. It's live now at <a href="${escapeHtml(live)}">${escapeHtml(live)}</a>. To use your own web address, reply to this email with it and we'll send the two settings to change.` : `Want us to host it and keep it current? Add <a href="${escapeHtml(publicBaseUrl(env))}/plans.html">Website Care</a> for $49/mo.`
     ];
     return {
       recipient: context.customer_email,

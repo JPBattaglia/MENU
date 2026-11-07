@@ -192,6 +192,17 @@
               <label><input type="checkbox" value="ACCESSIBILITY_MONITORING"> Accessibility Monitoring <span data-price="ACCESSIBILITY_MONITORING"></span></label>
             </fieldset>
             <p class="mini site-addon-note" id="siteAddonNote" aria-live="polite"></p>
+            <div class="site-domain" id="siteDomain" hidden>
+              <h5>Your own domain <small>optional</small></h5>
+              <p class="mini">Get a web address like yourplace.com, registered in your name for one year. We set it up and point it at your site.</p>
+              <div class="domain-search">
+                <label class="sr-only" for="domainQuery">Domain or business name</label>
+                <input id="domainQuery" type="text" placeholder="yourplace.com" autocomplete="off" autocapitalize="none" spellcheck="false" maxlength="80">
+                <button class="btn secondary" type="button" id="domainSearchBtn">Search</button>
+              </div>
+              <ul class="domain-results" id="domainResults"></ul>
+              <p class="mini" id="domainNote" aria-live="polite"></p>
+            </div>
           </section>
 
           <div class="menu-config" id="menuConfig" hidden>
