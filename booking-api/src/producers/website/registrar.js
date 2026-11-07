@@ -12,8 +12,9 @@ const SUGGESTIONS = 6;
 const CACHE_SECONDS = 600;
 
 function registrarConfig(env) {
-  if (!env.CF_REGISTRAR_TOKEN || !env.CF_ACCOUNT_ID) return null;
-  return { account: env.CF_ACCOUNT_ID, token: env.CF_REGISTRAR_TOKEN };
+  const token = String(env.CF_REGISTRAR_TOKEN || "").trim();
+  if (!token || !env.CF_ACCOUNT_ID) return null;
+  return { account: env.CF_ACCOUNT_ID, token };
 }
 
 async function registrar(config, path, { method = "GET", body, fetchImpl = fetch } = {}) {
@@ -101,6 +102,20 @@ async function lookupDomains(env, input, { fetchImpl = fetch } = {}) {
   return { exact, results: [...checked, ...suggested.filter((d) => d.name && !seen.has(d.name) && seen.add(d.name))] };
 }
 
+// What is wrong with the saved token, without ever logging it: its length, prefix family, and Cloudflare's verdict.
+async function tokenShape(env, { fetchImpl = fetch } = {}) {
+  const config = registrarConfig(env);
+  if (!config) return { set: false };
+  const raw = String(env.CF_REGISTRAR_TOKEN || "");
+  const shape = { length: config.token.length, cfat: config.token.startsWith("cfat_"), trimmed: raw !== config.token, spaces: /\s/.test(config.token) };
+  try {
+    const response = await fetchImpl(`${API}/accounts/${config.account}/tokens/verify`, { headers: { Authorization: `Bearer ${config.token}` } });
+    const data = await response.json().catch(() => null);
+    shape.verify = { status: response.status, token_status: data?.result?.status || null, errors: (data?.errors || []).map((e) => e.message) };
+  } catch (error) { shape.verify = { error: error?.message }; }
+  return shape;
+}
+
 function json(body, status = 200, cacheSeconds = 0) {
   return new Response(JSON.stringify(body), {
     status,
@@ -127,9 +142,9 @@ async function handleDomainLookup(request, env, { fetchImpl = fetch, cache = glo
     if (cache) await cache.put(key, response.clone()).catch(() => {});
     return response;
   } catch (error) {
-    console.error("domain lookup", error?.message);
+    console.error("domain lookup", error?.message, JSON.stringify(await tokenShape(env, { fetchImpl })));
     return json({ ok: false, enabled: true, error: "Domain search is not answering right now. Try again in a minute." }, 502);
   }
 }
 
-export { DOMAIN_MARKUP_CENTS, asDomain, asQuery, checkDomains, customerCents, handleDomainLookup, lookupDomains, registrarConfig, searchDomains };
+export { tokenShape, DOMAIN_MARKUP_CENTS, asDomain, asQuery, checkDomains, customerCents, handleDomainLookup, lookupDomains, registrarConfig, searchDomains };
