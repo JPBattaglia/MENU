@@ -2,6 +2,7 @@ import { handleAdminQueue } from "./admin/queue.js";
 import { handlePreviewCreate, handlePreviewView, handlePreviewHandoff, handleRepLink } from "./marketing/public-preview.js";
 import { handleSiteForm } from "./producers/site-files/site-form.js";
 import { handleDomainLookup } from "./producers/website/registrar.js";
+import { runDomainPurchases } from "./producers/website/domain-purchase.js";
 import { handleWebsitePreviewCreate, handleWebsitePreviewView, handleWebsitePreviewHandoff, handleWebsitePreviewCustomize, handleWebsitePreviewImage, handleProspectSiteDemo } from "./marketing/website-preview.js";
 import { handleOrderCancel } from "./account/cancel.js";
 import { handleBuyerRevision } from "./approvals/buyer-revision.js";
@@ -426,6 +427,8 @@ const mmWorkerWithBooking = {
       await runScheduledProduction(env).catch((error) => {
         console.error("Scheduled production failed:", error instanceof Error ? error.message : String(error));
       });
+      // Domains bought at checkout: register, point, tell the buyer (every tick, a few at a time).
+      await runDomainPurchases(env).catch((error) => console.error("Domain purchases failed:", error instanceof Error ? error.message : String(error)));
       await advanceSelfTests(env, app).catch((error) => console.error("Self-test failed:", error instanceof Error ? error.message : String(error)));
       await advanceSubscriptionSelfTests(env, app).catch((error) => console.error("Subscription self-test failed:", error instanceof Error ? error.message : String(error)));
       await advanceRoutingSelfTests(env, app).catch((error) => console.error("Routing self-test failed:", error instanceof Error ? error.message : String(error)));

@@ -22,7 +22,7 @@ const RUNBOOK = {
 const RUNBOOK_BY_TEMPLATE = {
   automation_failure_v1: "R1",
   conversion_blocked_v1: "R2", guest_app_blocked_v1: "R2", site_files_blocked_v1: "R2", nino_design_blocked_v1: "R2", social_posts_blocked_v1: "R2",
-  website_blocked_v1: "R2", google_care_alert_v1: "R2", gv_alert_v1: "R2",
+  website_blocked_v1: "R2", google_care_alert_v1: "R2", gv_alert_v1: "R2", domain_purchase_blocked_v1: "R2",
   conversion_no_brief_v1: "R3", gv_not_connected_v1: "R3", nino_design_brief_owner_v1: "R3", merch_missing_v1: "R3", extra_pages_unpaid_owner_v1: "R3",
   review_post_failed_v1: "R4",
   render_stale_v1: "R5",

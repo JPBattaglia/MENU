@@ -121,6 +121,7 @@ function json(body, status = 200, cacheSeconds = 0) {
     status,
     headers: {
       "Content-Type": "application/json; charset=utf-8",
+      "Access-Control-Allow-Origin": "*",
       "Cache-Control": cacheSeconds ? `public, max-age=${cacheSeconds}` : "no-store"
     }
   });
