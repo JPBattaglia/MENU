@@ -1,6 +1,6 @@
 import { handleAdminQueue } from "./admin/queue.js";
 import { handlePreviewCreate, handlePreviewView, handlePreviewHandoff, handleRepLink } from "./marketing/public-preview.js";
-import { handleWebsitePreviewCreate, handleWebsitePreviewView, handleWebsitePreviewHandoff, handleProspectSiteDemo } from "./marketing/website-preview.js";
+import { handleWebsitePreviewCreate, handleWebsitePreviewView, handleWebsitePreviewHandoff, handleWebsitePreviewCustomize, handleWebsitePreviewImage, handleProspectSiteDemo } from "./marketing/website-preview.js";
 import { handleOrderCancel } from "./account/cancel.js";
 import { handleBuyerRevision } from "./approvals/buyer-revision.js";
 import { handleApprovalRequest, handleBatchApprovalRequest } from "./approvals/approvals.js";
@@ -19,6 +19,7 @@ import { siteHostAction } from "./producers/website/hosts.js";
 import { handleSiteCareRequest } from "./producers/website-care/intake.js";
 import { runSiteHealthPass } from "./producers/website-care/health.js";
 import { handleSiteIntake } from "./producers/website/intake.js";
+import { handleSiteFilesOwn } from "./producers/site-files/own.js";
 import { alertStaleRenders, handleRenderJobs, nudgeWaitingRenders } from "./producers/social-posts/render-jobs.js";
 import { handleLiveSite, handleSitePreview } from "./producers/website/serve.js";
 import { appOnlyRedirect, handleAppPreview, handleLiveApp } from "./producers/guest-app/serve.js";
@@ -139,6 +140,10 @@ var worker_default = {
     if (cancelMatch && (request.method === "GET" || request.method === "POST")) return handleOrderCancel(request, env, cancelMatch[1].toLowerCase());
     // Free Website Package previews (owner, Nov 5, 2026).
     if (url.pathname === "/api/website-preview/create" && (request.method === "POST" || request.method === "OPTIONS")) return handleWebsitePreviewCreate(request, env);
+    const ownSite = url.pathname.match(/^\/api\/website-preview\/customize\/([a-f0-9]{36})$/);
+    if (ownSite && request.method === "POST") return handleWebsitePreviewCustomize(request, env, ownSite[1]);
+    const ownImage = url.pathname.match(/^\/api\/website-preview\/view\/([a-f0-9]{36})\/d\/[a-z]+\/img\/([a-z0-9-]+\.[a-z]+)$/);
+    if (ownImage && (request.method === "GET" || request.method === "HEAD")) return handleWebsitePreviewImage(env, ownImage[1], ownImage[2]);
     const sitePreview = url.pathname.match(/^\/api\/website-preview\/(view|handoff)\/([a-f0-9]{36})(?:\/((?:d\/[a-z]+\/|d\/)?[a-z]+\.html))?$/);
     if (sitePreview && (request.method === "GET" || request.method === "HEAD")) {
       return sitePreview[1] === "view" ? handleWebsitePreviewView(request, env, sitePreview[2], sitePreview[3] || "index.html") : handleWebsitePreviewHandoff(env, sitePreview[2]);
@@ -202,6 +207,8 @@ var worker_default = {
     if (renderJobMatch && (request.method === "GET" || (request.method === "POST" && renderJobMatch[1] !== "next"))) {
       return handleRenderJobs(request, env, renderJobMatch[1].toLowerCase());
     }
+    const siteOwnMatch = url.pathname.match(/^\/api\/site-files\/own\/([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})$/i);
+    if (siteOwnMatch && (request.method === "GET" || request.method === "POST")) return handleSiteFilesOwn(request, env, siteOwnMatch[1].toLowerCase());
     const siteIntakeMatch = url.pathname.match(/^\/api\/site-intake\/([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})$/i);
     if (siteIntakeMatch && (request.method === "GET" || request.method === "POST")) {
       return handleSiteIntake(request, env, siteIntakeMatch[1].toLowerCase());

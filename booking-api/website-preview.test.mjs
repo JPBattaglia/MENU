@@ -86,6 +86,56 @@ test('an upload becomes a watermarked, unindexed website preview with its own pa
   assert.equal(prefill.phone, '(415) 555-0100'); assert.match(prefill.offerings, /Margherita/);
 });
 
+// Real image bytes for uploads: PNG, JPEG and a fake "image" that is really text.
+const PNG = new Uint8Array([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0, 0, 0, 13, 0x49, 0x48, 0x44, 0x52]);
+const JPG = new Uint8Array([0xff, 0xd8, 0xff, 0xe0, 0, 16, 0x4a, 0x46, 0x49, 0x46]);
+
+test('Make it yours: a logo, photos and a brand colour rebuild all nine designs, and bad files are refused', async (t) => {
+  const f = setup();
+  stubApis(t);
+  const out = await (await f.create({ request_id: await f.upload(), email: 'owner@pizza.example', business: 'Sample Pizza', phone: '(415) 555-0100' })).json();
+  const first = await (await f.get(`/api/website-preview/view/${out.token}/d/bistro/index.html`)).text();
+  for (const words of ['Make it yours', `action="/api/website-preview/customize/${out.token}"`, 'name="photos"', 'name="logo"', 'type="color"', 'Update all 9 designs']) assert.ok(first.includes(words), words);
+  const post = (form) => f.call(`/api/website-preview/customize/${out.token}`, { method: 'POST', body: form });
+  const form = new FormData();
+  form.set('design', 'bistro');
+  form.set('logo', new File([PNG], 'logo.png', { type: 'image/png' }));
+  form.append('photos', new File([JPG], 'a.jpg', { type: 'image/jpeg' }));
+  form.append('photos', new File([PNG], 'b.png', { type: 'image/png' }));
+  form.set('brand', '#B22222'); form.set('use_brand', '1');
+  const res = await post(form);
+  assert.equal(res.status, 303);
+  assert.equal(res.headers.get('Location'), `https://menu-made.com/api/website-preview/view/${out.token}/d/bistro/index.html`);
+  for (const key of ['trattoria', 'bistro', 'night', 'farmhouse', 'fine', 'fresh', 'pop', 'coastal', 'taproom']) {
+    const html = await (await f.get(`/api/website-preview/view/${out.token}/d/${key}/index.html`)).text();
+    assert.ok(html.includes('img/logo.png'), `${key}: logo`);
+    assert.ok(html.includes('Using your logo, 2 photos, your colour'), `${key}: panel shows what is in use`);
+  }
+  const all = (await Promise.all(['index', 'menu', 'about', 'contact'].map(async (p) => (await f.get(`/api/website-preview/view/${out.token}/d/farmhouse/${p}.html`)).text()))).join('');
+  assert.ok(all.includes('img/photo-1.jpg'), 'photos appear in the design');
+  assert.ok(all.toLowerCase().includes('#b22222'), 'the brand colour is used');
+  const img = await f.get(`/api/website-preview/view/${out.token}/d/farmhouse/img/logo.png`);
+  assert.equal(img.status, 200); assert.equal(img.headers.get('Content-Type'), 'image/png');
+  assert.equal((await f.get(`/api/website-preview/view/${out.token}/d/farmhouse/img/data.json`)).status, 404, 'only the images are served');
+  const data = JSON.parse(await (await f.env.ASSETS.get(`website-previews/${out.token}/data.json`)).text());
+  assert.equal(data.site.photos.length, 2); assert.equal(data.site.brand, '#b22222'); assert.equal(data.customized, 1);
+  // Only a new colour: the photos and logo stay; unticking the colour goes back to each design's own.
+  const colourOnly = new FormData(); colourOnly.set('design', 'night'); colourOnly.set('brand', '#000000');
+  assert.equal((await post(colourOnly)).status, 303);
+  const after = JSON.parse(await (await f.env.ASSETS.get(`website-previews/${out.token}/data.json`)).text());
+  assert.equal(after.site.brand, ''); assert.equal(after.site.photos.length, 2); assert.ok(after.site.logo);
+  // Not an image, or too many photos: refused, nothing changes.
+  const bad = new FormData(); bad.set('logo', new File([new TextEncoder().encode('<svg onload=alert(1)>')], 'x.png', { type: 'image/png' }));
+  assert.equal((await post(bad)).status, 400);
+  const many = new FormData(); for (let i = 0; i < 7; i++) many.append('photos', new File([PNG], `${i}.png`, { type: 'image/png' }));
+  assert.equal((await post(many)).status, 400);
+  assert.equal(JSON.parse(await (await f.env.ASSETS.get(`website-previews/${out.token}/data.json`)).text()).customized, 2);
+  // An ended preview can't be changed.
+  f.env.DB.raw.prepare(`UPDATE website_previews SET expires_at = '2000-01-01T00:00:00.000Z'`).run();
+  assert.equal((await post(form)).status, 410);
+  assert.equal((await f.get(`/api/website-preview/view/${out.token}/d/farmhouse/img/logo.png`)).status, 404);
+});
+
 test('a current website adds its about text, phone and address; the public limits hold', async (t) => {
   const f = setup();
   const calls = stubApis(t);
