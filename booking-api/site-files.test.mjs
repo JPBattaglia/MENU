@@ -124,6 +124,38 @@ test('the logo and photos added in the generator are in the zip and on the live 
   assert.ok(pages.join('').includes('img/logo.png')); assert.ok(!pages.join('').includes('photo-2'));
 });
 
+test('after paying: the link in the delivery email adds a logo and photos, rebuilds the zip and the live site, and emails it', async () => {
+  const f = setup({ hosted: true });
+  f.env.LINK_SIGNING_SECRET = 'test-link-secret';
+  await runOrder(f);
+  const mail = f.emails.find((e) => /Your website is ready/.test(e.subject));
+  assert.match(mail.html, /Add your logo and photos/);
+  const link = /https:\/\/menu-made\.com\/api\/site-files\/own\/[0-9a-f-]{36}\?t=[^"\s]+/.exec(mail.text)?.[0];
+  assert.ok(link, mail.text);
+  const call = (init) => withFetch(f.fetch, () => api.default.fetch(new Request(link, init), f.env, f.ctx));
+  const page = await call();
+  assert.equal(page.status, 200);
+  const html = await page.text();
+  assert.match(html, /name="photos"/); assert.match(html, /Update my website/);
+  const PNG = new Uint8Array([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0, 0, 0, 13, 0x49, 0x48, 0x44, 0x52]);
+  const form = new FormData();
+  form.set('logo', new File([PNG], 'logo.png', { type: 'image/png' }));
+  form.append('photos', new File([PNG], 'p.png', { type: 'image/png' }));
+  const done = await call({ method: 'POST', body: form });
+  assert.equal(done.status, 200, await done.clone().text());
+  assert.match(await done.text(), /Download your website/);
+  const zips = f.DB.raw.prepare(`SELECT d.status, a.storage_key FROM deliverables d JOIN assets a ON a.id = d.asset_id WHERE d.deliverable_type = 'SITE_ZIP' ORDER BY d.version`).all();
+  assert.deepEqual(zips.map((z) => z.status), ['SUPERSEDED', 'FINAL']);
+  const names = readZip(new Uint8Array(await (await f.ASSETS.get(zips[1].storage_key)).arrayBuffer())).map((e) => e.name);
+  assert.ok(names.includes('oliva-kitchen/img/logo.png') && names.includes('oliva-kitchen/img/photo-1.png'), names.join());
+  const live = await (await api.default.fetch(new Request('https://menu-made.com/api/site/oliva-kitchen/'), f.env, f.ctx)).text();
+  assert.match(live, /img\/logo\.png/, 'the live site has the logo');
+  assert.ok(f.emails.some((e) => /Your updated website/.test(e.subject)));
+  // A bad link is refused.
+  const bad = await withFetch(f.fetch, () => api.default.fetch(new Request(link.replace(/t=.*/, 't=nope')), f.env, f.ctx));
+  assert.equal(bad.status, 403);
+});
+
 test('a missing preview never sends the buyer anything; the owner is told', async () => {
   const f = setup({ hosted: false });
   await withFetch(f.fetch, async () => {

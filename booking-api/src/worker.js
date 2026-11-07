@@ -19,6 +19,7 @@ import { siteHostAction } from "./producers/website/hosts.js";
 import { handleSiteCareRequest } from "./producers/website-care/intake.js";
 import { runSiteHealthPass } from "./producers/website-care/health.js";
 import { handleSiteIntake } from "./producers/website/intake.js";
+import { handleSiteFilesOwn } from "./producers/site-files/own.js";
 import { alertStaleRenders, handleRenderJobs, nudgeWaitingRenders } from "./producers/social-posts/render-jobs.js";
 import { handleLiveSite, handleSitePreview } from "./producers/website/serve.js";
 import { appOnlyRedirect, handleAppPreview, handleLiveApp } from "./producers/guest-app/serve.js";
@@ -206,6 +207,8 @@ var worker_default = {
     if (renderJobMatch && (request.method === "GET" || (request.method === "POST" && renderJobMatch[1] !== "next"))) {
       return handleRenderJobs(request, env, renderJobMatch[1].toLowerCase());
     }
+    const siteOwnMatch = url.pathname.match(/^\/api\/site-files\/own\/([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})$/i);
+    if (siteOwnMatch && (request.method === "GET" || request.method === "POST")) return handleSiteFilesOwn(request, env, siteOwnMatch[1].toLowerCase());
     const siteIntakeMatch = url.pathname.match(/^\/api\/site-intake\/([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})$/i);
     if (siteIntakeMatch && (request.method === "GET" || request.method === "POST")) {
       return handleSiteIntake(request, env, siteIntakeMatch[1].toLowerCase());

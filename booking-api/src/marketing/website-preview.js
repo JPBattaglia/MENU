@@ -344,6 +344,35 @@ async function handleWebsitePreviewView(request, env, token, page, { now = Date.
   return new Response(request.method === "HEAD" ? null : object.body, { status: 200, headers: { "Content-Type": "text/html; charset=utf-8", "Cache-Control": "no-store", "X-Robots-Tag": "noindex, nofollow", "Referrer-Policy": "no-referrer" } });
 }
 
+// The logo, photos and colour from a "Make it yours" form, stored beside the preview and set on `site` (in place).
+// Also used after payment (site-files/own.js), when the buyer adds them from the link in the delivery email.
+async function applyOwnForm(env, token, site, form) {
+  const files = (name) => form.getAll(name).filter((f) => f && typeof f === "object" && typeof f.arrayBuffer === "function" && f.size > 0);
+  const read = async (file) => {
+    if (file.size > MAX_OWN_IMAGE) return { error: `${file.name || "An image"} is over 5 MB.` };
+    const bytes = new Uint8Array(await file.arrayBuffer());
+    const type = sniffImage(bytes);
+    return type ? { bytes, type } : { error: `${file.name || "A file"} isn't a PNG, JPG or WebP image.` };
+  };
+  const logoFile = files("logo")[0];
+  const photoFiles = files("photos");
+  if (photoFiles.length > MAX_PHOTOS) return { error: `Choose up to ${MAX_PHOTOS} photos.` };
+  const logo = logoFile ? await read(logoFile) : null;
+  if (logo?.error) return { error: logo.error };
+  const photos = [];
+  for (const f of photoFiles) { const r = await read(f); if (r.error) return { error: r.error }; photos.push(r); }
+  const put = (name, img) => env.ASSETS.put(`website-previews/${token}/img/${name}.${img.type.ext}`, img.bytes, { httpMetadata: { contentType: img.type.mime } });
+  if (logo) { await put("logo", logo); site.logo = { path: `img/logo.${logo.type.ext}` }; }
+  if (photos.length) {
+    for (const [i, p] of photos.entries()) await put(`photo-${i + 1}`, p);
+    site.photos = photos.map((p, i) => ({ path: `img/photo-${i + 1}.${p.type.ext}`, alt: `Photo ${i + 1} of ${site.name}` }));
+  }
+  const brand = String(form.get("brand") || "").trim().toLowerCase();
+  if (form.get("use_brand") === "1" && hexOk(brand)) site.brand = brand;
+  else if (form.get("use_brand") !== "1") site.brand = "";
+  return { site };
+}
+
 // "Make it yours": POST multipart { design, logo?, photos?[], brand?, use_brand? } -> stores the images beside the
 // preview, rebuilds all nine designs from the stored copy (no AI call) and returns to the design the buyer was on.
 // New photos replace the old set; no new files keeps what was there. The paid site is built from the same data.json.
@@ -360,29 +389,8 @@ async function handleWebsitePreviewCustomize(request, env, token, { now = Date.n
   if (!form) return oops("We couldn't read the upload.");
   const design = DESIGNS.find((d) => d.key === form.get("design")) || DESIGNS[0];
   const site = { ...data.site };
-  const files = (name) => form.getAll(name).filter((f) => f && typeof f === "object" && typeof f.arrayBuffer === "function" && f.size > 0);
-  const read = async (file) => {
-    if (file.size > MAX_OWN_IMAGE) return { error: `${file.name || "An image"} is over 5 MB.` };
-    const bytes = new Uint8Array(await file.arrayBuffer());
-    const type = sniffImage(bytes);
-    return type ? { bytes, type } : { error: `${file.name || "A file"} isn't a PNG, JPG or WebP image.` };
-  };
-  const logoFile = files("logo")[0];
-  const photoFiles = files("photos");
-  if (photoFiles.length > MAX_PHOTOS) return oops(`Choose up to ${MAX_PHOTOS} photos.`);
-  const logo = logoFile ? await read(logoFile) : null;
-  if (logo?.error) return oops(logo.error);
-  const photos = [];
-  for (const f of photoFiles) { const r = await read(f); if (r.error) return oops(r.error); photos.push(r); }
-  const put = (name, img) => env.ASSETS.put(`website-previews/${token}/img/${name}.${img.type.ext}`, img.bytes, { httpMetadata: { contentType: img.type.mime } });
-  if (logo) { await put("logo", logo); site.logo = { path: `img/logo.${logo.type.ext}` }; }
-  if (photos.length) {
-    for (const [i, p] of photos.entries()) await put(`photo-${i + 1}`, p);
-    site.photos = photos.map((p, i) => ({ path: `img/photo-${i + 1}.${p.type.ext}`, alt: `Photo ${i + 1} of ${site.name}` }));
-  }
-  const brand = String(form.get("brand") || "").trim().toLowerCase();
-  if (form.get("use_brand") === "1" && hexOk(brand) && /^#[0-9a-f]{6}$/.test(brand)) site.brand = brand;
-  else if (form.get("use_brand") !== "1") site.brand = "";
+  const applied = await applyOwnForm(env, token, site, form);
+  if (applied.error) return oops(applied.error);
   await storeDesigns(env, token, site, data.copy, { prospect: row.source === "prospect", extra: { customized: Number(data.customized || 0) + 1 } });
   return new Response(null, { status: 303, headers: { Location: designUrl(token, design.key), "Cache-Control": "no-store" } });
 }
@@ -461,4 +469,4 @@ async function prefillFromPreview(env, email) {
   return out;
 }
 
-export { designUrl, chooseUrl, wrapDesign, storeDesigns, handleWebsitePreviewCreate, handleWebsitePreviewView, handleWebsitePreviewHandoff, handleWebsitePreviewCustomize, handleWebsitePreviewImage, handleProspectSiteDemo, prefillFromPreview, offeringsFromMenu, wrapPage, fallbackCopy, PREVIEW_HOURS, PER_NETWORK_DAY };
+export { designUrl, chooseUrl, wrapDesign, storeDesigns, handleWebsitePreviewCreate, handleWebsitePreviewView, handleWebsitePreviewHandoff, handleWebsitePreviewCustomize, handleWebsitePreviewImage, applyOwnForm, MAX_PHOTOS, handleProspectSiteDemo, prefillFromPreview, offeringsFromMenu, wrapPage, fallbackCopy, PREVIEW_HOURS, PER_NETWORK_DAY };

@@ -14,6 +14,7 @@ import { storeDeliverable } from "../shared/deliverables.js";
 import { createZip } from "../social-posts/zip.js";
 import { buildDesignSite, designFor } from "../website/templates/index.js";
 import { slugify, validSlug } from "../website/intake.js";
+import { OWN_DAYS, ownLink } from "./own.js";
 
 const enc = new TextEncoder();
 
@@ -74,20 +75,12 @@ async function tellOwner(env, context, problem) {
   }).catch(() => null);
 }
 
-async function runSiteFilesProduceStep(targetStep, env) {
-  if (!env.ASSETS) throw new Error("R2 ASSETS binding is not available");
-  const context = await loadDeliveryContext(targetStep.project_id, env);
-  if (!context) throw new Error("Production project could not be loaded");
-  const item = await env.DB.prepare(`SELECT oi.metadata_json FROM projects p JOIN order_items oi ON oi.id = p.order_item_id WHERE p.id = ?`).bind(context.id).first();
-  const meta = parseJsonOrNull(item?.metadata_json) || {};
+// Builds the chosen design from the preview's data.json: the zip (SITE_ZIP) and, with Website Care, the live site
+// (SITE_BUILD, FINAL at once). Used by PRODUCE and again when the buyer adds a logo or photos after paying (own.js).
+async function makeSiteFiles(env, context, meta, { replace = false } = {}) {
   const design = designFor(meta.site_design);
   const data = /^[a-f0-9]{36}$/.test(String(meta.site_preview || "")) ? parseJsonOrNull(await (await env.ASSETS.get(`website-previews/${meta.site_preview}/data.json`))?.text()) : null;
-  if (!design || !data?.site || !data?.copy) {
-    await tellOwner(env, context, "the chosen site couldn't be found");
-    const output = { outcome: "NOT_PRODUCED", reasons: ["The chosen design or its preview data is missing"] };
-    await completeStep(targetStep, output, env);
-    return output;
-  }
+  if (!design || !data?.site || !data?.copy) return { missing: true };
   const site = { ...data.site, name: data.site.name || context.business_name };
   // The logo and photos added with "Make it yours" sit beside the preview; one that can't be read is left out.
   const images = [];
@@ -113,7 +106,10 @@ async function runSiteFilesProduceStep(targetStep, env) {
     ...images.map((i) => ({ name: `${folder}/${i.path}`, data: i.bytes })),
     { name: `${folder}/README.txt`, data: enc.encode(readme(site.name, design, hosted)) }
   ]);
+  const supersede = (type) => env.DB.prepare(`UPDATE deliverables SET status = 'SUPERSEDED' WHERE project_id = ? AND deliverable_type = ? AND status != 'SUPERSEDED'`).bind(context.id, type).run();
+  if (replace) await supersede("SITE_ZIP");
   const stored = await storeDeliverable(env, context, { type: "SITE_ZIP", filename: `${folder}-website.zip`, mime: "application/zip", bytes: zip, folder: "site-zip", metadata: { site_files: { design: design.key, preview: meta.site_preview } } });
+  if (replace) await env.DB.prepare(`UPDATE deliverables SET status = 'FINAL', customer_visible = 1, delivered_at = ? WHERE id = ?`).bind(nowIso(), stored.deliverableId).run();
   let live = null;
   if (hosted) {
     const slug = await reserveSlug(env, context, site.name);
@@ -126,12 +122,29 @@ async function runSiteFilesProduceStep(targetStep, env) {
       liveImages.push({ path: i.path, storage_key: key, mime: i.mime, size: i.bytes.length });
     }
     const build = { version: 1, slug, style: `generator:${design.key}`, built_at: nowIso(), pages, images: liveImages, site, copy: data.copy };
+    if (replace) await supersede("SITE_BUILD");
     const b = await storeDeliverable(env, context, { type: "SITE_BUILD", filename: `${slug}-site.json`, mime: "application/json", bytes: enc.encode(JSON.stringify(build)), folder: "site-build", metadata: { website: { slug, style: `generator:${design.key}`, pages: Object.keys(pages).length, images: liveImages.length } } });
     // Live at once: the buyer chose this exact design, so there is nothing more to approve.
     await env.DB.prepare(`UPDATE deliverables SET status = 'FINAL', customer_visible = 1, delivered_at = ? WHERE id = ?`).bind(nowIso(), b.deliverableId).run();
     live = `https://${slug}.menu-made.com/`;
   }
-  const output = { outcome: "PRODUCED", design: design.key, zip_deliverable: stored.deliverableId, hosted, images: images.length, ...(live ? { live_url: live } : {}) };
+  return { design, zipId: stored.deliverableId, hosted, live, images: images.length, site };
+}
+
+async function runSiteFilesProduceStep(targetStep, env) {
+  if (!env.ASSETS) throw new Error("R2 ASSETS binding is not available");
+  const context = await loadDeliveryContext(targetStep.project_id, env);
+  if (!context) throw new Error("Production project could not be loaded");
+  const item = await env.DB.prepare(`SELECT oi.metadata_json FROM projects p JOIN order_items oi ON oi.id = p.order_item_id WHERE p.id = ?`).bind(context.id).first();
+  const meta = parseJsonOrNull(item?.metadata_json) || {};
+  const made = await makeSiteFiles(env, context, meta);
+  if (made.missing) {
+    await tellOwner(env, context, "the chosen site couldn't be found");
+    const output = { outcome: "NOT_PRODUCED", reasons: ["The chosen design or its preview data is missing"] };
+    await completeStep(targetStep, output, env);
+    return output;
+  }
+  const output = { outcome: "PRODUCED", design: made.design.key, zip_deliverable: made.zipId, hosted: made.hosted, images: made.images, ...(made.live ? { live_url: made.live } : {}) };
   await completeStep(targetStep, output, env);
   return output;
 }
@@ -155,9 +168,11 @@ const siteFilesOverrides = {
     const site = await env.DB.prepare(`SELECT slug FROM website_sites WHERE business_id = ? ORDER BY created_at ASC LIMIT 1`).bind(context.business_id).first();
     const hosted = Boolean(await env.DB.prepare(`SELECT 1 AS ok FROM order_items WHERE order_id = ? AND json_extract(metadata_json, '$.plan_code') = 'WEBSITE_CARE' LIMIT 1`).bind(context.order_id).first());
     const live = hosted && site?.slug ? `https://${site.slug}.menu-made.com/` : null;
+    const own = await ownLink(env, context.id);
     const paragraphs = [
       `Hi ${escapeHtml(context.first_name || "there")}, your website for ${escapeHtml(business)} is ready.`,
       "The download is a zip with the whole site. The README inside says how to put it online with any web host.",
+      `Want your own logo and photos on it? <a href="${escapeHtml(own)}">Add them here</a> and we rebuild it for you, free, for the next ${OWN_DAYS} days.`,
       live ? `We're hosting it for you on Website Care. It's live now at <a href="${escapeHtml(live)}">${escapeHtml(live)}</a>. To use your own web address, reply to this email with it and we'll send the two settings to change.` : `Want us to host it and keep it current? Add <a href="${escapeHtml(publicBaseUrl(env))}/plans.html">Website Care</a> for $49/mo.`
     ];
     return {
@@ -165,10 +180,10 @@ const siteFilesOverrides = {
       subject: `${isTestOrder(context) ? "[TEST] " : ""}Your website is ready`,
       templateKey: "delivery_site_files_v1",
       html: brandedEmailHtml({ preheader: `${business}'s website, ready to download${live ? " and live" : ""}.`, eyebrow: "YOUR WEBSITE", heading: `${business}'s website is ready`, paragraphs,
-        buttons: [{ label: "Download your website (zip)", url: zip, primary: true }, ...(live ? [{ label: "Open your live site", url: live }] : [])], footnote: "The download link works for 90 days, so save the zip. Questions? Reply to this email." }),
-      text: [`Your website for ${business} is ready.`, `Download (zip): ${zip}`, ...(live ? [`Live now: ${live}`] : []), "The download link works for 90 days."].join("\n")
+        buttons: [{ label: "Download your website (zip)", url: zip, primary: true }, ...(live ? [{ label: "Open your live site", url: live }] : []), { label: "Add your logo and photos", url: own }], footnote: "The download link works for 90 days, so save the zip. Questions? Reply to this email." }),
+      text: [`Your website for ${business} is ready.`, `Download (zip): ${zip}`, ...(live ? [`Live now: ${live}`] : []), `Add your logo and photos (free, ${OWN_DAYS} days): ${own}`, "The download link works for 90 days."].join("\n")
     };
   }
 };
 
-export { inlined, readme, runSiteFilesProduceStep, siteFilesOverrides };
+export { inlined, makeSiteFiles, readme, runSiteFilesProduceStep, siteFilesOverrides };
