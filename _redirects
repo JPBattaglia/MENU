@@ -2,3 +2,7 @@
 /accessability.html /accessibility 301
 /about /portfolio 301
 /about.html /portfolio 301
+/apps /services#guest-app 302
+/apps.html /services#guest-app 302
+/store-app /services#guest-app 302
+/store-app.html /services#guest-app 302
