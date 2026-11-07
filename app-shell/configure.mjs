@@ -14,16 +14,28 @@ const name = String(cfg.app_name || "").trim();
 if (!name || name.length > 30) throw new Error("app_name must be 1-30 characters (App Store limit)");
 if (!/^https:\/\//.test(cfg.api_base || "")) throw new Error("api_base must be https");
 
+// Site apps (the owner's own apps, booking-api/src/store-app/own-apps.js): the app opens the business's whole website
+// inside the app. Its own domain and Stripe's checkout stay in the app (buying never leaves it); any other site opens
+// in the phone's browser.
+let site = null;
+if (cfg.site_url) {
+  if (!/^https:\/\/[a-z0-9.-]+\.[a-z]{2,}(\/[^\s]*)?$/i.test(cfg.site_url)) throw new Error("site_url must be an https address");
+  const host = new URL(cfg.site_url).hostname.replace(/^www\./, "");
+  site = { url: cfg.site_url, hosts: [host, `www.${host}`, "checkout.stripe.com", "*.stripe.com", "*.stripe.network"] };
+}
+
 writeFileSync(join(here, "capacitor.config.json"), JSON.stringify({
   appId: cfg.app_id,
   appName: name,
   webDir: "www",
   backgroundColor: cfg.brand_color,
+  ...(site ? { server: { allowNavigation: site.hosts } } : {}),
   plugins: { PushNotifications: { presentationOptions: ["badge", "sound", "alert"] } }
 }, null, 2));
 
 writeFileSync(join(here, "www", "config.json"), JSON.stringify({
   app_name: name, brand_color: cfg.brand_color, api_base: cfg.api_base, app_id: cfg.app_id,
+  ...(site ? { site_url: site.url, site_screens: (Array.isArray(cfg.site_screens) ? cfg.site_screens : []).filter((p) => /^\/[A-Za-z0-9._\/-]*$/.test(p)).slice(0, 3) } : {}),
   // TestFlight and App Store builds use Apple's production push service; only Xcode debug builds use sandbox.
   push_environment: cfg.push_environment === "sandbox" ? "sandbox" : "production"
 }, null, 2));

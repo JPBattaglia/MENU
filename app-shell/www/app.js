@@ -185,10 +185,51 @@
     }).catch(function () {});
   }
 
+  // ---- site app: the whole website inside the app ----
+  // Turns notifications on (asks once, on the first launch), sends the phone's token to the worker, then opens the
+  // website. The token must be sent from here: once the website is open this page and its listeners are gone.
+  function siteApp(c) {
+    document.body.classList.add("site");
+    $("name").textContent = c.app_name;
+    var opened = false;
+    function open() {
+      if (opened) return;
+      if (navigator.onLine === false) {
+        status("You're offline. Connect to the internet, then tap Try again.");
+        $("site-retry").hidden = false;
+        return;
+      }
+      opened = true;
+      window.location.replace(c.site_url);
+    }
+    $("site-retry").addEventListener("click", function () { $("site-retry").hidden = true; status(""); open(); });
+    var push = pushPlugin();
+    if (!push) { open(); return; }
+    setTimeout(open, 6000); // never wait long for the notification service
+    push.addListener("registration", function (t) {
+      var platform = window.Capacitor.getPlatform();
+      var token = String(t && t.value || "");
+      if (platform === "ios") token = token.toLowerCase();
+      var sent = store.get("push-sent") || {};
+      if (!(platform === "ios" ? /^[0-9a-f]{64,200}$/ : /^[A-Za-z0-9_:-]{100,4096}$/).test(token) || (sent.token === token && Date.now() - (sent.at || 0) < 7 * 86400000)) { open(); return; }
+      api("push/native", { platform: platform, token: token, bundle_id: cfg.app_id, environment: cfg.push_environment || "production" })
+        .then(function (r) { if (r.ok) store.set("push-sent", { token: token, at: Date.now() }); })
+        .catch(function () {}).then(open);
+    });
+    push.addListener("registrationError", open);
+    push.checkPermissions().then(function (p) {
+      if (p.receive === "granted") { push.register(); return; }
+      if (p.receive === "denied" || store.get("push-asked")) { open(); return; }
+      store.set("push-asked", true);
+      return push.requestPermissions().then(function (r) { if (r.receive === "granted") push.register(); else open(); });
+    }).catch(open);
+  }
+
   // ---- start ----
   fetch("config.json").then(function (r) { return r.json(); }).then(function (c) {
     cfg = c;
     brand(c.brand_color);
+    if (c.site_url) { siteApp(c); return; }
     $("name").textContent = c.app_name;
     var cached = store.get("content");
     if (cached) render(cached);

@@ -139,6 +139,7 @@ jobs:
         run: grep -q "connect-src 'self'" app-shell/www/index.html
       - name: Live content endpoint
         run: |
+          if [ -n "$(jq -r '.site_url // empty' "$CONFIG")" ]; then echo "Site app: the website is the content" | tee -a "$GITHUB_STEP_SUMMARY"; exit 0; fi
           base=$(jq -r .api_base "$CONFIG")
           for i in $(seq 1 20); do
             if curl -sSf -H "Origin: capacitor://localhost" -D headers.txt "$base/content" -o content.json 2>/dev/null \
