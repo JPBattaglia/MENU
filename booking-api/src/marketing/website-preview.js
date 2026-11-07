@@ -140,7 +140,79 @@ function wrapPage(html, token, { prospect = false } = {}) {
 
 // The site generator (owner, Nov 6, 2026): the same business in each of the nine designs. "Generate site" goes to the
 // next design, "Choose this site" goes to checkout with that design. Same watermark, noindex and no-print rules.
-function ownPanel(token, key, site = {}) {
+// Customize details (owner, Nov 6, 2026): motto, About text, contact details, social links and an order/booking
+// link, on top of the logo, photos and colour. Used in the generator's popup and on the after-purchase page.
+const SOCIAL_FIELDS = [
+  ["instagram", "Instagram", ["instagram.com"], "https://www.instagram.com/"],
+  ["facebook", "Facebook", ["facebook.com", "fb.com"], ""],
+  ["tiktok", "TikTok", ["tiktok.com"], "https://www.tiktok.com/@"],
+  ["yelp", "Yelp", ["yelp.com"], ""]
+];
+const ORDER_LABELS = ["Order online", "Book a table", "Book now"];
+const aboutText = (site, copy) => site.about_text || (copy?.about || []).join("\n\n");
+
+function detailFields(site = {}, copy = {}) {
+  const v = (x) => escapeHtml(x || "");
+  const field = (name, label, value, attrs = "", hint = "") => `<label>${label}${hint ? ` <small>${hint}</small>` : ""}<input name="${name}" value="${v(value)}" ${attrs}></label>`;
+  return `<details class="mm-own-group"><summary>Motto and About</summary>
+  ${field("motto", "Motto", site.motto || copy.tagline, 'maxlength="80"', "(the line under your name)")}
+  <label>About your business <small>(blank line between paragraphs)</small><textarea name="about" rows="5" maxlength="1500">${v(aboutText(site, copy))}</textarea></label></details>
+  <details class="mm-own-group"><summary>Contact details</summary>
+  ${field("phone", "Phone", site.phone, 'type="tel" maxlength="30"')}
+  ${field("email", "Email", site.email, 'type="email" maxlength="150"', "(shown on your Contact page)")}
+  ${field("address", "Address", site.address, 'maxlength="150"')}
+  <label>Hours <small>(one line per day or group, e.g. Mon-Fri: 8am-3pm)</small><textarea name="hours" rows="4" maxlength="400">${v(site.hours)}</textarea></label></details>
+  <details class="mm-own-group"><summary>Social and order links</summary>
+  ${SOCIAL_FIELDS.map(([name, label]) => field(name, label, site[name], 'inputmode="url" maxlength="300"', name === "instagram" || name === "tiktok" ? "(link or @name)" : "(link)")).join("\n  ")}
+  ${field("order_url", "Order or booking link", site.order_url, 'type="url" inputmode="url" maxlength="300"', "(DoorDash, Toast, OpenTable…)")}
+  <label>Button says <select name="order_label">${ORDER_LABELS.map((l) => `<option${(site.order_label || ORDER_LABELS[0]) === l ? " selected" : ""}>${l}</option>`).join("")}</select></label></details>`;
+}
+
+function linkFrom(raw, hosts, handleBase) {
+  let v = String(raw || "").trim();
+  if (!v) return { value: "" };
+  if (v.length > 300) return { error: "That link is too long." };
+  if (handleBase && /^@?[A-Za-z0-9._]{1,30}$/.test(v)) return { value: handleBase + v.replace(/^@/, "") };
+  if (!/^https?:\/\//i.test(v)) v = `https://${v}`;
+  let url;
+  try { url = new URL(v); } catch { return { error: `"${String(raw).slice(0, 60)}" isn't a web link.` }; }
+  if (!/^https?:$/.test(url.protocol) || !url.hostname.includes(".")) return { error: `"${String(raw).slice(0, 60)}" isn't a web link.` };
+  url.protocol = "https:";
+  const host = url.hostname.toLowerCase().replace(/^www\./, "");
+  if (hosts.length && !hosts.some((h) => host === h || host.endsWith(`.${h}`))) return { error: `That doesn't look like a ${hosts[0].split(".")[0]} link.` };
+  return { value: url.toString() };
+}
+const oneLineText = (v, max) => String(v ?? "").replace(/[\x00-\x1f]+/g, " ").replace(/\s+/g, " ").trim().slice(0, max);
+const multiLineText = (v, max) => String(v ?? "").replace(/\r\n?/g, "\n").replace(/[\x00-\x09\x0b-\x1f]/g, "").replace(/\n{3,}/g, "\n\n").trim().slice(0, max);
+
+// Text fields from a Customize form, set on `site` in place; fields not in the form are left alone.
+function applyDetails(site, form) {
+  if (form.has("motto")) site.motto = oneLineText(form.get("motto"), 80);
+  if (form.has("about")) site.about_text = multiLineText(form.get("about"), 1500);
+  if (form.has("phone")) site.phone = oneLineText(form.get("phone"), 30);
+  if (form.has("address")) site.address = oneLineText(form.get("address"), 150);
+  if (form.has("hours")) site.hours = multiLineText(form.get("hours"), 400);
+  if (form.has("email")) {
+    const email = oneLineText(form.get("email"), 150).toLowerCase();
+    if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return { error: "That email address doesn't look right." };
+    site.email = email;
+  }
+  for (const [name, label, hosts, handleBase] of SOCIAL_FIELDS) {
+    if (!form.has(name)) continue;
+    const r = linkFrom(form.get(name), hosts, handleBase);
+    if (r.error) return { error: `${label}: ${r.error}` };
+    site[name] = r.value;
+  }
+  if (form.has("order_url")) {
+    const r = linkFrom(form.get("order_url"), [], "");
+    if (r.error) return { error: `Order or booking link: ${r.error}` };
+    site.order_url = r.value;
+  }
+  if (form.has("order_label")) site.order_label = ORDER_LABELS.includes(form.get("order_label")) ? form.get("order_label") : ORDER_LABELS[0];
+  return {};
+}
+
+function ownPanel(token, key, site = {}, copy = {}) {
   const n = ownPhotoCount(site), brand = hexOk(site.brand) ? String(site.brand).toLowerCase() : "";
   const have = [site.logo ? "your logo" : "", n ? `${n} photo${n === 1 ? "" : "s"}` : "", brand ? "your colour" : ""].filter(Boolean);
   const sample = hasSamplePhotos(site) ? " The photos are samples until you add yours." : "";
@@ -150,11 +222,13 @@ function ownPanel(token, key, site = {}) {
   <div class="mm-own-head"><h2 id="mm-own-title">Customize your site</h2><button type="button" class="mm-own-x" aria-label="Close" onclick="this.closest('dialog').close()">&times;</button></div>
   <form method="post" enctype="multipart/form-data" action="/api/website-preview/customize/${token}" onsubmit="var b = this.parentNode; b.classList.add('busy'); b.querySelector('.mm-own-busy').hidden = false; this.hidden = true; b.closest('dialog').addEventListener('cancel', function (e) { e.preventDefault(); });">
   <input type="hidden" name="design" value="${escapeHtml(key)}">
-  <p class="mm-own-now">${have.length ? `Using ${escapeHtml(have.join(", "))}. New files replace them.` : "Add your logo, photos and colour. Every design updates."}${sample}</p>
+  <p class="mm-own-now">${have.length ? `Using ${escapeHtml(have.join(", "))}. New files replace them.` : "Add your logo, photos, colour and details. Every design updates."}${sample}</p>
+  <details class="mm-own-group" open><summary>Logo, photos and colour</summary>
   <label>Logo <small>(PNG, JPG or WebP)</small><input type="file" name="logo" accept="image/png,image/jpeg,image/webp"></label>
   <label>Photos <small>(up to ${MAX_PHOTOS}, 5 MB each)</small><input type="file" name="photos" accept="image/png,image/jpeg,image/webp" multiple></label>
   <label class="mm-own-colour">Brand colour <input type="color" name="brand" value="${brand || "#00a7b5"}"></label>
-  <label class="mm-own-check"><input type="checkbox" name="use_brand" value="1"${brand ? " checked" : ""}> Use this colour</label>
+  <label class="mm-own-check"><input type="checkbox" name="use_brand" value="1"${brand ? " checked" : ""}> Use this colour</label></details>
+  ${detailFields(site, copy)}
   <button type="submit">Update all 9 designs</button>
   </form>
   <div class="mm-own-busy" role="status" aria-live="polite" hidden><span class="mm-spin" aria-hidden="true"></span><p><strong>Updating all 9 designs…</strong></p><p>Adding your logo, photos and colour to every design. This can take up to a minute. Keep this page open: it reloads by itself when they're ready.</p></div>
@@ -162,7 +236,7 @@ function ownPanel(token, key, site = {}) {
   <script>window.addEventListener("pageshow", function () { var b = document.querySelector(".mm-own-box"); if (!b) return; b.classList.remove("busy"); b.querySelector("form").hidden = false; b.querySelector(".mm-own-busy").hidden = true; });</script>`;
 }
 
-function wrapDesign(html, css, token, index, { prospect = false, site = null } = {}) {
+function wrapDesign(html, css, token, index, { prospect = false, site = null, copy = null } = {}) {
   const d = DESIGNS[index];
   const next = DESIGNS[(index + 1) % DESIGNS.length];
   const mark = encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" width="260" height="160"><text x="130" y="90" text-anchor="middle" transform="rotate(-24 130 80)" font-family="system-ui,sans-serif" font-size="22" font-weight="700" fill="#071f2c" fill-opacity=".13">PREVIEW · NOT LIVE</text></svg>`);
@@ -171,7 +245,7 @@ function wrapDesign(html, css, token, index, { prospect = false, site = null } =
   <a class="mm-gen-next" href="${escapeHtml(designUrl(token, next.key))}">Generate site</a>
   <button type="button" class="mm-gen-own" onclick="var d = document.getElementById('mm-own'); d.showModal ? d.showModal() : d.setAttribute('open', '')">Customize</button>
   <a class="mm-gen-pick" href="${escapeHtml(chooseUrl(token, d.key))}">Choose this site: ${SITE_FILES_PRICE}</a>
-  ${ownPanel(token, d.key, site || {})}
+  ${ownPanel(token, d.key, site || {}, copy || {})}
 </aside>`;
   const style = `<style>${css}
   body { padding-bottom: 170px; }
@@ -183,7 +257,10 @@ function wrapDesign(html, css, token, index, { prospect = false, site = null } =
   .mm-own::backdrop { background: rgba(4,16,24,.62); } .mm-own[open]:not(:modal) { position: fixed; inset: 0; z-index: 50; }
   .mm-own-box { padding: 18px 20px 20px; } .mm-own-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 6px; }
   .mm-own h2 { margin: 0; font: 700 20px/1.2 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; color: #fff; } .mm-own .mm-own-x { padding: 2px 10px; background: none; color: #e8f6f7; font-size: 26px; line-height: 1; }
-  .mm-own form { display: grid; gap: 12px; } .mm-own-busy { display: grid; justify-items: center; gap: 10px; padding: 28px 8px 12px; text-align: center; } .mm-own-busy[hidden], .mm-own form[hidden] { display: none; } .mm-own-box.busy .mm-own-x { display: none; }
+  .mm-own form { display: grid; gap: 12px; } .mm-own { overflow: auto; overscroll-behavior: contain; }
+  .mm-own-group { display: grid; gap: 10px; border-top: 1px solid #ffffff26; padding-top: 10px; } .mm-own-group > summary { cursor: pointer; font-weight: 700; color: #9eeef3; padding: 4px 0; } .mm-own-group[open] { gap: 12px; }
+  .mm-own-group:not([open]) > :not(summary) { display: none; } .mm-own-group label { margin-top: 10px; }
+  .mm-own input:not([type]), .mm-own input[type=tel], .mm-own input[type=email], .mm-own input[type=url], .mm-own textarea, .mm-own select { width: 100%; font: 15px/1.4 system-ui, sans-serif; padding: 10px 12px; border: 1px solid #ffffff4d; border-radius: 8px; background: #0d2a38; color: #e8f6f7; font-weight: 400; } .mm-own textarea { resize: vertical; } .mm-own-busy { display: grid; justify-items: center; gap: 10px; padding: 28px 8px 12px; text-align: center; } .mm-own-busy[hidden], .mm-own form[hidden] { display: none; } .mm-own-box.busy .mm-own-x { display: none; }
   .mm-spin { width: 52px; height: 52px; border: 5px solid #ffffff2e; border-top-color: #00a7b5; border-radius: 50%; animation: mm-spin .9s linear infinite; } @keyframes mm-spin { to { transform: rotate(360deg); } }
   @media (prefers-reduced-motion: reduce) { .mm-spin { animation: mm-spin 2.4s linear infinite !important; } }
   .mm-own label { display: grid; gap: 4px; font-weight: 600; } .mm-own small { font-weight: 400; opacity: .8; } .mm-own input[type=file] { color: #e8f6f7; max-width: 100%; }
@@ -238,7 +315,7 @@ async function storeDesigns(env, token, site, copy, { prospect = false, extra = 
     const files = buildDesignSite(site, copy, design.key);
     for (const [file, html] of Object.entries(files)) {
       if (!file.endsWith(".html")) continue;
-      await env.ASSETS.put(`website-previews/${token}/d/${design.key}/${file}`, wrapDesign(html, files["styles.css"], token, i, { prospect, site }), { httpMetadata: { contentType: "text/html; charset=utf-8" } });
+      await env.ASSETS.put(`website-previews/${token}/d/${design.key}/${file}`, wrapDesign(html, files["styles.css"], token, i, { prospect, site, copy }), { httpMetadata: { contentType: "text/html; charset=utf-8" } });
     }
   }
   await env.ASSETS.put(`website-previews/${token}/data.json`, JSON.stringify({ ...extra, site, copy }), { httpMetadata: { contentType: "application/json" } });
@@ -371,6 +448,8 @@ async function handleWebsitePreviewView(request, env, token, page, { now = Date.
 // The logo, photos and colour from a "Customize" form, stored beside the preview and set on `site` (in place).
 // Also used after payment (site-files/own.js), when the buyer adds them from the link in the delivery email.
 async function applyOwnForm(env, token, site, form) {
+  const details = applyDetails(site, form);   // text first: a bad link stops the update before any file is stored
+  if (details.error) return details;
   const files = (name) => form.getAll(name).filter((f) => f && typeof f === "object" && typeof f.arrayBuffer === "function" && f.size > 0);
   const read = async (file) => {
     if (file.size > MAX_OWN_IMAGE) return { error: `${file.name || "An image"} is over 5 MB.` };
@@ -402,7 +481,7 @@ async function applyOwnForm(env, token, site, form) {
 // New photos replace the old set; no new files keeps what was there. The paid site is built from the same data.json.
 async function handleWebsitePreviewCustomize(request, env, token, { now = Date.now() } = {}) {
   const gone = () => plainGone(410, "This preview has ended", `<a href="${escapeHtml(`${SITE}/website-design.html#try-free`)}">Start a new one</a>.`);
-  const oops = (text) => plainGone(400, "Those files didn't work", `${escapeHtml(text)} <a href="javascript:history.back()">Go back</a> and try again.`);
+  const oops = (text) => plainGone(400, "That didn't work", `${escapeHtml(text)} <a href="javascript:history.back()">Go back</a> and try again.`);
   if (!/^[a-f0-9]{36}$/.test(token) || !env.DB || !env.ASSETS) return gone();
   const row = await env.DB.prepare(`SELECT token, source, status, expires_at FROM website_previews WHERE token = ?`).bind(token).first();
   if (!row || row.status !== "READY" || row.expires_at <= new Date(now).toISOString()) return gone();
@@ -493,4 +572,4 @@ async function prefillFromPreview(env, email) {
   return out;
 }
 
-export { designUrl, chooseUrl, wrapDesign, storeDesigns, handleWebsitePreviewCreate, handleWebsitePreviewView, handleWebsitePreviewHandoff, handleWebsitePreviewCustomize, handleWebsitePreviewImage, applyOwnForm, MAX_PHOTOS, handleProspectSiteDemo, prefillFromPreview, offeringsFromMenu, wrapPage, fallbackCopy, PREVIEW_HOURS, PER_NETWORK_DAY };
+export { detailFields, designUrl, chooseUrl, wrapDesign, storeDesigns, handleWebsitePreviewCreate, handleWebsitePreviewView, handleWebsitePreviewHandoff, handleWebsitePreviewCustomize, handleWebsitePreviewImage, applyOwnForm, MAX_PHOTOS, handleProspectSiteDemo, prefillFromPreview, offeringsFromMenu, wrapPage, fallbackCopy, PREVIEW_HOURS, PER_NETWORK_DAY };
