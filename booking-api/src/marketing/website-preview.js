@@ -44,7 +44,7 @@ const MENU_TYPES = new Set(["application/pdf", "image/png", "image/jpeg", "image
 const SCANNER = /bot|crawl|spider|slurp|preview|scanner|proofpoint|mimecast|barracuda|safelinks|urldefense|headless|python|curl|wget|java\/|go-http|facebookexternalhit|slackbot|whatsapp|discord|skypeuripreview|outlook-ios-linkpreview/i;
 const PAGE = /^(index|menu|services|about|gallery|contact)\.html$|^d\/[a-z]+(\/(index|menu|about|contact))?\.html$/;
 const SITE_FILES_PRICE = "$299";
-// "Make it yours" (owner, Nov 6, 2026): a logo, up to MAX_PHOTOS photos and a brand colour, applied to all nine designs.
+// "Customize" (owner, Nov 6, 2026; was "Make it yours"): a logo, up to MAX_PHOTOS photos and a brand colour, applied to all nine designs.
 const MAX_PHOTOS = 6;
 const MAX_OWN_IMAGE = 5 * 1024 * 1024;
 const MAX_CUSTOMIZE = 15;        // rebuilds per preview (no AI involved, just storage)
@@ -144,10 +144,11 @@ function ownPanel(token, key, site = {}) {
   const n = ownPhotoCount(site), brand = hexOk(site.brand) ? String(site.brand).toLowerCase() : "";
   const have = [site.logo ? "your logo" : "", n ? `${n} photo${n === 1 ? "" : "s"}` : "", brand ? "your colour" : ""].filter(Boolean);
   const sample = hasSamplePhotos(site) ? " The photos are samples until you add yours." : "";
-  // A popup in the middle of the screen, opened by the "Make it yours" button in the bar (owner, Nov 6, 2026).
+  // A popup in the middle of the screen, opened by the "Customize" button in the bar (owner, Nov 6, 2026). Rebuilding
+  // nine designs takes a while, so sending shows a "please wait" panel in place of the form until the page reloads.
   return `<dialog class="mm-own" id="mm-own" aria-labelledby="mm-own-title" onclick="if (event.target === this) this.close()"><div class="mm-own-box">
-  <div class="mm-own-head"><h2 id="mm-own-title">Make it yours</h2><button type="button" class="mm-own-x" aria-label="Close" onclick="this.closest('dialog').close()">&times;</button></div>
-  <form method="post" enctype="multipart/form-data" action="/api/website-preview/customize/${token}">
+  <div class="mm-own-head"><h2 id="mm-own-title">Customize your site</h2><button type="button" class="mm-own-x" aria-label="Close" onclick="this.closest('dialog').close()">&times;</button></div>
+  <form method="post" enctype="multipart/form-data" action="/api/website-preview/customize/${token}" onsubmit="var b = this.parentNode; b.classList.add('busy'); b.querySelector('.mm-own-busy').hidden = false; this.hidden = true; b.closest('dialog').addEventListener('cancel', function (e) { e.preventDefault(); });">
   <input type="hidden" name="design" value="${escapeHtml(key)}">
   <p class="mm-own-now">${have.length ? `Using ${escapeHtml(have.join(", "))}. New files replace them.` : "Add your logo, photos and colour. Every design updates."}${sample}</p>
   <label>Logo <small>(PNG, JPG or WebP)</small><input type="file" name="logo" accept="image/png,image/jpeg,image/webp"></label>
@@ -155,7 +156,10 @@ function ownPanel(token, key, site = {}) {
   <label class="mm-own-colour">Brand colour <input type="color" name="brand" value="${brand || "#00a7b5"}"></label>
   <label class="mm-own-check"><input type="checkbox" name="use_brand" value="1"${brand ? " checked" : ""}> Use this colour</label>
   <button type="submit">Update all 9 designs</button>
-  </form></div></dialog>`;
+  </form>
+  <div class="mm-own-busy" role="status" aria-live="polite" hidden><span class="mm-spin" aria-hidden="true"></span><p><strong>Updating all 9 designs…</strong></p><p>Adding your logo, photos and colour to every design. This can take up to a minute. Keep this page open: it reloads by itself when they're ready.</p></div>
+  </div></dialog>
+  <script>window.addEventListener("pageshow", function () { var b = document.querySelector(".mm-own-box"); if (!b) return; b.classList.remove("busy"); b.querySelector("form").hidden = false; b.querySelector(".mm-own-busy").hidden = true; });</script>`;
 }
 
 function wrapDesign(html, css, token, index, { prospect = false, site = null } = {}) {
@@ -163,9 +167,9 @@ function wrapDesign(html, css, token, index, { prospect = false, site = null } =
   const next = DESIGNS[(index + 1) % DESIGNS.length];
   const mark = encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" width="260" height="160"><text x="130" y="90" text-anchor="middle" transform="rotate(-24 130 80)" font-family="system-ui,sans-serif" font-size="22" font-weight="700" fill="#071f2c" fill-opacity=".13">PREVIEW · NOT LIVE</text></svg>`);
   const bar = `<aside class="mm-gen" role="note" aria-label="Site generator">
-  <p><strong>Design ${index + 1} of ${DESIGNS.length}: ${escapeHtml(d.label)}</strong><span> · ${escapeHtml(d.blurb)}. ${prospect ? `A private preview made for you by Menu-made, ends in ${PROSPECT_DAYS} days.` : `Free preview, ends in ${PREVIEW_HOURS / 24} days.`}${hasSamplePhotos(site) ? " Sample photos: add your own in Make it yours." : ""}</span></p>
+  <p><strong>Design ${index + 1} of ${DESIGNS.length}: ${escapeHtml(d.label)}</strong><span> · ${escapeHtml(d.blurb)}. ${prospect ? `A private preview made for you by Menu-made, ends in ${PROSPECT_DAYS} days.` : `Free preview, ends in ${PREVIEW_HOURS / 24} days.`}${hasSamplePhotos(site) ? " Sample photos: add your own with Customize." : ""}</span></p>
   <a class="mm-gen-next" href="${escapeHtml(designUrl(token, next.key))}">Generate site</a>
-  <button type="button" class="mm-gen-own" onclick="var d = document.getElementById('mm-own'); d.showModal ? d.showModal() : d.setAttribute('open', '')">Make it yours</button>
+  <button type="button" class="mm-gen-own" onclick="var d = document.getElementById('mm-own'); d.showModal ? d.showModal() : d.setAttribute('open', '')">Customize</button>
   <a class="mm-gen-pick" href="${escapeHtml(chooseUrl(token, d.key))}">Choose this site: ${SITE_FILES_PRICE}</a>
   ${ownPanel(token, d.key, site || {})}
 </aside>`;
@@ -179,7 +183,9 @@ function wrapDesign(html, css, token, index, { prospect = false, site = null } =
   .mm-own::backdrop { background: rgba(4,16,24,.62); } .mm-own[open]:not(:modal) { position: fixed; inset: 0; z-index: 50; }
   .mm-own-box { padding: 18px 20px 20px; } .mm-own-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 6px; }
   .mm-own h2 { margin: 0; font: 700 20px/1.2 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; color: #fff; } .mm-own .mm-own-x { padding: 2px 10px; background: none; color: #e8f6f7; font-size: 26px; line-height: 1; }
-  .mm-own form { display: grid; gap: 12px; }
+  .mm-own form { display: grid; gap: 12px; } .mm-own-busy { display: grid; justify-items: center; gap: 10px; padding: 28px 8px 12px; text-align: center; } .mm-own-busy[hidden], .mm-own form[hidden] { display: none; } .mm-own-box.busy .mm-own-x { display: none; }
+  .mm-spin { width: 52px; height: 52px; border: 5px solid #ffffff2e; border-top-color: #00a7b5; border-radius: 50%; animation: mm-spin .9s linear infinite; } @keyframes mm-spin { to { transform: rotate(360deg); } }
+  @media (prefers-reduced-motion: reduce) { .mm-spin { animation: mm-spin 2.4s linear infinite !important; } }
   .mm-own label { display: grid; gap: 4px; font-weight: 600; } .mm-own small { font-weight: 400; opacity: .8; } .mm-own input[type=file] { color: #e8f6f7; max-width: 100%; }
   .mm-own .mm-own-colour, .mm-own .mm-own-check { display: flex; align-items: center; gap: 10px; } .mm-own input[type=color] { width: 52px; height: 36px; border: 0; padding: 0; background: none; }
   .mm-own p { margin: 0; } .mm-own button { padding: 12px 18px; border: 0; border-radius: 8px; background: #00a7b5; color: #fff; font: 700 15px system-ui, sans-serif; cursor: pointer; }
@@ -362,7 +368,7 @@ async function handleWebsitePreviewView(request, env, token, page, { now = Date.
   return new Response(request.method === "HEAD" ? null : object.body, { status: 200, headers: { "Content-Type": "text/html; charset=utf-8", "Cache-Control": "no-store", "X-Robots-Tag": "noindex, nofollow", "Referrer-Policy": "no-referrer" } });
 }
 
-// The logo, photos and colour from a "Make it yours" form, stored beside the preview and set on `site` (in place).
+// The logo, photos and colour from a "Customize" form, stored beside the preview and set on `site` (in place).
 // Also used after payment (site-files/own.js), when the buyer adds them from the link in the delivery email.
 async function applyOwnForm(env, token, site, form) {
   const files = (name) => form.getAll(name).filter((f) => f && typeof f === "object" && typeof f.arrayBuffer === "function" && f.size > 0);
@@ -391,7 +397,7 @@ async function applyOwnForm(env, token, site, form) {
   return { site };
 }
 
-// "Make it yours": POST multipart { design, logo?, photos?[], brand?, use_brand? } -> stores the images beside the
+// "Customize": POST multipart { design, logo?, photos?[], brand?, use_brand? } -> stores the images beside the
 // preview, rebuilds all nine designs from the stored copy (no AI call) and returns to the design the buyer was on.
 // New photos replace the old set; no new files keeps what was there. The paid site is built from the same data.json.
 async function handleWebsitePreviewCustomize(request, env, token, { now = Date.now() } = {}) {
@@ -413,7 +419,7 @@ async function handleWebsitePreviewCustomize(request, env, token, { now = Date.n
   return new Response(null, { status: 303, headers: { Location: designUrl(token, design.key), "Cache-Control": "no-store" } });
 }
 
-// The logo and photos added with "Make it yours", served beside each design's pages (img/<name> from any page).
+// The logo and photos added with "Customize", served beside each design's pages (img/<name> from any page).
 async function handleWebsitePreviewImage(env, token, file, { now = Date.now() } = {}) {
   const m = IMG.exec(file);
   if (!/^[a-f0-9]{36}$/.test(token) || !m || !env.DB || !env.ASSETS) return new Response("Not found", { status: 404 });

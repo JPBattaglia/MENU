@@ -95,7 +95,7 @@ test('Make it yours: a logo, photos and a brand colour rebuild all nine designs,
   stubApis(t);
   const out = await (await f.create({ request_id: await f.upload(), email: 'owner@pizza.example', business: 'Sample Pizza', phone: '(415) 555-0100' })).json();
   const first = await (await f.get(`/api/website-preview/view/${out.token}/d/bistro/index.html`)).text();
-  for (const words of ['Make it yours', `action="/api/website-preview/customize/${out.token}"`, 'name="photos"', 'name="logo"', 'type="color"', 'Update all 9 designs']) assert.ok(first.includes(words), words);
+  for (const words of ['>Customize</button>', 'Customize your site', 'Updating all 9 designs', 'class="mm-spin"', `action="/api/website-preview/customize/${out.token}"`, 'name="photos"', 'name="logo"', 'type="color"', 'Update all 9 designs']) assert.ok(first.includes(words), words);
   const post = (form) => f.call(`/api/website-preview/customize/${out.token}`, { method: 'POST', body: form });
   const form = new FormData();
   form.set('design', 'bistro');
