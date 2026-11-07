@@ -72,7 +72,8 @@ test('sign-in sends a link only to buyers; other emails get a no-purchases note 
     assert.match(h.emails[0].html, /\/api\/account\/open\//);
     for (const note of h.emails.slice(1)) {
       assert.equal(note.subject, 'Signing in to Menu-Made');
-      assert.match(note.html, /No purchases under this email/);
+      assert.match(note.html, /Your account starts with your first purchase/);
+      assert.match(note.html, /only when something is bought/);
       assert.doesNotMatch(note.html + note.text, /\/api\/account\/open\//, 'a note never carries a sign-in link');
     }
     await h.signIn('nobody@example.com');
@@ -177,4 +178,22 @@ test('customer emails carry the Your account button; owner alerts and the sign-i
   assert.match(out.html, /Your account<\/a><\/td><\/tr><tr><td style="padding:24px 32px;background-color:#071f2c;">/);
   assert.match(out.text, /Your account .*https:\/\/menu-made\.com\/account$/);
   assert.deepEqual(withAccountLink(out.html, out.text), out, 'never added twice');
+});
+
+test('no purchase but a free preview: the note says an account comes with a purchase and links straight to the preview', async () => {
+  const h = setup();
+  try {
+    const t = new Date().toISOString(), later = new Date(Date.now() + 86400e3).toISOString();
+    h.sql(`INSERT INTO website_previews (token, source, email, business, status, created_at, expires_at) VALUES (?, 'public', 'looker@cafe.example', 'Corner Cafe', 'READY', ?, ?)`, 'c'.repeat(36), t, later);
+    const res = await h.signIn('looker@cafe.example');
+    const body = await res.json();
+    assert.match(body.message, /free preview, there's a link to your preview/);
+    assert.doesNotMatch(JSON.stringify(body), /cccccc/, 'the page never shows the preview link');
+    const note = h.emails.at(-1);
+    assert.equal(note.subject, 'Your Menu-Made preview');
+    assert.match(note.html, /See your website preview/);
+    assert.match(note.html, new RegExp(`/api/website-preview/view/${'c'.repeat(36)}/`));
+    assert.match(note.html, /for Corner Cafe/);
+    assert.doesNotMatch(note.html, /\/api\/account\/open\//);
+  } finally { h.restore(); }
 });
