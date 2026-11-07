@@ -162,6 +162,24 @@ test('ended and unknown previews show a plain ended page', async (t) => {
   assert.equal((await f.get(`/api/website-preview/view/${'a'.repeat(36)}/index.html`)).status, 410);
 });
 
+test('clicking through every page of all nine designs counts nine opens; the cap is for public previews only', async (t) => {
+  const f = setup();
+  stubApis(t);
+  const out = await (await f.create({ request_id: await f.upload({ email: 'c@pizza.example' }), email: 'c@pizza.example', business: 'Sample Pizza' })).json();
+  const { DESIGN_KEYS } = await import('./src/producers/website/templates/designs.js');
+  for (const key of DESIGN_KEYS) for (const page of ['index', 'menu', 'about', 'contact']) {
+    const res = await f.get(`/api/website-preview/view/${out.token}/d/${key}/${page}.html`);
+    assert.ok([200, 404, 410].includes(res.status));
+    assert.notEqual(res.status, 410, `${key}/${page} must not end the preview`);
+  }
+  const opens = () => f.env.DB.raw.prepare(`SELECT open_count AS n FROM website_previews WHERE token = ?`).get(out.token).n;
+  assert.equal(opens(), DESIGN_KEYS.length);
+  f.env.DB.raw.prepare(`UPDATE website_previews SET open_count = 120`).run();
+  assert.equal((await f.get(`/api/website-preview/view/${out.token}/d/bistro/index.html`)).status, 410, 'public previews end at 120 opens');
+  f.env.DB.raw.prepare(`UPDATE website_previews SET source = 'rep'`).run();
+  assert.equal((await f.get(`/api/website-preview/view/${out.token}/d/bistro/index.html`)).status, 200, 'rep previews (shown on visits) have no cap');
+});
+
 async function prospectSetup(rows) {
   const f = setup();
   const b64u = (v) => Buffer.from(v).toString('base64url');
