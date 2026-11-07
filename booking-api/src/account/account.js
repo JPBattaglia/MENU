@@ -70,12 +70,43 @@ async function handleSignIn(request, env) {
     return privateJson({ ok: false, error: "Enter the email address you used at checkout." }, 400);
   }
   const buyer = await findBuyer(env, email);
-  if (!buyer) return answer;
   const hourAgo = new Date(Date.now() - 3600e3).toISOString();
+  if (!buyer) {
+    // No purchases under this email (owner, Nov 6, 2026: "the sign in with email did not work"): tell the inbox so,
+    // once an hour, instead of sending nothing. The page's answer stays the same, so it still reveals nothing.
+    const told = await env.DB.prepare(`SELECT COUNT(*) AS n FROM account_sign_ins WHERE email = ? AND customer_id = '' AND created_at > ?`).bind(email, hourAgo).first();
+    if (Number(told?.n || 0) < 1) await sendNoAccountNote(env, email).catch(() => null);
+    return answer;
+  }
   const recent = await env.DB.prepare(`SELECT COUNT(*) AS n FROM account_sign_ins WHERE email = ? AND created_at > ?`).bind(email, hourAgo).first();
   if (Number(recent?.n || 0) >= MAX_SIGN_INS_PER_HOUR) return answer;
   const sent = await sendSignInLink(env, buyer, email);
   return sent.ok ? answer : privateJson({ ok: false, error: "We couldn't send the email just now. Please try again in a minute." }, 502);
+}
+
+// No usable link: the row only counts the note for the hourly limit (customer_id '' matches no customer).
+async function sendNoAccountNote(env, email) {
+  const now = nowIso();
+  await env.DB.prepare(`INSERT INTO account_sign_ins (id, customer_id, email, created_at, expires_at, used_at) VALUES (?, '', ?, ?, ?, ?)`)
+    .bind(crypto.randomUUID(), email, now, now, now).run();
+  const base = publicBaseUrl(env);
+  return sendTransactionalEmail(env, {
+    to: email,
+    subject: "Signing in to Menu-Made",
+    html: brandedEmailHtml({
+      preheader: "We don't have a purchase under this email address.",
+      eyebrow: "Your account",
+      heading: "No purchases under this email",
+      paragraphs: [
+        `Someone asked to sign in to Menu-Made with ${escapeHtml(email)}, but we don't have a purchase under this address. Your account opens with the email you used at checkout.`,
+        "A free preview doesn't need an account: its link is in the email we sent with it. If you didn't ask to sign in, you can ignore this email."
+      ],
+      buttons: [{ label: "Try another email", url: `${base}/account.html`, primary: true }, { label: "See plans", url: `${base}/plans.html` }]
+    }),
+    text: `We don't have a Menu-Made purchase under ${email}. Your account opens with the email you used at checkout: ${base}/account.html\nA free preview doesn't need an account: its link is in the email we sent with it.`,
+    purpose: "ACCOUNT_SIGN_IN",
+    templateKey: "account_no_purchase_v1"
+  });
 }
 
 async function sendSignInLink(env, buyer, email) {

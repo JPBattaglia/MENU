@@ -29,7 +29,7 @@ footer{text-align:center;padding:28px;background:${ink};color:#e8dccb;font-size:
 <header class="hero" id="main" data-hero>${photo(d, 0, "bg")}<div class="in">${logoImg(d, "logo", 84)}<span class="orn"></span><h1>${esc(d.name)}</h1><p>${esc(d.tagline)}</p>${menuBtn(d, "btn fill")}${orderBtn(d, "btn")}${callBtn(d, "btn")}</div></header>
 <main>${d.sections.length ? `<section id="menu"><h2>${d.menuLabel}</h2><p class="sub">${esc(d.intro)}</p><div class="menu-grid">${sections(d, (s) => `<div class="msec">${s.name ? `<h3>${esc(s.name)}</h3>` : ""}<ul>${s.items.map((i) => item(i, { leader: true })).join("")}</ul></div>`)}</div></section>` : ""}
 <section id="about"><h2>Our story</h2><p class="sub">${esc(d.name)}</p><div class="about">${aboutHtml(d)}</div></section>
-<section id="visit"><h2>${d.address ? "Visit us" : "Get in touch"}</h2><p class="sub">${d.address ? "We’d love to see you" : "We’d love to hear from you"}</p><div class="visit">${d.hours.length || d.phone ? `<div><h3>Hours</h3>${hoursList(d)}</div>` : ""}<div><h3>Find us</h3>${contactLines(d)}</div></div></section></main>
+<section id="visit"><h2>Contact us</h2><p class="sub">${d.address ? "We’d love to see you" : "We’d love to hear from you"}</p><div class="visit">${d.hours.length || d.phone ? `<div><h3>Hours</h3>${hoursList(d)}</div>` : ""}<div><h3>Find us</h3>${contactLines(d)}</div></div></section></main>
 <footer>© ${year()} ${esc(d.name)}</footer>`;
     return { css, body, theme: b };
   }
@@ -156,7 +156,7 @@ footer{text-align:center;padding:30px;font:500 11px Jost,sans-serif;letter-spaci
 <div class="hero" id="main" data-hero>${photo(d, 0)}<div class="in"><span class="eyebrow">${d.address ? esc(d.address.split(",")[0]) : "Welcome"}</span><h1>${esc(d.name)}</h1><p>${esc(d.tagline)}</p>${menuBtn(d, "line")}${orderBtn(d, "line")}</div></div>
 <main>${d.sections.length ? `<section id="menu"><h2>${d.menuLabel}</h2><span class="rule"></span>${sections(d, (s) => `<div class="course">${s.name ? `<h3>${esc(s.name)}</h3>` : ""}<ul>${s.items.map((x) => item(x)).join("")}</ul></div>`)}</section>` : ""}
 <section id="about" class="about"><h2>The house</h2><span class="rule"></span><p>${esc(d.intro)}</p>${aboutHtml(d)}</section>
-<section id="visit"><h2>${d.address ? "Visit" : "Contact"}</h2><span class="rule"></span><div class="visit">${d.hours.length || d.phone ? `<div><h3>Hours</h3>${hoursList(d)}</div>` : ""}<div><h3>${d.address ? "Address" : "Contact"}</h3>${contactLines(d)}</div></div></section></main>
+<section id="visit"><h2>Contact</h2><span class="rule"></span><div class="visit">${d.hours.length || d.phone ? `<div><h3>Hours</h3>${hoursList(d)}</div>` : ""}<div><h3>${d.address ? "Address" : "Contact"}</h3>${contactLines(d)}</div></div></section></main>
 <footer>© ${year()} ${esc(d.name)}</footer>`;
     return { css, body, theme: bg };
   }
@@ -187,7 +187,7 @@ footer{text-align:center;padding:28px;color:#4d5a51;font-size:15px}
 <div class="hero" id="main" data-hero><div><h1>${esc(d.tagline || d.name)}</h1><p>${esc(d.intro)}</p>${menuBtn(d, "pill")}${callBtn(d, "pill alt")}</div>${photo(d, 0)}</div>
 <main>${d.sections.length ? `<section id="menu"><h2>${d.menuLabel}</h2>${sections(d, (s) => `${s.name ? `<h3 class="badge">${esc(s.name)}</h3>` : ""}<ul class="grid">${s.items.map((x) => item(x)).join("")}</ul>`)}</section>` : ""}
 <section id="about"><h2 class="vh">About</h2><div class="aboutbox"><h2>About ${esc(d.name)}</h2>${aboutHtml(d)}</div></section>
-<section id="visit"><h2>${d.address ? "Visit us" : "Contact us"}</h2><div class="visit">${d.hours.length || d.phone ? `<div><h3>Hours</h3>${hoursList(d)}</div>` : ""}<div><h3>${d.address ? "Where we are" : "Reach us"}</h3>${contactLines(d)}</div></div></section></main>
+<section id="visit"><h2>Contact us</h2><div class="visit">${d.hours.length || d.phone ? `<div><h3>Hours</h3>${hoursList(d)}</div>` : ""}<div><h3>${d.address ? "Where we are" : "Reach us"}</h3>${contactLines(d)}</div></div></section></main>
 <footer>© ${year()} ${esc(d.name)}</footer>`;
     return { css, body, theme: b };
   }
@@ -251,7 +251,7 @@ footer{padding:24px clamp(24px,6vw,80px);font:500 13px Montserrat,sans-serif;col
 <div class="content"><div class="hero" id="main" data-hero>${photo(d, 0)}<div class="in"><h1>${esc(d.tagline || d.name)}</h1><p>${esc(d.intro)}</p>${menuBtn(d, "tide")}${orderBtn(d, "tide")}</div><svg viewBox="0 0 1440 70" preserveAspectRatio="none" aria-hidden="true"><path d="M0 40 C 240 0 480 70 720 40 S 1200 10 1440 40 V70 H0Z" fill="${sand}"/></svg></div>
 <main class="wrap">${d.sections.length ? `<section id="menu"><h2>${d.menuLabel}</h2><div class="ledger">${sections(d, (s) => `${s.name ? `<h3>${esc(s.name)}</h3>` : ""}<ul>${s.items.map((x) => item(x)).join("")}</ul>`)}</div></section>` : ""}
 <section id="about"><h2>About</h2>${aboutHtml(d)}</section>
-<section id="visit"><h2>${d.address ? "Visit" : "Contact"}</h2><div class="visit">${d.hours.length || d.phone ? `<div><h3>Hours</h3>${hoursList(d)}</div>` : ""}<div><h3>${d.address ? "Location" : "Contact"}</h3>${contactLines(d)}</div></div></section></main>
+<section id="visit"><h2>Contact</h2><div class="visit">${d.hours.length || d.phone ? `<div><h3>Hours</h3>${hoursList(d)}</div>` : ""}<div><h3>${d.address ? "Location" : "Contact"}</h3>${contactLines(d)}</div></div></section></main>
 <footer>© ${year()} ${esc(d.name)}</footer></div>`;
     return { css, body, theme: navy };
   }
