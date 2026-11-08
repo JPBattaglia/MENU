@@ -32,6 +32,7 @@ test('a requested link is emailed to the owner; the page lists the newest file p
   assert.equal(await runOwnerOutputsLink(env), 1);
   assert.equal(db.prepare(`SELECT status FROM self_tests WHERE id = 'r1'`).get().status, 'PASSED');
   const link = /https:\/\/menu-made\.com\/api\/owner\/outputs\?t=[^"\s<]+/.exec(sent[0].text)[0];
+  assert.equal(JSON.parse(db.prepare(`SELECT state_json FROM self_tests WHERE id = 'r1'`).get().state_json).url, link, 'the link is kept on the request row');
 
   const page = await (await call(link)).text();
   assert.match(page, /Social Posts/); assert.match(page, /Review Replies/);
