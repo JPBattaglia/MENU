@@ -1,5 +1,5 @@
 // Menu Care (stage 6): apply a customer's change request to their live menu.
-//   parseMenuHtml(html)      -> { businessName, primary, accent, logoDataUri, menu, style, subtitle, logo }   (reads the page buildDesignedMenuHtml wrote)
+//   parseMenuHtml(html)      -> { businessName, primary, accent, logoDataUri, menu, style, subtitle, logo, hideName }   (reads the page buildDesignedMenuHtml wrote)
 //   diffMenus(before, after) -> [{ kind: "added"|"removed"|"changed", section, name, before?, after? }]
 //   applyMenuChange(env, {...}) -> { menu, summary, diff, problems }   (one generate() call, then deterministic checks)
 // Nothing here publishes. The care step renders the new version and the owner approves it before it goes live.
@@ -51,7 +51,7 @@ function parseMenuHtml(html) {
     sections.push({ name, items });
   }
   const notes = strip(/<p class="notes">([\s\S]*?)<\/p>/.exec(source)?.[1]);
-  const title = strip(/<h1>([\s\S]*?)<\/h1>/.exec(source)?.[1]);
+  const title = strip(/<h1(?: class="name-hidden")?>([\s\S]*?)<\/h1>/.exec(source)?.[1]);
   const logo = /<header>\s*<img src="([^"]+)"/.exec(source)?.[1];
   return {
     businessName: title,
@@ -61,7 +61,8 @@ function parseMenuHtml(html) {
     menu: { sections, notes, unreadable: "" },
     style: readStyleMeta(source),
     subtitle: strip(/<\/h1>\s*<p>([\s\S]*?)<\/p>/.exec(source)?.[1]) || "Menu",
-    logo: readLogoAttr(source)
+    logo: readLogoAttr(source),
+    hideName: /<h1 class="name-hidden">/.test(source)
   };
 }
 

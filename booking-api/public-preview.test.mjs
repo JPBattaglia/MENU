@@ -341,3 +341,23 @@ test('Chalkboard is hand-lettered in a wooden frame', () => {
   assert.match(html, /border: 16px ridge/);
   assert.equal(parseMenuHtml(html).style.frame, 'chalk');
 });
+
+test('Customize: change the business name, or hide it when the logo already spells it', async (t) => {
+  const { f, token, customize } = await madePreview(t);
+  await customize({ design: 'classic', business_name: 'Sample Café & Bar' });
+  let html = await (await f.get(`/api/menu-preview/view/${token}/classic`)).text();
+  assert.match(html, /<h1>Sample Café &amp; Bar<\/h1>/);
+  assert.match(html, /<title>Sample Café &amp; Bar — Menu<\/title>/);
+  await customize({ design: 'classic', business_name: 'Sample Café & Bar', hide_name: '1' });
+  html = await (await f.get(`/api/menu-preview/view/${token}/classic`)).text();
+  assert.match(html, /<h1>Sample Café &amp; Bar<\/h1>/, 'no logo yet: the name stays visible');
+  await customize({ design: 'classic', business_name: 'Sample Café & Bar', hide_name: '1', logo: new File([PNG], 'logo.png', { type: 'image/png' }) });
+  html = await (await f.get(`/api/menu-preview/view/${token}/modern`)).text();
+  assert.match(html, /<h1 class="name-hidden">Sample Café &amp; Bar<\/h1>/, 'hidden from view, kept for screen readers');
+  assert.match(html, /name="hide_name" value="1" checked/);
+  const live = parseMenuHtml(html.replace(/<aside[\s\S]*?<\/aside>/, ''));
+  assert.equal(live.businessName, 'Sample Café & Bar');
+  assert.equal(live.hideName, true, 'Menu Care keeps the name hidden');
+  await customize({ design: 'classic', business_name: '' });
+  assert.match(await (await f.get(`/api/menu-preview/view/${token}/classic`)).text(), /<h1>Sample Cafe<\/h1>/, 'emptied: back to the original name');
+});

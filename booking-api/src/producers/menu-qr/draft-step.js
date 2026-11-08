@@ -66,7 +66,9 @@ async function runGenerateMenuDraftStep(targetStep, env) {
   // order is unmeasured (design.js: a JPEG gets a border, anything else a soft halo).
   const logo = orderLogo ? null : choice?.logoDataUri ? { info: choice.custom?.logo_info || null, mode: choice.custom?.logo_bg || "auto" } : null;
   const draftHtml = source.menu ? buildDesignedMenuHtml({
-    businessName,
+    // The name as the buyer set it in the preview's Customize, and whether their logo already shows it.
+    businessName: choice?.custom?.name || businessName,
+    hideName: choice?.custom?.hide_name === true,
     // A generator design keeps its own colours; the order's colour (or the preview's Customize colour) is only its
     // highlight. The buyer's own design takes the order's colours, else the menu's printed ones, as before.
     brandColors: chosen ? "" : brandColors || menuColors(source.menu),
