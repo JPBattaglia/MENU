@@ -340,6 +340,7 @@ test('Chalkboard is hand-lettered in a wooden frame', () => {
   assert.match(html, /body \{ font-family: "Chalkboard SE", Chalkduster, "Marker Felt", "Comic Sans MS"/);
   assert.match(html, /border: 16px ridge/);
   assert.equal(parseMenuHtml(html).style.frame, 'chalk');
+  assert.match(html, /<footer>Menu by <a href="https:\/\/menu-made.com\/">MENU-MADE<\/a><\/footer>/, 'footer links to menu-made.com');
 });
 
 test('Customize: change the business name, or hide it when the logo already spells it', async (t) => {
