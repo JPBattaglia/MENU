@@ -70,14 +70,21 @@ const logoImg = (d, cls = "logo", size = 48) => (d.logo ? `<img class="${cls}" s
 const photo = (d, i, cls = "") => (d.photos[i] ? `<img class="${cls}" src="${esc(d.photos[i].path)}" alt="${esc(d.photos[i].alt || "")}" loading="${i ? "lazy" : "eager"}">` : "");
 const aboutHtml = (d) => d.about.map((p) => `<p>${esc(p)}</p>`).join("");
 
+// "Website by MENU-MADE" (owner, Nov 7, 2026), under every design's own footer: the menu-made.com logo on the brand's
+// navy, so it reads the same on light and dark designs. The logo is inline (1.8 KB): hosted sites only load images
+// from their own domain.
+const MENU_MADE_LOGO = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAL4AAAAoCAMAAAB3lbDxAAAAkFBMVEUAAAACnKrcDgT+AQABd4oEusIDzdTpGhXeXwtbV19hmZiOWVm6HRikKi9VqqoqlqcqYXKkLC8A+fwx3ON/Dg79Xl6qVVUXfHyIiYLRhghyOUVrnZ2LO0b/XwCsVFJV//9D1NdcanfPIiP1QhBTd4RvfIF2dnYDtMsvuMZV/6qXTjnHSygAVaoDnKqiPEAvdIWmaE2TAAAAMHRSTlMA/v4P/f7+Xv7y8NsD4gNk/q4FXAICAwLu//C66QKpA3G4k1is6gIyXQPAkgMhs5JWKPdzAAAES0lEQVR42s2ZCXvqKhCGJxKTg0gjuS7VGz3HaGvt7fL//91li7IlBq3t+R7rUxbhdSQwzEAJiH0wSimjOYwRIEo2hFJZgWCKIOflijLGckAgVPJXoSSKf1yJStV8AFjwAh80h7qu+RBIlTYfvPr1lRBSVZQOiBDGhDfLKVAJOauYZlCzNhpLIKKAuPJRIpVOFP4oy4aynGJemkOe6Qpcw7OkL/eEDkz9OsmqpnR7EF9WDqomwYwXSJINh4lWmk5okqmKJ4ZmAvYZ2Eh1SDGHcvFBf5y3cfps6ODrcoM/1BWJGmpW7geugvRCuEQLMGySpAyRzKKX+Lo8qWEO/NVApUH8xAAizVgX8dOUyt+xoEH6ZZB/CzOFPzxNKf4P46fpSqyVEjVQ3fgcCJ4i8MXgCLZB4y+XyxA+4WvNxE8ng6zV+nLK6fTc/RL+KhofAMfg0wMsbHzq4dd/AX7L4umBv8p/GL/90W3BN/lx7kwZhT/qxp+Z+Fjjy2PBRV86X0F1Iu8efnJSOsG4yo3NL4iPvha/OOvl5Z+QXl7OXd7dR7fOTSFxkN2A/3gaGPfEjxb/FDaN5LVejV9dgf/24Oj4+yy37cHHH8/m87n4G3MhFI8/ugn/Guvbh+ON1o/DTzz8tznqp/lbPP4Y3Rl/GmV5+W7g19+M7y6eBRR7rPQ0CutJt+8L6TH/KH5m4z9DUbWdW77LUwgnu4R++ImYAVz8dTs+icZfwIG0nrpBl21h4//Xic9pr8Xf+fjrAH4RdhrCPs+giMa3d57djfg7Z/HAZxBfeZy/+uBPO/B3l/F38O34m9Ms6Xfioy9aPL3xvbW/+9FHF5fibn8D/hfvPGLjJNEbp4Evb+M2/uM98X2fp9hvhfb7f9u01z3UsWXhMxluacHnLgW6t9MQ7bb97o2PvwE/6LKt1+s2l43jw3kFMuVHtFp/fXf8eOt344/uie+5bN6V5OGobizHo9+0iMb/264rcORrvzc+OPiIB2wNvdv4sVf1Et4v3dStuzq/qsNDDP7ctT7vYur6SMNKXuU+qZa15Wun4bT56z6V2Dod/NLFhy58lBNMiI6hiw8MIsJUAXwYDHofW8ppuISPu/A3iRnWciK60VG2IH6703ArvgyADhMjG3ABH1u0vfFbQrQ+PnXwodv6tCsg7eLzmVimMyHcTjPw8Bed+GGHGWx87zpPovCtte+EMKblaTCKeHgvkJ440AjrVzxEy7dCPkhiDRLE1xFZKz3h4+ej01grJzmkgjIi24VFYg4gLjnk43/yX1Ds5OclWbn45l2MoWcnOeThM7TR60Pg26k5nQfMWa6zfHZqbiZmQ+WW9tx56LaclnLMHDf2rNyzT+I3ibvSTc3Z8fRUdiHJsMG3E6NgOJQqR2kmRpvpyqLZiZUAHpUArHpclPo55Qkuprbvivn4+WbzwRgPPYORGGVMZmdrPdYrF1AmrYryD6pa/wcMa5tUrvAl3gAAAABJRU5ErkJggg==";
+const CREDIT = `<a class="mm-credit" href="https://menu-made.com/">Website by <img src="${MENU_MADE_LOGO}" alt="MENU-MADE" width="95" height="20"></a>`;
+
 function page(d, { fonts, css, body, theme }) {
   const fontLink = fonts ? `<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link rel="stylesheet" href="https://fonts.googleapis.com/css2?${fonts}&display=swap">` : "";
   return `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${d.pageTitle ? `${esc(d.pageTitle)} | ${esc(d.name)}` : `${esc(d.name)}${d.tagline ? ` | ${esc(d.tagline)}` : ""}`}</title><meta name="description" content="${esc(d.meta || d.intro)}"><meta name="theme-color" content="${theme}">${fontLink}<link rel="stylesheet" href="styles.css"></head>
-<body><a class="skip" href="#main">Skip to content</a>${body}</body></html>`;
+<body><a class="skip" href="#main">Skip to content</a>${body}${CREDIT}</body></html>`;
 }
 
 const BASE_CSS = `*{box-sizing:border-box}html{scroll-behavior:smooth;-webkit-text-size-adjust:100%}body{margin:0;overflow-wrap:anywhere}img{max-width:100%;display:block}
 .skip{position:absolute;left:-999px;top:0;z-index:50;padding:10px 14px;background:#000;color:#fff}.skip:focus{left:8px;top:8px}
+.mm-credit{display:flex;align-items:center;justify-content:center;gap:8px;padding:11px 16px;background:#071f2c;color:#e8f6f7;font:500 13px/1 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;letter-spacing:.02em;text-decoration:none}.mm-credit img{display:block;width:auto;height:20px}.mm-credit:hover,.mm-credit:focus-visible{color:#5ff2ff}
 a:focus-visible,button:focus-visible{outline:3px solid currentColor;outline-offset:3px}
 .vh{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
 section[id]{scroll-margin-top:84px}
