@@ -252,3 +252,12 @@ test('a plan that includes Website Care (Pro, or your own plan with it) also put
   await runOrder(g);
   assert.equal(g.row(`SELECT COUNT(*) AS n FROM website_sites`).n, 0, 'a plan without Website Care: zip only');
 });
+
+test('every page of every design ends with "Website by MENU-MADE" linking to menu-made.com, logo inline', () => {
+  for (const d of DESIGNS) {
+    for (const [name, html] of Object.entries(buildDesignSite(SITE, COPY, d.key))) {
+      if (!name.endsWith('.html')) continue;
+      assert.match(html, /<a class="mm-credit" href="https:\/\/menu-made.com\/">Website by <img src="data:image\/png;base64,[A-Za-z0-9+/=]+" alt="MENU-MADE"[^>]*><\/a><\/body>/, `${d.key} ${name}`);
+    }
+  }
+});
