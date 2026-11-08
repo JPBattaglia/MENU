@@ -65,8 +65,10 @@ async function runOwnerOutputsLink(env) {
     text: `Latest outputs from every service (link works ${LINK_DAYS} days): ${url}`,
     idempotencyKey: `owner-outputs/${row.id}`, purpose: "OWNER_ACTION", templateKey: "owner_outputs_link_v1"
   }).catch((error) => ({ ok: false, error }));
-  await env.DB.prepare(`UPDATE self_tests SET status = ?, error = ?, updated_at = ? WHERE id = ?`)
-    .bind(result?.ok ? "PASSED" : "FAILED", result?.ok ? null : String(result?.error?.message || result?.error || "send failed").slice(0, 300), nowIso(), row.id).run();
+  // The link is also kept on the request row, so Claude can open it from the database when the owner inbox is out of
+  // reach (whoever can read D1 can already do far more than this read-only page).
+  await env.DB.prepare(`UPDATE self_tests SET status = ?, error = ?, state_json = ?, updated_at = ? WHERE id = ?`)
+    .bind(result?.ok ? "PASSED" : "FAILED", result?.ok ? null : String(result?.error?.message || result?.error || "send failed").slice(0, 300), JSON.stringify({ url }), nowIso(), row.id).run();
   return result?.ok ? 1 : 0;
 }
 
