@@ -109,6 +109,7 @@ function flyerLayout(brief, { size = "print", hasLogo = false, variant = 0 } = {
   if (frame === 2) parts.push(`<rect x="0" y="0" width="${Math.round(40 * k)}" height="${H}" fill="${p.accent}"/><rect x="${W - Math.round(40 * k)}" y="0" width="${Math.round(40 * k)}" height="${H}" fill="${p.accent}"/>`);
   const headInk = frame === 1 ? p.accentInk : p.accent;
   let y = Math.round((size === "print" ? 260 : 120) * k);
+  const contentStart = parts.length; // logo to details: moved down together below when the page has room to spare
   if (hasLogo) {
     const lh = Math.round((size === "print" ? 330 : 360) * k * squeeze);
     parts.push(logoImage(W / 2 - lh, y, lh * 2, lh));
@@ -132,25 +133,33 @@ function flyerLayout(brief, { size = "print", hasLogo = false, variant = 0 } = {
       y += lf.height + Math.round(36 * k * squeeze);
     }
   }
+  const topEnd = y;
+  const contentEnd = parts.length;
   // The contact line sits at the bottom; the call to action goes above it, never over it.
   let contactTop = H - Math.round(80 * k);
   if (brief.contact) {
     const cf = fit(brief.contact, { maxWidth: inner, maxHeight: 120 * k * (size === "print" ? 1 : 1.5), start: Math.round(64 * k * (size === "print" ? 1 : 1.5)), min: Math.round(30 * k), em: 0.56 });
     if (!cf) return { error: "The contact line is too long" };
-    contactTop = H - Math.round((size === "print" ? 300 : 90) * k) - cf.height;
+    contactTop = H - Math.round((size === "print" ? 300 : 170) * k) - cf.height; // clear of the frame line
     parts.push(textLines(cf.lines, { x: W / 2, y: contactTop, size: cf.size, fill: frame === 1 && contactTop < H * 0.42 ? p.accentInk : p.ink, family: BODY, weight: 400 }));
   }
+  let spare = contactTop - Math.round(40 * k) - topEnd;
   if (brief.call_to_action) {
     const cta = fit(brief.call_to_action, { maxWidth: inner - 200 * k, maxHeight: 120 * k * (size === "print" ? 1 : 1.5), start: Math.round(84 * k * (size === "print" ? 1 : 1.5)), min: Math.round(40 * k), em: 0.62 });
     if (!cta) return { error: "The call to action is too long" };
     const bh = Math.round(cta.height + 70 * k);
     const gap = Math.round(40 * k);
     const by = Math.max(y + gap, Math.min(H - Math.round((size === "print" ? 620 : 300) * k), contactTop - gap - bh));
+    spare = by - gap - topEnd;
     parts.push(`<rect x="${pad + 100 * k}" y="${by}" width="${inner - 200 * k}" height="${bh}" rx="${bh / 2}" fill="${p.accent}"/>`);
     parts.push(textLines(cta.lines, { x: W / 2, y: by + 35 * k, size: cta.size, fill: p.accentInk, family: BODY, weight: 700 }));
     y = by + bh + gap;
   }
   if (y > contactTop) return { error: "The flyer text does not fit the page; shorten the details" };
+  // Room to spare between the details and the button (a short flyer): share it out instead of leaving one big gap in
+  // the middle (owner review, Nov 7, 2026). Frame 1's colour band is sized to the headline, so it stays as laid out.
+  const dy = frame === 1 ? 0 : Math.round(Math.max(0, spare - 60 * k) * 0.45);
+  if (dy > 0) parts.splice(contentStart, contentEnd - contentStart, `<g transform="translate(0 ${dy})">${parts.slice(contentStart, contentEnd).join("")}</g>`);
   return { svg: `${svgOpen(W, H)}${parts.join("")}</svg>`, width: W, height: H };
 }
 
@@ -258,30 +267,52 @@ function menuBlocks(menu, s, colW) {
   return blocks;
 }
 
+// Columns are filled to a height cap; the smallest cap that still fits the pages balances the two columns, so a short
+// menu sits side by side instead of filling the left column and leaving the right one empty (owner review, Nov 7, 2026).
 function layoutMenu(menu, { pages, hasHeader = true }, s) {
   const colW = (PAGE.W - PAGE.margin * 2 - PAGE.gutter) / 2;
   const blocks = menuBlocks(menu, s, colW);
-  if (!blocks) return null;
-  const columns = [];
+  if (!blocks || !blocks.length) return null;
   const top = (pageIndex) => (pageIndex === 0 && hasHeader ? 760 : PAGE.margin + 40);
   const bottom = PAGE.H - PAGE.margin - 120;
-  let page = 0; let col = 0; let y = top(0); let current = [];
-  const next = () => { columns.push({ page, col, blocks: current }); current = []; col += 1; if (col > 1) { col = 0; page += 1; } y = top(page); };
-  for (let i = 0; i < blocks.length; i++) {
-    const b = blocks[i];
-    const need = b.h + (b.keepWithNext && blocks[i + 1] ? blocks[i + 1].h : 0);
-    if (y + need > bottom && current.length) next();
-    if (y + b.h > bottom) return null; // a single block taller than a column
-    current.push({ ...b, y }); y += b.h;
+  const fill = (cap) => {
+    const columns = [];
+    let page = 0; let col = 0; let y = top(0); let current = [];
+    const limit = () => Math.min(bottom, top(page) + cap);
+    const next = () => { columns.push({ page, col, blocks: current }); current = []; col += 1; if (col > 1) { col = 0; page += 1; } y = top(page); };
+    for (let i = 0; i < blocks.length; i++) {
+      const b = blocks[i];
+      const need = b.h + (b.keepWithNext && blocks[i + 1] ? blocks[i + 1].h : 0);
+      if (y + need > limit() && current.length) next();
+      if (y + b.h > bottom) return null; // a single block taller than a column
+      current.push({ ...b, y }); y += b.h;
+    }
+    if (current.length) columns.push({ page, col, blocks: current });
+    const used = Math.max(...columns.map((c) => c.page)) + 1;
+    return used <= pages ? { columns, pages: used, colW } : null;
+  };
+  const full = fill(bottom);
+  if (!full) return null;
+  // Balance: binary-search the smallest column height that keeps the same number of pages.
+  let lo = Math.max(...blocks.map((b) => b.h)), hi = bottom, best = full;
+  while (hi - lo > 8) {
+    const mid = Math.floor((lo + hi) / 2);
+    const tryIt = fill(mid);
+    if (tryIt && tryIt.pages === full.pages) { best = tryIt; hi = mid; } else lo = mid;
   }
-  if (current.length) columns.push({ page, col, blocks: current });
-  const used = Math.max(...columns.map((c) => c.page)) + 1;
-  return used <= pages ? { columns, pages: used, colW } : null;
+  // A one-page menu shorter than the page is moved down a little, so it doesn't hang under the header.
+  if (best.pages === 1) {
+    const lowest = Math.max(...best.columns.map((c) => { const last = c.blocks.at(-1); return last.y + last.h; }));
+    const dy = Math.floor(Math.max(0, bottom - lowest) / 3);
+    if (dy) best.columns = best.columns.map((c) => ({ ...c, blocks: c.blocks.map((b) => ({ ...b, y: b.y + dy })) }));
+  }
+  return best;
 }
 
 function menuPageSvgs(menu, brief, { pages, hasLogo }) {
   let layout = null; let s = 1;
-  for (s = 1; s >= 0.62; s -= 0.04) { layout = layoutMenu(menu, { pages }, s); if (layout) break; }
+  // Short menus get larger type (up to 1.4x, about 15 pt item names); long ones shrink down to a readable minimum.
+  for (s = 1.4; s >= 0.62; s -= 0.04) { layout = layoutMenu(menu, { pages }, s); if (layout) break; }
   if (!layout) return { error: `The menu does not fit on ${pages} page${pages === 1 ? "" : "s"} at a readable size` };
   const f = face(brief.style);
   const p = paletteFor(brief.style, brief.brand_colors);

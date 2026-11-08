@@ -255,3 +255,10 @@ test('buyer changes: two included rounds from the delivery email, each redone an
     assert.match(await (await call(f, changeUrl)).text(), /Both rounds of changes used/);
   });
 });
+
+test('copy is checked for US spelling; words the business itself uses are allowed', async () => {
+  const { ukSpellings } = await import('./src/lib/spelling.js');
+  assert.deepEqual(ukSpellings('Your Neighbourhood Cafe. Fall Flavours are here. Sip. Savour. Repeat.'), ['Neighbourhood', 'Flavours', 'Savour']);
+  assert.deepEqual(ukSpellings('Lunch at the Harbour Centre', 'Name: Harbour Centre Deli'), [], 'the business name keeps its own spelling');
+  assert.deepEqual(ukSpellings('Your neighborhood spot for cozy flavors'), []);
+});

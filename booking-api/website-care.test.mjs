@@ -8,6 +8,8 @@ import { createD1, createR2 } from './test-support/d1.mjs';
 
 const api = { ...(await import('./src/worker.js')), ...(await import('./src/workflows/runner.js')) };
 const { buildSite } = await import('./src/producers/website/build.js');
+const { buildDesignSite } = await import('./src/producers/website/templates/index.js');
+const { inlined } = await import('./src/producers/site-files/files-step.js');
 const { checkSite } = await import('./src/producers/website/check.js');
 const { createSiteChangeRequest } = await import('./src/producers/website-care/intake.js');
 const { checkChange, currentDetails } = await import('./src/producers/website-care/edit.js');
@@ -40,7 +42,7 @@ test('change checks: invented facts, wrong styles, mass deletion and no-op chang
   assert.match(run({ hours: 'Daily: 8am-11pm' }, 'We are open daily'), /hours "8am"/);
 });
 
-function setup({ site = true, live = true, entitlement = true } = {}) {
+function setup({ site = true, live = true, entitlement = true, generator = '' } = {}) {
   const DB = createD1();
   const ASSETS = createR2();
   const sql = (q, ...a) => DB.raw.prepare(q).run(...a);
@@ -60,10 +62,11 @@ function setup({ site = true, live = true, entitlement = true } = {}) {
     sql(`INSERT INTO projects (id, order_id, order_item_id, business_id, customer_id, project_type, status, workflow_key, workflow_version, created_at, updated_at) VALUES ('p0', 'o0', 'i0', 'biz', 'cust', 'WEBSITE', 'DELIVERED', 'WEBSITE_PACKAGE_V1', 1, ?, ?)`, t, t);
     sql(`INSERT INTO website_sites (id, slug, project_id, business_id, customer_id, style, created_at, updated_at) VALUES ('ws1', 'joes-pizza', 'p0', 'biz', 'cust', 'modern', ?, ?)`, t, t);
   }
-  const pages = buildSite(SITE, COPY);
-  assert.deepEqual(checkSite({ pages, images: {}, site: SITE }), []);
+  const files = generator ? buildDesignSite(SITE, COPY, generator) : null;
+  const pages = generator ? Object.fromEntries(Object.keys(files).filter((n) => n.endsWith('.html')).map((n) => [n, inlined(files, n)])) : buildSite(SITE, COPY);
+  if (!generator) assert.deepEqual(checkSite({ pages, images: {}, site: SITE }), []);
   if (site && live) {
-    const build = { version: 1, slug: 'joes-pizza', style: 'modern', built_at: t, pages, images: [], site: SITE, copy: COPY };
+    const build = { version: 1, slug: 'joes-pizza', style: generator ? `generator:${generator}` : 'modern', built_at: t, pages, images: [], site: SITE, copy: COPY };
     ASSETS.put('seed/build.json', new TextEncoder().encode(JSON.stringify(build)));
     sql(`INSERT INTO assets (id, business_id, customer_id, project_id, asset_type, storage_provider, storage_key, original_filename, mime_type, size_bytes, checksum, status, uploaded_at, approved_for_use, metadata_json) VALUES ('a0', 'biz', 'cust', 'p0', 'DELIVERABLE', 'R2', 'seed/build.json', 'b.json', 'application/json', 10, 'x', 'VALID', ?, 1, ?)`, t, JSON.stringify({ website: { slug: 'joes-pizza' } }));
     sql(`INSERT INTO deliverables (id, project_id, asset_id, deliverable_type, version, status, customer_visible, delivered_at, created_at) VALUES ('d0', 'p0', 'a0', 'SITE_BUILD', 1, 'FINAL', 1, ?, ?)`, t, t);
@@ -138,6 +141,23 @@ test('end to end: request, AI edit, checks, owner preview, approval, same addres
     assert.deepEqual(buyer.to, ['joe@joespizza.example']); assert.match(buyer.text, /Your website now shows/); assert.match(buyer.text, /api\/site\/joes-pizza\//);
     assert.equal(f.row(`SELECT COUNT(*) AS n FROM business_events WHERE event_type = 'AI_USAGE'`).n, 1);
     assert.match(await (await call(f, 'https://menu-made.com/api/site/joes-pizza/')).text(), /Fresh pizza, made daily/);
+  });
+});
+
+test('a site bought from the generator is changed in its own design, never swapped for the plain builder', async () => {
+  const f = setup({ generator: 'bistro' });
+  await withFetch(f.fetch, async () => {
+    await post(f, REQUEST);
+    f.state.outputs.push(good());
+    await api.runScheduledProduction(f.env); await Promise.all(f.pending);
+    assert.equal(f.row(`SELECT status FROM site_change_requests`).status, 'DRAFTED', f.row(`SELECT result_json FROM site_change_requests`).result_json);
+    const owner = f.emails.find((m) => m.to[0] === 'info@menu-made.com');
+    const [preview] = linksIn(owner.text, '/api/site-preview/');
+    const draft = await (await call(f, preview + 'menu.html')).text();
+    assert.ok(draft.includes('$16') && draft.includes('Garlic Bread'));
+    assert.match(draft, /class="mm-credit"/, 'still the generator design');
+    const key = f.row(`SELECT a.storage_key FROM deliverables d JOIN assets a ON a.id = d.asset_id WHERE d.id <> 'd0' AND d.deliverable_type = 'SITE_BUILD'`).storage_key;
+    assert.equal(JSON.parse(new TextDecoder().decode(await (await f.env.ASSETS.get(key)).arrayBuffer())).style, 'generator:bistro');
   });
 });
 

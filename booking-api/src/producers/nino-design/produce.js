@@ -4,6 +4,7 @@
 // asks the owner to approve (creative work) before the buyer is emailed.
 // Anything that cannot be produced well (text that doesn't fit, an unreadable menu, an AI answer that fails its
 // checks twice, the monthly AI cap) is never delivered: the owner is told and nothing reaches the buyer.
+import { US_SPELLING, ukSpellings } from "../../lib/spelling.js";
 import { ownerEmailAddress } from "../../lib/config.js";
 import { brandedEmailHtml, escapeHtml, sendTransactionalEmail } from "../../lib/email.js";
 import { parseJsonOrNull } from "../../lib/http.js";
@@ -93,6 +94,7 @@ function checkSocialPosts(posts, sourceText) {
     if (seen.has(headline.toLowerCase())) problems.push(`${label}: duplicate headline`);
     seen.add(headline.toLowerCase());
     for (const fact of findUnsupportedFacts(`${headline} ${subline} ${caption}`, sourceText)) problems.push(`${label}: ${fact.kind} "${fact.value}" is not in the brief`);
+    for (const word of ukSpellings(`${headline} ${subline} ${caption}`, sourceText)) problems.push(`${label}: use US spelling instead of "${word}"`);
     return { headline, subline, caption, hashtags };
   });
   return { posts: clean, problems };
@@ -105,7 +107,7 @@ async function writeSocialPosts(env, { brief, menuText, note, scope }, deps) {
   for (let attempt = 1; attempt <= 2; attempt++) {
     const result = await generate(env, {
       purpose: "nino_social_pack",
-      system: `You are a graphic designer's copywriter. Write exactly ${SOCIAL_POSTS} social media posts for one small business, to be printed on branded graphics. Use ONLY facts from the BRIEF. Never invent prices, dates, opening hours, phone numbers, addresses, links, awards, discounts or events. Each headline different, punchy, no emojis on the graphic.`,
+      system: `You are a graphic designer's copywriter. Write exactly ${SOCIAL_POSTS} social media posts for one small business, to be printed on branded graphics. Use ONLY facts from the BRIEF. Never invent prices, dates, opening hours, phone numbers, addresses, links, awards, discounts or events. Each headline different, punchy, no emojis on the graphic. ${US_SPELLING}`,
       prompt: `BRIEF:\n${source}${feedback}`,
       schema: SOCIAL_SCHEMA, scope, maxTokens: 5000
     }, deps);
