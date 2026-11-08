@@ -147,5 +147,14 @@
       "monthly": { "price": "price_1UZS5EHw7f6jhUv8ugqPaNA2", "amount": 27900 },
       "annual": { "price": "price_1UZS5GHw7f6jhUv8g3LN6Vex", "amount": 279000 },
       "note": "Owner: Menu Care comes out of Starter, Growth and Pro (an add-on now; the bundles section's includes are updated, prices are the launch ones). Pro $279 so it stays below the same services as Your own plan ($292)." }
-  ]
+  ],
+  "portal_configurations": {
+    "note": "Owner, Nov 8, 2026: limit plan switches. Live billing-page configurations the worker picks per subscription (src/subscriptions/portal.js). The default bpc_1UVOqcHw7f6jhUv83wtzyORj (also behind the Stripe login page) allows no switching; your own plan uses it.",
+    "default": "bpc_1UVOqcHw7f6jhUv83wtzyORj",
+    "SWITCH_OPEN": { "id": "bpc_1UZZonHw7f6jhUv8SA2U89ys", "products": ["BUNDLE_STARTER", "BUNDLE_GROWTH", "REVIEW_REPLIES", "GOOGLE_PROFILE_CARE", "ACCESSIBILITY_MONITORING", "SOCIAL_POSTS"] },
+    "SWITCH_SITE": { "id": "bpc_1UZZozHw7f6jhUv8mpVX7Gea", "products": ["BUNDLE_STARTER", "BUNDLE_GROWTH", "BUNDLE_PRO", "REVIEW_REPLIES", "GOOGLE_PROFILE_CARE", "ACCESSIBILITY_MONITORING", "SOCIAL_POSTS", "WEBSITE_CARE"] },
+    "SWITCH_WEBSITE": { "id": "bpc_1UZZp4Hw7f6jhUv88dahB8lC", "products": ["WEBSITE_CARE", "BUNDLE_PRO"] },
+    "SWITCH_MENU_CARE": { "id": "bpc_1UZZp9Hw7f6jhUv8KGQlsFCL", "products": ["MENU_CARE"] },
+    "SWITCH_GUEST_APP": { "id": "bpc_1UZZpDHw7f6jhUv8Zj6szLc6", "products": ["GUEST_APP"] }
+  }
 }

@@ -492,6 +492,36 @@ test('billing portal link opens a Stripe portal session for that subscriber only
   } finally { h.restore(); }
 });
 
+test('billing page switches are limited (owner, Nov 8, 2026): each live subscription opens the configuration that fits it', async () => {
+  const h = setup();
+  try {
+    const { row } = await growthSubscriber(h);
+    h.env.DB.raw.prepare(`UPDATE entitlements SET metadata_json = json_set(COALESCE(metadata_json, '{}'), '$.environment', 'live') WHERE subscription_id = ?`).run(row.id);
+    const { PORTAL_CONFIGS } = await import('./src/subscriptions/portal.js');
+    const open = async () => {
+      const link = new URL(await billingPortalLink(h.env, row.id));
+      assert.equal((await h.call(link.pathname + link.search)).status, 303);
+      return h.stripe.portal.at(-1).configuration;
+    };
+    const planIs = (code) => h.env.DB.raw.prepare(`UPDATE subscriptions SET offer_id = (SELECT id FROM offers WHERE code = ?) WHERE id = ?`).run(code, row.id);
+    assert.equal(await open(), PORTAL_CONFIGS.SWITCH_OPEN, 'Growth without a site: no Pro or Website Care to switch to');
+    const site = h.one(`SELECT o.id AS offer_id, v.id AS version_id FROM offers o JOIN offer_versions v ON v.offer_id = o.id WHERE o.code IN ('SITE_FILES', 'WEBSITE_PACKAGE') LIMIT 1`);
+    assert.ok(site, 'a website offer exists');
+    const t0 = '2026-11-08T10:00:00.000Z';
+    h.env.DB.raw.prepare(`INSERT INTO orders (id, created_at, updated_at, customer_id, business_id, status, subtotal_cents, total_cents, payment_status) VALUES ('ord_site', ?, ?, ?, ?, 'PAID', 29900, 29900, 'PAID')`).run(t0, t0, row.customer_id, row.business_id);
+    h.env.DB.raw.prepare(`INSERT INTO order_items (id, order_id, offer_id, offer_version_id, unit_price_cents, line_total_cents) VALUES ('oi_site', 'ord_site', ?, ?, 29900, 29900)`).run(site.offer_id, site.version_id);
+    assert.equal(await open(), PORTAL_CONFIGS.SWITCH_SITE, 'with a Menu-made site, Pro and Website Care are offered');
+    planIs('BUNDLE_PRO');
+    assert.equal(await open(), PORTAL_CONFIGS.SWITCH_WEBSITE, 'Pro keeps Website Care: Pro <-> Website Care only');
+    planIs('MENU_CARE');
+    assert.equal(await open(), PORTAL_CONFIGS.SWITCH_MENU_CARE, 'Menu Care keeps the menu online: monthly <-> yearly only');
+    planIs('GUEST_APP');
+    assert.equal(await open(), PORTAL_CONFIGS.SWITCH_GUEST_APP);
+    planIs('CUSTOM_PLAN');
+    assert.equal(await open(), undefined, 'your own plan uses the default, which allows no switching');
+  } finally { h.restore(); }
+});
+
 // "Your own plan" (owner, Nov 6, 2026): ticked monthly services at one price, 10% off for two, 20% off for three or more.
 test('your own plan: priced by the server, 10% off two services, 20% off three or more, rounded down to whole dollars', async () => {
   const h = setup();
