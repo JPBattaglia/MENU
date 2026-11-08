@@ -136,3 +136,51 @@ test('a SENT update from the auto-sender is marked sent_via getmenumade', async 
   const row = f.env.DB.raw.prepare(`SELECT status, sent_via, sent_at FROM prospects`).get();
   assert.equal(row.status, 'SENT'); assert.equal(row.sent_via, 'getmenumade'); assert.ok(row.sent_at);
 });
+
+// ---------- New openings (owner, Nov 8, 2026) ----------
+const { handleProspectLookup } = await import('./src/marketing/prospects.js');
+const recent = (days) => new Date(Date.now() - days * 86400000).toISOString().slice(0, 10);
+
+test('new openings from the city registry are stored with their opening date and go first in the email batch', async () => {
+  const f = await setup();
+  const opened = { id: 'sf/1234567-01-001', name: 'Fresh Noodle Bar', city: 'San Francisco', address: '500 Kearny St', email: 'hi@freshnoodle.example',
+    gaps: ['no_website'], offer_code: 'WEBSITE_PACKAGE', score: 9, opened_on: recent(10) };
+  const old = { ...opened, id: 'sf/old-1', name: 'Old Opening', email: 'old@x.example', opened_on: recent(400) };
+  const res = await f.post({ run_id: '1', prospects: [CAFE, opened, old, { ...opened, id: 'sf/bad id!' }] });
+  assert.deepEqual(await res.json(), { ok: true, stored: 3, rejected: 1 });
+  const row = f.rows().find((r) => r.id === opened.id);
+  assert.equal(row.source, 'sf_registry'); assert.equal(row.opened_on, opened.opened_on);
+  assert.equal(f.rows().find((r) => r.id === CAFE.id).source, 'osm');
+  const drafts = { ...f.good, aud: 'menu-made-prospect-drafts', job_workflow_ref: 'JPBattaglia/MENU/.github/workflows/prospect-drafts.yml@refs/heads/master' };
+  const req = new Request('https://menu-made.com/api/system/prospects/batch', { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${await f.sign(drafts)}` }, body: JSON.stringify({ limit: 25 }) });
+  const batch = (await (await worker.fetch(req, f.env, { waitUntil() {} })).json()).prospects;
+  assert.deepEqual(batch.map((p) => p.id), [opened.id, CAFE.id, old.id], 'a recent opening beats the menu-file prospect; an old one does not');
+  assert.equal(batch[0].opened_on, opened.opened_on);
+});
+
+test('a new opening is looked up on the web once, then served from the database', async () => {
+  const f = await setup();
+  f.env.ANTHROPIC_API_KEY = 'test';
+  let calls = 0; let sent = null;
+  const fetchStub = async (url, init) => {
+    calls++; sent = JSON.parse(init.body);
+    return Response.json({ model: 'claude-haiku-5-5', usage: { input_tokens: 100, output_tokens: 20 }, content: [
+      { type: 'server_tool_use', id: 's1', name: 'web_search', input: { query: 'Fresh Noodle Bar' } },
+      { type: 'tool_use', id: 't1', name: 'record_output', input: { website: 'https://freshnoodle.example/', email: 'Hello@FreshNoodle.example', phone: '(415) 555-0100' } }] });
+  };
+  const ask = async (body) => handleProspectLookup(new Request('https://menu-made.com/api/system/prospects/lookup', { method: 'POST',
+    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${await f.sign(f.good)}` }, body: JSON.stringify(body) }), f.env, { deps: { fetch: fetchStub } });
+  const body = { id: 'sf/1234567-01-001', name: 'Fresh Noodle Bar', address: '500 Kearny St', opened_on: recent(10) };
+  let out = await (await ask(body)).json();
+  assert.deepEqual(out, { ok: true, website: 'https://freshnoodle.example/', email: 'hello@freshnoodle.example', phone: '(415) 555-0100' });
+  assert.equal(sent.tools[0].type, 'web_search_20250305', 'web search is offered before the result is recorded');
+  assert.equal(sent.tools.at(-1).name, 'record_output');
+  out = await (await ask(body)).json();
+  assert.equal(out.cached, true); assert.equal(calls, 1, 'no second web lookup');
+  const row = f.rows()[0];
+  assert.equal(row.source, 'sf_registry'); assert.ok(row.looked_up_at);
+  // The finder's later post keeps what the lookup found.
+  await f.post({ run_id: '2', prospects: [{ ...body, city: 'San Francisco', website: 'https://freshnoodle.example/', email: 'hello@freshnoodle.example', gaps: ['no_tap_to_call'], offer_code: 'WEBSITE_PACKAGE', score: 11 }] });
+  assert.equal(f.rows()[0].looked_up_at, row.looked_up_at);
+  assert.equal((await ask({ ...body, id: 'node/5' })).status, 400, 'only registry openings are looked up');
+});

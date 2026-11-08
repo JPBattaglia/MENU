@@ -109,7 +109,8 @@ async function generate(env, options, deps = {}) {
     model,
     max_tokens: options.maxTokens || 4000,
     ...(system ? { system } : {}),
-    tools: [{ name: TOOL_NAME, description: "Record the result.", input_schema: schema }],
+    // serverTools (Nov 8, 2026): Anthropic-run tools such as web_search, used before the result is recorded.
+    tools: [...(options.serverTools || []), { name: TOOL_NAME, description: "Record the result.", input_schema: schema }],
     tool_choice: { type: "auto" },
     messages: [{ role: "user", content: `${prompt}\n\nRespond only by calling the ${TOOL_NAME} tool once.` }]
   });

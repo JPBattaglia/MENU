@@ -123,6 +123,23 @@ async function freePreviews(env, sinceIso) {
   } catch { return { made: 0, opened: 0, ordered: 0 }; }
 }
 
+// New openings (owner, Nov 8, 2026): SF food and drink businesses the Monday finder picked up from the city's registry
+// this week, newest opening first, with what happened: emailed, queued for the next email run, or no email found (the
+// phone and address are there for a visit or a call). Also useful for Shift4 visits.
+async function newOpenings(env, sinceIso, limit = 15) {
+  try {
+    const rows = (await env.DB.prepare(`SELECT name, address, phone, email, website, status, offer_code, opened_on FROM prospects
+        WHERE opened_on IS NOT NULL AND found_at >= ? ORDER BY opened_on DESC, name LIMIT ?`).bind(sinceIso, limit + 1).all()).results || [];
+    const total = Number((await env.DB.prepare(`SELECT COUNT(*) AS n FROM prospects WHERE opened_on IS NOT NULL AND found_at >= ?`).bind(sinceIso).first())?.n || 0);
+    return { total, rows: rows.slice(0, limit) };
+  } catch { return { total: 0, rows: [] }; }
+}
+function openingLine(r) {
+  const outreach = ["SENT", "REPLIED"].includes(r.status) ? "emailed" : r.status === "DRAFTED" ? "email drafted" : r.status === "OPTED_OUT" ? "said no thanks"
+    : r.status === "BOUNCED" ? "email bounced" : r.email && r.offer_code ? "in the next email run" : r.email ? "has an email, nothing to pitch from its website" : "no email found";
+  return `${r.address || "San Francisco"}. Opened ${shortDate(r.opened_on)}. ${r.phone ? `${r.phone}. ` : ""}${r.website ? `${r.website.replace(/^https?:\/\/(www\.)?/, "").replace(/\/$/, "")}. ` : ""}${outreach[0].toUpperCase()}${outreach.slice(1)}.`;
+}
+
 // The report itself, exported for the tests: { subject, rows, paragraphs, text }.
 async function weeklyNumbers(env, now = Date.now()) {
   const weekIso = new Date(now - 7 * DAY).toISOString();
@@ -152,6 +169,11 @@ async function weeklyNumbers(env, now = Date.now()) {
   const demoWeek = mmWeek.get(OUTREACH) || { sales: 0, cents: 0 };
   totalSales += demoWeek.sales;
   rows.push(["Prospect emails", `${out.sent} sent this week, ${out.previews} menu previews built, ${out.opened} opened, ${out.followups} follow-ups drafted, ${out.replied} replies, ${out.optedOut} opt-outs, ${out.bounced} bounces. Sales from the emails since ${shortDate(CAMPAIGNS[0].start)}: ${demo.sales} (${money(demo.cents)}).`]);
+  const fresh = await newOpenings(env, weekIso);
+  if (fresh.total) {
+    rows.push(["New openings found", `${fresh.total} new San Francisco food & drink business${fresh.total === 1 ? "" : "es"} this week${fresh.total > fresh.rows.length ? ` (newest ${fresh.rows.length} below)` : ""}. Those with an email go into the prospect emails first.`]);
+    for (const r of fresh.rows) rows.push([r.name, openingLine(r)]);
+  }
   if (shopWeek) {
     const other = [...shopWeek.entries()].filter(([k]) => !CAMPAIGNS.some((c) => c.key === k)).reduce((n, [, v]) => n + v.sales, 0);
     totalSales += other;

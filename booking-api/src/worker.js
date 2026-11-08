@@ -36,7 +36,7 @@ import { handleSwitches } from "./lib/switches.js";
 import { dailyCoverageReport, handleCoverage } from "./selftest/coverage.js";
 import { handleSiteCheckResult } from "./selftest/site-check.js";
 import { handleD1Usage } from "./selftest/d1-usage.js";
-import { handleProspects, handleProspectBatch, handleProspectStatus, handleSendPlan } from "./marketing/prospects.js";
+import { handleProspects, handleProspectBatch, handleProspectStatus, handleProspectLookup, handleSendPlan } from "./marketing/prospects.js";
 import { handleProspectDemo, handleMenuPreview, handleProspectFollowups } from "./marketing/demo-menu.js";
 import { handleWeeklyNumbers } from "./marketing/weekly-numbers.js";
 import { countingDb, saveTickCount } from "./lib/query-count.js";
@@ -141,6 +141,7 @@ var worker_default = {
     if (url.pathname === "/api/system/prospects" && request.method === "POST") return handleProspects(request, env);
     if (url.pathname === "/api/system/prospects/batch" && request.method === "POST") return handleProspectBatch(request, env);
     if (url.pathname === "/api/system/prospects/status" && request.method === "POST") return handleProspectStatus(request, env);
+    if (url.pathname === "/api/system/prospects/lookup" && request.method === "POST") return handleProspectLookup(request, env);
     if (url.pathname === "/api/system/prospects/send-plan" && request.method === "POST") return handleSendPlan(request, env);
     // Marketing plan v4: private phone-menu previews for prospect emails, and the day-3 follow-up list.
     if (url.pathname === "/api/system/prospects/demo" && request.method === "POST") return handleProspectDemo(request, env);

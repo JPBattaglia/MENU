@@ -14,6 +14,7 @@
 //    Sites that run on an ordering platform (Toast, Square, ChowNow ...) have a working menu: no menu gap.
 // 3. A contact email: OpenStreetMap's tag, else mailto links (Cloudflare-protected ones decoded) on the home, menu and
 //    contact pages, preferring an address on the business's own domain.
+// 1b. New openings (Nov 8, 2026): SF food and drink locations registered with the city in the last 120 days (see below).
 // 4. Each business gets the ONE offer that fixes its biggest gap (a menu gap leads, it's the cheap way in) and a score.
 //
 // The repository is public: the log shows counts only. Rows go to menu-made.com/api/system/prospects over this job's
@@ -185,6 +186,94 @@ for (const [city, box] of TILES) {
 }
 if (failedTiles === TILES.length) { console.log("Every map tile failed; nothing to check."); process.exit(1); }
 
+// 1b. New openings (owner, Nov 8, 2026): San Francisco food and drink locations registered with the city in the last
+// NEW_DAYS days (DataSF "Registered Business Locations", free, no key, refreshed daily). One already on the map is marked
+// with its opening date; one that isn't yet is looked up on the web by the worker (Claude web search, once per business,
+// at most MAX_LOOKUPS new lookups a run) for its website, email and phone. Either way it is checked like any other.
+const SF_REGISTRY = "https://data.sfgov.org/resource/g8m3-pdis.json";
+const NEW_DAYS = 120, MAX_LOOKUPS = 40;
+const CHAINS = /\b(starbucks|mcdonald'?s|subway|chipotle|peet'?s|philz|blue bottle|taco bell|burger king|wendy'?s|jack in the box|domino'?s|pizza hut|panda express|sweetgreen|panera|dunkin|7-eleven|in-n-out|shake shack|popeyes|kfc|jamba|mendocino farms|cava|tender greens|ike'?s|chick-fil-a|raising cane|wingstop|jollibee|tous les jours|paris baguette|gong cha|kung fu tea|tpumps|sharetea|compass group|bon appetit|aramark|sodexo|levy|delaware north)\b/i;
+const nameWords = (s) => String(s || "").toLowerCase().normalize("NFKD").replace(/[\u0300-\u036f]/g, "").replace(/&/g, " and ").replace(/[^a-z0-9 ]+/g, " ").split(/\s+/)
+  .filter((w) => w && !["the", "and", "a", "of", "restaurant", "cafe", "bar", "llc", "inc", "corp", "co", "sf"].includes(w));
+const sameName = (a, b) => { const x = nameWords(a), y = nameWords(b); if (!x.length || !y.length) return false; const [sh, lo] = x.length <= y.length ? [x, y] : [y, x]; return sh.every((w) => lo.includes(w)); };
+const houseNumber = (a) => /^\s*(\d+)/.exec(a || "")?.[1] || null;
+function cleanName(raw) {
+  let n = String(raw || "").replace(/\s+/g, " ").replace(/[,.]?\s*\b(llc|l\.l\.c\.|inc|incorporated|corp|corporation|co|ltd|lp)\.?\s*$/i, "").trim();
+  if (n && n === n.toUpperCase()) n = n.toLowerCase().replace(/(^|[\s\-/&(])([a-z])/g, (m, p, c) => p + c.toUpperCase()).replace(/'S\b/g, "'s");
+  return n;
+}
+const titleAddress = (a) => String(a || "").replace(/\s+/g, " ").trim().toLowerCase().replace(/\b([a-z])/g, (c) => c.toUpperCase()).replace(/\b(\d+)(St|Nd|Rd|Th)\b/g, (m, d, x) => d + x.toLowerCase());
+
+async function sfNewOpenings() {
+  const since = new Date(Date.now() - NEW_DAYS * 86400000).toISOString().slice(0, 10);
+  const url = `${SF_REGISTRY}?$limit=5000&$order=location_start_date%20DESC&$where=${encodeURIComponent(`location_start_date >= '${since}T00:00:00'`)}`;
+  for (let attempt = 0; attempt < 3; attempt++) {
+    try {
+      const res = await fetch(url, { headers: { "User-Agent": UA, Accept: "application/json" }, signal: AbortSignal.timeout(60000) });
+      const body = await res.text();
+      if (res.ok) return JSON.parse(body);
+      console.log(`  city registry: ${res.status} ${body.slice(0, 200)}`);
+      if (res.status === 400) return null;
+    } catch (e) { console.log(`  city registry: ${String(e?.cause?.code || e?.name || e).slice(0, 120)}`); }
+    await sleep(10000);
+  }
+  return null;
+}
+
+async function lookup(o) {
+  try {
+    const token = await oidcToken(); // fresh each call: a run of lookups outlasts one token
+    const res = await fetch("https://menu-made.com/api/system/prospects/lookup", { method: "POST", headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ id: o.id, name: o.name, address: o.address, opened_on: o.opened_on }), signal: AbortSignal.timeout(120000) });
+    const out = await res.json().catch(() => ({}));
+    return res.ok && out.ok ? out : { error: `${res.status} ${String(out.error || "").slice(0, 100)}` };
+  } catch (e) { return { error: String(e?.name || e).slice(0, 100) }; }
+}
+
+const openingStats = { registry: 0, food: 0, matched: 0, lookedUp: 0, cached: 0, withEmail: 0, waiting: 0, failed: 0 };
+const registry = await sfNewOpenings();
+if (!registry) console.log("New openings: the city registry was unavailable this run; skipped.");
+else {
+  openingStats.registry = registry.length;
+  const seenLoc = new Set(); const openings = [];
+  for (const r of registry) {
+    const food = /^722/.test(String(r.naic_code || "")) || /food services/i.test(r.naic_code_description || "") || /restaurant|eating|tavern|bar\b/i.test(r.lic_code_description || "");
+    const inSf = /san francisco/i.test(r.city || "") || /^941/.test(String(r.business_zip || ""));
+    if (!food || !inSf || r.location_end_date || r.dba_end_date) continue;
+    const name = cleanName(r.dba_name || r.ownership_name);
+    const address = titleAddress(r.full_business_address);
+    const key = String(r.ttxid || r.uniqueid || r.certificate_number || "").replace(/[^A-Za-z0-9._-]+/g, "-").slice(0, 40);
+    if (!name || !address || !key || CHAINS.test(name) || CHAINS.test(r.ownership_name || "") || seenLoc.has(key)) continue;
+    seenLoc.add(key);
+    openings.push({ id: `sf/${key}`, name, address, opened_on: String(r.location_start_date || "").slice(0, 10) });
+  }
+  openingStats.food = openings.length;
+  const onMap = [...businesses.values()].filter((b) => b.city === "San Francisco" || /san francisco/i.test(b.city || ""));
+  const unmatched = [];
+  for (const o of openings) {
+    const hit = onMap.find((b) => houseNumber(b.address) && houseNumber(b.address) === houseNumber(o.address) && sameName(b.name, o.name));
+    if (hit) { hit.opened_on = hit.opened_on && hit.opened_on > o.opened_on ? hit.opened_on : o.opened_on; openingStats.matched++; }
+    else unmatched.push(o);
+  }
+  const live = !process.env.DRY_RUN;
+  let fresh = 0;
+  for (const o of unmatched) {
+    const b = { id: o.id, name: o.name, kind: "restaurant", cuisine: null, city: "San Francisco", address: o.address, phone: null, website: null, osmEmail: null, lookupEmail: null, opened_on: o.opened_on };
+    if (live && fresh < MAX_LOOKUPS) {
+      const found = await lookup(o);
+      if (found.error) { openingStats.failed++; if (openingStats.failed <= 3) console.log(`  lookup failed: ${found.error}`); if (openingStats.failed >= 5 && !openingStats.lookedUp && !openingStats.cached) { console.log("  lookups stopped for this run"); fresh = MAX_LOOKUPS; } }
+      else {
+        if (found.cached) openingStats.cached++; else { openingStats.lookedUp++; fresh++; }
+        b.website = found.website || null; b.phone = found.phone || null; b.lookupEmail = found.email || null;
+        if (found.email) openingStats.withEmail++;
+      }
+    } else openingStats.waiting++;
+    businesses.set(b.id, b);
+  }
+  console.log(`New openings: ${openingStats.registry} SF registrations in ${NEW_DAYS} days, ${openingStats.food} independent food & drink, ${openingStats.matched} already on the map; ` +
+    `web lookups ${openingStats.lookedUp} new + ${openingStats.cached} known (${openingStats.withEmail} with an email), ${openingStats.waiting} wait for next week, ${openingStats.failed} failed`);
+}
+
 const list = [...businesses.values()];
 const stats = { checked: 0, blocked: 0, platform: 0, withEmail: 0, withOffer: 0, gaps: {} };
 const rows = (await pool(list, 16, async (b) => {
@@ -193,21 +282,22 @@ const rows = (await pool(list, 16, async (b) => {
     const r = await checkSite(b.website); stats.checked++;
     if (r.blocked) stats.blocked++; if (r.platform) stats.platform++;
     gaps = r.gaps; emails = r.emails; host = r.host; menuUrl = r.menuUrl || null;
-  } else if (b.osmEmail) gaps = ["no_website"];
-  const email = b.osmEmail ? b.osmEmail.split(/[;,\s]/)[0].toLowerCase() : pickEmail(emails, host);
+  } else if (b.osmEmail || b.lookupEmail) gaps = ["no_website"];
+  const email = b.osmEmail ? b.osmEmail.split(/[;,\s]/)[0].toLowerCase() : pickEmail(emails, host) || b.lookupEmail || null;
   const offer = offerFor(gaps);
-  if (!offer) return null;
+  if (!offer && !b.opened_on) return null; // new openings are kept anyway: they're listed in the Friday numbers email
   for (const g of gaps) stats.gaps[g] = (stats.gaps[g] || 0) + 1;
-  stats.withOffer++; if (email) stats.withEmail++;
-  const score = gaps.reduce((n, g) => n + (WEIGHTS[g] || 0), 0) + (email ? 3 : 0);
+  if (offer) { stats.withOffer++; if (email) stats.withEmail++; }
+  const score = gaps.reduce((n, g) => n + (WEIGHTS[g] || 0), 0) + (email ? 3 : 0) + (b.opened_on ? 6 : 0);
   return { id: b.id, name: b.name, kind: b.kind, cuisine: b.cuisine, city: b.city, address: b.address, phone: b.phone, website: b.website,
-    email, email_source: b.osmEmail ? "osm" : email ? "page" : null, gaps, menu_url: menuUrl, offer_code: offer, score };
+    email, email_source: b.osmEmail ? "osm" : email ? "page" : null, gaps, menu_url: menuUrl, offer_code: offer, score, opened_on: b.opened_on || null };
 })).filter(Boolean);
 
 console.log(`Independent places: ${list.length}; websites checked: ${stats.checked} (${stats.blocked} blocked the check, ${stats.platform} on ordering platforms)`);
 console.log(`With a gap Menu-made fixes: ${stats.withOffer}; of those with a contact email: ${stats.withEmail}`);
 console.log(`Gaps: ${Object.entries(stats.gaps).map(([g, n]) => `${g} ${n}`).join(", ")}`);
-const offers = rows.reduce((m, r) => (m[r.offer_code] = (m[r.offer_code] || 0) + 1, m), {});
+const offers = rows.filter((r) => r.offer_code).reduce((m, r) => (m[r.offer_code] = (m[r.offer_code] || 0) + 1, m), {});
+console.log(`New openings kept: ${rows.filter((r) => r.opened_on).length} (${rows.filter((r) => r.opened_on && r.offer_code && r.email).length} ready for an email)`);
 console.log(`Lead offers: ${Object.entries(offers).map(([o, n]) => `${o} ${n}`).join(", ")}`);
 
 if (process.env.DRY_RUN) process.exit(0);
