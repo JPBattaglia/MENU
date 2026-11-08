@@ -254,3 +254,21 @@ test('self-test: real reads and report, writes refused by Google for the synthet
   assert.equal(s.log.posts.length + s.log.media.length, 0, 'nothing published on the real location');
   assert.ok(s.log.emails.every((m) => m.to[0] === 'delivered@resend.dev'));
 });
+
+test('the monthly report ends with up to three things to do, worked out from the numbers', async () => {
+  const { adviceFor, reportHtml } = await import('./src/producers/google-care/report.js');
+  const n = (views, calls, directions, website, prevViews = views) => ({
+    current: { BUSINESS_IMPRESSIONS_MOBILE_SEARCH: views / 2, BUSINESS_IMPRESSIONS_DESKTOP_SEARCH: 0, BUSINESS_IMPRESSIONS_MOBILE_MAPS: views / 2, BUSINESS_IMPRESSIONS_DESKTOP_MAPS: 0, CALL_CLICKS: calls, BUSINESS_DIRECTION_REQUESTS: directions, WEBSITE_CLICKS: website },
+    previous: { BUSINESS_IMPRESSIONS_MOBILE_SEARCH: prevViews, BUSINESS_IMPRESSIONS_DESKTOP_SEARCH: 0, BUSINESS_IMPRESSIONS_MOBILE_MAPS: 0, BUSINESS_IMPRESSIONS_DESKTOP_MAPS: 0, CALL_CLICKS: 0, BUSINESS_DIRECTION_REQUESTS: 0, WEBSITE_CLICKS: 0 },
+    headline: { views: { current: views, previous: prevViews }, calls: { current: calls, previous: 0 }, directions: { current: directions, previous: 0 }, website: { current: website, previous: 0 } },
+    range: { start: '2026-10-06', end: '2026-11-04' }
+  });
+  const titles = (args) => adviceFor(args).map((t) => t[0]);
+  assert.deepEqual(titles({ numbers: n(60, 0, 0, 0), photos: 0, replies: 0 }), ['Nobody called', 'No website clicks', 'Few direction requests']);
+  assert.deepEqual(titles({ numbers: n(400, 20, 30, 15, 600), photos: 2, replies: 3 }), ['Views went down']);
+  assert.deepEqual(titles({ numbers: n(400, 20, 30, 15), photos: 2, replies: 3 }), ['Keep it up']);
+  assert.deepEqual(titles({ numbers: n(10, 1, 1, 1), photos: 0, replies: 1 }), ['Get seen more', 'Add photos']);
+  const html = reportHtml({ business: 'Cafe', numbers: n(10, 1, 1, 1), summary: 'x', photos: 0, replies: 1, photoLink: 'https://menu-made.com/api/photo-library/s?t=1' });
+  assert.match(html, /<h2>What to do next<\/h2><ol><li><strong>Get seen more\.<\/strong>/);
+  assert.match(html, /<a href="https:\/\/menu-made\.com\/api\/photo-library\/s\?t=1">Open your photo library<\/a>/);
+});

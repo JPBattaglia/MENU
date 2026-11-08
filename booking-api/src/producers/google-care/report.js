@@ -77,7 +77,29 @@ async function reportSummary(env, numbers, businessName, scope, deps) {
   } catch { return fallback; }
 }
 
-function reportHtml({ business, numbers, summary, posts = 0, photos = 0, replies = 0 }) {
+// "What to do next" (owner review, Nov 7, 2026: the report was numbers only). Rules on the numbers themselves, so
+// nothing is guessed; at most three, most useful first. Each says what to do and, where it's ours, that we do it.
+function adviceFor({ numbers, posts = 0, photos = 0, replies = 0, photoLink = "" }) {
+  const h = numbers.headline;
+  const c = numbers.current;
+  const views = h.views.current;
+  const tips = [];
+  const pct = (a, b) => (b ? (a - b) / b : 0);
+  if (views < 30) tips.push(["Get seen more", "Google showed your profile fewer than 30 times this month. Complete profiles show up more: check your categories, hours and description are filled in, and add photos. Add photos to your photo library and we put them on your profile for you."]);
+  else if (pct(views, h.views.previous) <= -0.15) tips.push(["Views went down", "Google showed your profile less than last month. Fresh activity helps: add new photos to your photo library and we use them in your weekly posts."]);
+  if (views >= 30 && h.calls.current === 0) tips.push(["Nobody called", "No one tapped Call this month. Check that the phone number on your profile is right and that your hours are up to date: people don't call a place that looks closed."]);
+  else if (views >= 100 && h.calls.current / views < 0.01) tips.push(["Few calls for your views", "Fewer than 1 in 100 people who saw your profile called. Make sure your hours are right and your menu link works, so people can decide quickly."]);
+  if (views >= 30 && h.website.current === 0) tips.push(["No website clicks", "No one clicked through to your website. Check that your profile has a website or menu link and that it opens on a phone."]);
+  const maps = c.BUSINESS_IMPRESSIONS_MOBILE_MAPS + c.BUSINESS_IMPRESSIONS_DESKTOP_MAPS;
+  if (maps >= 30 && h.directions.current / maps < 0.02) tips.push(["Few direction requests", "People see you on the map but few ask for directions. Check that your map pin sits on your front door and that your photos show the outside, so people can find you."]);
+  if (!photos) tips.push(["Add photos", "We added no photos this month because your photo library has none left to add. Add 3 to 5 photos of your food, your room or your team and we put them on your profile.", photoLink]);
+  if (!replies) tips.push(["Ask for reviews", "There were no new reviews to answer. Ask happy guests to leave one: a small sign or QR code at the counter linking to your Google review page works well."]);
+  if (!tips.length) tips.push(["Keep it up", "Your numbers look healthy. Keep adding photos to your library; a profile that changes every week keeps showing up."]);
+  return tips.slice(0, 3);
+}
+
+function reportHtml({ business, numbers, summary, posts = 0, photos = 0, replies = 0, photoLink = "" }) {
+  const advice = adviceFor({ numbers, posts, photos, replies, photoLink });
   const tiles = HEADLINES.map(([key, label]) => `<div class="tile"><div class="n">${numbers.headline[key].current.toLocaleString("en-US")}</div><div class="l">${e(label)}</div><div class="c">${e(change(numbers.headline[key]))}</div></div>`).join("");
   const rows = Object.entries(METRICS).map(([m, label]) => `<tr><td>${e(label)}</td><td>${numbers.current[m].toLocaleString("en-US")}</td><td>${numbers.previous[m].toLocaleString("en-US")}</td></tr>`).join("");
   return `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${e(business)} Google report</title>
@@ -85,8 +107,9 @@ function reportHtml({ business, numbers, summary, posts = 0, photos = 0, replies
 <body><main><h1>${e(business)}</h1><p>Google profile report · ${e(numbers.range.start)} to ${e(numbers.range.end)}</p><p>${e(summary)}</p>
 <div class="grid">${tiles}</div>
 <h2>The details</h2><table><thead><tr><th>Google counted</th><th>Last 30 days</th><th>30 days before</th></tr></thead><tbody>${rows}</tbody></table>
+<h2>What to do next</h2><ol>${advice.map(([title, text, link]) => `<li><strong>${e(title)}.</strong> ${e(text)}${link ? ` <a href="${e(link)}">Open your photo library</a>.` : ""}</li>`).join("")}</ol>
 <h2>What we did this month</h2><ul><li>${posts} Google post${posts === 1 ? "" : "s"}</li><li>${photos} photo${photos === 1 ? "" : "s"} added to your profile</li><li>${replies} review repl${replies === 1 ? "y" : "ies"}</li></ul>
 <p class="note">All numbers come from Google's Business Profile Performance data and usually run 2-3 days behind. A "view" is Google showing your profile once; one person can count more than once.</p></main></body></html>`;
 }
 
-export { METRICS, windows, fetchProfileNumbers, reportSummary, reportHtml };
+export { METRICS, adviceFor, windows, fetchProfileNumbers, reportSummary, reportHtml };

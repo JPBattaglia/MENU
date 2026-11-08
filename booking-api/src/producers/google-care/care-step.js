@@ -93,7 +93,7 @@ async function runGoogleCareProduceStep(targetStep, env, deps = {}) {
           const photos = await count(`SELECT COUNT(*) AS n FROM profile_care_items WHERE subscription_id = ? AND kind = 'PHOTO' AND status = 'PUBLISHED' AND updated_at >= ?`);
           const replies = await count(`SELECT COUNT(*) AS n FROM review_replies WHERE subscription_id = ? AND status = 'POSTED' AND updated_at >= ?`);
           const summary = await reportSummary(env, numbers, g.businessName, g.scope, deps.generate);
-          const html = new TextEncoder().encode(reportHtml({ business: g.businessName, numbers, summary, posts, photos, replies }));
+          const html = new TextEncoder().encode(reportHtml({ business: g.businessName, numbers, summary, posts, photos, replies, photoLink: await photoLibraryLink(env, g.subscriptionId) }));
           const stored = await storeDeliverable(env, g.context, {
             type: "GOOGLE_PROFILE_REPORT", filename: `google-report-${numbers.range.end}.html`, mime: "text/html", bytes: html, folder: "google-care",
             metadata: { google_report: { ...numbers.headline, range: numbers.range } }
