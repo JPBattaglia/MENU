@@ -282,6 +282,8 @@ test('live, the posts wait for GitHub to draw them, then go to the owner and the
     await Promise.all(f.pending);
     assert.equal(f.row(`SELECT status FROM workflow_runs`).status, 'SUCCEEDED');
     assert.equal(f.emails.at(-1).to[0], 'owner@proofcafe.example');
+    assert.match(f.emails.at(-1).text, /Photo library: https:\/\/menu-made\.com\/api\/photo-library\//, 'the buyer is pointed to the photo library');
+    assert.match(f.emails.at(-1).html, /Open your photo library<\/a>/);
   });
 });
 
@@ -349,4 +351,64 @@ test('the worker starts the GitHub renderer when graphics are parked, and nudges
     delete f.env.GITHUB_DISPATCH_TOKEN;
     assert.deepEqual(await renderJobs.nudgeWaitingRenders(f.env, Date.now() + 99 * 60000), []);
   });
+});
+
+test('posts use the business\'s own photos: several layouts, photo posts as JPEG, photos by signed link (never on a dish post)', async () => {
+  const f = setup();
+  delete f.env.SOCIAL_RASTERIZER;
+  const kit = await oidcKit('kid-photos');
+  f.env.RENDER_OIDC_FETCH = kit.jwks;
+  const t = '2026-10-02T00:00:00.000Z';
+  for (const n of [1, 2, 3]) {
+    f.env.DB.raw.prepare(`INSERT INTO assets (id, business_id, customer_id, project_id, asset_type, storage_provider, storage_key, original_filename, mime_type, size_bytes, status, uploaded_at, approved_for_use, is_customer_supplied, metadata_json) VALUES (?, 'biz', 'cust', NULL, 'PHOTO', 'R2', ?, 'p.jpg', 'image/jpeg', 100, 'VALID', ?, 1, 1, ?)`)
+      .run(`00000000-0000-4000-8000-00000000000${n}`, `lib/${n}.jpg`, t, JSON.stringify({ photo_library: SUB }));
+    await f.env.ASSETS.put(`lib/${n}.jpg`, new Uint8Array([0xff, 0xd8, 0xff, n]));
+  }
+  await withFetch(f.fetch, async () => {
+    f.state.outputs.push({ posts: goodPosts() });
+    await api.runScheduledProduction(f.env);
+    const auth = { Authorization: `Bearer ${await kit.sign(kit.good)}` };
+    const spec = await (await renderJobs.handleRenderJobs(new Request('https://menu-made.com/api/render-jobs/s1', { headers: auth }), f.env, 's1')).json();
+    assert.equal(spec.photos.length, 3);
+    const jpg = spec.files.filter((s) => s.format === 'jpg');
+    assert.ok(jpg.length >= 4 && jpg.every((s) => s.name.endsWith('.jpg') && /__PHOTO_\d__/.test(s.svg)), 'photo posts are JPEG and carry a photo placeholder');
+    assert.ok(spec.files.every((s) => !/data:image\/jpeg/.test(s.svg)), 'no photo bytes in the spec');
+    const posts = goodPosts();
+    for (const s of jpg) {
+      const i = Number(/post-(\d+)/.exec(s.name)[1]) - 1;
+      assert.ok(!posts[i].featured_item, `post ${i + 1} names a dish and must not get a photo`);
+    }
+    const layouts = new Set(spec.files.map((s) => (/clip-path|linearGradient/.test(s.svg) ? 'photo' : 'type') + (s.svg.match(/fill="(#[0-9a-f]{6})"/)?.[1] || '')));
+    assert.ok(layouts.size >= 4, `the month looks varied (${layouts.size} looks)`);
+    const url = spec.photos[0].url;
+    assert.match(url, /^https:\/\/menu-made\.com\/api\/post-photo\/[0-9a-f-]{36}\?t=/);
+    const photo = await call(f, url);
+    assert.equal(photo.status, 200); assert.equal(photo.headers.get('content-type'), 'image/jpeg');
+    assert.equal((await call(f, url.replace(/t=.*/, 't=bad.token'))).status, 404);
+    const calendar = f.row(`SELECT a.storage_key FROM deliverables d JOIN assets a ON a.id = d.asset_id WHERE d.deliverable_type = 'SOCIAL_CALENDAR'`);
+    const html = await (await f.env.ASSETS.get(calendar.storage_key)).text();
+    assert.match(html, /href="https:\/\/menu-made\.com\/api\/post-photo\//, 'the review calendar shows the photos by link');
+    assert.doesNotMatch(html, /__PHOTO_\d__/);
+    // The renderer returns photo posts as JPEG: the worker checks their size from the JPEG header.
+    const jpegOf = (w, h) => { const b = new Uint8Array(9000); b.set([0xff, 0xd8, 0xff, 0xc0, 0x00, 0x11, 0x08, h >> 8, h & 255, w >> 8, w & 255]); return b; };
+    const zip = createZip([...spec.files.map((s) => ({ name: s.name, data: s.format === 'jpg' ? jpegOf(s.width, s.height) : pngOf(s.width, s.height) })), ...spec.extra.map((e) => ({ name: e.name, data: new TextEncoder().encode(e.text) }))]);
+    const ok = await renderJobs.handleRenderJobs(new Request('https://menu-made.com/api/render-jobs/s1', { method: 'POST', headers: auth, body: zip }), f.env, 's1');
+    assert.equal(ok.status, 200, await ok.clone().text());
+    assert.match(spec.extra[0].text, /post-\d\d-square\.jpg \(feed\)/, 'the captions file names the JPEGs');
+  });
+});
+
+test('the renderer fills in the logo and downloaded photos, and reads JPEG sizes', async () => {
+  const { fillAssets, jpegSize, resolvePhotos } = await import('./scripts/render-assets.mjs');
+  const fetched = [];
+  const map = await resolvePhotos({ photos: [{ placeholder: '__PHOTO_1__', url: 'https://menu-made.com/api/post-photo/x?t=1' }, { placeholder: '__PHOTO_2__', data: 'data:image/png;base64,AA' }] },
+    async (url) => { fetched.push(url); return new Response(new Uint8Array([1, 2, 3]), { headers: { 'content-type': 'image/jpeg' } }); });
+  assert.deepEqual(fetched, ['https://menu-made.com/api/post-photo/x?t=1'], 'a photo given as data is not downloaded');
+  assert.equal(fillAssets('<image href="__PHOTO_1__"/><image href="__PHOTO_2__"/><image href="__LOGO_DATA_URI__"/>', 'data:image/png;base64,LL', map),
+    '<image href="data:image/jpeg;base64,AQID"/><image href="data:image/png;base64,AA"/><image href="data:image/png;base64,LL"/>');
+  await assert.rejects(resolvePhotos({ photos: [{ placeholder: '__PHOTO_1__', url: 'u' }] }, async () => new Response('<html>', { headers: { 'content-type': 'text/html' } })), /unexpected type/);
+  await assert.rejects(resolvePhotos({ photos: [{ placeholder: '__PHOTO_1__', url: 'u' }] }, async () => new Response('', { status: 404 })), /HTTP 404/);
+  const jpeg = new Uint8Array(40); jpeg.set([0xff, 0xd8, 0xff, 0xc0, 0x00, 0x11, 0x08, 0x07, 0x80, 0x04, 0x38]);
+  assert.deepEqual(jpegSize(jpeg), { height: 1920, width: 1080 });
+  assert.equal(jpegSize(new Uint8Array([0x89, 0x50])), null);
 });

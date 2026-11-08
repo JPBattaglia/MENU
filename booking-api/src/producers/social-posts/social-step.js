@@ -15,7 +15,9 @@ import { getSettings } from "../../subscriptions/settings.js";
 import { storeDeliverable } from "../shared/deliverables.js";
 import { POSTS_PER_MONTH, planPosts } from "./plan.js";
 import { queueSocialRender } from "./render-jobs.js";
-import { SIZES, brandOf, esc, renderPostSvg } from "./render.js";
+import { brandOf, esc } from "./render.js";
+import { layoutPalette, pickLayouts, socialLayout } from "../shared/social-layouts.js";
+import { postPhotos, withPhotoLinks } from "../shared/post-photos.js";
 import { createZip } from "./zip.js";
 
 const MONTHS = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
@@ -26,10 +28,11 @@ function monthOf(metadata) {
   return { label: `${MONTHS[d.getUTCMonth()]} ${d.getUTCFullYear()}`, month: d.getUTCMonth() + 1, year: d.getUTCFullYear() };
 }
 
-function captionsText(business, month, posts) {
+function captionsText(business, month, posts, names = null) {
   const lines = [`${business} - social posts for ${month.label}`, ""];
   posts.forEach((post, i) => {
-    lines.push(`Post ${pad(i + 1)} - suggested date: ${MONTHS[month.month - 1]} ${post.day}`, `Graphics: post-${pad(i + 1)}-square.png (feed), post-${pad(i + 1)}-story.png (story)`, post.caption, post.hashtags.join(" "), "");
+    const [feed, story] = names?.[i] || [`post-${pad(i + 1)}-square.png`, `post-${pad(i + 1)}-story.png`];
+    lines.push(`Post ${pad(i + 1)} - suggested date: ${MONTHS[month.month - 1]} ${post.day}`, `Graphics: ${feed} (feed), ${story} (story)`, post.caption, post.hashtags.join(" "), "");
   });
   return lines.join("\n");
 }
@@ -91,20 +94,32 @@ async function runSocialPostsProduceStep(targetStep, env, deps = {}) {
   if (plan.capped) return blocked("monthly AI limit reached", [plan.capped]);
   if (plan.problems.length) return blocked("posts failed the quality checks", plan.problems);
 
+  // Six layouts, three with the business's own photos (owner review, Nov 7, 2026; shared/social-layouts.js).
   const brand = brandOf({ primary: live?.primary, accent: live?.accent });
+  const palette = layoutPalette({ dark: brand.primary, light: "#faf7f2", accent: brand.accent });
+  const photos = await postPhotos(env, { businessId: context.business_id || null, subscriptionId: metadata.subscription_id || null });
+  const picks = pickLayouts(plan.posts.map((p) => ({ featured: Boolean(p.featured?.name) })), photos.length);
+  const logo = live?.logoDataUri || "";
+  const forBrowser = (svg) => withPhotoLinks(logo ? svg.replaceAll("__LOGO_DATA_URI__", logo) : svg, photos);
   const svgs = { square: [], story: [] };
   const graphics = [];
+  const names = [];
   for (const [i, post] of plan.posts.entries()) {
+    const pick = picks[i];
+    const pair = [];
     for (const size of ["square", "story"]) {
-      const result = renderPostSvg(post, { businessName: business, brand, logoDataUri: live?.logoDataUri }, size);
+      const result = socialLayout({ headline: post.headline, featured: post.featured }, { layout: pick.layout, size, businessName: business, palette, logo: Boolean(logo), photo: pick.photo, uid: `p${i + 1}${size[0]}` });
       if (result.error) return blocked("a graphic could not be built", [`Post ${i + 1}: ${result.error}`]);
-      svgs[size].push(result.svg);
-      graphics.push({ name: `post-${pad(i + 1)}-${size}.png`, svg: result.svg, width: SIZES[size].width, height: SIZES[size].height });
+      svgs[size].push(forBrowser(result.svg));
+      const name = `post-${pad(i + 1)}-${size}.${pick.photo ? "jpg" : "png"}`;
+      pair.push(name);
+      graphics.push({ name, svg: result.svg, width: result.width, height: result.height, ...(pick.photo ? { format: "jpg", min_bytes: 8000 } : {}) });
     }
+    names.push(pair);
   }
-  const captions = captionsText(business, month, plan.posts);
+  const captions = captionsText(business, month, plan.posts, names);
   const html = new TextEncoder().encode(calendarHtml(business, month, plan.posts, svgs.square));
-  const care = { month: month.label, posts: plan.posts.length, attempts: plan.attempts };
+  const care = { month: month.label, posts: plan.posts.length, attempts: plan.attempts, photos: photos.length, layouts: picks.map((p) => p.layout) };
   const calendar = await storeDeliverable(env, context, { type: "SOCIAL_CALENDAR", filename: `${business}-posting-calendar-${month.year}-${pad(month.month)}.html`.replace(/\s+/g, "-"), mime: "text/html", bytes: html, folder: "social-calendar", metadata: { social: care } });
   const packFilename = `${business}-social-posts-${month.year}-${pad(month.month)}.zip`.replace(/\s+/g, "-");
   const base = { outcome: "PRODUCED", month: month.label, posts: plan.posts.length, calendar_deliverable: calendar.deliverableId };
@@ -115,12 +130,14 @@ async function runSocialPostsProduceStep(targetStep, env, deps = {}) {
   if (!rasterize) {
     return queueSocialRender(env, targetStep, {
       files: graphics,
+      assets: logo ? { logo } : {},
+      photos,
       extra: [{ name: "captions-and-calendar.txt", text: captions }],
       finish: { pack_filename: packFilename, care, output: base }
     });
   }
   const files = [];
-  for (const g of graphics) files.push({ name: g.name, data: await rasterize(g.svg, g.width) });
+  for (const g of graphics) files.push({ name: g.name, data: await rasterize(logo ? g.svg.replaceAll("__LOGO_DATA_URI__", logo) : g.svg, g.width) });
   files.push({ name: "captions-and-calendar.txt", data: new TextEncoder().encode(captions) });
   const pack = await storeDeliverable(env, context, { type: "SOCIAL_PACK", filename: packFilename, mime: "application/zip", bytes: createZip(files), folder: "social-pack", metadata: { social: care } });
   const output = { ...base, png_files: graphics.length, pack_deliverable: pack.deliverableId, version: pack.version };

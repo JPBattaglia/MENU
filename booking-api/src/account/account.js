@@ -236,7 +236,7 @@ async function planSummary(env, sub) {
     links.push(link("Plan settings", await settingsLink(env, sub.id)));
     if (codes.includes("MENU_CARE")) links.push(link("Request menu changes", await menuCareLink(env, sub.id)));
     if (codes.includes("WEBSITE_CARE")) links.push(link("Request website changes", await siteCareLink(env, sub.id)));
-    if (codes.includes("GOOGLE_PROFILE_CARE")) links.push(link("Add photos to your library", await photoLibraryLink(env, sub.id)));
+    if (codes.includes("GOOGLE_PROFILE_CARE") || codes.includes("SOCIAL_POSTS")) links.push(link("Add photos to your library", await photoLibraryLink(env, sub.id)));
     if (codes.includes("GUEST_APP") && sub.business_id) {
       const app = await loadLiveApp(env, { businessId: sub.business_id }).catch(() => null);
       if (app?.id) {

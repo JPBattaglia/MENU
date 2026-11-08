@@ -37,9 +37,10 @@ const RENDER_IN = `wr.workflow_key IN (${RENDER_WORKFLOWS.map((k) => `'${k}'`).j
 // for __LOGO_DATA_URI__ in the SVGs by the renderer; finish: what the result handler needs later (finish.kind picks it).
 // fonts: display font families the renderer should load (Nino designs); preview: { title, sections, widths } asks the
 // renderer to add preview.html (small copies of the images on one page) to the ZIP.
-async function queueRender(env, targetStep, { kind = "SOCIAL", files, extra = [], assets = {}, fonts = [], preview = null, finish }) {
+async function queueRender(env, targetStep, { kind = "SOCIAL", files, extra = [], assets = {}, photos = [], fonts = [], preview = null, finish }) {
   const id = targetStep.workflow_step_id;
-  await env.ASSETS.put(specKey(id), JSON.stringify({ version: 1, id, kind, zip_name: finish.pack_filename, files, extra, assets, ...(fonts.length ? { fonts } : {}), ...(preview ? { preview } : {}) }), {
+  // photos: [{ placeholder, url }] the renderer downloads and puts in place of __PHOTO_n__ (shared/post-photos.js).
+  await env.ASSETS.put(specKey(id), JSON.stringify({ version: 1, id, kind, zip_name: finish.pack_filename, files, extra, assets, ...(photos.length ? { photos: photos.map(({ placeholder, url }) => ({ placeholder, url })) } : {}), ...(fonts.length ? { fonts } : {}), ...(preview ? { preview } : {}) }), {
     httpMetadata: { contentType: "application/json" }
   });
   const output = { waiting_for: "RENDER", render_job: id, requested_at: nowIso(), finish };
@@ -188,8 +189,8 @@ function checkPack(entries, spec) {
   for (const file of spec.files) {
     const data = byName.get(file.name);
     if (!data) return `${file.name} is missing`;
-    const size = pngSize(data);
-    if (!size) return `${file.name} is not a PNG`;
+    const size = file.format === "jpg" ? jpegSize(data) : pngSize(data);
+    if (!size) return `${file.name} is not a ${file.format === "jpg" ? "JPEG" : "PNG"}`;
     if (size.width !== file.width || size.height !== file.height) return `${file.name} is ${size.width}x${size.height}, expected ${file.width}x${file.height}`;
     if (data.length < (file.min_bytes ?? 2000)) return `${file.name} is suspiciously small (${data.length} bytes)`;
   }
@@ -198,6 +199,20 @@ function checkPack(entries, spec) {
   if (spec.preview && !byName.has("preview.html")) return "preview.html is missing";
   const expected = spec.files.length + (spec.extra || []).length + previewFiles;
   if (entries.length !== expected) return `the ZIP holds ${entries.length} files, expected ${expected}`;
+  return null;
+}
+
+// Width and height from a baseline or progressive JPEG (photo posts are JPEG; see scripts/render-assets.mjs).
+function jpegSize(data) {
+  if (data.length < 4 || data[0] !== 0xff || data[1] !== 0xd8) return null;
+  let i = 2;
+  while (i + 9 < data.length) {
+    if (data[i] !== 0xff) { i += 1; continue; }
+    const marker = data[i + 1];
+    const length = (data[i + 2] << 8) | data[i + 3];
+    if (marker >= 0xc0 && marker <= 0xcf && ![0xc4, 0xc8, 0xcc].includes(marker)) return { height: (data[i + 5] << 8) | data[i + 6], width: (data[i + 7] << 8) | data[i + 8] };
+    i += 2 + length;
+  }
   return null;
 }
 

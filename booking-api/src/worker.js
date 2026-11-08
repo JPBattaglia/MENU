@@ -88,6 +88,7 @@ import { runNextProductionStep, runScheduledProduction } from "./workflows/runne
 import { handleMe, handleOpen, handleSignIn, handleSignOut } from "./account/account.js";
 import { handleDesignBrief, remindDesignBriefs } from "./producers/nino-design/brief.js";
 import { alertStaleHandLogos, handleNinoLogoUpload } from "./producers/nino-design/hand-logo.js";
+import { handlePostPhoto } from "./producers/shared/post-photos.js";
 import { emailMerchTracking, handleMerchCheckout, handleMerchLogo, handleMerchLogoUpload, handleMerchProducts, handleMerchQuote, handleMerchUpload } from "./producers/staff-merch/order.js";
 import { advanceNinoDesignSelfTests } from "./selftest/nino-design-selftest.js";
 import { advanceStaffMerchSelfTests } from "./selftest/staff-merch-selftest.js";
@@ -100,6 +101,8 @@ var worker_default = {
       return handleAdminQueue(request, env);
     }
     if (url.pathname === "/api/owner/outputs" && request.method === "GET") return handleOwnerOutputs(request, env);
+    const postPhotoMatch = url.pathname.match(/^\/api\/post-photo\/([0-9a-f-]{36})$/i);
+    if (postPhotoMatch && request.method === "GET") return handlePostPhoto(request, env, postPhotoMatch[1].toLowerCase());
     const ninoLogoMatch = url.pathname.match(/^\/api\/nino-logo\/([0-9a-f-]{36})$/i);
     if (ninoLogoMatch && (request.method === "GET" || request.method === "POST")) return handleNinoLogoUpload(request, env, ninoLogoMatch[1].toLowerCase());
     const batchMatch = url.pathname.match(/^\/api\/approvals\/batch\/([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})$/i);
