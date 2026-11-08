@@ -6,6 +6,7 @@ import { aboutHtml, brandOr, callBtn, contactLines, esc, hoursList, inkOn, item,
 const year = () => new Date().getUTCFullYear();
 const sections = (d, fn) => d.sections.map((s, i) => fn(s, i)).join("");
 
+// logoBg (each design): the colour behind its main logo, for the logo backdrop (index.js decorateLogos).
 // 1. Trattoria: warm and classic. Full-width banner hero, centered serif name, menu in two columns with dotted leaders.
 const trattoria = {
   key: "trattoria", label: "Trattoria", blurb: "Warm and classic, serif type, menu with dotted price lines", defaultBrand: "#8c2f1b",
@@ -31,7 +32,7 @@ footer{text-align:center;padding:28px;background:${ink};color:#e8dccb;font-size:
 <section id="about"><h2>Our story</h2><p class="sub">${esc(d.name)}</p><div class="about">${aboutHtml(d)}</div></section>
 <section id="visit"><h2>Contact us</h2><p class="sub">${d.address ? "We’d love to see you" : "We’d love to hear from you"}</p><div class="visit">${d.hours.length || d.phone ? `<div><h3>Hours</h3>${hoursList(d)}</div>` : ""}<div><h3>Find us</h3>${contactLines(d)}</div></div></section></main>
 <footer>© ${year()} ${esc(d.name)}</footer>`;
-    return { css, body, theme: b };
+    return { css, body, theme: b, logoBg: d.photos[0] ? "#1c1410" : b };
   }
 };
 
@@ -65,7 +66,7 @@ footer{margin-top:96px;border-top:1px solid #e6e8ec;padding:28px 20px;text-align
 <section id="about" class="two"><div><h2>About us</h2>${aboutHtml(d)}</div>${d.photos[1] ? photo(d, 1) : ""}</section>
 <section id="visit"><h2>${d.address ? "Come by" : "Contact"}</h2><div class="two"><div class="panel"><h3>Hours</h3>${hoursList(d)}</div><div class="panel">${contactLines(d)}</div></div></section></main>
 <footer>© ${year()} ${esc(d.name)}${d.address ? ` · ${esc(d.address)}` : ""}</footer>`;
-    return { css, body, theme: b };
+    return { css, body, theme: b, logoBg: "#ffffff" };
   }
 };
 
@@ -99,7 +100,7 @@ footer{padding:26px;text-align:center;color:#8a8a92;border-top:1px solid #ffffff
 <section id="about"><h2>The story</h2><div class="story"><div class="about">${aboutHtml(d)}</div>${photo(d, 1)}</div></section>
 <section id="visit"><h2>${d.address ? "Pull up" : "Holler"}</h2><div class="visit">${d.hours.length || d.phone ? `<div><h3>Hours</h3>${hoursList(d)}</div>` : ""}<div><h3>${d.address ? "Where" : "Contact"}</h3>${contactLines(d)}</div></div></section></main>
 <footer>© ${year()} ${esc(d.name)}</footer>`;
-    return { css, body, theme: bg };
+    return { css, body, theme: bg, logoBg: bg };
   }
 };
 
@@ -128,7 +129,7 @@ footer{text-align:center;padding:24px;font:700 24px Caveat,cursive}`;
 <section id="about"><h2>Our story</h2><div class="about">${aboutHtml(d)}</div></section>
 <section id="visit"><h2>${d.address ? "Come on in" : "Say hello"}</h2><div class="visit">${d.hours.length || d.phone ? `<div class="card"><h3>Hours</h3>${hoursList(d)}</div>` : ""}<div class="card"><h3>${d.address ? "Find us" : "Contact"}</h3>${contactLines(d)}</div></div></section></main>
 <footer>${esc(d.name)} · ${year()}</footer>`;
-    return { css, body, theme: b };
+    return { css, body, theme: b, logoBg: bg };
   }
 };
 
@@ -158,7 +159,7 @@ footer{text-align:center;padding:30px;font:500 11px Jost,sans-serif;letter-spaci
 <section id="about" class="about"><h2>The house</h2><span class="rule"></span><p>${esc(d.intro)}</p>${aboutHtml(d)}</section>
 <section id="visit"><h2>Contact</h2><span class="rule"></span><div class="visit">${d.hours.length || d.phone ? `<div><h3>Hours</h3>${hoursList(d)}</div>` : ""}<div><h3>${d.address ? "Address" : "Contact"}</h3>${contactLines(d)}</div></div></section></main>
 <footer>© ${year()} ${esc(d.name)}</footer>`;
-    return { css, body, theme: bg };
+    return { css, body, theme: bg, logoBg: bg };
   }
 };
 
@@ -189,7 +190,7 @@ footer{text-align:center;padding:28px;color:#4d5a51;font-size:15px}
 <section id="about"><h2 class="vh">About</h2><div class="aboutbox"><h2>About ${esc(d.name)}</h2>${aboutHtml(d)}</div></section>
 <section id="visit"><h2>Contact us</h2><div class="visit">${d.hours.length || d.phone ? `<div><h3>Hours</h3>${hoursList(d)}</div>` : ""}<div><h3>${d.address ? "Where we are" : "Reach us"}</h3>${contactLines(d)}</div></div></section></main>
 <footer>© ${year()} ${esc(d.name)}</footer>`;
-    return { css, body, theme: b };
+    return { css, body, theme: b, logoBg: tint2 };
   }
 };
 
@@ -223,7 +224,7 @@ footer{text-align:center;padding:26px;font:600 18px Fredoka,sans-serif;backgroun
 <div class="hero" id="main" data-hero><h1>${esc(d.name)}</h1><p>${esc(d.tagline)}${d.intro ? `. ${esc(d.intro)}` : ""}</p>${menuBtn(d, "blob")}${orderBtn(d, "blob w")}${callBtn(d, "blob w")}${d.photos[0] ? `<div class="pic">${photo(d, 0)}</div>` : ""}</div>
 <main>${bands.map(([id, html], i) => `<section id="${id}" class="band" style="background:${pastels[(i + 1) % pastels.length]}">${wave(pastels[(i + 1) % pastels.length])}<div class="in">${html}</div></section>`).join("")}</main>
 <footer>Made with love by ${esc(d.name)} · ${year()}</footer>`;
-    return { css, body, theme: pastels[0] };
+    return { css, body, theme: pastels[0], logoBg: pastels[0] };
   }
 };
 
@@ -253,7 +254,7 @@ footer{padding:24px clamp(24px,6vw,80px);font:500 13px Montserrat,sans-serif;col
 <section id="about"><h2>About</h2>${aboutHtml(d)}</section>
 <section id="visit"><h2>Contact</h2><div class="visit">${d.hours.length || d.phone ? `<div><h3>Hours</h3>${hoursList(d)}</div>` : ""}<div><h3>${d.address ? "Location" : "Contact"}</h3>${contactLines(d)}</div></div></section></main>
 <footer>© ${year()} ${esc(d.name)}</footer></div>`;
-    return { css, body, theme: navy };
+    return { css, body, theme: navy, logoBg: navy };
   }
 };
 
@@ -292,7 +293,7 @@ ${d.intro ? `<p class="tonight">${esc(d.intro)}</p>` : ""}
 <section id="about"><h2>The bar</h2><p class="sub">Our story</p><div class="about">${aboutHtml(d)}</div></section>
 <section id="visit"><h2>${d.address ? "Pull up a stool" : "Get in touch"}</h2><p class="sub">${d.address ? "Hours and directions" : "Contact"}</p><div class="visit">${d.hours.length || d.phone ? `<div><h3>Hours</h3>${hoursList(d)}</div>` : ""}<div><h3>${d.address ? "Find us" : "Reach us"}</h3>${contactLines(d)}</div></div></section></main>
 <footer>© ${year()} ${esc(d.name)} · Please drink responsibly</footer>`;
-    return { css, body, theme: green };
+    return { css, body, theme: green, logoBg: green };
   }
 };
 

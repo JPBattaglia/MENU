@@ -37,7 +37,7 @@ function siteData(site, copy) {
     social: [["Instagram", site.instagram], ["Facebook", site.facebook], ["TikTok", site.tiktok], ["Yelp", site.yelp]].filter(([, u]) => /^https:\/\//.test(String(u || ""))),
     order: /^https:\/\//.test(String(site.order_url || "")) ? site.order_url : "",
     orderLabel: ["Order online", "Book a table", "Book now"].includes(site.order_label) ? site.order_label : "",
-    logo: site.logo || null, photos: site.photos || [], menuLabel: services ? "Services" : "Menu", services
+    logo: site.logo || null, logoMode: site.logo_bg || "auto", photos: site.photos || [], menuLabel: services ? "Services" : "Menu", services
   };
 }
 

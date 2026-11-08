@@ -11,6 +11,8 @@
 //   GET  /api/website-preview/view/<token>/<page>.html     the preview pages (relative links between them)
 //   GET  /api/website-preview/handoff/<token>              -> { ok, business, email } for checkout
 //   POST /api/system/prospects/site-demo  { id }           (prospect-drafts.yml OIDC) -> { ok, url } | { ok:false, skip }
+import { logoBgSelect, logoMeasureScript } from "./logo-measure.js";
+import { LOGO_MODES, parseLogoInfo } from "../producers/menu-qr/design.js";
 import { nowIso, parseJsonOrNull } from "../lib/http.js";
 import { bytesToBase64 } from "../lib/util.js";
 import { brandedEmailHtml, escapeHtml, sendTransactionalEmail } from "../lib/email.js";
@@ -224,6 +226,8 @@ function ownPanel(token, key, site = {}, copy = {}) {
   <p class="mm-own-now">${have.length ? `Using ${escapeHtml(have.join(", "))}. New files replace them.` : "Add your logo, photos, colour and details. Every design updates."}${sample}</p>
   <details class="mm-own-group" open><summary>Logo, photos and colour</summary>
   <label>Logo <small>(PNG, JPG or WebP)</small><input type="file" name="logo" accept="image/png,image/jpeg,image/webp"></label>
+  <input type="hidden" name="logo_info" value="">
+  <label>Logo background <small>(Automatic picks one per design so the logo stands out)</small>${logoBgSelect(site.logo_bg)}</label>
   <label>Photos <small>(up to ${MAX_PHOTOS}, 5 MB each)</small><input type="file" name="photos" accept="image/png,image/jpeg,image/webp" multiple></label>
   <label class="mm-own-colour">Brand colour <input type="color" name="brand" value="${brand || "#00a7b5"}"></label>
   <label class="mm-own-check"><input type="checkbox" name="use_brand" value="1"${brand ? " checked" : ""}> Use this colour</label></details>
@@ -232,6 +236,7 @@ function ownPanel(token, key, site = {}, copy = {}) {
   </form>
   <div class="mm-own-busy" role="status" aria-live="polite" hidden><span class="mm-spin" aria-hidden="true"></span><p><strong>Updating all 9 designs…</strong></p><p>Adding your logo, photos and colour to every design. This can take up to a minute. Keep this page open: it reloads by itself when they're ready.</p></div>
   </div></dialog>
+  ${logoMeasureScript("#mm-own input[name=logo]")}
   <script>window.addEventListener("pageshow", function () { var b = document.querySelector(".mm-own-box"); if (!b) return; b.classList.remove("busy"); b.querySelector("form").hidden = false; b.querySelector(".mm-own-busy").hidden = true; });</script>`;
 }
 
@@ -262,7 +267,7 @@ function wrapDesign(html, css, token, index, { prospect = false, site = null, co
   .mm-own input:not([type]), .mm-own input[type=tel], .mm-own input[type=email], .mm-own input[type=url], .mm-own textarea, .mm-own select { width: 100%; font: 15px/1.4 system-ui, sans-serif; padding: 10px 12px; border: 1px solid #ffffff4d; border-radius: 8px; background: #0d2a38; color: #e8f6f7; font-weight: 400; } .mm-own textarea { resize: vertical; } .mm-own-busy { display: grid; justify-items: center; gap: 10px; padding: 28px 8px 12px; text-align: center; } .mm-own-busy[hidden], .mm-own form[hidden] { display: none; } .mm-own-box.busy .mm-own-x { display: none; }
   .mm-spin { width: 52px; height: 52px; border: 5px solid #ffffff2e; border-top-color: #00a7b5; border-radius: 50%; animation: mm-spin .9s linear infinite; } @keyframes mm-spin { to { transform: rotate(360deg); } }
   @media (prefers-reduced-motion: reduce) { .mm-spin { animation: mm-spin 2.4s linear infinite !important; } }
-  .mm-own label { display: grid; gap: 4px; font-weight: 600; } .mm-own small { font-weight: 400; opacity: .8; } .mm-own input[type=file] { color: #e8f6f7; max-width: 100%; }
+  .mm-own label { display: grid; gap: 4px; font-weight: 600; } .mm-own small { font-weight: 400; opacity: .8; } .mm-own input[type=file] { color: #e8f6f7; max-width: 100%; } .mm-own input[type=file]::file-selector-button { margin-right: 12px; padding: 10px 18px; border: 0; border-radius: 8px; background: #00a7b5; color: #fff; font: 700 15px system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; cursor: pointer; } .mm-own input[type=file]::file-selector-button:hover { background: #00bccb; }
   .mm-own .mm-own-colour, .mm-own .mm-own-check { display: flex; align-items: center; gap: 10px; } .mm-own input[type=color] { width: 52px; height: 36px; border: 0; padding: 0; background: none; }
   .mm-own p { margin: 0; } .mm-own button { padding: 12px 18px; border: 0; border-radius: 8px; background: #00a7b5; color: #fff; font: 700 15px system-ui, sans-serif; cursor: pointer; }
   @media (max-width: 600px) { .mm-gen p span { display: none; } .mm-gen a, .mm-gen-own { padding: 10px 13px; font-size: 14px; } }
@@ -461,7 +466,13 @@ async function applyOwnForm(env, token, site, form) {
   const photos = [];
   for (const f of photoFiles) { const r = await read(f); if (r.error) return { error: r.error }; photos.push(r); }
   const put = (name, img) => env.ASSETS.put(`website-previews/${token}/img/${name}.${img.type.ext}`, img.bytes, { httpMetadata: { contentType: img.type.mime } });
-  if (logo) { await put("logo", logo); site.logo = { path: `img/logo.${logo.type.ext}` }; }
+  if (logo) {
+    await put("logo", logo);
+    // The browser's measurement of the logo (Customize; none on the after-purchase page): a JPEG is a solid box.
+    const info = parseLogoInfo(form.get("logo_info")) || (logo.type.mime === "image/jpeg" ? { t: 0, l: null, c: null, b: 1 } : null);
+    site.logo = { path: `img/logo.${logo.type.ext}`, ...(info ? { info } : {}) };
+  }
+  if (LOGO_MODES.includes(String(form.get("logo_bg") || ""))) site.logo_bg = String(form.get("logo_bg"));
   if (photos.length) {
     for (const [i, p] of photos.entries()) await put(`photo-${i + 1}`, p);
     site.photos = photos.map((p, i) => ({ path: `img/photo-${i + 1}.${p.type.ext}`, alt: `Photo ${i + 1} of ${site.name}` }));
@@ -472,7 +483,7 @@ async function applyOwnForm(env, token, site, form) {
   return { site };
 }
 
-// "Customize": POST multipart { design, logo?, photos?[], brand?, use_brand? } -> stores the images beside the
+// "Customize": POST multipart { design, logo?, logo_info?, logo_bg?, photos?[], brand?, use_brand? } -> stores the images beside the
 // preview, rebuilds all nine designs from the stored copy (no AI call) and returns to the design the buyer was on.
 // New photos replace the old set; no new files keeps what was there. The paid site is built from the same data.json.
 async function handleWebsitePreviewCustomize(request, env, token, { now = Date.now() } = {}) {

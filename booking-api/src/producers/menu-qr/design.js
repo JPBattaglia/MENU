@@ -341,7 +341,7 @@ function buildMenuDraftHtml({
 </html>`;
 }
 
-export { parseLogoInfo, LOGO_MODES,
+export { parseLogoInfo, logoTreatment, LOGO_MODES,
   NAMED_MENU_COLORS,
   parseBrandColors,
   colorLuminance,

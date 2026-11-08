@@ -8,6 +8,8 @@
 // plus the business's images at the paths given in site.logo / site.photos. The same files are shown in the generator,
 // delivered in the zip, and served when Menu-made hosts the site.
 import { BASE_CSS, brandOr, esc, inkOn, page, siteData } from "./common.js";
+import { logoTreatment } from "../../menu-qr/design.js";
+import { luminance } from "../../menu-qr/style.js";
 import { DESIGNS, DESIGN_KEYS, designFor } from "./designs.js";
 
 const PAGES = { "index.html": "Home", "menu.html": "Menu", "about.html": "About", "contact.html": "Contact" };
@@ -94,6 +96,25 @@ function composePage(body, file, hasMenu) {
   return html;
 }
 
+// Logo legibility (owner, Nov 7, 2026: the menu Customize's "Logo background", on websites too). The design's main
+// logos get a treatment against the colour behind them (design.logoBg): none, a halo, a badge in a tone of the
+// design, or a border for a logo with its own box (menu-qr/design.js logoTreatment). The page-band and footer
+// logos sit on a plate: white by default (dark for a light logo), or the buyer's choice.
+function decorateLogos(html, d, out, brand) {
+  if (!d.logo) return html;
+  const bg = out.logoBg || out.theme || "#ffffff";
+  const theme = { paper: bg, text: luminance(bg) > 0.4 ? "#1d1d1f" : "#f7f4ee" };
+  const mode = d.logoMode || "auto";
+  const info = d.logo.info || null;
+  const t = logoTreatment({ info, mode, isJpeg: /\.jpe?g$/i.test(d.logo.path || ""), headerBg: bg, theme, accent: brand });
+  const vars = t.kind === "badge" ? ` style="--plate:${t.plate}"` : t.kind === "halo" ? ` style="--glow:${t.glow}"` : "";
+  const plate = { none: "transparent", light: "#ffffff", dark: "#1d1d1f", accent: brand }[mode] || (info && info.l > 0.6 ? "#1d1d1f" : "#ffffff");
+  const plateStyle = mode === "none" ? ` style="--plate:transparent;box-shadow:none;padding:0"` : ` style="--plate:${plate}"`;
+  return html
+    .replace(/<img class="logo"/g, `<img class="logo logo-${t.kind}"${vars}`)
+    .replace(/<img class="(pb-logo|foot-logo)"/g, (m, cls) => `<img class="${cls}"${plateStyle}`);
+}
+
 function buildDesignSite(site, copy, key, { formAction = "" } = {}) {
   const design = designFor(key);
   if (!design) throw new Error(`Unknown design ${key}`);
@@ -117,7 +138,7 @@ function buildDesignSite(site, copy, key, { formAction = "" } = {}) {
     let html = page({ ...d, pageTitle: title }, { fonts: design.fonts, body, theme: out.theme });
     // The skip link needs a target on every page: without the hero, the page's own section.
     if (!/\sid="main"/.test(html)) html = html.replace('<a class="skip" href="#main">', `<a class="skip" href="#${{ "menu.html": "menu", "about.html": "about", "contact.html": "visit" }[file]}">`);
-    files[file] = html;
+    files[file] = decorateLogos(html, d, out, brand);
   }
   files["styles.css"] = `${BASE_CSS}\n${out.css}\n${PARTS_CSS(brand)}\n`;
   return files;
@@ -127,7 +148,7 @@ function buildDesignSite(site, copy, key, { formAction = "" } = {}) {
 const PARTS_CSS = (brand) => `.page-band{position:relative;display:flex;align-items:center;justify-content:center;min-height:clamp(200px,30vw,340px);overflow:hidden;background:#111;color:#fff;text-align:center}
 .page-band.plain{background:var(--pb);color:var(--pb-ink)}.page-band .pb-img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:.55}.page-band.photo-only{min-height:clamp(180px,26vw,320px)}.page-band.photo-only .pb-img{opacity:1}
 .page-band .pb-in{position:relative;display:flex;flex-direction:column;align-items:center;gap:14px;padding:36px 20px}
-.page-band .pb-logo{height:clamp(88px,12vw,128px);width:auto;max-width:min(320px,70vw);object-fit:contain;background:#fff;border-radius:16px;padding:10px;box-shadow:0 6px 24px rgba(0,0,0,.25)}
+.page-band .pb-logo{height:clamp(88px,12vw,128px);width:auto;max-width:min(320px,70vw);object-fit:contain;background:var(--plate,#fff);border-radius:16px;padding:10px;box-shadow:0 6px 24px rgba(0,0,0,.25)}
 .page-band .pb-name{margin:0;font-family:inherit;font-weight:800;font-size:clamp(28px,5vw,52px);line-height:1.1;text-shadow:0 2px 14px rgba(0,0,0,.35)}.page-band.plain .pb-name{text-shadow:none}
 .gallery{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px;margin:32px 0 0}.gallery img{width:100%;aspect-ratio:4/3;object-fit:cover;border-radius:10px}
 .cform{max-width:620px;margin:36px auto 72px;text-align:left}.cform h3{margin:0 0 14px;font-size:1.5em;line-height:1.2}.cform fieldset{display:grid;gap:14px;margin:0;padding:0;border:0;min-width:0}
@@ -137,7 +158,10 @@ const PARTS_CSS = (brand) => `.page-band{position:relative;display:flex;align-it
 .cform button{justify-self:start;padding:14px 26px;border:0;border-radius:8px;background:${brand};color:${inkOn(brand)};font:inherit;font-weight:700;cursor:pointer}.cform fieldset[disabled]{opacity:.7}
 .cform-note{margin:10px 0 0;font-size:.9em;opacity:.8}
 .foot-social{display:flex;flex-wrap:wrap;justify-content:center;gap:8px 18px;margin:0 0 12px}.foot-social a{color:inherit;font-weight:700;text-decoration:underline;text-underline-offset:3px}
-.foot-logo{display:block;height:72px;width:auto;max-width:240px;object-fit:contain;margin:0 auto 12px;background:#fff;border-radius:12px;padding:8px}
+.foot-logo{display:block;height:72px;width:auto;max-width:240px;object-fit:contain;margin:0 auto 12px;background:var(--plate,#fff);border-radius:12px;padding:8px}
+.logo-halo{filter:drop-shadow(0 0 1px var(--glow)) drop-shadow(0 0 1px var(--glow)) drop-shadow(0 0 7px color-mix(in srgb,var(--glow) 70%,transparent))}
+.logo-badge{box-sizing:content-box;padding:8px 12px;border-radius:14px;background:var(--plate);box-shadow:0 3px 12px rgba(0,0,0,.18)}
+.logo-boxed{border-radius:10px;border:2px solid ${brand};box-shadow:0 3px 12px rgba(0,0,0,.18)}
 @media(max-width:600px){.brand .logo{height:44px;max-width:140px}.mark .logo{height:56px}.top .logo{height:96px}.crest .logo,.hero .logo{height:96px}.rail .logo{height:84px}header a.cta{white-space:nowrap}.brand{font-size:min(1em,20px)}}`;
 
 export { DESIGNS, DESIGN_KEYS, PAGES, buildDesignSite, composePage, designFor };

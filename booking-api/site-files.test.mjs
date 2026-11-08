@@ -234,7 +234,7 @@ test('preview: the contact form is shown but switched off; inner pages get a pho
     assert.doesNotMatch(files['index.html'], /class="cform"/, `${d.key}: the form is on the Contact page only`);
     for (const [page, img] of [['menu.html', 'photo-3'], ['about.html', 'photo-4'], ['contact.html', 'photo-2']]) assert.match(files[page], new RegExp(`class="page-band[^"]*"[^>]*><img class="pb-img" src="img/${img}\\.jpg"`), `${d.key} ${page}`);
     assert.match(files['about.html'], /class="gallery"><img src="img\/photo-3\.jpg"/, `${d.key}: the buyer's other photos on About`);
-    assert.match(files['menu.html'], /<footer[^>]*><img class="foot-logo" src="img\/logo\.png"/, d.key);
+    assert.match(files['menu.html'], /<footer[^>]*><img class="foot-logo"[^>]* src="img\/logo\.png"/, d.key);
   }
   // Trattoria's header is only the navigation, so its band carries the logo and name; the others' headers already do.
   assert.match(buildDesignSite(site, COPY, 'trattoria')['menu.html'], /class="pb-logo"[^>]*><p class="pb-name">Oliva Kitchen/);
@@ -260,4 +260,22 @@ test('every page of every design ends with "Website by MENU-MADE" linking to men
       assert.match(html, /<a class="mm-credit" href="https:\/\/menu-made.com\/">Website by <img src="data:image\/png;base64,[A-Za-z0-9+/=]+" alt="MENU-MADE"[^>]*><\/a><\/body>/, `${d.key} ${name}`);
     }
   }
+});
+
+test('logo background on websites: each design treats the logo against the colour behind it; the buyer can choose', () => {
+  const site = (info, mode) => ({ ...SITE, logo: { path: 'img/logo.png', ...(info ? { info } : {}) }, ...(mode ? { logo_bg: mode } : {}) });
+  const kind = (html) => /<img class="logo logo-([a-z]+)"/.exec(html)?.[1];
+  const darkBold = { t: 1, l: 0.02, c: 0.6, b: 0 };
+  const white = { t: 1, l: 1, c: 0.6, b: 0 };
+  assert.equal(kind(buildDesignSite(site(darkBold), COPY, 'night')['index.html']), 'badge', 'dark logo on Night Market gets a light badge');
+  assert.equal(kind(buildDesignSite(site(darkBold), COPY, 'bistro')['index.html']), 'none', 'dark logo on white needs nothing');
+  assert.equal(kind(buildDesignSite(site(white), COPY, 'bistro')['index.html']), 'badge', 'white logo on white gets a dark badge');
+  assert.equal(kind(buildDesignSite(site(null), COPY, 'night')['index.html']), 'halo', 'unmeasured PNG: halo');
+  assert.equal(kind(buildDesignSite({ ...site(null), logo: { path: 'img/logo.jpg' } }, COPY, 'bistro')['index.html']), 'boxed', 'unmeasured JPEG: border');
+  assert.equal(kind(buildDesignSite(site(darkBold, 'dark'), COPY, 'bistro')['index.html']), 'badge', 'buyer chose a dark badge');
+  const none = buildDesignSite(site(darkBold, 'none'), COPY, 'night')['menu.html'];
+  assert.equal(kind(none), 'none');
+  assert.match(none, /<img class="foot-logo" style="--plate:transparent;box-shadow:none;padding:0"/, 'None also drops the footer plate');
+  assert.match(buildDesignSite(site(white), COPY, 'bistro')['menu.html'], /<img class="foot-logo" style="--plate:#1d1d1f"/, 'a white logo gets a dark footer plate');
+  assert.match(buildDesignSite(site(darkBold), COPY, 'bistro')['styles.css'], /\.logo-badge\{/);
 });
