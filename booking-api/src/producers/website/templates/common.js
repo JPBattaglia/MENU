@@ -37,7 +37,7 @@ function siteData(site, copy) {
     social: [["Instagram", site.instagram], ["Facebook", site.facebook], ["TikTok", site.tiktok], ["Yelp", site.yelp]].filter(([, u]) => /^https:\/\//.test(String(u || ""))),
     order: /^https:\/\//.test(String(site.order_url || "")) ? site.order_url : "",
     orderLabel: ["Order online", "Book a table", "Book now"].includes(site.order_label) ? site.order_label : "",
-    logo: site.logo || null, logoMode: site.logo_bg || "auto", photos: site.photos || [], menuLabel: services ? "Services" : "Menu", services
+    logo: site.logo || null, logoMode: site.logo_bg || "auto", hideName: site.hide_name === true, photos: site.photos || [], menuLabel: services ? "Services" : "Menu", services
   };
 }
 
@@ -67,6 +67,14 @@ function contactLines(d) {
 }
 
 const logoImg = (d, cls = "logo", size = 48) => (d.logo ? `<img class="${cls}" src="${esc(d.logo.path)}" alt="" width="${size}" height="${size}">` : "");
+// "Hide the name" (Customize, owner, Nov 7, 2026): for a logo that already spells out the name. The name leaves the
+// header and the hero only, and stays there for screen readers and search; page titles, About text and the footer keep it.
+const nameHidden = (d) => Boolean(d.hideName && d.logo);
+const shownName = (d) => (nameHidden(d) ? `<span class="vh">${esc(d.name)}</span>` : esc(d.name));
+const nameEl = (d, tag, cls = "") => {
+  const c = [cls, nameHidden(d) ? "vh" : ""].filter(Boolean).join(" ");
+  return `<${tag}${c ? ` class="${c}"` : ""}>${esc(d.name)}</${tag}>`;
+};
 const photo = (d, i, cls = "") => (d.photos[i] ? `<img class="${cls}" src="${esc(d.photos[i].path)}" alt="${esc(d.photos[i].alt || "")}" loading="${i ? "lazy" : "eager"}">` : "");
 const aboutHtml = (d) => d.about.map((p) => `<p>${esc(p)}</p>`).join("");
 
@@ -86,7 +94,7 @@ const BASE_CSS = `*{box-sizing:border-box}html{scroll-behavior:smooth;-webkit-te
 .skip{position:absolute;left:-999px;top:0;z-index:50;padding:10px 14px;background:#000;color:#fff}.skip:focus{left:8px;top:8px}
 .mm-credit{display:flex;align-items:center;justify-content:center;gap:8px;padding:11px 16px;background:#071f2c;color:#e8f6f7;font:500 13px/1 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;letter-spacing:.02em;text-decoration:none}.mm-credit img{display:block;width:auto;height:20px}.mm-credit:hover,.mm-credit:focus-visible{color:#5ff2ff}
 a:focus-visible,button:focus-visible{outline:3px solid currentColor;outline-offset:3px}
-.vh{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+.vh{position:absolute!important;width:1px!important;height:1px!important;margin:0!important;padding:0!important;border:0!important;overflow:hidden!important;clip:rect(0 0 0 0)!important;white-space:nowrap!important}
 section[id]{scroll-margin-top:84px}
 .item{list-style:none}.item-top{display:flex;align-items:baseline;gap:10px}.item-name{font-weight:700}.item-price{margin-left:auto;font-weight:700;white-space:nowrap}
 .leader{flex:1;border-bottom:2px dotted currentColor;opacity:.35;transform:translateY(-4px)}.leader+.item-price{margin-left:0}
@@ -94,4 +102,4 @@ section[id]{scroll-margin-top:84px}
 dl{margin:0}dt{font-weight:700}dd{margin:0}.c-line{display:flex;flex-wrap:wrap;gap:4px 12px;margin:0 0 12px}.c-label{font-weight:700;min-width:72px}
 @media (prefers-reduced-motion:reduce){html{scroll-behavior:auto}*{animation:none!important;transition:none!important}}`;
 
-export { BASE_CSS, aboutHtml, brandOr, callBtn, contactLines, esc, hoursList, inkOn, item, logoImg, menuBtn, mix, nav, orderBtn, page, photo, siteData, textOn };
+export { BASE_CSS, aboutHtml, brandOr, callBtn, contactLines, esc, hoursList, inkOn, item, logoImg, menuBtn, mix, nameEl, nameHidden, nav, orderBtn, page, photo, shownName, siteData, textOn };

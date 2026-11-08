@@ -262,6 +262,24 @@ test('every page of every design ends with "Website by MENU-MADE" linking to men
   }
 });
 
+test('hide the business name: with a logo, every design drops the visible name from the header and hero, keeps it for screen readers', () => {
+  const logo = { path: 'img/logo.png', info: { t: 1, l: 0.02, c: 0.6, b: 0 } };
+  const vis = (html) => html.replace(/<title>[\s\S]*?<\/title>/, '').replace(/<footer[\s\S]*?<\/footer>/g, '').replace(/<section id="about"[\s\S]*?<\/section>/g, '')
+    .replace(/<(h1|p|span)[^>]*class="[^"]*\bvh\b[^"]*"[^>]*>[^<]*<\/\1>/g, '').replace(/<h2[^>]*>[^<]*<\/h2>/g, '').replace(/<p class="sub">[^<]*<\/p>/g, '').replace(/<meta[^>]*>/g, '');
+  for (const d of DESIGNS) {
+    const shown = buildDesignSite({ ...SITE, logo }, COPY, d.key);
+    const hidden = buildDesignSite({ ...SITE, logo, hide_name: true }, COPY, d.key);
+    for (const page of ['index.html', 'menu.html']) {
+      assert.ok(vis(shown[page]).includes(SITE.name), `${d.key} ${page}: name shown by default`);
+      assert.ok(!vis(hidden[page]).includes(SITE.name), `${d.key} ${page}: name hidden`);
+      assert.match(hidden[page], new RegExp(`class="[^"]*\\bvh\\b[^"]*">${SITE.name}<`), `${d.key} ${page}: still there for screen readers`);
+      assert.match(hidden[page], new RegExp(`<title>[^<]*${SITE.name}`), `${d.key} ${page}: page title keeps it`);
+    }
+    // No logo: hiding would leave the site nameless, so the name stays.
+    assert.ok(vis(buildDesignSite({ ...SITE, hide_name: true }, COPY, d.key)['index.html']).includes(SITE.name), `${d.key}: no logo keeps the name`);
+  }
+});
+
 test('logo background on websites: each design treats the logo against the colour behind it; the buyer can choose', () => {
   const site = (info, mode) => ({ ...SITE, logo: { path: 'img/logo.png', ...(info ? { info } : {}) }, ...(mode ? { logo_bg: mode } : {}) });
   const kind = (html) => /<img class="logo logo-([a-z]+)"/.exec(html)?.[1];

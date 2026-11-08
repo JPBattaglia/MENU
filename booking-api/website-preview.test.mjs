@@ -127,6 +127,14 @@ test('Make it yours: a logo, photos and a brand colour rebuild all nine designs,
   const dark = new FormData(); dark.set('design', 'bistro'); dark.set('logo_bg', 'dark');
   assert.equal((await post(dark)).status, 303);
   assert.match(await (await f.get(`/api/website-preview/view/${out.token}/d/bistro/index.html`)).text(), /<img class="logo logo-badge" style="--plate:#/, 'the chosen Dark badge');
+  assert.ok(first.includes('name="hide_name"') && first.includes('<summary>Logo and name</summary>') && first.includes('name="mm-own-g"'), 'Hide the name box; one group open at a time');
+  assert.equal(JSON.parse(await (await f.env.ASSETS.get(`website-previews/${out.token}/data.json`)).text()).site.hide_name, undefined, 'a form without the box leaves it alone');
+  const hide = new FormData(); hide.set('design', 'bistro'); hide.append('hide_name', '0'); hide.append('hide_name', '1');
+  assert.equal((await post(hide)).status, 303);
+  assert.match(await (await f.get(`/api/website-preview/view/${out.token}/d/bistro/index.html`)).text(), /<span class="vh">Sample Pizza<\/span><\/a>/, 'name hidden in the header');
+  const show = new FormData(); show.set('design', 'bistro'); show.append('hide_name', '0');
+  assert.equal((await post(show)).status, 303);
+  assert.equal(JSON.parse(await (await f.env.ASSETS.get(`website-previews/${out.token}/data.json`)).text()).site.hide_name, false, 'unticked shows it again');
   // Only a new colour: the photos and logo stay; unticking the colour goes back to each design's own.
   const colourOnly = new FormData(); colourOnly.set('design', 'night'); colourOnly.set('brand', '#000000');
   assert.equal((await post(colourOnly)).status, 303);
@@ -137,7 +145,7 @@ test('Make it yours: a logo, photos and a brand colour rebuild all nine designs,
   assert.equal((await post(bad)).status, 400);
   const many = new FormData(); for (let i = 0; i < 7; i++) many.append('photos', new File([PNG], `${i}.png`, { type: 'image/png' }));
   assert.equal((await post(many)).status, 400);
-  assert.equal(JSON.parse(await (await f.env.ASSETS.get(`website-previews/${out.token}/data.json`)).text()).customized, 3, 'colour-only and Logo background updates counted; refused ones not');
+  assert.equal(JSON.parse(await (await f.env.ASSETS.get(`website-previews/${out.token}/data.json`)).text()).customized, 5, 'colour-only, Logo background and name updates counted; refused ones not');
   // An ended preview can't be changed.
   f.env.DB.raw.prepare(`UPDATE website_previews SET expires_at = '2000-01-01T00:00:00.000Z'`).run();
   assert.equal((await post(form)).status, 410);

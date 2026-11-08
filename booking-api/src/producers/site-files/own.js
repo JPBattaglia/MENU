@@ -9,7 +9,7 @@ import { parseJsonOrNull, simplePage } from "../../lib/http.js";
 import { signLinkToken, verifyLinkToken } from "../../lib/links.js";
 import { isTestOrder, loadDeliveryContext } from "../../approvals/release.js";
 import { DELIVERY_LINK_TTL_DAYS } from "../../lib/config.js";
-import { MAX_PHOTOS, applyOwnForm, detailFields } from "../../marketing/website-preview.js";
+import { MAX_PHOTOS, applyOwnForm, detailFields, hideNameField } from "../../marketing/website-preview.js";
 import { makeSiteFiles } from "./files-step.js";
 import { hasSamplePhotos, ownPhotoCount } from "../website/mood.js";
 
@@ -35,6 +35,7 @@ function formHtml(action, site, note = "", copy = {}) {
 <form method="post" enctype="multipart/form-data" action="${escapeHtml(action)}" style="display:grid;gap:14px">
 <label style="display:grid;gap:4px;font-weight:bold">Logo (PNG, JPG or WebP)<input type="file" name="logo" accept="image/png,image/jpeg,image/webp"></label>
 <label style="display:grid;gap:4px;font-weight:bold">Logo background <small style="font-weight:normal">(Automatic picks one per design so the logo stands out)</small>${logoBgSelect(site.logo_bg, { style: "font:15px Arial,sans-serif;padding:10px;border:1px solid #c5d6dc;border-radius:6px" })}</label>
+${hideNameField(site, { style: "display:flex;gap:10px;align-items:center;flex-wrap:wrap" })}
 <label style="display:grid;gap:4px;font-weight:bold">Photos (up to ${MAX_PHOTOS}, 5 MB each)<input type="file" name="photos" accept="image/png,image/jpeg,image/webp" multiple></label>
 <label style="display:flex;gap:10px;align-items:center;font-weight:bold">Brand colour <input type="color" name="brand" value="${escapeHtml(site.brand || "#00a7b5")}"></label>
 <label style="display:flex;gap:10px;align-items:center"><input type="checkbox" name="use_brand" value="1"${site.brand ? " checked" : ""}> Use this colour</label>
