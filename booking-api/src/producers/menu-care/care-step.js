@@ -182,7 +182,8 @@ async function runMenuCareProduceStep(targetStep, env, deps = {}) {
     menu: change.menu,
     logoDataUri: live.logoDataUri,
     style: live.style,
-    subtitle: live.subtitle
+    subtitle: live.subtitle,
+    logo: live.logo
   });
   assertMenuRendered(html, change.menu);
   const bytes = new TextEncoder().encode(html);

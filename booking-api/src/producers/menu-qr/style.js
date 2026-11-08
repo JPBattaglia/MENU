@@ -15,7 +15,10 @@ const FONTS = {
   "rounded-sans": '"SF Pro Rounded", "Arial Rounded MT Bold", "Varela Round", "Avenir Next", sans-serif',
   slab: 'Rockwell, "Roboto Slab", "American Typewriter", Georgia, serif',
   typewriter: '"American Typewriter", "Courier New", Courier, monospace',
-  script: '"Snell Roundhand", "Apple Chancery", "Segoe Script", "Brush Script MT", cursive'
+  script: '"Snell Roundhand", "Apple Chancery", "Segoe Script", "Brush Script MT", cursive',
+  // Hand-lettered chalk (owner, Nov 7, 2026): Chalkboard SE is on every iPhone and Mac; then Mac-only Chalkduster,
+  // Marker Felt, and Comic Sans / Comic Neue elsewhere.
+  chalk: '"Chalkboard SE", Chalkduster, "Marker Felt", "Comic Sans MS", "Comic Neue", "Segoe Print", cursive'
 };
 const CASES = { upper: "uppercase", title: "capitalize", "as-printed": "none" };
 const DIVIDERS = ["line", "double", "dotted", "ornament", "none"];
@@ -86,7 +89,8 @@ function normalizeStyle(raw) {
     nav: pick(raw.nav, NAVS, "pills"),
     section: pick(raw.section, SECTIONS, "rule"),
     texture: pick(raw.texture, TEXTURES, "none"),
-    frame: raw.frame === true,
+    // Page frame: "line" (a thin double rule) or "chalk" (a wooden chalkboard frame). true = "line" (pages from before).
+    frame: raw.frame === true || raw.frame === "line" ? "line" : raw.frame === "chalk" ? "chalk" : "none",
     dark
   };
 }
@@ -134,7 +138,7 @@ function structureCss(s) {
     arch: `header { background: var(--primary); padding: 38px 20px 44px; border-radius: 0 0 50% 50% / 0 0 34px 34px; ${onPrimary}`,
     hero: `header { background: radial-gradient(120% 90% at 50% 0%, color-mix(in srgb, var(--accent) 45%, var(--primary)) 0%, var(--primary) 72%); padding: 66px 20px 56px; ${onPrimary} h1 { font-size: clamp(44px, 14vw, 78px); line-height: .95; letter-spacing: -.01em; }`,
     frame: `header { padding: 34px 20px 22px; } h1 { display: inline-block; padding: 16px 28px 14px; border: 4px double var(--accent); } header p { margin-top: 14px; }`,
-    split: `header { text-align: left; max-width: 760px; margin: 0 auto; padding: 30px 22px 20px; border-bottom: 4px solid var(--primary); display: grid; grid-template-columns: auto 1fr; column-gap: 16px; align-items: center; } header:not(:has(img)) { display: block; } header img { grid-row: span 2; margin: 0; max-height: 72px; max-width: 110px; } h1 { font-size: clamp(38px, 11vw, 64px); line-height: 1; letter-spacing: -.02em; font-weight: 800; } header p { margin-top: 6px; letter-spacing: .2em; } header p::before, header p::after { display: none; }`,
+    split: `header { text-align: left; max-width: 760px; margin: 0 auto; padding: 30px 22px 20px; border-bottom: 4px solid var(--primary); display: grid; grid-template-columns: auto 1fr; column-gap: 16px; align-items: center; } header:not(:has(img)) { display: block; } header img { grid-row: span 2; margin: 0; max-height: 72px; max-width: 46vw; } h1 { font-size: clamp(38px, 11vw, 64px); line-height: 1; letter-spacing: -.02em; font-weight: 800; } header p { margin-top: 6px; letter-spacing: .2em; } header p::before, header p::after { display: none; }`,
     ticket: `header { position: relative; background: var(--primary); padding: 34px 20px 46px; ${onPrimary} header::after { content: ""; position: absolute; left: 0; right: 0; bottom: 0; height: 16px; background: repeating-conic-gradient(var(--primary) 0 25%, var(--paper) 0 50%) 0 0 / 16px 16px; }`,
     minimal: `header { padding: 72px 20px 34px; } h1 { font-weight: 400; font-size: clamp(26px, 7.5vw, 40px); letter-spacing: .22em; text-transform: uppercase; } header p { margin-top: 14px; letter-spacing: .5em; font-size: 11px; }`
   }[s.header];
@@ -171,10 +175,13 @@ function structureCss(s) {
     none: "",
     dots: `body { background-image: radial-gradient(color-mix(in srgb, var(--ink) 10%, transparent) 1px, transparent 1.6px); background-size: 18px 18px; }`,
     lines: `body { background-image: repeating-linear-gradient(0deg, transparent 0 31px, color-mix(in srgb, var(--accent) 13%, transparent) 31px 32px); }`,
-    chalk: `body { background-image: radial-gradient(60% 40% at 18% 12%, rgba(255,255,255,.07), transparent 70%), radial-gradient(50% 35% at 85% 45%, rgba(255,255,255,.06), transparent 70%), radial-gradient(55% 30% at 30% 85%, rgba(255,255,255,.05), transparent 70%); background-attachment: fixed; }`,
+    // Chalk: erased smudges, a few wiped arcs and a fine dust over the slate.
+    chalk: `body { background-image: radial-gradient(60% 40% at 18% 12%, rgba(255,255,255,.10), transparent 70%), radial-gradient(50% 35% at 85% 45%, rgba(255,255,255,.08), transparent 70%), radial-gradient(55% 30% at 30% 85%, rgba(255,255,255,.07), transparent 70%), repeating-radial-gradient(circle at 70% 20%, transparent 0 38px, rgba(255,255,255,.025) 38px 44px), radial-gradient(rgba(255,255,255,.06) 1px, transparent 1.5px); background-size: auto, auto, auto, auto, 5px 5px; background-attachment: fixed; }`,
     grid: `body { background-image: linear-gradient(color-mix(in srgb, var(--accent) 9%, transparent) 1px, transparent 1px), linear-gradient(90deg, color-mix(in srgb, var(--accent) 9%, transparent) 1px, transparent 1px); background-size: 26px 26px; }`
   }[s.texture];
-  const frame = s.frame ? `main { margin: 22px max(14px, calc((100% - 720px) / 2)); padding: 10px 22px 40px; border: 1px solid var(--accent); outline: 1px solid var(--accent); outline-offset: 5px; background: var(--paper); }` : "";
+  const frame = s.frame === "chalk"
+    ? `body { margin: 0; border: 16px ridge #74492a; min-height: 100vh; box-shadow: inset 0 0 0 3px #3a2414, inset 0 0 70px rgba(0,0,0,.55); } header { background: transparent; } body, h1, h2, .item, .price, .desc, .jump a { text-shadow: 0 0 1px rgba(255,255,255,.35), 0 0 6px rgba(255,255,255,.08); } h2 { border-bottom-style: dashed; } li { border-bottom-style: dashed; } .jump { background: color-mix(in srgb, var(--paper) 93%, transparent); border-bottom: 2px dashed var(--rule); } .jump a { background: transparent; color: var(--primary); border: 2px solid var(--accent); border-radius: 999px 820px 900px 760px / 760px 900px 820px 999px; } footer { color: var(--muted); }`
+    : s.frame === "line" ? `main { margin: 22px max(14px, calc((100% - 720px) / 2)); padding: 10px 22px 40px; border: 1px solid var(--accent); outline: 1px solid var(--accent); outline-offset: 5px; background: var(--paper); }` : "";
   return [header, nav, section, items, texture, frame].filter(Boolean).join("\n  ");
 }
 
@@ -205,4 +212,4 @@ function readStyleMeta(html) {
   }
 }
 
-export { FONTS, normalizeStyle, toStyle, styleCss, styleMeta, readStyleMeta, contrast };
+export { FONTS, normalizeStyle, toStyle, styleCss, styleMeta, readStyleMeta, contrast, luminance, mix };

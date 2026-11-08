@@ -1,9 +1,10 @@
 // Menu Care (stage 6): apply a customer's change request to their live menu.
-//   parseMenuHtml(html)      -> { businessName, primary, accent, logoDataUri, menu, style, subtitle }   (reads the page buildDesignedMenuHtml wrote)
+//   parseMenuHtml(html)      -> { businessName, primary, accent, logoDataUri, menu, style, subtitle, logo }   (reads the page buildDesignedMenuHtml wrote)
 //   diffMenus(before, after) -> [{ kind: "added"|"removed"|"changed", section, name, before?, after? }]
 //   applyMenuChange(env, {...}) -> { menu, summary, diff, problems }   (one generate() call, then deterministic checks)
 // Nothing here publishes. The care step renders the new version and the owner approves it before it goes live.
 import { generate } from "../../ai/generate.js";
+import { LOGO_MODES, parseLogoInfo } from "../menu-qr/design.js";
 import { findUnsupportedFacts } from "../../ai/quality.js";
 import { readStyleMeta } from "../menu-qr/style.js";
 
@@ -17,6 +18,15 @@ class MenuCareError extends Error {
     this.name = "MenuCareError";
     this.code = code;
   }
+}
+
+// The logo's legibility measurement and mode (design.js logoTreatment), so an update keeps the same treatment.
+function readLogoAttr(source) {
+  const attr = /<header>\s*<img [^>]*data-logo="([^"]*)"/.exec(source)?.[1];
+  if (!attr) return null;
+  const text = attr.replace(/&amp;/g, "&").replace(/&quot;/g, '"');
+  const mode = /(?:^|;)m=([a-z]+)/.exec(text)?.[1];
+  return { info: parseLogoInfo(text), mode: LOGO_MODES.includes(mode) ? mode : "auto" };
 }
 
 function parseMenuHtml(html) {
@@ -50,7 +60,8 @@ function parseMenuHtml(html) {
     logoDataUri: logo ? decode(logo) : null,
     menu: { sections, notes, unreadable: "" },
     style: readStyleMeta(source),
-    subtitle: strip(/<\/h1>\s*<p>([\s\S]*?)<\/p>/.exec(source)?.[1]) || "Menu"
+    subtitle: strip(/<\/h1>\s*<p>([\s\S]*?)<\/p>/.exec(source)?.[1]) || "Menu",
+    logo: readLogoAttr(source)
   };
 }
 

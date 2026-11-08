@@ -309,3 +309,35 @@ test('the line under the name and the design structure survive a Menu Care updat
   assert.equal(live.style.layout, 'badge');
   assert.equal(parseMenuHtml(buildDesignedMenuHtml({ businessName: 'Cafe', menu: { sections: [{ name: 'Mains', items: [{ name: 'Soup', price: '8' }] }] }, logoDataUri: null })).subtitle, 'Menu');
 });
+
+test('logo legibility: each design picks none, halo, badge or border from the logo and the header behind it', () => {
+  const menu = { sections: [{ name: 'Mains', items: [{ name: 'Soup', price: '8' }] }] };
+  const png = 'data:image/png;base64,iVBORw0KGgo=';
+  const page = (key, info, mode = 'auto', uri = png) => buildDesignedMenuHtml({ businessName: 'Cafe', menu, logoDataUri: uri, style: MENU_DESIGNS.find((d) => d.key === key).style,
+    logo: { info, mode } });
+  const kind = (html) => /<header>\s*<img [^>]*class="logo-([a-z]+)"/.exec(html)?.[1];
+  const darkThin = { t: 1, l: 0.01, c: 0.25, b: 0 };
+  const darkBold = { t: 1, l: 0.02, c: 0.6, b: 0 };
+  const white = { t: 1, l: 1, c: 0.6, b: 0 };
+  assert.equal(kind(page('bistro', darkBold)), 'badge', 'dark logo on a black header gets a light badge');
+  assert.match(page('bistro', darkBold), /--plate: #[0-9a-f]{6}/);
+  assert.equal(kind(page('modern', darkBold)), 'none', 'dark logo on white needs nothing');
+  assert.equal(kind(page('modern', white)), 'badge', 'white logo on white gets a dark badge');
+  assert.equal(kind(page('fine', darkThin)), 'none');
+  assert.equal(kind(page('bistro', { t: 0, l: 0.9, c: 1, b: 1 })), 'boxed', 'a logo with its own box gets a border');
+  assert.equal(kind(page('bistro', null, 'auto', 'data:image/jpeg;base64,/9j/')), 'boxed', 'an unmeasured JPEG is a box');
+  assert.equal(kind(page('bistro', null)), 'halo', 'an unmeasured PNG gets a halo');
+  assert.equal(kind(page('modern', darkBold, 'dark')), 'badge', 'the buyer can choose a badge');
+  assert.equal(kind(page('bistro', darkBold, 'none')), 'none', '...or none');
+  const live = parseMenuHtml(page('bistro', darkBold, 'light'));
+  assert.deepEqual(live.logo, { info: darkBold, mode: 'light' }, 'Menu Care keeps the measurement and the choice');
+  assert.match(live.logoDataUri, /^data:image\/png/);
+});
+
+test('Chalkboard is hand-lettered in a wooden frame', () => {
+  const html = buildDesignedMenuHtml({ businessName: 'Cafe', menu: { sections: [{ name: 'Mains', items: [{ name: 'Soup', price: '8' }] }] }, logoDataUri: null,
+    style: MENU_DESIGNS.find((d) => d.key === 'chalkboard').style });
+  assert.match(html, /body \{ font-family: "Chalkboard SE", Chalkduster, "Marker Felt", "Comic Sans MS"/);
+  assert.match(html, /border: 16px ridge/);
+  assert.equal(parseMenuHtml(html).style.frame, 'chalk');
+});

@@ -12,7 +12,7 @@
 //   GET  /api/menu-preview/view/<token>                                        the preview page (noindex, unlisted)
 //   GET  /api/menu-preview/handoff/<token>                                     -> { ok, business, email, request_id }
 //   GET  /api/menu-preview/view/<token>/<design>                               one of the generator's designs
-//   POST /api/menu-preview/customize/<token>  multipart { design, logo?, brand? (highlight colour), use_brand?, subtitle? }
+//   POST /api/menu-preview/customize/<token>  multipart { design, logo?, logo_info?, logo_bg?, brand? (highlight colour), use_brand?, subtitle? }
 //   GET  /api/menu-preview/choose/<token>/<design>                             saves the design, then "Make it live"
 //
 // Menu generator (owner, Nov 7, 2026, like the site generator): the menu is read once, then shown in each of the
@@ -34,7 +34,7 @@ import { nowIso, parseJsonOrNull } from "../lib/http.js";
 import { bytesToBase64 } from "../lib/util.js";
 import { brandedEmailHtml, escapeHtml, sendTransactionalEmail } from "../lib/email.js";
 import { menuColors, readMenuWithClaude } from "../producers/menu-qr/claude-reader.js";
-import { buildDesignedMenuHtml } from "../producers/menu-qr/design.js";
+import { LOGO_MODES, buildDesignedMenuHtml, parseLogoInfo } from "../producers/menu-qr/design.js";
 import { MENU_DESIGNS, designStyle, menuDesignFor } from "../producers/menu-qr/menu-designs.js";
 import { sniffImage } from "../producers/website/intake.js";
 import { MENU_PACKAGE_PRICING } from "../checkout/quote.js";
@@ -102,6 +102,8 @@ function publicPreviewPage(menuHtml, token, { index = 0, custom = {} } = {}) {
   <input type="hidden" name="design" value="${escapeHtml(d.key)}">
   <p class="mm-own-now">${have.length ? `Using ${escapeHtml(have.join(", "))}. A new logo replaces the old one.` : `Add your logo and colour. All ${MENU_DESIGNS.length} designs update.`}</p>
   <label>Logo <small>(PNG, JPG or WebP, up to 1.5 MB)</small><input type="file" name="logo" accept="image/png,image/jpeg,image/webp"></label>
+  <input type="hidden" name="logo_info" value="">
+  <label>Logo background <small>(Automatic picks one per design so the logo stands out)</small><select name="logo_bg">${[["auto", "Automatic"], ["none", "None"], ["light", "Light badge"], ["dark", "Dark badge"], ["accent", "Highlight colour badge"]].map(([v, t]) => `<option value="${v}"${(custom.logo_bg || "auto") === v ? " selected" : ""}>${t}</option>`).join("")}</select></label>
   <label class="mm-own-colour">Highlight colour <input type="color" name="brand" value="${brand || "#00a7b5"}"></label>
   <label class="mm-own-check"><input type="checkbox" name="use_brand" value="1"${brand ? " checked" : ""}> Use it for lines, borders and accents</label>
   <label>Line under your name <small>(e.g. Dinner Menu, Est. 1998)</small><input name="subtitle" maxlength="60" value="${escapeHtml(custom.subtitle || "Menu")}"></label>
@@ -110,7 +112,31 @@ function publicPreviewPage(menuHtml, token, { index = 0, custom = {} } = {}) {
   <div class="mm-own-busy" role="status" aria-live="polite" hidden><span class="mm-spin" aria-hidden="true"></span><p><strong>Updating your menu…</strong></p><p>This takes a few seconds; the page reloads by itself.</p></div>
   </div></dialog>
 </aside>
-<script>window.addEventListener("pageshow", function () { var b = document.querySelector(".mm-own-box"); if (!b) return; b.querySelector("form").hidden = false; b.querySelector(".mm-own-busy").hidden = true; });</script>`;
+<script>
+// Measures a chosen logo here in the browser (nothing extra is uploaded): see-through parts, average brightness,
+// how much of its outline box is ink, and whether it is a solid box. design.js logoTreatment uses it.
+(function () {
+  var input = document.querySelector('#mm-own input[name=logo]'); if (!input) return;
+  input.addEventListener("change", function () {
+    var out = input.form.elements.logo_info; out.value = "";
+    var file = input.files && input.files[0]; if (!file || !window.createImageBitmap) return;
+    createImageBitmap(file).then(function (bmp) {
+      var k = Math.min(1, 160 / Math.max(bmp.width, bmp.height)), w = Math.max(1, Math.round(bmp.width * k)), h = Math.max(1, Math.round(bmp.height * k));
+      var c = document.createElement("canvas"); c.width = w; c.height = h; var x = c.getContext("2d"); x.drawImage(bmp, 0, 0, w, h);
+      var d = x.getImageData(0, 0, w, h).data, lin = function (v) { v /= 255; return v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4); };
+      var ink = 0, clear = 0, sum = 0, edge = 0, edgeSolid = 0, x0 = w, y0 = h, x1 = -1, y1 = -1;
+      for (var y = 0; y < h; y++) for (var i = 0; i < w; i++) {
+        var p = (y * w + i) * 4, a = d[p + 3];
+        if (y === 0 || y === h - 1 || i === 0 || i === w - 1) { edge++; if (a > 200) edgeSolid++; }
+        if (a < 16) { clear++; continue; }
+        if (a > 128) { ink++; sum += 0.2126 * lin(d[p]) + 0.7152 * lin(d[p + 1]) + 0.0722 * lin(d[p + 2]); if (i < x0) x0 = i; if (i > x1) x1 = i; if (y < y0) y0 = y; if (y > y1) y1 = y; }
+      }
+      var box = (x1 - x0 + 1) * (y1 - y0 + 1);
+      out.value = "t=" + (clear / (w * h) > 0.05 ? 1 : 0) + ";l=" + (ink ? (sum / ink).toFixed(3) : "0.5") + ";c=" + (box > 0 ? (ink / box).toFixed(2) : "1") + ";b=" + (edge && edgeSolid / edge > 0.9 ? 1 : 0);
+    }).catch(function () {});
+  });
+})();
+window.addEventListener("pageshow", function () { var b = document.querySelector(".mm-own-box"); if (!b) return; b.querySelector("form").hidden = false; b.querySelector(".mm-own-busy").hidden = true; });</script>`;
   const style = `<style>
   body { padding-bottom: 170px; }
   body::after { content: ""; position: fixed; inset: 0; z-index: 4; pointer-events: none; background-image: url("data:image/svg+xml,${mark}"); }
@@ -124,6 +150,7 @@ function publicPreviewPage(menuHtml, token, { index = 0, custom = {} } = {}) {
   .mm-own h2 { margin: 0; padding: 0; border: 0; font: 700 20px/1.2 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; color: #fff; text-transform: none; letter-spacing: 0; text-align: left; } .mm-own h2::after { content: none; }
   .mm-own .mm-own-x { padding: 2px 10px; border: 0; background: none; color: #e8f6f7; font-size: 26px; line-height: 1; }
   .mm-own form { display: grid; gap: 14px; } .mm-own label { display: grid; gap: 4px; font-weight: 600; } .mm-own small { font-weight: 400; opacity: .8; }
+  .mm-own select { font: 15px/1.4 system-ui, sans-serif; padding: 9px 10px; border: 1px solid #ffffff4d; border-radius: 8px; background: #0d2a38; color: #e8f6f7; }
   .mm-own input[name=subtitle] { width: 100%; font: 15px/1.4 system-ui, sans-serif; padding: 10px 12px; border: 1px solid #ffffff4d; border-radius: 8px; background: #0d2a38; color: #e8f6f7; }
   .mm-own input[type=file] { color: #e8f6f7; max-width: 100%; } .mm-own .mm-own-colour, .mm-own .mm-own-check { display: flex; align-items: center; gap: 10px; } .mm-own input[type=color] { width: 52px; height: 36px; border: 0; padding: 0; background: none; }
   .mm-own p { margin: 0; color: #e8f6f7; } .mm-own button { padding: 12px 18px; border: 0; border-radius: 8px; background: #00a7b5; color: #fff; font: 700 15px system-ui, sans-serif; cursor: pointer; }
@@ -151,7 +178,8 @@ function renderMenuDesign(data, key, logoDataUri = null) {
     menu: data.menu,
     logoDataUri,
     style: designStyle(design.key, data.menu),
-    subtitle: custom.subtitle
+    subtitle: custom.subtitle,
+    logo: { info: custom.logo_info || null, mode: custom.logo_bg || "auto" }
   });
 }
 
@@ -356,7 +384,11 @@ async function handlePreviewCustomize(request, env, token, { now = Date.now() } 
     if (!type) return oops("The logo has to be a PNG, JPG or WebP image.");
     await env.ASSETS.put(`menu-previews/${token}/logo`, bytes, { httpMetadata: { contentType: type.mime } });
     custom.logo = { mime: type.mime };
+    // The browser's measurement of this logo (none if its script didn't run: a JPEG is then treated as a solid box).
+    custom.logo_info = parseLogoInfo(form.get("logo_info")) || (type.mime === "image/jpeg" ? { t: 0, l: null, c: null, b: 1 } : null);
   }
+  const bg = String(form.get("logo_bg") || "");
+  if (LOGO_MODES.includes(bg)) custom.logo_bg = bg;
   const brand = String(form.get("brand") || "").trim().toLowerCase();
   custom.color = form.get("use_brand") === "1" && hexOk(brand) ? brand : "";
   if (form.has("subtitle")) {
