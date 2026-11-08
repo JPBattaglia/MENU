@@ -181,7 +181,8 @@ async function runMenuCareProduceStep(targetStep, env, deps = {}) {
     brandColors: [live.primary, live.accent].filter(Boolean).join(", "),
     menu: change.menu,
     logoDataUri: live.logoDataUri,
-    style: live.style
+    style: live.style,
+    subtitle: live.subtitle
   });
   assertMenuRendered(html, change.menu);
   const bytes = new TextEncoder().encode(html);

@@ -1,5 +1,5 @@
 // Menu Care (stage 6): apply a customer's change request to their live menu.
-//   parseMenuHtml(html)      -> { businessName, primary, accent, logoDataUri, menu }   (reads the page buildDesignedMenuHtml wrote)
+//   parseMenuHtml(html)      -> { businessName, primary, accent, logoDataUri, menu, style, subtitle }   (reads the page buildDesignedMenuHtml wrote)
 //   diffMenus(before, after) -> [{ kind: "added"|"removed"|"changed", section, name, before?, after? }]
 //   applyMenuChange(env, {...}) -> { menu, summary, diff, problems }   (one generate() call, then deterministic checks)
 // Nothing here publishes. The care step renders the new version and the owner approves it before it goes live.
@@ -49,7 +49,8 @@ function parseMenuHtml(html) {
     accent: /--accent:\s*(#[0-9a-f]{6})/i.exec(source)?.[1] || null,
     logoDataUri: logo ? decode(logo) : null,
     menu: { sections, notes, unreadable: "" },
-    style: readStyleMeta(source)
+    style: readStyleMeta(source),
+    subtitle: strip(/<\/h1>\s*<p>([\s\S]*?)<\/p>/.exec(source)?.[1]) || "Menu"
   };
 }
 

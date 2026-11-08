@@ -75,6 +75,8 @@ function normalizeStyle(raw) {
     align: raw.heading_align === "left" ? "left" : "center",
     divider: pick(raw.divider, DIVIDERS, "line"),
     layout: pick(raw.item_layout, LAYOUTS, "stacked"),
+    // Menu generator designs (menu-designs.js): the name on the paper, or on a band of the heading colour.
+    header: raw.header === "band" ? "band" : "plain",
     dark
   };
 }
@@ -110,6 +112,7 @@ function styleCss(s) {
   .desc { color: var(--muted); }
   .notes { background: transparent; border-color: var(--rule); color: var(--muted); }
   footer { color: var(--muted); }
+  ${s.header === "band" ? `header { background: var(--primary); color: var(--paper); padding: 34px 20px 26px; } h1 { color: var(--paper); } header p { color: var(--paper); opacity: .88; } header p::before, header p::after { background: var(--paper); }` : ""}
   ${s.layout === "inline" ? `li { padding: 10px 0; } li:has(.desc) .row .leader { display: none; } li:has(.desc) .row { display: block; } li:has(.desc) .row .price { float: right; margin-left: 12px; } li:has(.desc) .desc { margin-top: 2px; }` : ""}`;
 }
 
@@ -125,7 +128,7 @@ function toStyle(value) {
   return normalizeStyle({
     paper: value.paper, text: value.text, heading: value.heading, item: value.item, price: value.price, accent: value.accent,
     title_font: value.titleFont, heading_font: value.headingFont, body_font: value.bodyFont, heading_case: value.headingCase,
-    item_case: value.itemCase, heading_align: value.align, divider: value.divider, item_layout: value.layout
+    item_case: value.itemCase, heading_align: value.align, divider: value.divider, item_layout: value.layout, header: value.header
   });
 }
 

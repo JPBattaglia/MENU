@@ -54,7 +54,8 @@ async function loadLogoDataUri(asset, env) {
   return `data:${mime};base64,${bytesToBase64(bytes)}`;
 }
 
-function buildDesignedMenuHtml({ businessName, brandColors, menu, logoDataUri, style }) {
+// subtitle: the line under the name ("Menu" unless the buyer changed it with Customize in the menu generator).
+function buildDesignedMenuHtml({ businessName, brandColors, menu, logoDataUri, style, subtitle }) {
   // The look of the customer's own menu, when the reader saw one (style.js); otherwise the standard page.
   let theme = toStyle(style ?? menu?.style);
   const esc = escapeHtml2;
@@ -76,6 +77,7 @@ function buildDesignedMenuHtml({ businessName, brandColors, menu, logoDataUri, s
   })).filter((section) => section.items.length);
   const notes = clean(menu.notes, 1000);
   const name = esc(businessName || "Menu");
+  const line = esc(clean(subtitle, 60) || "Menu");
   const nav = sections.length > 1
     ? `<nav class="jump" aria-label="Menu sections">${sections.map((s) => `<a href="#${s.id}">${esc(s.name)}</a>`).join("")}</nav>`
     : "";
@@ -128,7 +130,7 @@ ${styleMeta(theme)}
   <header>
     ${logoDataUri ? `<img src="${esc(logoDataUri)}" alt="${name} logo">` : ""}
     <h1>${name}</h1>
-    <p>Menu</p>
+    <p>${line}</p>
   </header>
   ${nav}
   <main>
