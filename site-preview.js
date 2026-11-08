@@ -15,7 +15,7 @@
   try { if (rep) localStorage.setItem('mm-rep', rep); else rep = localStorage.getItem('mm-rep') || ''; } catch { /* storage off */ }
   if (rep) {
     const label = form.querySelector('label[for="site_email"]');
-    if (label) label.textContent = 'Their email (optional, we send them the link)';
+    if (label) label.textContent = 'Email (we send you the link)';
     $('site_email').required = false;
     const note = document.createElement('p');
     note.className = 'mm-try-rep';

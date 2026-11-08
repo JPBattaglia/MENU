@@ -20,7 +20,7 @@
   if (rep) {
     form.classList.add('is-rep');
     const label = form.querySelector('label[for="try_email"]');
-    if (label) label.textContent = 'Their email (optional, we send them the link)';
+    if (label) label.textContent = 'Email (we send you the link)';
     $('try_email').required = false;
     const fine = form.querySelector('.mm-try-fine');
     if (fine) fine.textContent = 'Rep mode: no limits for you. Take a photo of their menu or upload the PDF.';
