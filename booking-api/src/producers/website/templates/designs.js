@@ -16,7 +16,7 @@ const trattoria = {
 .top{display:flex;justify-content:center;gap:28px;padding:14px 20px;background:${ink};font:600 14px/1 Lora,serif;letter-spacing:.12em;text-transform:uppercase}.top a{color:#f3e9da;text-decoration:none}.top a:hover{text-decoration:underline}
 .hero{position:relative;text-align:center;color:#fff;padding:110px 20px 120px;background:${d.photos[0] ? "#1c1410" : `radial-gradient(circle at 20% 20%,${mix(b, "#ffffff", .12)},transparent 55%),linear-gradient(160deg,${mix(b, "#000000", .15)},${mix(b, "#000000", .55)})`};overflow:hidden}
 .hero img.bg{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:.45}.hero .in{position:relative;max-width:820px;margin:0 auto}
-.hero .logo{margin:0 auto 22px;height:clamp(96px,14vw,140px);width:auto;max-width:300px;object-fit:contain;background:#fff;border-radius:16px;padding:10px}
+.hero .logo{margin:0 auto 22px;height:clamp(96px,14vw,140px);width:auto;max-width:300px;object-fit:contain}
 .hero h1{font:800 clamp(42px,8vw,86px)/1.05 'Playfair Display',Georgia,serif;margin:0 0 14px}.hero p{font-size:clamp(19px,2.6vw,24px);margin:0 auto 28px;max-width:34ch}
 .orn{display:block;margin:0 auto 18px;width:120px;height:2px;background:currentColor;opacity:.6}
 .btn{display:inline-block;margin:6px;padding:14px 26px;border:2px solid #fff;color:#fff;text-decoration:none;font-weight:600;letter-spacing:.05em}.btn.fill{background:${b};border-color:${b};color:${on}}
@@ -77,7 +77,7 @@ const nightMarket = {
     const b = brandOr(brandIn, this.defaultBrand), bg = "#0d0d0f", ink = "#f2f2f2", acc = textOn(b, bg, "#ffd166"), on = inkOn(acc);
     const css = `body{background:${bg};color:${ink};font:17px/1.6 Inter,system-ui,sans-serif}
 header.top{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:18px clamp(18px,4vw,48px);border-bottom:1px solid #ffffff1a}
-.brand{font:34px/1 'Bebas Neue',Impact,sans-serif;letter-spacing:.04em;color:${ink};text-decoration:none;display:flex;gap:12px;align-items:center}.brand .logo{height:60px;width:auto;max-width:190px;object-fit:contain;background:#fff;border-radius:10px;padding:6px}
+.brand{font:34px/1 'Bebas Neue',Impact,sans-serif;letter-spacing:.04em;color:${ink};text-decoration:none;display:flex;gap:12px;align-items:center}.brand .logo{height:60px;width:auto;max-width:190px;object-fit:contain}
 header.top nav{display:flex;gap:22px}header.top nav a{color:${ink};text-decoration:none;font:22px 'Bebas Neue',sans-serif;letter-spacing:.06em}header.top nav a:hover{color:${acc}}
 .hero{padding:clamp(48px,9vw,120px) clamp(18px,4vw,48px) 64px;position:relative;overflow:hidden}.hero:before{content:"";position:absolute;width:60vw;height:60vw;max-width:760px;max-height:760px;right:-12vw;top:-20vw;background:radial-gradient(circle,${acc}55,transparent 65%);filter:blur(10px)}
 .hero img.bg{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:.3}.hero h1{position:relative;font:clamp(72px,15vw,200px)/.88 'Bebas Neue',Impact,sans-serif;margin:0;text-transform:uppercase;letter-spacing:.01em}.hero h1 span{color:${acc}}
@@ -203,7 +203,7 @@ const cafePop = {
     const wave = (fill) => `<svg class="wave" viewBox="0 0 1440 60" preserveAspectRatio="none" aria-hidden="true"><path d="M0 30 Q 120 0 240 30 T 480 30 T 720 30 T 960 30 T 1200 30 T 1440 30 V60 H0Z" fill="${fill}"/></svg>`;
     const css = `body{background:${cream};color:${ink};font:18px/1.65 Nunito,system-ui,sans-serif}
 header.top{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:16px clamp(16px,4vw,40px)}
-.brand{display:flex;align-items:center;gap:10px;font:700 26px Fredoka,sans-serif;color:${ink};text-decoration:none}.brand .logo{height:62px;width:auto;max-width:190px;object-fit:contain;border-radius:14px;background:#fff;padding:6px}
+.brand{display:flex;align-items:center;gap:10px;font:700 26px Fredoka,sans-serif;color:${ink};text-decoration:none}.brand .logo{height:62px;width:auto;max-width:190px;object-fit:contain}
 header.top nav{display:flex;gap:10px}header.top nav a{font:600 17px Fredoka,sans-serif;color:${ink};text-decoration:none;background:#fff;padding:8px 16px;border-radius:14px;box-shadow:0 3px 0 ${ink}22}
 .hero{text-align:center;padding:40px 20px 70px;background:${pastels[0]}}.pic{max-width:720px;margin:30px auto 0;border:3px solid ${ink};border-radius:28px;overflow:hidden;box-shadow:0 8px 0 ${ink}22}.pic img{width:100%;aspect-ratio:16/9;object-fit:cover}.pic.tilt{max-width:560px;transform:rotate(-1.5deg)}.hero h1{font:700 clamp(46px,9vw,100px)/1 Fredoka,sans-serif;margin:10px 0 12px;color:${ink}}.hero p{font-size:21px;max-width:36ch;margin:0 auto 24px}
 .blob{display:inline-block;background:${b};color:${on};font:600 20px Fredoka,sans-serif;padding:14px 26px;border-radius:22px;text-decoration:none;margin:6px;box-shadow:0 5px 0 ${mix(b, "#000000", .3)}}.blob.w{background:#fff;color:${ink};box-shadow:0 5px 0 ${ink}33}
@@ -235,7 +235,7 @@ const coastal = {
     const b = brandOr(brandIn, this.defaultBrand), navy = mix(b, "#0b1a2b", .7), sand = "#f4efe6", ink = "#1b2633", acc = textOn(b, sand, ink), on = inkOn(b);
     const css = `body{background:${sand};color:${ink};font:300 17px/1.8 Merriweather,Georgia,serif}
 .rail{position:fixed;inset:0 auto 0 0;width:300px;background:${navy};color:#eef3f8;padding:36px 30px;display:flex;flex-direction:column;gap:26px;z-index:5}
-.rail .logo{height:110px;width:auto;max-width:100%;object-fit:contain;background:#fff;border-radius:16px;padding:8px;align-self:flex-start}.rail .name{font:800 30px/1.1 Montserrat,sans-serif;margin:0;color:#fff}.rail .tag{font-size:15px;color:#c6d3e1;margin:0}
+.rail .logo{height:110px;width:auto;max-width:100%;object-fit:contain;align-self:flex-start}.rail .name{font:800 30px/1.1 Montserrat,sans-serif;margin:0;color:#fff}.rail .tag{font-size:15px;color:#c6d3e1;margin:0}
 .rail nav{display:flex;flex-direction:column;gap:2px}.rail nav a{color:#eef3f8;text-decoration:none;font:700 14px Montserrat,sans-serif;letter-spacing:.14em;text-transform:uppercase;padding:10px 0;border-bottom:1px solid #ffffff22}.rail nav a:hover{color:#fff;padding-left:6px}
 .rail .callme{margin-top:auto;background:${b};color:${on};text-decoration:none;text-align:center;font:700 15px Montserrat,sans-serif;padding:14px;border-radius:10px}
 .content{margin-left:300px}.hero{min-height:72vh;display:flex;align-items:flex-end;padding:clamp(28px,6vw,80px);position:relative;color:#fff;background:${d.photos[0] ? "#122" : `linear-gradient(180deg,${mix(b, "#ffffff", .25)},${navy})`};overflow:hidden}
@@ -267,12 +267,12 @@ const taproom = {
     const today = d.hours.slice(0, 3);
     const css = `body{background:${green};color:${cream};font:18px/1.65 'Source Sans 3',system-ui,sans-serif}
 header.top{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:14px clamp(16px,4vw,44px);border-bottom:3px double ${brass}66}
-.brand{display:flex;align-items:center;gap:10px;font:22px 'Alfa Slab One',Georgia,serif;color:${cream};text-decoration:none;letter-spacing:.02em}.brand .logo{height:56px;width:auto;max-width:180px;object-fit:contain;background:#fff;border-radius:10px;padding:6px}
+.brand{display:flex;align-items:center;gap:10px;font:22px 'Alfa Slab One',Georgia,serif;color:${cream};text-decoration:none;letter-spacing:.02em}.brand .logo{height:56px;width:auto;max-width:180px;object-fit:contain}
 header.top nav{display:flex;gap:22px}header.top nav a{color:${cream};text-decoration:none;font-weight:700;letter-spacing:.14em;text-transform:uppercase;font-size:14px}header.top nav a:hover{color:${brass}}
 .hero{position:relative;text-align:center;padding:clamp(48px,8vw,100px) 20px clamp(40px,6vw,70px);${d.photos[0] ? "overflow:hidden" : `background:radial-gradient(ellipse at 50% 0,${panel},${green} 70%)`}}
 .hero img.bg{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:.3}.hero .in{position:relative}
 .crest{display:inline-block;border:3px solid ${brass};outline:1px solid ${brass};outline-offset:6px;border-radius:24px;padding:clamp(22px,4vw,40px) clamp(24px,6vw,64px);background:${green}cc}
-.crest .logo{margin:0 auto 12px;height:clamp(100px,14vw,140px);width:auto;max-width:300px;object-fit:contain;background:#fff;border-radius:14px;padding:10px}.crest small{display:block;color:${brass};font-weight:700;letter-spacing:.3em;text-transform:uppercase;font-size:13px}
+.crest .logo{margin:0 auto 12px;height:clamp(100px,14vw,140px);width:auto;max-width:300px;object-fit:contain}.crest small{display:block;color:${brass};font-weight:700;letter-spacing:.3em;text-transform:uppercase;font-size:13px}
 .crest h1{font:clamp(44px,8vw,92px)/1 'Alfa Slab One',Georgia,serif;margin:12px 0;color:${cream};text-shadow:0 3px 0 #0007}.crest p{margin:0;font-size:20px;color:#d8cfbb}
 .hours-strip{display:flex;flex-wrap:wrap;justify-content:center;gap:10px 28px;margin:28px auto 0;max-width:900px}.hours-strip span{font-weight:700}.hours-strip b{color:${brass};margin-right:6px;text-transform:uppercase;letter-spacing:.1em;font-size:14px}
 .go{display:inline-block;margin:24px 6px 0;padding:14px 24px;border-radius:999px;text-decoration:none;font-weight:700;letter-spacing:.06em;text-transform:uppercase;font-size:15px;background:${brass};color:${on}}.go.out{background:transparent;color:${cream};box-shadow:inset 0 0 0 2px ${cream}}
