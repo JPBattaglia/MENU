@@ -3,6 +3,7 @@ import { handlePreviewCreate, handlePreviewView, handlePreviewHandoff, handleRep
 import { handleSiteForm } from "./producers/site-files/site-form.js";
 import { handleDomainLookup } from "./producers/website/registrar.js";
 import { runDomainPurchases } from "./producers/website/domain-purchase.js";
+import { handleDomainRenewDone, handleDomainRenewPay, runDomainRenewals } from "./producers/website/domain-renewal.js";
 import { handleWebsitePreviewCreate, handleWebsitePreviewView, handleWebsitePreviewHandoff, handleWebsitePreviewCustomize, handleWebsitePreviewImage, handleProspectSiteDemo } from "./marketing/website-preview.js";
 import { handleOrderCancel } from "./account/cancel.js";
 import { handleBuyerRevision } from "./approvals/buyer-revision.js";
@@ -248,6 +249,10 @@ var worker_default = {
     if (liveSiteMatch && methodAllowed(request, liveSiteMatch[2])) {
       return serveSlug(request, env, liveSiteMatch[1], liveSiteMatch[2]);
     }
+    const domainRenewMatch = url.pathname.match(/^\/api\/domain-renew\/([a-z0-9.-]{3,253})(\/done)?$/);
+    if (domainRenewMatch && request.method === "GET") {
+      return domainRenewMatch[2] ? handleDomainRenewDone(request, domainRenewMatch[1]) : handleDomainRenewPay(request, env, domainRenewMatch[1]);
+    }
     const extraPagesMatch = url.pathname.match(/^\/api\/extra-pages\/([A-Za-z0-9-]{1,64})(\/done)?$/);
     if (extraPagesMatch && request.method === "GET") {
       return extraPagesMatch[2] ? handleExtraPagesDone(request) : handleExtraPagesPay(request, env, extraPagesMatch[1]);
@@ -429,6 +434,8 @@ const mmWorkerWithBooking = {
       });
       // Domains bought at checkout: register, point, tell the buyer (every tick, a few at a time).
       await runDomainPurchases(env).catch((error) => console.error("Domain purchases failed:", error instanceof Error ? error.message : String(error)));
+      // Domain renewals: once a day, pay-link emails before expiry; auto-renew on only once the buyer has paid.
+      await runDomainRenewals(env).catch((error) => console.error("Domain renewals failed:", error instanceof Error ? error.message : String(error)));
       await advanceSelfTests(env, app).catch((error) => console.error("Self-test failed:", error instanceof Error ? error.message : String(error)));
       await advanceSubscriptionSelfTests(env, app).catch((error) => console.error("Subscription self-test failed:", error instanceof Error ? error.message : String(error)));
       await advanceRoutingSelfTests(env, app).catch((error) => console.error("Routing self-test failed:", error instanceof Error ? error.message : String(error)));

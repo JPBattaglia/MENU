@@ -9,6 +9,7 @@ import { startConversionFix } from "../producers/conversion/intake.js";
 import { startGoogleVisibility } from "../producers/google-visibility/intake.js";
 import { refreshOnboardingState } from "../onboarding/onboarding.js";
 import { handleExtraPagesPaid } from "../producers/menu-qr/page-billing.js";
+import { handleDomainRenewalPaid } from "../producers/website/domain-renewal.js";
 import { SUBSCRIPTION_EVENTS, handleSubscriptionEvent, onSubscriptionCheckoutCompleted } from "../subscriptions/webhooks.js";
 import { startDesignBrief } from "../producers/nino-design/brief.js";
 import { startStaffMerch } from "../producers/staff-merch/order.js";
@@ -177,6 +178,8 @@ async function handleStripeWebhook(request, env) {
       if (event.type === "checkout.session.completed") {
         if (event.data?.object?.metadata?.purpose === "extra_menu_pages") {
           await handleExtraPagesPaid(event.data.object, env);
+        } else if (event.data?.object?.metadata?.purpose === "domain_renewal") {
+          await handleDomainRenewalPaid(event.data.object, env);
         } else {
           await handleCheckoutCompleted(
             event,

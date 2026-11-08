@@ -11,8 +11,8 @@
 //     HELD         -> the price rose more than PRICE_SLACK_CENTS since checkout; the owner decides
 //     FAILED       -> Cloudflare refused or the name was taken meanwhile; the owner is alerted (runbook R2)
 //     TEST         -> a sandbox order: nothing is bought
-// Renewals: registered with auto-renew off (Cloudflare's default), so nothing renews unpaid. Renewal reminders with a
-// pay link (cost + $5) switch auto-renew on once paid (PATCH registrations/<domain>); see the handbook roadmap.
+// Renewals: registered with auto-renew off (Cloudflare's default), so nothing renews unpaid. domain-renewal.js emails the
+// buyer a pay link (cost + $5) from 45 days before expiry and switches auto-renew on only once paid.
 import { brandedEmailHtml, escapeHtml, sendTransactionalEmail } from "../../lib/email.js";
 import { ownerEmailAddress } from "../../lib/config.js";
 import { nowIso } from "../../lib/http.js";
