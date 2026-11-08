@@ -1,5 +1,5 @@
 import { handleAdminQueue } from "./admin/queue.js";
-import { handlePreviewCreate, handlePreviewView, handlePreviewHandoff, handlePreviewCustomize, handlePreviewChoose, handleRepLink } from "./marketing/public-preview.js";
+import { handlePreviewCreate, handlePreviewView, handlePreviewHandoff, handlePreviewCustomize, handlePreviewChoose, handleRepLink, runPreviewReminders } from "./marketing/public-preview.js";
 import { handleSiteForm } from "./producers/site-files/site-form.js";
 import { handleDomainLookup } from "./producers/website/registrar.js";
 import { runDomainPurchases } from "./producers/website/domain-purchase.js";
@@ -441,6 +441,8 @@ const mmWorkerWithBooking = {
       await runDomainPurchases(env).catch((error) => console.error("Domain purchases failed:", error instanceof Error ? error.message : String(error)));
       // Domain renewals: once a day, pay-link emails before expiry; auto-renew on only once the buyer has paid.
       await runDomainRenewals(env).catch((error) => console.error("Domain renewals failed:", error instanceof Error ? error.message : String(error)));
+      // Menu previews: one reminder about 2 days in when no order came from it (hourly, 9 am to 7 pm Pacific).
+      await runPreviewReminders(env).catch((error) => console.error("Preview reminders failed:", error instanceof Error ? error.message : String(error)));
       await advanceSelfTests(env, app).catch((error) => console.error("Self-test failed:", error instanceof Error ? error.message : String(error)));
       await advanceSubscriptionSelfTests(env, app).catch((error) => console.error("Subscription self-test failed:", error instanceof Error ? error.message : String(error)));
       await advanceRoutingSelfTests(env, app).catch((error) => console.error("Routing self-test failed:", error instanceof Error ? error.message : String(error)));

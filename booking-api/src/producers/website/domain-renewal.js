@@ -112,7 +112,7 @@ async function emailBuyerRenewal(env, row, number) {
     html: brandedEmailHtml({
       preheader: `${amount} keeps ${row.domain} yours until ${dateText(new Date(Date.parse(row.expires_at) + 365 * DAY).toISOString())}.`,
       eyebrow: reminder ? "RENEWAL REMINDER" : "YOUR DOMAIN",
-      heading: `Keep ${escapeHtml(row.domain)} for another year`,
+      heading: `Keep ${row.domain} for another year`,
       paragraphs: [`Hi ${escapeHtml(who.first_name || "there")},`, ...lines.map(escapeHtml)],
       rows: [["Domain", row.domain], ["Expires", expires], ["Renewal (1 year)", amount]],
       buttons: [{ label: `Renew for ${amount}`, url, primary: true }],
@@ -136,7 +136,7 @@ async function emailBuyerRenewed(env, row, newExpiry) {
     to: String(who.email).trim(),
     subject: `${row.domain} is renewed until ${until}`,
     html: brandedEmailHtml({
-      preheader: `Your domain is yours for another year.`, eyebrow: "YOUR DOMAIN", heading: `${escapeHtml(row.domain)} is renewed`,
+      preheader: `Your domain is yours for another year.`, eyebrow: "YOUR DOMAIN", heading: `${row.domain} is renewed`,
       paragraphs: [`Hi ${escapeHtml(who.first_name || "there")}, thanks for your payment. ${escapeHtml(row.domain)} is now registered in your name until <strong>${escapeHtml(until)}</strong>.`,
         "Before next year's renewal we'll email you again; nothing renews without your OK."],
       buttons: [{ label: "Open your website", url: `https://${row.domain}/`, primary: true }],
@@ -155,7 +155,7 @@ async function alertOwnerUnpaid(env, row) {
     to: ownerEmailAddress(env),
     subject: `Domain renewal unpaid: ${row.domain} expires ${dateText(row.expires_at)}`,
     html: brandedEmailHtml({
-      eyebrow: "WAITING ON THE BUYER", heading: `${escapeHtml(business)} hasn't renewed ${escapeHtml(row.domain)}`,
+      eyebrow: "WAITING ON THE BUYER", heading: `${business} hasn't renewed ${row.domain}`,
       paragraphs: [`The domain expires on ${escapeHtml(dateText(row.expires_at))}. The buyer has had ${Number(row.renewal_emails || 0)} renewal emails with a pay link (${escapeHtml(dollars(renewalCents(row)))}).`,
         "If they don't pay, nothing is charged to Menu-made: the domain lapses and their website keeps working on its menu-made.com address. A nudge from you may help."],
       rows: [["Business", business], ["Buyer", who?.email || ""], ["Domain", row.domain], ["Order", row.order_id || ""]]
@@ -178,7 +178,7 @@ async function alertOwnerStuck(env, row, why) {
     to: ownerEmailAddress(env),
     subject: `[Domain] ${row.domain}: renewal paid, renew it by hand`,
     html: brandedEmailHtml({
-      eyebrow: "DOMAIN", heading: `${escapeHtml(row.domain)}: the buyer paid, Cloudflare hasn't renewed`,
+      eyebrow: "DOMAIN", heading: `${row.domain}: the buyer paid, Cloudflare hasn't renewed`,
       paragraphs: [`${escapeHtml(why)} The buyer paid ${escapeHtml(dollars(row.renewal_paid_cents || renewalCents(row)))} on ${escapeHtml(dateText(row.renewal_paid_at || nowIso()))}. It expires ${escapeHtml(dateText(row.expires_at))}.`,
         "Renew it by hand (about 2 minutes):", ...steps.map((s, i) => `${i + 1}. ${escapeHtml(s)}`)]
     }),

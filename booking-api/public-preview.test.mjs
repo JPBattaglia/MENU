@@ -5,7 +5,7 @@ import assert from 'node:assert/strict';
 import { createD1, createR2 } from './test-support/d1.mjs';
 
 const { default: worker } = await import('./src/worker.js');
-const { publicPreviewPage, menuPreviewChoice, PER_NETWORK_DAY, PER_EMAIL } = await import('./src/marketing/public-preview.js');
+const { publicPreviewPage, menuPreviewChoice, runPreviewReminders, PER_NETWORK_DAY, PER_EMAIL } = await import('./src/marketing/public-preview.js');
 const { MENU_DESIGNS } = await import('./src/producers/menu-qr/menu-designs.js');
 const { buildDesignedMenuHtml } = await import('./src/producers/menu-qr/design.js');
 const { parseMenuHtml } = await import('./src/producers/menu-care/menu-edit.js');
@@ -31,12 +31,12 @@ function setup() {
 }
 
 function stubClaude(t) {
-  const calls = { claude: 0, email: 0 };
+  const calls = { claude: 0, email: 0, sent: [] };
   const original = globalThis.fetch;
-  globalThis.fetch = async (input) => {
+  globalThis.fetch = async (input, init) => {
     const url = String(input?.url || input);
     if (url === 'https://api.anthropic.com/v1/messages') { calls.claude++; return Response.json({ model: 'claude-test', content: [{ type: 'tool_use', name: 'record_menu', input: MENU }], usage: { input_tokens: 1, output_tokens: 1 } }); }
-    if (url === 'https://api.resend.com/emails') { calls.email++; return Response.json({ id: 'em_1' }); }
+    if (url === 'https://api.resend.com/emails') { calls.email++; try { calls.sent.push(JSON.parse(init?.body)); } catch { /* not JSON */ } return Response.json({ id: 'em_1' }); }
     throw new Error(`unexpected fetch ${url}`);
   };
   t.after(() => { globalThis.fetch = original; });
@@ -360,4 +360,36 @@ test('Customize: change the business name, or hide it when the logo already spel
   assert.equal(live.hideName, true, 'Menu Care keeps the name hidden');
   await customize({ design: 'classic', business_name: '' });
   assert.match(await (await f.get(`/api/menu-preview/view/${token}/classic`)).text(), /<h1>Sample Cafe<\/h1>/, 'emptied: back to the original name');
+});
+
+test('one reminder about 2 days in, only when no order came from the preview', async (t) => {
+  const { f, calls, token, requestId } = await madePreview(t);
+  const created = Date.parse(f.env.DB.raw.prepare(`SELECT created_at FROM menu_previews WHERE token = ?`).get(token).created_at);
+
+  const reminders = () => calls.sent.filter((e) => /menu preview ends/.test(e.subject));
+  assert.deepEqual(await runPreviewReminders(f.env, { now: created + 30 * 3600000, force: true }), [], 'not on day 1');
+  assert.deepEqual(await runPreviewReminders(f.env, { now: created + 47 * 3600000, force: true }), [token]);
+  const mail = reminders()[0];
+  assert.ok(mail.to.includes('owner@cafe.example'));
+  assert.match(mail.html, new RegExp(`/api/menu-preview/view/${token}`));
+  assert.match(mail.html, /Sample Cafe&#039;s menu preview ends soon/);
+  assert.doesNotMatch(mail.html, /&amp;#39;|&amp;amp;/, 'no double escaping');
+  assert.deepEqual(await runPreviewReminders(f.env, { now: created + 50 * 3600000, force: true }), [], 'only once');
+  assert.equal(reminders().length, 1);
+
+  // Outside 9 am to 7 pm Pacific nothing goes out.
+  const g = await madePreview(t);
+  const gCreated = Date.parse(g.f.env.DB.raw.prepare(`SELECT created_at FROM menu_previews`).get().created_at);
+  let night = gCreated + 47 * 3600000;
+  while (Number(new Intl.DateTimeFormat('en-US', { hour: 'numeric', hourCycle: 'h23', timeZone: 'America/Los_Angeles' }).format(new Date(night))) !== 2) night += 3600000;
+  night -= new Date(night).getUTCMinutes() * 60000;
+  assert.deepEqual(await runPreviewReminders(g.f.env, { now: night }), [], 'not at 2 am');
+
+  // Ordered from the same menu file: no reminder.
+  const h = await madePreview(t);
+  h.f.env.DB.raw.exec(`PRAGMA foreign_keys = OFF`);
+  h.f.env.DB.raw.prepare(`INSERT INTO orders (id, created_at, updated_at, customer_id, status, subtotal_cents, total_cents, payment_status, notes) VALUES ('o9', 'x', 'x', 'c', 'PAID', 0, 0, 'PAID', ?)`).run(`Document ref: ${h.requestId}`);
+  const hCreated = Date.parse(h.f.env.DB.raw.prepare(`SELECT created_at FROM menu_previews`).get().created_at);
+  assert.deepEqual(await runPreviewReminders(h.f.env, { now: hCreated + 47 * 3600000, force: true }), []);
+  assert.ok(h.f.env.DB.raw.prepare(`SELECT reminder_sent_at FROM menu_previews`).get().reminder_sent_at, 'marked so it is not checked again');
 });
