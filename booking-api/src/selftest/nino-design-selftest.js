@@ -98,6 +98,8 @@ async function stageAwaitBriefs(env, app, test) {
     for (const [k, v] of Object.entries(BRIEFS[product.code])) form.append(k, v);
     if (product.logo) form.append("logo", new File([SAMPLE_LOGO_PNG], "logo.png", { type: "image/png" }));
     if (product.menuFile) form.append("menu_file", new File([menuPdf()], "menu.pdf", { type: "application/pdf" }));
+    // Photos go behind some social posts: two, so the GitHub renderer downloads them and saves those posts as JPEG.
+    if (product.photos) for (const n of [1, 2]) form.append("photos", new File([SAMPLE_LOGO_PNG], `photo-${n}.png`, { type: "image/png" }));
     const res = await app(new Request(`${publicBaseUrl(env)}/api/design-brief/${project.id}`, { method: "POST", body: form }));
     const text = await res.text();
     if (res.status !== 200 || !text.includes("Thank you")) throw new Error(`The ${product.name} brief was refused (HTTP ${res.status}): ${text.replace(/<[^>]+>/g, " ").slice(0, 200)}`);
@@ -148,9 +150,11 @@ async function stageAwaitDelivered(env, app, test) {
   if (rows.some((r) => r.status !== "DELIVERED")) return null;
   const mail = await env.DB.prepare(`SELECT COUNT(*) AS n FROM communications WHERE order_id = ? AND purpose = 'ORDER_DELIVERY' AND status = 'SENT'`).bind(s.orderId).first();
   if (Number(mail?.n) < 4) throw new Error(`Expected 4 delivery emails, found ${mail?.n}`);
+  const pack = await env.DB.prepare(`SELECT json_extract(a.metadata_json, '$.nino_design.photos') AS photos FROM deliverables d JOIN assets a ON a.id = d.asset_id JOIN projects p ON p.id = d.project_id WHERE p.order_id = ? AND p.workflow_key = 'NINO_SOCIAL_PACK_V1' AND d.deliverable_type = 'NINO_DESIGN_PACK' AND d.status = 'FINAL'`).bind(s.orderId).first();
+  if (Number(pack?.photos) < 2) throw new Error("The social pack did not use the brief's photos");
   const usage = await env.DB.prepare(`SELECT COUNT(*) AS n FROM business_events WHERE event_type = 'AI_USAGE' AND entity_id IN (SELECT value FROM json_each(?))`).bind(JSON.stringify(s.projects)).first();
   if (Number(usage?.n) < 1) throw new Error("The social posts logged no AI usage");
-  return updateTest(env, test, { status: "PASSED", stage: "DONE", log: "All four designs delivered to the buyer after approval" });
+  return updateTest(env, test, { status: "PASSED", stage: "DONE", log: "All four designs delivered to the buyer after approval (the social pack with the brief's photos, drawn as JPEG)" });
 }
 
 const STAGES = { START: stageStart, AWAIT_BRIEFS: stageAwaitBriefs, AWAIT_APPROVALS: stageAwaitApprovals, AWAIT_DELIVERED: stageAwaitDelivered };
