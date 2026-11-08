@@ -187,10 +187,13 @@ for (const [city, box] of TILES) {
 if (failedTiles === TILES.length) { console.log("Every map tile failed; nothing to check."); process.exit(1); }
 
 // 1b. New openings (owner, Nov 8, 2026): San Francisco food and drink locations registered with the city in the last
-// NEW_DAYS days (DataSF "Registered Business Locations", free, no key, refreshed daily). One already on the map is marked
+// NEW_DAYS days (DataSF "Registered Business Locations", free, no key, refreshed daily; food = self_reported_naics_code). One already on the map is marked
 // with its opening date; one that isn't yet is looked up on the web by the worker (Claude web search, once per business,
 // at most MAX_LOOKUPS new lookups a run) for its website, email and phone. Either way it is checked like any other.
-const SF_REGISTRY = "https://data.sfgov.org/resource/g8m3-pdis.json";
+const SF_REGISTRY = "https://data.sf.gov/resource/g8m3-pdis.json"; // moved from data.sfgov.org (Nov 2026)
+// Self-reported NAICS: full-service, limited-service, snack and coffee places, bars, retail bakeries and sweets shops.
+// Food trucks, caterers and contract cafeterias are left out (no storefront to pitch).
+const FOOD_NAICS = /^(722511|722513|722514|722515|722410|311811|445291|445292|445298)$/;
 const NEW_DAYS = 120, MAX_LOOKUPS = 40;
 const CHAINS = /\b(starbucks|mcdonald'?s|subway|chipotle|peet'?s|philz|blue bottle|taco bell|burger king|wendy'?s|jack in the box|domino'?s|pizza hut|panda express|sweetgreen|panera|dunkin|7-eleven|in-n-out|shake shack|popeyes|kfc|jamba|mendocino farms|cava|tender greens|ike'?s|chick-fil-a|raising cane|wingstop|jollibee|tous les jours|paris baguette|gong cha|kung fu tea|tpumps|sharetea|compass group|bon appetit|aramark|sodexo|levy|delaware north)\b/i;
 const nameWords = (s) => String(s || "").toLowerCase().normalize("NFKD").replace(/[\u0300-\u036f]/g, "").replace(/&/g, " and ").replace(/[^a-z0-9 ]+/g, " ").split(/\s+/)
@@ -237,7 +240,7 @@ else {
   openingStats.registry = registry.length;
   const seenLoc = new Set(); const openings = [];
   for (const r of registry) {
-    const food = /^722/.test(String(r.naic_code || "")) || /food services/i.test(r.naic_code_description || "") || /restaurant|eating|tavern|bar\b/i.test(r.lic_code_description || "");
+    const food = FOOD_NAICS.test(String(r.self_reported_naics_code || "").trim()) || /^RESTAURANT|BARS\/TAVERNS/i.test(r.lic_code_description || "");
     const inSf = /san francisco/i.test(r.city || "") || /^941/.test(String(r.business_zip || ""));
     if (!food || !inSf || r.location_end_date || r.dba_end_date) continue;
     const name = cleanName(r.dba_name || r.ownership_name);
