@@ -1,0 +1,15 @@
+name: diag-registry
+on: { push: { branches: [diag-registry] } }
+jobs:
+  d:
+    runs-on: ubuntu-latest
+    steps:
+      - run: |
+          B='https://data.sfgov.org/resource/g8m3-pdis.json'
+          curl -sG "$B" --data-urlencode '$select=naic_code,naic_code_description,count(*) AS n' --data-urlencode "\$where=location_start_date >= '2026-07-10T00:00:00'" --data-urlencode '$group=naic_code,naic_code_description' --data-urlencode '$order=n DESC' | jq -c '.[]'
+          echo ---lic
+          curl -sG "$B" --data-urlencode '$select=lic_code_description,count(*) AS n' --data-urlencode "\$where=location_start_date >= '2026-07-10T00:00:00'" --data-urlencode '$group=lic_code_description' --data-urlencode '$order=n DESC' --data-urlencode '$limit=25' | jq -c '.[]'
+          echo ---city
+          curl -sG "$B" --data-urlencode '$select=city,count(*) AS n' --data-urlencode "\$where=location_start_date >= '2026-07-10T00:00:00'" --data-urlencode '$group=city' --data-urlencode '$order=n DESC' --data-urlencode '$limit=8' | jq -c '.[]'
+          echo ---keys
+          curl -sG "$B" --data-urlencode '$limit=1' --data-urlencode '$order=location_start_date DESC' | jq -c '.[0] | keys'
