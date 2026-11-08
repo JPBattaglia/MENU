@@ -55,7 +55,9 @@ async function loadLogoDataUri(asset, env) {
 }
 
 // subtitle: the line under the name ("Menu" unless the buyer changed it with Customize in the menu generator).
-function buildDesignedMenuHtml({ businessName, brandColors, menu, logoDataUri, style, subtitle }) {
+// highlight: one colour for the design's highlights only (dividers, nav, numbers, borders), leaving its header and
+// headings as designed (owner, Nov 7, 2026: a chosen colour on the headings made every design look the same).
+function buildDesignedMenuHtml({ businessName, brandColors, menu, logoDataUri, style, subtitle, highlight }) {
   // The look of the customer's own menu, when the reader saw one (style.js); otherwise the standard page.
   let theme = toStyle(style ?? menu?.style);
   const esc = escapeHtml2;
@@ -64,6 +66,8 @@ function buildDesignedMenuHtml({ businessName, brandColors, menu, logoDataUri, s
   const colors = parseBrandColors(brandColors).filter((c) => colorLuminance(c) < 0.6);
   // Colours named for the order (or read from the menu) lead the theme's headings and accents.
   if (theme && colors.length) theme = toStyle({ ...theme, heading: colors[0], accent: colors[1] || colors[0] });
+  const mark = parseBrandColors(highlight)[0];
+  if (theme && mark) theme = toStyle({ ...theme, accent: mark });
   const primary = theme ? theme.heading : readableOnWhiteText(colors[0] || "#1f2a2e");
   const accent = theme ? theme.accent : colors[1] ? readableOnWhiteText(colors[1]) : primary;
   const sections = (menu.sections || []).slice(0, 60).map((section, index) => ({
@@ -110,6 +114,7 @@ ${styleMeta(theme)}
   header p { margin: 8px 0 0; font-size: 13px; letter-spacing: 3px; text-transform: uppercase; opacity: .85; }
   .jump { position: sticky; top: 0; z-index: 2; display: flex; gap: 8px; overflow-x: auto; padding: 10px 16px; background: rgba(251, 248, 243, .96); border-bottom: 1px solid var(--rule); scrollbar-width: none; }
   .jump::-webkit-scrollbar { display: none; }
+  .jump a:first-child { margin-left: auto; } .jump a:last-child { margin-right: auto; }
   .jump a { flex: none; padding: 7px 14px; border: 1px solid var(--rule); border-radius: 999px; color: var(--primary); background: #fff; font-size: 14px; font-weight: 600; text-decoration: none; white-space: nowrap; }
   main { max-width: 720px; margin: 0 auto; padding: 8px 20px 48px; }
   .menu-section { scroll-margin-top: 64px; padding-top: 28px; }

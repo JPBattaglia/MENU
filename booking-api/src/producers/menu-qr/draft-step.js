@@ -63,8 +63,10 @@ async function runGenerateMenuDraftStep(targetStep, env) {
   const logoDataUri = await loadLogoDataUri(getInputValue(preparedPayload.inputs, "logo"), env).catch(() => null) || choice?.logoDataUri || null;
   const draftHtml = source.menu ? buildDesignedMenuHtml({
     businessName,
-    // No colours given: the preview's Customize colour, else (for the buyer's own design) the menu's printed colours.
-    brandColors: brandColors || choice?.custom?.color || (chosen ? "" : menuColors(source.menu)),
+    // A generator design keeps its own colours; the order's colour (or the preview's Customize colour) is only its
+    // highlight. The buyer's own design takes the order's colours, else the menu's printed ones, as before.
+    brandColors: chosen ? "" : brandColors || menuColors(source.menu),
+    highlight: chosen ? brandColors || choice?.custom?.color || "" : choice?.custom?.color || "",
     menu: source.menu,
     logoDataUri,
     ...(chosen ? { style: designStyle(chosen, source.menu) } : {}),

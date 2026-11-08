@@ -12,7 +12,7 @@
 //   GET  /api/menu-preview/view/<token>                                        the preview page (noindex, unlisted)
 //   GET  /api/menu-preview/handoff/<token>                                     -> { ok, business, email, request_id }
 //   GET  /api/menu-preview/view/<token>/<design>                               one of the generator's designs
-//   POST /api/menu-preview/customize/<token>  multipart { design, logo?, brand?, use_brand?, subtitle? }
+//   POST /api/menu-preview/customize/<token>  multipart { design, logo?, brand? (highlight colour), use_brand?, subtitle? }
 //   GET  /api/menu-preview/choose/<token>/<design>                             saves the design, then "Make it live"
 //
 // Menu generator (owner, Nov 7, 2026, like the site generator): the menu is read once, then shown in each of the
@@ -102,8 +102,8 @@ function publicPreviewPage(menuHtml, token, { index = 0, custom = {} } = {}) {
   <input type="hidden" name="design" value="${escapeHtml(d.key)}">
   <p class="mm-own-now">${have.length ? `Using ${escapeHtml(have.join(", "))}. A new logo replaces the old one.` : `Add your logo and colour. All ${MENU_DESIGNS.length} designs update.`}</p>
   <label>Logo <small>(PNG, JPG or WebP, up to 1.5 MB)</small><input type="file" name="logo" accept="image/png,image/jpeg,image/webp"></label>
-  <label class="mm-own-colour">Brand colour <input type="color" name="brand" value="${brand || "#00a7b5"}"></label>
-  <label class="mm-own-check"><input type="checkbox" name="use_brand" value="1"${brand ? " checked" : ""}> Use this colour for headings</label>
+  <label class="mm-own-colour">Highlight colour <input type="color" name="brand" value="${brand || "#00a7b5"}"></label>
+  <label class="mm-own-check"><input type="checkbox" name="use_brand" value="1"${brand ? " checked" : ""}> Use it for lines, borders and accents</label>
   <label>Line under your name <small>(e.g. Dinner Menu, Est. 1998)</small><input name="subtitle" maxlength="60" value="${escapeHtml(custom.subtitle || "Menu")}"></label>
   <button type="submit">Update all ${MENU_DESIGNS.length} designs</button>
   </form>
@@ -139,14 +139,15 @@ function publicPreviewPage(menuHtml, token, { index = 0, custom = {} } = {}) {
 }
 
 // One design of the stored read. data: { business, menu, colors, custom: { logo, color, subtitle } }.
-// The buyer's own design keeps the colours read from their menu; the fixed designs keep their own unless Customize set one.
 function renderMenuDesign(data, key, logoDataUri = null) {
   const design = menuDesignFor(key) || MENU_DESIGNS[0];
   const custom = data.custom || {};
   const brand = hexOk(custom.color) ? custom.color : "";
   return buildDesignedMenuHtml({
     businessName: data.business,
-    brandColors: brand || (design.key === "yours" ? data.colors || "" : ""),
+    // The buyer's own design keeps the colours read from their menu; a Customize colour only changes highlights.
+    brandColors: design.key === "yours" ? data.colors || "" : "",
+    highlight: brand,
     menu: data.menu,
     logoDataUri,
     style: designStyle(design.key, data.menu),
