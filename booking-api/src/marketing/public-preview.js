@@ -12,7 +12,7 @@
 //   GET  /api/menu-preview/view/<token>                                        the preview page (noindex, unlisted)
 //   GET  /api/menu-preview/handoff/<token>                                     -> { ok, business, email, request_id }
 //   GET  /api/menu-preview/view/<token>/<design>                               one of the generator's designs
-//   POST /api/menu-preview/customize/<token>  multipart { design, logo?, logo_info?, logo_bg?, brand? (highlight colour), use_brand?, subtitle? }
+//   POST /api/menu-preview/customize/<token>  multipart { design, logo?, logo_info?, logo_bg?, business_name?, hide_name?, brand? (highlight colour), use_brand?, subtitle? }
 //   GET  /api/menu-preview/choose/<token>/<design>                             saves the design, then "Make it live"
 //
 // Menu generator (owner, Nov 7, 2026, like the site generator): the menu is read once, then shown in each of the
@@ -84,13 +84,13 @@ function newToken() {
 
 // The paid product's own page design, plus the generator bar, a watermark on every screen, and no printing.
 // index: which of MENU_DESIGNS is on screen; custom: what Customize set (for the popup's "now using" line).
-function publicPreviewPage(menuHtml, token, { index = 0, custom = {} } = {}) {
+function publicPreviewPage(menuHtml, token, { index = 0, custom = {}, business = "" } = {}) {
   const price = dollars(firstYearCents());
   const d = MENU_DESIGNS[index] || MENU_DESIGNS[0];
   const next = MENU_DESIGNS[(MENU_DESIGNS.indexOf(d) + 1) % MENU_DESIGNS.length];
   const mark = encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" width="260" height="160"><text x="130" y="90" text-anchor="middle" transform="rotate(-24 130 80)" font-family="system-ui,sans-serif" font-size="22" font-weight="700" fill="#071f2c" fill-opacity=".13">PREVIEW · NOT LIVE</text></svg>`);
   const brand = hexOk(custom.color) ? custom.color : "";
-  const have = [custom.logo ? "your logo" : "", brand ? "your colour" : "", custom.subtitle ? "your line under the name" : ""].filter(Boolean);
+  const have = [custom.logo ? "your logo" : "", custom.name ? "your name" : "", custom.hide_name ? "the name hidden" : "", brand ? "your colour" : "", custom.subtitle ? "your line under the name" : ""].filter(Boolean);
   const bar = `<aside class="mm-preview" role="note" aria-label="Menu generator">
   <p><strong>Design ${MENU_DESIGNS.indexOf(d) + 1} of ${MENU_DESIGNS.length}: ${escapeHtml(d.label)}</strong><span> · ${escapeHtml(d.blurb)}. Free preview: no QR code, ends in ${PREVIEW_HOURS / 24} days.</span></p>
   <a class="mm-gen-next" href="${escapeHtml(designUrl(token, next.key))}">Generate menu</a>
@@ -104,6 +104,8 @@ function publicPreviewPage(menuHtml, token, { index = 0, custom = {} } = {}) {
   <label>Logo <small>(PNG, JPG or WebP, up to 1.5 MB)</small><input type="file" name="logo" accept="image/png,image/jpeg,image/webp"></label>
   <input type="hidden" name="logo_info" value="">
   <label>Logo background <small>(Automatic picks one per design so the logo stands out)</small><select name="logo_bg">${[["auto", "Automatic"], ["none", "None"], ["light", "Light badge"], ["dark", "Dark badge"], ["accent", "Highlight colour badge"]].map(([v, t]) => `<option value="${v}"${(custom.logo_bg || "auto") === v ? " selected" : ""}>${t}</option>`).join("")}</select></label>
+  <label>Business name <small>(as it shows on the menu)</small><input name="business_name" maxlength="80" value="${escapeHtml(custom.name || business || "")}"></label>
+  <label class="mm-own-check"><input type="checkbox" name="hide_name" value="1"${custom.hide_name ? " checked" : ""}> Hide the name (my logo already shows it)</label>
   <label class="mm-own-colour">Highlight colour <input type="color" name="brand" value="${brand || "#00a7b5"}"></label>
   <label class="mm-own-check"><input type="checkbox" name="use_brand" value="1"${brand ? " checked" : ""}> Use it for lines, borders and accents</label>
   <label>Line under your name <small>(e.g. Dinner Menu, Est. 1998)</small><input name="subtitle" maxlength="60" value="${escapeHtml(custom.subtitle || "Menu")}"></label>
@@ -151,7 +153,7 @@ window.addEventListener("pageshow", function () { var b = document.querySelector
   .mm-own .mm-own-x { padding: 2px 10px; border: 0; background: none; color: #e8f6f7; font-size: 26px; line-height: 1; }
   .mm-own form { display: grid; gap: 14px; } .mm-own label { display: grid; gap: 4px; font-weight: 600; } .mm-own small { font-weight: 400; opacity: .8; }
   .mm-own select { font: 15px/1.4 system-ui, sans-serif; padding: 9px 10px; border: 1px solid #ffffff4d; border-radius: 8px; background: #0d2a38; color: #e8f6f7; }
-  .mm-own input[name=subtitle] { width: 100%; font: 15px/1.4 system-ui, sans-serif; padding: 10px 12px; border: 1px solid #ffffff4d; border-radius: 8px; background: #0d2a38; color: #e8f6f7; }
+  .mm-own input[name=subtitle], .mm-own input[name=business_name] { width: 100%; font: 15px/1.4 system-ui, sans-serif; padding: 10px 12px; border: 1px solid #ffffff4d; border-radius: 8px; background: #0d2a38; color: #e8f6f7; }
   .mm-own input[type=file] { color: #e8f6f7; max-width: 100%; } .mm-own .mm-own-colour, .mm-own .mm-own-check { display: flex; align-items: center; gap: 10px; } .mm-own input[type=color] { width: 52px; height: 36px; border: 0; padding: 0; background: none; }
   .mm-own p { margin: 0; color: #e8f6f7; } .mm-own button { padding: 12px 18px; border: 0; border-radius: 8px; background: #00a7b5; color: #fff; font: 700 15px system-ui, sans-serif; cursor: pointer; }
   .mm-own-busy { display: grid; justify-items: center; gap: 10px; padding: 28px 8px 12px; text-align: center; } .mm-own-busy[hidden], .mm-own form[hidden] { display: none; }
@@ -171,7 +173,8 @@ function renderMenuDesign(data, key, logoDataUri = null) {
   const custom = data.custom || {};
   const brand = hexOk(custom.color) ? custom.color : "";
   return buildDesignedMenuHtml({
-    businessName: data.business,
+    businessName: custom.name || data.business,
+    hideName: custom.hide_name === true,
     // The buyer's own design keeps the colours read from their menu; a Customize colour only changes highlights.
     brandColors: design.key === "yours" ? data.colors || "" : "",
     highlight: brand,
@@ -194,7 +197,7 @@ async function loadPreviewLogo(env, token, custom) {
 async function storeMenuDesigns(env, token, data) {
   const logo = await loadPreviewLogo(env, token, data.custom);
   for (const [index, design] of MENU_DESIGNS.entries()) {
-    const page = publicPreviewPage(renderMenuDesign(data, design.key, logo), token, { index, custom: data.custom || {} });
+    const page = publicPreviewPage(renderMenuDesign(data, design.key, logo), token, { index, custom: data.custom || {}, business: data.business });
     await env.ASSETS.put(`menu-previews/${token}/${design.key}.html`, page, { httpMetadata: { contentType: "text/html; charset=utf-8" } });
   }
   await env.ASSETS.put(`menu-previews/${token}/data.json`, JSON.stringify(data), { httpMetadata: { contentType: "application/json" } });
@@ -389,6 +392,12 @@ async function handlePreviewCustomize(request, env, token, { now = Date.now() } 
   }
   const bg = String(form.get("logo_bg") || "");
   if (LOGO_MODES.includes(bg)) custom.logo_bg = bg;
+  if (form.has("business_name")) {
+    const name = cleanText(form.get("business_name"), 80);
+    custom.name = name && name !== data.business ? name : "";
+  }
+  // Hiding the name only makes sense with a logo to show instead (design.js ignores it without one).
+  custom.hide_name = form.get("hide_name") === "1";
   const brand = String(form.get("brand") || "").trim().toLowerCase();
   custom.color = form.get("use_brand") === "1" && hexOk(brand) ? brand : "";
   if (form.has("subtitle")) {

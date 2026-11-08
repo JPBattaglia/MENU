@@ -94,7 +94,12 @@ function logoTreatment({ info, mode, isJpeg, headerBg, theme, accent }) {
   const bgL = luminance(headerBg);
   const ratio = (Math.max(l, bgL) + 0.05) / (Math.min(l, bgL) + 0.05);
   if (ratio >= 4.5) return { kind: "none" };
-  if ((info.c !== null && info.c < 0.35) || ratio < 3) return { kind: "badge", plate: l < 0.4 ? light : dark };
+  if ((info.c !== null && info.c < 0.35) || ratio < 3) {
+    const plate = l < 0.4 ? light : dark;
+    // A plate the same tone as the header (a mid-tone logo on a light header) wouldn't help: leave the logo as is.
+    const pl = luminance(plate);
+    return (Math.max(pl, bgL) + 0.05) / (Math.min(pl, bgL) + 0.05) < 1.4 ? { kind: "none" } : { kind: "badge", plate };
+  }
   return { kind: "halo", glow: l < 0.4 ? "#ffffff" : "#000000" };
 }
 
@@ -109,7 +114,9 @@ function logoImgHtml({ logoDataUri, alt, logo, theme, primary, accent }) {
 }
 
 // logo: { info, mode } for the logo's legibility treatment (see logoTreatment above).
-function buildDesignedMenuHtml({ businessName, brandColors, menu, logoDataUri, style, subtitle, highlight, logo }) {
+// hideName: the logo already spells the name (owner, Nov 7, 2026), so the name is kept for screen readers, search and
+// Menu Care but not shown. Only with a logo.
+function buildDesignedMenuHtml({ businessName, brandColors, menu, logoDataUri, style, subtitle, highlight, logo, hideName }) {
   // The look of the customer's own menu, when the reader saw one (style.js); otherwise the standard page.
   let theme = toStyle(style ?? menu?.style);
   const esc = escapeHtml2;
@@ -162,6 +169,8 @@ ${styleMeta(theme)}
   body { margin: 0; background: var(--paper); color: var(--ink); font: 16px/1.5 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
   header { background: var(--primary); color: #fff; text-align: center; padding: 36px 20px 30px; }
   header img { display: block; max-height: 84px; max-width: 70%; margin: 0 auto 14px; object-fit: contain; }
+  h1.name-hidden { position: absolute; width: 1px; height: 1px; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; padding: 0; }
+  header:has(h1.name-hidden) img { max-height: 120px; }
   header img.logo-halo { filter: drop-shadow(0 0 1px var(--glow)) drop-shadow(0 0 1px var(--glow)) drop-shadow(0 0 7px color-mix(in srgb, var(--glow) 70%, transparent)); }
   header img.logo-badge { box-sizing: content-box; padding: 12px 18px; border-radius: 16px; background: var(--plate); box-shadow: 0 3px 12px rgba(0,0,0,.18); }
   header img.logo-boxed { border-radius: 10px; border: 2px solid var(--accent); box-shadow: 0 3px 12px rgba(0,0,0,.18); }
@@ -189,7 +198,7 @@ ${styleMeta(theme)}
 <body>
   <header>
     ${logoImgHtml({ logoDataUri, alt: name, logo, theme, primary, accent: theme ? theme.accent : accent })}
-    <h1>${name}</h1>
+    <h1${hideName && logoDataUri ? ' class="name-hidden"' : ""}>${name}</h1>
     <p>${line}</p>
   </header>
   ${nav}
