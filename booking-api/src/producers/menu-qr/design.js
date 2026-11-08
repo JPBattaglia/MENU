@@ -192,7 +192,8 @@ ${styleMeta(theme)}
   .price { font-weight: 650; color: var(--primary); white-space: nowrap; font-variant-numeric: tabular-nums; }
   .desc { margin: 4px 0 0; color: var(--muted); font-size: 15px; }
   .notes { margin-top: 32px; padding: 16px; border-radius: 10px; background: #fff; border: 1px solid var(--rule); color: var(--muted); font-size: 14px; }
-  footer { padding: 24px 20px 36px; text-align: center; color: var(--muted); font-size: 12px; }${styleCss(theme)}
+  footer { padding: 24px 20px 36px; text-align: center; color: var(--muted); font-size: 12px; }
+  footer a { color: inherit; text-decoration: underline; text-underline-offset: 2px; }${styleCss(theme)}
 </style>
 </head>
 <body>
@@ -207,7 +208,7 @@ ${styleMeta(theme)}
     </section>
     ${notes ? `<p class="notes">${esc(notes)}</p>` : ""}
   </main>
-  <footer>Menu by MENU-MADE</footer>
+  <footer>Menu by <a href="https://menu-made.com/">MENU-MADE</a></footer>
 </body>
 </html>`;
 }
