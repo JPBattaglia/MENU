@@ -7,7 +7,7 @@
 //   styles.css    the design
 // plus the business's images at the paths given in site.logo / site.photos. The same files are shown in the generator,
 // delivered in the zip, and served when Menu-made hosts the site.
-import { BASE_CSS, brandOr, esc, inkOn, page, siteData } from "./common.js";
+import { BASE_CSS, brandOr, esc, inkOn, nameEl, page, siteData } from "./common.js";
 import { logoTreatment } from "../../menu-qr/design.js";
 import { luminance } from "../../menu-qr/style.js";
 import { DESIGNS, DESIGN_KEYS, designFor } from "./designs.js";
@@ -61,7 +61,7 @@ function pageBand(d, file, brand, headerHasBrand) {
   if (!pick && headerHasBrand) return "";
   const img = pick ? `<img class="pb-img" src="${esc(pick.path)}" alt="${esc(pick.alt || "")}">` : "";
   const logo = d.logo ? `<img class="pb-logo" src="${esc(d.logo.path)}" alt="">` : "";
-  const words = headerHasBrand ? "" : `<div class="pb-in">${logo}<p class="pb-name">${esc(d.name)}</p></div>`;
+  const words = headerHasBrand ? "" : `<div class="pb-in">${logo}${nameEl(d, "p", "pb-name")}</div>`;
   return `<div class="page-band${pick ? "" : " plain"}${words ? "" : " photo-only"}" style="--pb:${brand};--pb-ink:${inkOn(brand)}">${img}${words}</div>\n`;
 }
 // The buyer's own photos beyond the two the designs place, on the About page.
@@ -160,7 +160,7 @@ const PARTS_CSS = (brand) => `.page-band{position:relative;display:flex;align-it
 .foot-social{display:flex;flex-wrap:wrap;justify-content:center;gap:8px 18px;margin:0 0 12px}.foot-social a{color:inherit;font-weight:700;text-decoration:underline;text-underline-offset:3px}
 .foot-logo{display:block;height:72px;width:auto;max-width:240px;object-fit:contain;margin:0 auto 12px;background:var(--plate,#fff);border-radius:12px;padding:8px}
 .logo-halo{filter:drop-shadow(0 0 1px var(--glow)) drop-shadow(0 0 1px var(--glow)) drop-shadow(0 0 7px color-mix(in srgb,var(--glow) 70%,transparent))}
-.logo-badge{box-sizing:content-box;padding:8px 12px;border-radius:14px;background:var(--plate);box-shadow:0 3px 12px rgba(0,0,0,.18)}
+.logo-badge{box-sizing:content-box;padding:8px 12px;border-radius:14px;background:var(--plate);box-shadow:0 3px 12px rgba(0,0,0,.18)}img.logo.logo-badge{max-width:calc(100% - 24px)}
 .logo-boxed{border-radius:10px;border:2px solid ${brand};box-shadow:0 3px 12px rgba(0,0,0,.18)}
 @media(max-width:600px){.brand .logo{height:44px;max-width:140px}.mark .logo{height:56px}.top .logo{height:96px}.crest .logo,.hero .logo{height:96px}.rail .logo{height:84px}header a.cta{white-space:nowrap}.brand{font-size:min(1em,20px)}}`;
 

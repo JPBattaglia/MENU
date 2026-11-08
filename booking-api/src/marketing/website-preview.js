@@ -155,15 +155,15 @@ const aboutText = (site, copy) => site.about_text || (copy?.about || []).join("\
 function detailFields(site = {}, copy = {}) {
   const v = (x) => escapeHtml(x || "");
   const field = (name, label, value, attrs = "", hint = "") => `<label>${label}${hint ? ` <small>${hint}</small>` : ""}<input name="${name}" value="${v(value)}" ${attrs}></label>`;
-  return `<details class="mm-own-group"><summary>Motto and About</summary>
+  return `<details class="mm-own-group" name="mm-own-g"><summary>Motto and About</summary>
   ${field("motto", "Motto", site.motto || copy.tagline, 'maxlength="80"', "(the line under your name)")}
   <label>About your business <small>(blank line between paragraphs)</small><textarea name="about" rows="5" maxlength="1500">${v(aboutText(site, copy))}</textarea></label></details>
-  <details class="mm-own-group"><summary>Contact details</summary>
+  <details class="mm-own-group" name="mm-own-g"><summary>Contact details</summary>
   ${field("phone", "Phone", site.phone, 'type="tel" maxlength="30"')}
   ${field("email", "Email", site.email, 'type="email" maxlength="150"', "(shown on your Contact page)")}
   ${field("address", "Address", site.address, 'maxlength="150"')}
   <label>Hours <small>(one line per day or group, e.g. Mon-Fri: 8am-3pm)</small><textarea name="hours" rows="4" maxlength="400">${v(site.hours)}</textarea></label></details>
-  <details class="mm-own-group"><summary>Social and order links</summary>
+  <details class="mm-own-group" name="mm-own-g"><summary>Social and order links</summary>
   ${SOCIAL_FIELDS.map(([name, label]) => field(name, label, site[name], 'inputmode="url" maxlength="300"', name === "instagram" || name === "tiktok" ? "(link or @name)" : "(link)")).join("\n  ")}
   ${field("order_url", "Order or booking link", site.order_url, 'type="url" inputmode="url" maxlength="300"', "(DoorDash, Toast, OpenTable…)")}
   <label>Button says <select name="order_label">${ORDER_LABELS.map((l) => `<option${(site.order_label || ORDER_LABELS[0]) === l ? " selected" : ""}>${l}</option>`).join("")}</select></label></details>`;
@@ -213,6 +213,12 @@ function applyDetails(site, form) {
   return {};
 }
 
+// "Hide the name" (owner, Nov 7, 2026): many logos are the name, so the name showed twice. The hidden "0" tells a form
+// that has the box apart from one that doesn't, since an unticked box sends nothing.
+function hideNameField(site = {}, { style = "", boxStyle = "" } = {}) {
+  return `<input type="hidden" name="hide_name" value="0"><label class="mm-own-check"${style ? ` style="${style}"` : ""}><input type="checkbox" name="hide_name" value="1"${site.hide_name ? " checked" : ""}${boxStyle ? ` style="${boxStyle}"` : ""}> Hide the business name (my logo shows it)</label>`;
+}
+
 function ownPanel(token, key, site = {}, copy = {}) {
   const n = ownPhotoCount(site), brand = hexOk(site.brand) ? String(site.brand).toLowerCase() : "";
   const have = [site.logo ? "your logo" : "", n ? `${n} photo${n === 1 ? "" : "s"}` : "", brand ? "your colour" : ""].filter(Boolean);
@@ -224,10 +230,12 @@ function ownPanel(token, key, site = {}, copy = {}) {
   <form method="post" enctype="multipart/form-data" action="/api/website-preview/customize/${token}" onsubmit="var b = this.parentNode; b.classList.add('busy'); b.querySelector('.mm-own-busy').hidden = false; this.hidden = true; b.closest('dialog').addEventListener('cancel', function (e) { e.preventDefault(); });">
   <input type="hidden" name="design" value="${escapeHtml(key)}">
   <p class="mm-own-now">${have.length ? `Using ${escapeHtml(have.join(", "))}. New files replace them.` : "Add your logo, photos, colour and details. Every design updates."}${sample}</p>
-  <details class="mm-own-group" open><summary>Logo, photos and colour</summary>
+  <details class="mm-own-group" name="mm-own-g" open><summary>Logo and name</summary>
   <label>Logo <small>(PNG, JPG or WebP)</small><input type="file" name="logo" accept="image/png,image/jpeg,image/webp"></label>
   <input type="hidden" name="logo_info" value="">
   <label>Logo background <small>(Automatic picks one per design so the logo stands out)</small>${logoBgSelect(site.logo_bg)}</label>
+  ${hideNameField(site)}</details>
+  <details class="mm-own-group" name="mm-own-g"><summary>Photos and colour</summary>
   <label>Photos <small>(up to ${MAX_PHOTOS}, 5 MB each)</small><input type="file" name="photos" accept="image/png,image/jpeg,image/webp" multiple></label>
   <label class="mm-own-colour">Brand colour <input type="color" name="brand" value="${brand || "#00a7b5"}"></label>
   <label class="mm-own-check"><input type="checkbox" name="use_brand" value="1"${brand ? " checked" : ""}> Use this colour</label></details>
@@ -473,6 +481,7 @@ async function applyOwnForm(env, token, site, form) {
     site.logo = { path: `img/logo.${logo.type.ext}`, ...(info ? { info } : {}) };
   }
   if (LOGO_MODES.includes(String(form.get("logo_bg") || ""))) site.logo_bg = String(form.get("logo_bg"));
+  if (form.has("hide_name")) site.hide_name = form.getAll("hide_name").includes("1");
   if (photos.length) {
     for (const [i, p] of photos.entries()) await put(`photo-${i + 1}`, p);
     site.photos = photos.map((p, i) => ({ path: `img/photo-${i + 1}.${p.type.ext}`, alt: `Photo ${i + 1} of ${site.name}` }));
@@ -483,7 +492,7 @@ async function applyOwnForm(env, token, site, form) {
   return { site };
 }
 
-// "Customize": POST multipart { design, logo?, logo_info?, logo_bg?, photos?[], brand?, use_brand? } -> stores the images beside the
+// "Customize": POST multipart { design, logo?, logo_info?, logo_bg?, hide_name?, photos?[], brand?, use_brand? } -> stores the images beside the
 // preview, rebuilds all nine designs from the stored copy (no AI call) and returns to the design the buyer was on.
 // New photos replace the old set; no new files keeps what was there. The paid site is built from the same data.json.
 async function handleWebsitePreviewCustomize(request, env, token, { now = Date.now() } = {}) {
@@ -579,4 +588,4 @@ async function prefillFromPreview(env, email) {
   return out;
 }
 
-export { detailFields, designUrl, chooseUrl, wrapDesign, storeDesigns, handleWebsitePreviewCreate, handleWebsitePreviewView, handleWebsitePreviewHandoff, handleWebsitePreviewCustomize, handleWebsitePreviewImage, applyOwnForm, MAX_PHOTOS, handleProspectSiteDemo, prefillFromPreview, offeringsFromMenu, wrapPage, fallbackCopy, PREVIEW_HOURS, PER_NETWORK_DAY };
+export { detailFields, hideNameField, designUrl, chooseUrl, wrapDesign, storeDesigns, handleWebsitePreviewCreate, handleWebsitePreviewView, handleWebsitePreviewHandoff, handleWebsitePreviewCustomize, handleWebsitePreviewImage, applyOwnForm, MAX_PHOTOS, handleProspectSiteDemo, prefillFromPreview, offeringsFromMenu, wrapPage, fallbackCopy, PREVIEW_HOURS, PER_NETWORK_DAY };
