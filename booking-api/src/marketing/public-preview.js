@@ -319,6 +319,56 @@ async function handlePreviewCreate(request, env, { now = Date.now() } = {}) {
   return json({ ok: true, url, token, seconds, ...(rep ? { start: startUrl(token) } : {}) });
 }
 
+// ---------- One reminder before the preview ends (owner, Nov 7, 2026) ----------
+// A preview that hasn't become an order gets one email about 2 days in (REMINDER_AFTER_HOURS), sent between 9 am and
+// 7 pm Pacific and only while there are at least REMINDER_MIN_LEFT_HOURS left. Never to the owner's own inbox (rep
+// previews made without the business's email). Runs from the cron, hourly; once per preview (reminder_sent_at).
+const REMINDER_AFTER_HOURS = 46;
+const REMINDER_MIN_LEFT_HOURS = 3;
+const pacificHour = (ms) => Number(new Intl.DateTimeFormat("en-US", { hour: "numeric", hourCycle: "h23", timeZone: "America/Los_Angeles" }).format(new Date(ms)));
+const endsText = (iso) => new Date(iso).toLocaleString("en-US", { weekday: "long", hour: "numeric", minute: "2-digit", timeZone: "America/Los_Angeles" });
+
+async function runPreviewReminders(env, { now = Date.now(), force = false } = {}) {
+  if (!env.DB) return [];
+  if (!force && (new Date(now).getUTCMinutes() >= 5 || pacificHour(now) < 9 || pacificHour(now) >= 19)) return [];
+  const { results = [] } = await env.DB.prepare(`
+      SELECT token, request_id, email, business, expires_at FROM menu_previews
+      WHERE status = 'READY' AND reminder_sent_at IS NULL AND created_at <= ? AND expires_at > ?
+      ORDER BY created_at ASC LIMIT 20
+    `).bind(new Date(now - REMINDER_AFTER_HOURS * 3600000).toISOString(), new Date(now + REMINDER_MIN_LEFT_HOURS * 3600000).toISOString()).all();
+  const owner = String(ownerEmailAddress(env) || "").toLowerCase();
+  const sent = [];
+  for (const row of results) {
+    const mark = () => env.DB.prepare(`UPDATE menu_previews SET reminder_sent_at = ? WHERE token = ?`).bind(new Date(now).toISOString(), row.token).run();
+    const email = String(row.email || "").trim().toLowerCase();
+    // Already ordered from this menu file: nothing to remind about.
+    const ordered = await env.DB.prepare(`SELECT 1 AS x FROM orders WHERE notes LIKE ? AND payment_status = 'PAID' LIMIT 1`).bind(`%Document ref: ${row.request_id}%`).first().catch(() => null);
+    if (!email || email === owner || ordered) { await mark(); continue; }
+    const url = viewUrl(row.token);
+    const ends = endsText(row.expires_at);
+    const result = await sendTransactionalEmail(env, {
+      to: email,
+      subject: `Your menu preview ends ${ends}`,
+      html: brandedEmailHtml({
+        preheader: `${MENU_DESIGNS.length} designs of your menu, free until ${ends}.`,
+        eyebrow: "ONLINE MENU + QR",
+        heading: `${row.business}'s menu preview ends soon`,
+        paragraphs: [
+          `Your free phone menu preview ends <strong>${escapeHtml(ends)}</strong> (Pacific time).`,
+          `Haven't picked a design yet? Tap <strong>Generate menu</strong> to see all ${MENU_DESIGNS.length}, and <strong>Customize</strong> to add your logo and colour.`,
+          `When one looks right, tap <strong>Make it live</strong> (${dollars(firstYearCents())} for the first year). It goes live with a QR code for your tables, and your menu file is already attached.`
+        ],
+        buttons: [{ label: "See my menu designs", url, primary: true }],
+        footnote: "This is the only reminder we'll send about this preview."
+      }),
+      text: `Your menu preview ends ${ends} (Pacific).\nSee all ${MENU_DESIGNS.length} designs: ${url}\nMake it live (${dollars(firstYearCents())} first year): ${startUrl(row.token)}\nThis is the only reminder about this preview.`,
+      idempotencyKey: `menu-preview-reminder/${row.token}`, purpose: "MENU_PREVIEW", templateKey: "menu_preview_reminder_v1"
+    }).catch((error) => ({ ok: false, error }));
+    if (result?.ok) { await mark(); sent.push(row.token); }
+  }
+  return sent;
+}
+
 // "Email me the rep link": always to the owner inbox, so asking for it reveals nothing.
 async function handleRepLink(request, env) {
   const inbox = ownerEmailAddress(env);
@@ -438,4 +488,4 @@ async function handlePreviewHandoff(env, token, { now = Date.now() } = {}) {
 }
 
 export { handleRepLink, repUrl, REP_PER_DAY };
-export { handlePreviewCreate, handlePreviewView, handlePreviewHandoff, handlePreviewCustomize, handlePreviewChoose, menuPreviewChoice, publicPreviewPage, renderMenuDesign, loadPreviewLogo, PREVIEW_HOURS, PER_DAY, PER_NETWORK_DAY, PER_EMAIL };
+export { runPreviewReminders, handlePreviewCreate, handlePreviewView, handlePreviewHandoff, handlePreviewCustomize, handlePreviewChoose, menuPreviewChoice, publicPreviewPage, renderMenuDesign, loadPreviewLogo, PREVIEW_HOURS, PER_DAY, PER_NETWORK_DAY, PER_EMAIL };

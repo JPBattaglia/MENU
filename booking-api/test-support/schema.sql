@@ -619,3 +619,6 @@ CREATE INDEX IF NOT EXISTS idx_site_form_messages_ip ON site_form_messages (ip_h
 
 -- 0045 (Nov 7, 2026)
 ALTER TABLE menu_previews ADD COLUMN design TEXT;
+
+-- 0046 (Nov 7, 2026)
+ALTER TABLE menu_previews ADD COLUMN reminder_sent_at TEXT;
