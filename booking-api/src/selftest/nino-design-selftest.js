@@ -12,6 +12,8 @@ import { signLinkToken } from "../lib/links.js";
 import { LINK_KIND } from "../producers/nino-design/brief.js";
 import { NINO_PRODUCTS, productForWorkflow } from "../producers/nino-design/products.js";
 import { SAMPLE_LOGO_PNG } from "./sample-assets.js";
+import { NINO_LOGO_KIND } from "../producers/nino-design/hand-logo.js";
+import { createZip } from "../producers/social-posts/zip.js";
 import { payTestCheckout, updateTest } from "./menu-qr-selftest.js";
 import { dailyClock } from "./daily-clock.js";
 
@@ -26,7 +28,7 @@ const BRIEFS = {
   NINO_SOCIAL_PACK: { business_name: "Sample Cafe", about: "A neighbourhood cafe and bakery serving espresso drinks, sourdough and seasonal pastries.", promote: "Our pumpkin spice latte, the sourdough loaf baked every morning, and the almond croissant.", voice: "warm and friendly", brand_colors: "#a3322a, #f6f1e7" },
   NINO_FLYER: { business_name: "Sample Cafe", headline: "Live Jazz Fridays", details: "Every Friday from 7 to 10 pm\nLocal trio, no cover charge\nHalf-price pastries after 8", call_to_action: "Bring a friend", contact: "123 Main Street", style: "elegant", brand_colors: "" },
   NINO_MENU_DESIGN: { business_name: "Sample Cafe", tagline: "Coffee and bakery", footer: "Ask us about allergens", style: "classic", brand_colors: "" },
-  NINO_LOGO: { business_name: "Sample Cafe", tagline: "Coffee & Bakery", style: "modern", brand_colors: "" }
+  NINO_LOGO: { business_name: "Sample Cafe", tagline: "Coffee & Bakery", style: "modern", brand_colors: "", ideas: "A coffee cup with steam", usage: "Sign and cups" }
 };
 
 // A 2-page text menu PDF (Claude reads it for the Menu Redesign).
@@ -108,6 +110,17 @@ async function stageAwaitApprovals(env, app, test) {
   const approved = new Set(s.approved || []);
   for (const projectId of s.projects) {
     if (approved.has(projectId)) continue;
+    // The logo is designed by Nino by hand: the self-test plays Nino on the real upload page (no email is sent to him).
+    const waitingNino = await env.DB.prepare(`SELECT ws.id FROM workflow_steps ws JOIN workflow_runs wr ON wr.id = ws.workflow_run_id WHERE wr.project_id = ? AND ws.step_key = 'PRODUCE' AND ws.status = 'WAITING' AND json_extract(ws.output_json, '$.waiting_for') = 'NINO'`).bind(projectId).first();
+    if (waitingNino) {
+      const form = new FormData();
+      form.append("concept_1", new File([SAMPLE_LOGO_PNG], "concept-1.png", { type: "image/png" }));
+      form.append("concept_1_name", "Self-test concept");
+      form.append("pack", new File([createZip([{ name: "logo/concept-1.png", data: SAMPLE_LOGO_PNG }])], "final.zip", { type: "application/zip" }));
+      const res = await app(new Request(`${publicBaseUrl(env)}/api/nino-logo/${waitingNino.id}?t=${encodeURIComponent(await signLinkToken(env, { kind: NINO_LOGO_KIND, id: waitingNino.id, ttlDays: 1 }))}`, { method: "POST", body: form }));
+      if (res.status !== 200) throw new Error(`Uploading the logo as Nino failed (HTTP ${res.status})`);
+      continue;
+    }
     const out = parseJsonOrNull((await env.DB.prepare(`SELECT ws.output_json FROM workflow_steps ws JOIN workflow_runs wr ON wr.id = ws.workflow_run_id WHERE wr.project_id = ? AND ws.step_key = 'PRODUCE' AND ws.status = 'SUCCEEDED'`).bind(projectId).first())?.output_json);
     if (out?.outcome === "NOT_PRODUCED") throw new Error(`A design was not produced: ${(out.reasons || []).join("; ")}`);
     const approval = await env.DB.prepare(`SELECT id, json_extract(metadata_json, '$.owner_notified_at') AS notified FROM approvals WHERE project_id = ? AND approval_type = 'OWNER_RELEASE' AND status = 'PENDING' LIMIT 1`).bind(projectId).first();
@@ -126,7 +139,7 @@ async function stageAwaitApprovals(env, app, test) {
   }
   if (approved.size === (s.approved || []).length) return null;
   const done = approved.size === s.projects.length;
-  return updateTest(env, test, { stage: done ? "AWAIT_DELIVERED" : "AWAIT_APPROVALS", state: { approved: [...approved] }, log: `${approved.size} of 4 designs drawn by the GitHub renderer and approved through the approve page` });
+  return updateTest(env, test, { stage: done ? "AWAIT_DELIVERED" : "AWAIT_APPROVALS", state: { approved: [...approved] }, log: `${approved.size} of 4 designs made (3 drawn by the GitHub renderer, the logo uploaded on Nino's page) and approved through the approve page` });
 }
 
 async function stageAwaitDelivered(env, app, test) {

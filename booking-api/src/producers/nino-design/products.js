@@ -51,13 +51,16 @@ const NINO_PRODUCTS = {
     menuFile: true
   },
   NINO_LOGO: {
-    code: "NINO_LOGO", workflow: "NINO_LOGO_V1", name: "Logo (wordmark)", priceCents: 24900,
-    short: "6 typographic logo options, final files", deliverable: "6 wordmark options, each as a transparent PNG and on light and dark backgrounds",
+    // Designed by hand by Nino (owner, Nov 7, 2026), no longer automatic wordmarks.
+    code: "NINO_LOGO", workflow: "NINO_LOGO_V1", name: "Logo", priceCents: 24900,
+    short: "Hand-designed by Nino: up to 3 concepts, final files", deliverable: "up to 3 logo concepts designed by hand by Nino, with the final files (transparent PNG, plus SVG or PDF)",
     fields: [
-      { key: "business_name", label: "Name for the logo", type: "text", required: true, max: 32, help: "Exactly as it should be spelled. Short names work best." },
+      { key: "business_name", label: "Name for the logo", type: "text", required: true, max: 32, help: "Exactly as it should be spelled." },
       { key: "tagline", label: "Tagline (optional)", type: "text", required: false, max: 40 },
       { key: "style", label: "Style", type: "select", options: STYLES, required: true },
-      { key: "brand_colors", label: "Colours (optional)", type: "text", required: false, max: 60, help: "Up to two colours, like #1f2a2e, #c9a227. Leave blank and we'll choose." }
+      { key: "brand_colors", label: "Colours (optional)", type: "text", required: false, max: 60, help: "Up to two colours, like #1f2a2e, #c9a227. Leave blank and Nino will choose." },
+      { key: "ideas", label: "Ideas, likes and dislikes (optional)", type: "textarea", required: false, max: 800, help: "Anything that helps Nino: what your place feels like, a symbol or dish you'd like in it, logos you like or don't." },
+      { key: "usage", label: "Where will you use it? (optional)", type: "text", required: false, max: 120, help: "For example: sign, menus, cups, Instagram." }
     ],
     logo: false
   }

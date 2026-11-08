@@ -87,6 +87,7 @@ import { uploadOnboardingAsset } from "./onboarding/uploads.js";
 import { runNextProductionStep, runScheduledProduction } from "./workflows/runner.js";
 import { handleMe, handleOpen, handleSignIn, handleSignOut } from "./account/account.js";
 import { handleDesignBrief, remindDesignBriefs } from "./producers/nino-design/brief.js";
+import { alertStaleHandLogos, handleNinoLogoUpload } from "./producers/nino-design/hand-logo.js";
 import { emailMerchTracking, handleMerchCheckout, handleMerchLogo, handleMerchLogoUpload, handleMerchProducts, handleMerchQuote, handleMerchUpload } from "./producers/staff-merch/order.js";
 import { advanceNinoDesignSelfTests } from "./selftest/nino-design-selftest.js";
 import { advanceStaffMerchSelfTests } from "./selftest/staff-merch-selftest.js";
@@ -99,6 +100,8 @@ var worker_default = {
       return handleAdminQueue(request, env);
     }
     if (url.pathname === "/api/owner/outputs" && request.method === "GET") return handleOwnerOutputs(request, env);
+    const ninoLogoMatch = url.pathname.match(/^\/api\/nino-logo\/([0-9a-f-]{36})$/i);
+    if (ninoLogoMatch && (request.method === "GET" || request.method === "POST")) return handleNinoLogoUpload(request, env, ninoLogoMatch[1].toLowerCase());
     const batchMatch = url.pathname.match(/^\/api\/approvals\/batch\/([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})$/i);
     if (batchMatch && (request.method === "GET" || request.method === "POST")) {
       return handleBatchApprovalRequest(request, env, ctx, batchMatch[1].toLowerCase());
@@ -445,6 +448,8 @@ const mmWorkerWithBooking = {
       await runDomainRenewals(env).catch((error) => console.error("Domain renewals failed:", error instanceof Error ? error.message : String(error)));
       // Menu previews: one reminder about 2 days in when no order came from it (hourly, 9 am to 7 pm Pacific).
       await runPreviewReminders(env).catch((error) => console.error("Preview reminders failed:", error instanceof Error ? error.message : String(error)));
+      // Logos waiting on Nino for 4+ days: one owner alert each (hourly, on the :15 tick).
+      if (new Date().getUTCMinutes() >= 15 && new Date().getUTCMinutes() < 20) await alertStaleHandLogos(env).catch((error) => console.error("Nino logo check failed:", error instanceof Error ? error.message : String(error)));
       // Owner "Latest outputs" link, when one is requested (self_tests kind OWNER_OUTPUTS_LINK).
       await runOwnerOutputsLink(env).catch((error) => console.error("Outputs link failed:", error instanceof Error ? error.message : String(error)));
       // Website previews: the same single reminder, on the half-hour tick.

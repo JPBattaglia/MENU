@@ -21,7 +21,8 @@ import { queueRender } from "../social-posts/render-jobs.js";
 import { storeDeliverable } from "../shared/deliverables.js";
 import { bytesToBase64 } from "../../lib/util.js";
 import { createZip } from "../social-posts/zip.js";
-import { FONT_FAMILIES, flyerSvg, logoOptions, menuPageSvgs, socialSvg } from "./design-svg.js";
+import { FONT_FAMILIES, flyerSvg, menuPageSvgs, socialSvg } from "./design-svg.js";
+import { requestHandLogo } from "./hand-logo.js";
 import { productForWorkflow, quoteMenuDesign } from "./products.js";
 
 const SOCIAL_POSTS = 9;
@@ -151,14 +152,9 @@ async function runNinoDesignProduceStep(targetStep, env, deps = {}) {
     }
     sections.push({ heading: "Your flyer", files: files.map((f) => f.name) });
   } else if (product.code === "NINO_LOGO") {
-    const r = logoOptions(brief, { variant });
-    if (r.error) return blocked("the logo could not be laid out", [r.error]);
-    for (const option of r.options) {
-      for (const file of option.files) files.push({ ...file, name: file.name.replace(/^option-(\d+)\//, "option-$1-"), preview_width: 600 });
-      sections.push({ heading: `Option ${option.id}: ${option.face}, ${option.layout.toLowerCase()}`, files: option.files.map((f) => f.name.replace(/^option-(\d+)\//, "option-$1-")) });
-    }
-    info.options = r.options.length;
-    extra.push({ name: "README.txt", text: `${business} - logo options\n\nEach option comes as a transparent PNG (for anything printed or placed on a photo), on white, and on dark. All are 2000 x 1000 pixels.\nReply to the delivery email with the option you like best if you'd like it as your Menu-Made brand.\n` });
+    // Designed by Nino by hand (owner, Nov 7, 2026): ask him and wait for his upload (hand-logo.js).
+    const packFilename = `${slug}-logo.zip`;
+    return requestHandLogo(env, targetStep, context, { brief, note: note?.note || "", finish: { kind: "NINO_DESIGN", pack_filename: packFilename, info: { product: product.code, variant }, output: { outcome: "PRODUCED", product: product.code } } });
   } else if (product.code === "NINO_SOCIAL_PACK") {
     let menuText = "";
     const liveHtml = context.business_id ? await loadLiveMenu(env, context.business_id).catch(() => null) : null;
