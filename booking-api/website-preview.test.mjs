@@ -103,6 +103,7 @@ test('Make it yours: a logo, photos and a brand colour rebuild all nine designs,
   form.append('photos', new File([JPG], 'a.jpg', { type: 'image/jpeg' }));
   form.append('photos', new File([PNG], 'b.png', { type: 'image/png' }));
   form.set('brand', '#B22222'); form.set('use_brand', '1');
+  form.set('logo_info', 't=1;l=0.020;c=0.60;b=0'); form.set('logo_bg', 'auto');
   const res = await post(form);
   assert.equal(res.status, 303);
   assert.equal(res.headers.get('Location'), `https://menu-made.com/api/website-preview/view/${out.token}/d/bistro/index.html`);
@@ -119,6 +120,13 @@ test('Make it yours: a logo, photos and a brand colour rebuild all nine designs,
   assert.equal((await f.get(`/api/website-preview/view/${out.token}/d/farmhouse/img/data.json`)).status, 404, 'only the images are served');
   const data = JSON.parse(await (await f.env.ASSETS.get(`website-previews/${out.token}/data.json`)).text());
   assert.equal(data.site.photos.length, 2); assert.equal(data.site.brand, '#b22222'); assert.equal(data.customized, 1);
+  assert.deepEqual(data.site.logo.info, { t: 1, l: 0.02, c: 0.6, b: 0 }, 'the browser measurement is kept');
+  assert.equal(data.site.logo_bg, 'auto');
+  assert.ok(first.includes('name="logo_bg"') && first.includes('name="logo_info"'), 'Logo background and measurement fields');
+  assert.match(await (await f.get(`/api/website-preview/view/${out.token}/d/night/index.html`)).text(), /<img class="logo logo-badge"/, 'a dark logo on Night Market gets a badge');
+  const dark = new FormData(); dark.set('design', 'bistro'); dark.set('logo_bg', 'dark');
+  assert.equal((await post(dark)).status, 303);
+  assert.match(await (await f.get(`/api/website-preview/view/${out.token}/d/bistro/index.html`)).text(), /<img class="logo logo-badge" style="--plate:#/, 'the chosen Dark badge');
   // Only a new colour: the photos and logo stay; unticking the colour goes back to each design's own.
   const colourOnly = new FormData(); colourOnly.set('design', 'night'); colourOnly.set('brand', '#000000');
   assert.equal((await post(colourOnly)).status, 303);
@@ -129,7 +137,7 @@ test('Make it yours: a logo, photos and a brand colour rebuild all nine designs,
   assert.equal((await post(bad)).status, 400);
   const many = new FormData(); for (let i = 0; i < 7; i++) many.append('photos', new File([PNG], `${i}.png`, { type: 'image/png' }));
   assert.equal((await post(many)).status, 400);
-  assert.equal(JSON.parse(await (await f.env.ASSETS.get(`website-previews/${out.token}/data.json`)).text()).customized, 2);
+  assert.equal(JSON.parse(await (await f.env.ASSETS.get(`website-previews/${out.token}/data.json`)).text()).customized, 3, 'colour-only and Logo background updates counted; refused ones not');
   // An ended preview can't be changed.
   f.env.DB.raw.prepare(`UPDATE website_previews SET expires_at = '2000-01-01T00:00:00.000Z'`).run();
   assert.equal((await post(form)).status, 410);
@@ -260,4 +268,10 @@ test('prospects: a bad-on-phone site is rebuilt from its own page; a no-website 
   const list = await (await f.post('/api/system/prospects/followups', {})).json();
   const item = list.prospects.find((p) => p.id === 'node/10');
   assert.equal(item.kind, 'opened'); assert.equal(item.demo_kind, 'website'); assert.equal(item.url, rebuilt.url);
+});
+
+test('Customize: "Logo background" and the logo measurement are kept and reach the designs', async () => {
+  const { logoBgSelect } = await import('./src/marketing/logo-measure.js');
+  assert.match(logoBgSelect('dark'), /<option value="dark" selected>Dark badge<\/option>/);
+  assert.match(logoBgSelect(), /<option value="auto" selected>Automatic<\/option>/);
 });

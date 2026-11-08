@@ -2,6 +2,7 @@
 // (OWN_DAYS) to one page where the buyer adds a logo, up to 6 photos and a brand colour. Saving rebuilds the zip
 // (and the live site, on Website Care) from the same design, free, and emails the new download link.
 //   GET/POST /api/site-files/own/<projectId>?t=<signed link>
+import { logoBgSelect } from "../../marketing/logo-measure.js";
 import { publicBaseUrl } from "../../lib/config.js";
 import { brandedEmailHtml, escapeHtml, sendTransactionalEmail } from "../../lib/email.js";
 import { parseJsonOrNull, simplePage } from "../../lib/http.js";
@@ -33,6 +34,7 @@ function formHtml(action, site, note = "", copy = {}) {
   return `${note}<p>${have.length ? `Your site uses ${escapeHtml(have.join(", "))}. New files replace them.` : "Add your logo, photos, brand colour and details (motto, About, contact, social and order links). We rebuild your website with them, free."}${sample}</p>
 <form method="post" enctype="multipart/form-data" action="${escapeHtml(action)}" style="display:grid;gap:14px">
 <label style="display:grid;gap:4px;font-weight:bold">Logo (PNG, JPG or WebP)<input type="file" name="logo" accept="image/png,image/jpeg,image/webp"></label>
+<label style="display:grid;gap:4px;font-weight:bold">Logo background <small style="font-weight:normal">(Automatic picks one per design so the logo stands out)</small>${logoBgSelect(site.logo_bg, { style: "font:15px Arial,sans-serif;padding:10px;border:1px solid #c5d6dc;border-radius:6px" })}</label>
 <label style="display:grid;gap:4px;font-weight:bold">Photos (up to ${MAX_PHOTOS}, 5 MB each)<input type="file" name="photos" accept="image/png,image/jpeg,image/webp" multiple></label>
 <label style="display:flex;gap:10px;align-items:center;font-weight:bold">Brand colour <input type="color" name="brand" value="${escapeHtml(site.brand || "#00a7b5")}"></label>
 <label style="display:flex;gap:10px;align-items:center"><input type="checkbox" name="use_brand" value="1"${site.brand ? " checked" : ""}> Use this colour</label>
