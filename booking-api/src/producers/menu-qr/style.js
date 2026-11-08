@@ -175,8 +175,8 @@ function structureCss(s) {
     none: "",
     dots: `body { background-image: radial-gradient(color-mix(in srgb, var(--ink) 10%, transparent) 1px, transparent 1.6px); background-size: 18px 18px; }`,
     lines: `body { background-image: repeating-linear-gradient(0deg, transparent 0 31px, color-mix(in srgb, var(--accent) 13%, transparent) 31px 32px); }`,
-    // Chalk: erased smudges, a few wiped arcs and a fine dust over the slate.
-    chalk: `body { background-image: radial-gradient(60% 40% at 18% 12%, rgba(255,255,255,.10), transparent 70%), radial-gradient(50% 35% at 85% 45%, rgba(255,255,255,.08), transparent 70%), radial-gradient(55% 30% at 30% 85%, rgba(255,255,255,.07), transparent 70%), repeating-radial-gradient(circle at 70% 20%, transparent 0 38px, rgba(255,255,255,.025) 38px 44px), radial-gradient(rgba(255,255,255,.06) 1px, transparent 1.5px); background-size: auto, auto, auto, auto, 5px 5px; background-attachment: fixed; }`,
+    // Chalk: erased smudges and a fine dust over the slate (no rings: owner, Nov 7, 2026).
+    chalk: `body { background-image: radial-gradient(60% 40% at 18% 12%, rgba(255,255,255,.10), transparent 70%), radial-gradient(50% 35% at 85% 45%, rgba(255,255,255,.08), transparent 70%), radial-gradient(55% 30% at 30% 85%, rgba(255,255,255,.07), transparent 70%), radial-gradient(rgba(255,255,255,.06) 1px, transparent 1.5px); background-size: auto, auto, auto, 5px 5px; background-attachment: fixed; }`,
     grid: `body { background-image: linear-gradient(color-mix(in srgb, var(--accent) 9%, transparent) 1px, transparent 1px), linear-gradient(90deg, color-mix(in srgb, var(--accent) 9%, transparent) 1px, transparent 1px); background-size: 26px 26px; }`
   }[s.texture];
   const frame = s.frame === "chalk"
