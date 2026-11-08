@@ -90,6 +90,7 @@ import { handleDesignBrief, remindDesignBriefs } from "./producers/nino-design/b
 import { emailMerchTracking, handleMerchCheckout, handleMerchLogo, handleMerchLogoUpload, handleMerchProducts, handleMerchQuote, handleMerchUpload } from "./producers/staff-merch/order.js";
 import { advanceNinoDesignSelfTests } from "./selftest/nino-design-selftest.js";
 import { advanceStaffMerchSelfTests } from "./selftest/staff-merch-selftest.js";
+import { handleOwnerOutputs, runOwnerOutputsLink } from "./admin/outputs.js";
 
 var worker_default = {
   async fetch(request, env, ctx) {
@@ -97,6 +98,7 @@ var worker_default = {
     if (url.pathname === "/api/admin/queue" && (request.method === "GET" || request.method === "POST")) {
       return handleAdminQueue(request, env);
     }
+    if (url.pathname === "/api/owner/outputs" && request.method === "GET") return handleOwnerOutputs(request, env);
     const batchMatch = url.pathname.match(/^\/api\/approvals\/batch\/([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})$/i);
     if (batchMatch && (request.method === "GET" || request.method === "POST")) {
       return handleBatchApprovalRequest(request, env, ctx, batchMatch[1].toLowerCase());
@@ -443,6 +445,8 @@ const mmWorkerWithBooking = {
       await runDomainRenewals(env).catch((error) => console.error("Domain renewals failed:", error instanceof Error ? error.message : String(error)));
       // Menu previews: one reminder about 2 days in when no order came from it (hourly, 9 am to 7 pm Pacific).
       await runPreviewReminders(env).catch((error) => console.error("Preview reminders failed:", error instanceof Error ? error.message : String(error)));
+      // Owner "Latest outputs" link, when one is requested (self_tests kind OWNER_OUTPUTS_LINK).
+      await runOwnerOutputsLink(env).catch((error) => console.error("Outputs link failed:", error instanceof Error ? error.message : String(error)));
       // Website previews: the same single reminder, on the half-hour tick.
       await runWebsitePreviewReminders(env).catch((error) => console.error("Website preview reminders failed:", error instanceof Error ? error.message : String(error)));
       await advanceSelfTests(env, app).catch((error) => console.error("Self-test failed:", error instanceof Error ? error.message : String(error)));
