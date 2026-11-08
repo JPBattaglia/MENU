@@ -135,6 +135,9 @@ function buildDesignSite(site, copy, key, { formAction = "" } = {}) {
     if (file === "contact.html") body = appendInside(body, 'id="visit"', contactForm(d, formAction));
     if (d.logo) body = body.replace(/<footer([^>]*)>/, (m) => `${m}<img class="foot-logo" src="${esc(d.logo.path)}" alt="">`);
     if (d.social.length) body = body.replace(/<footer([^>]*)>((?:<img class="foot-logo"[^>]*>)?)/, (m) => `${m}<p class="foot-social">${d.social.map(([n, u]) => `<a href="${esc(u)}" rel="noopener">${n}</a>`).join("")}</p>`);
+    // Every page needs one main heading for screen readers and search. The sub-pages (and Farmhouse's home, whose name
+    // is a styled line) have none of their own, so a hidden one goes first in <main>; nothing changes on screen.
+    if (!/<h1[\s>]/.test(body)) body = body.replace(/<main\b[^>]*>/, (m) => `${m}<h1 class="vh">${title ? `${esc(title)} | ` : ""}${esc(d.name)}</h1>`);
     let html = page({ ...d, pageTitle: title }, { fonts: design.fonts, body, theme: out.theme });
     // The skip link needs a target on every page: without the hero, the page's own section.
     if (!/\sid="main"/.test(html)) html = html.replace('<a class="skip" href="#main">', `<a class="skip" href="#${{ "menu.html": "menu", "about.html": "about", "contact.html": "visit" }[file]}">`);

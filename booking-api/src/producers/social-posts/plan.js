@@ -1,5 +1,6 @@
 // Social Posts content plan (stage 6): one AI call writes the month's 12 posts from the buyer's real menu and business name.
 // Everything it writes is checked afterwards; a price, hour, phone number or link that is not in the source is a failure.
+import { US_SPELLING, ukSpellings } from "../../lib/spelling.js";
 import { generate } from "../../ai/generate.js";
 import { findUnsupportedFacts } from "../../ai/quality.js";
 
@@ -32,7 +33,8 @@ const SYSTEM = [
   `Write exactly ${POSTS_PER_MONTH} posts spread across the month, mixing dish spotlights, short stories about the business, seasonal ideas and simple tips.`,
   "Use ONLY facts from the BUSINESS DETAILS and MENU. Never invent prices, opening hours, phone numbers, addresses, links, awards, discounts, ingredients or events.",
   "Do not put prices or hours in a headline or caption; a price is shown automatically for the featured menu item.",
-  "featured_item must be copied exactly from the menu or left empty. Each headline must be different. Friendly, specific, no emojis in headlines."
+  "featured_item must be copied exactly from the menu or left empty. Each headline must be different. Friendly, specific, no emojis in headlines.",
+  US_SPELLING
 ].join(" ");
 
 function menuToText(menu) {
@@ -54,6 +56,7 @@ function validatePosts(posts, { menu, sourceText }) {
     if (caption.length < 30 || caption.length > 600) problems.push(`${label}: caption must be 30-600 characters`);
     if (hashtags.length < 3 || hashtags.length > 10 || hashtags.some((h) => !/^#[A-Za-z0-9_]{2,40}$/.test(h))) problems.push(`${label}: use 3-10 simple hashtags`);
     if (seen.has(headline.toLowerCase())) problems.push(`${label}: duplicate headline`);
+    for (const word of ukSpellings(`${headline} ${caption}`, sourceText)) problems.push(`${label}: use US spelling instead of "${word}"`);
     seen.add(headline.toLowerCase());
     for (const fact of findUnsupportedFacts(`${headline} ${caption}`, sourceText)) problems.push(`${label}: ${fact.kind} "${fact.value}" is not in the business details or menu`);
     const item = names.get(String(post.featured_item ?? "").trim().toLowerCase());

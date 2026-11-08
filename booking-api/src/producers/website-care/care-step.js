@@ -15,6 +15,9 @@ import { finishRun } from "../menu-care/care-step.js";
 import { completeStep } from "../../workflows/runner.js";
 import { storeDeliverable } from "../shared/deliverables.js";
 import { buildSite } from "../website/build.js";
+import { buildDesignSite, designFor } from "../website/templates/index.js";
+import { inlined } from "../site-files/files-step.js";
+import { formAction } from "../site-files/site-form.js";
 import { checkSite } from "../website/check.js";
 import { siteUrl } from "../website/presenter.js";
 import { applySiteChange } from "./edit.js";
@@ -121,14 +124,23 @@ async function runWebsiteCareProduceStep(targetStep, env, deps = {}) {
   });
   if (!change.understood || change.problems.length) return blockedBy(change.problems);
 
-  const pages = buildSite(change.site, change.copy);
+  // A site bought from the generator (style "generator:<design>") is rebuilt in its own design; building it with the
+  // older builder would silently swap the buyer's chosen design for the plain one.
+  const style = String(live.build.style || "");
+  const designKey = style.startsWith("generator:") && designFor(style.slice(10)) ? style.slice(10) : "";
+  let pages;
+  if (designKey) {
+    const files = buildDesignSite(change.site, change.copy, designKey, { formAction: await formAction(env, live.project_id) });
+    pages = Object.fromEntries(Object.keys(files).filter((f) => f.endsWith(".html")).map((f) => [f, inlined(files, f)]));
+  } else pages = buildSite(change.site, change.copy);
+  const builtStyle = designKey ? style : change.site.style;
   const images = live.build.images || [];
   const problems = checkSite({ pages, images: Object.fromEntries(images.map((i) => [i.path, i.size])), site: change.site });
   if (problems.length) return blockedBy([`The updated website failed our automated checks: ${problems.slice(0, 5).join("; ")}`]);
 
-  const build = { version: 1, slug: live.slug, style: change.site.style, built_at: new Date().toISOString(), pages, images, site: change.site, copy: change.copy };
+  const build = { version: 1, slug: live.slug, style: builtStyle, built_at: new Date().toISOString(), pages, images, site: change.site, copy: change.copy };
   const stored = await storeDeliverable(env, context, { type: "SITE_BUILD", filename: `${live.slug}-site-update.json`, mime: "application/json", bytes: new TextEncoder().encode(JSON.stringify(build)), folder: "site-build",
-    metadata: { website: { slug: live.slug, style: change.site.style, pages: Object.keys(pages).length, images: images.length }, care: { request_id: request.id, summary: change.summary, changes: change.changes } } });
+    metadata: { website: { slug: live.slug, style: builtStyle, pages: Object.keys(pages).length, images: images.length }, care: { request_id: request.id, summary: change.summary, changes: change.changes } } });
   await setRequest(env, request.id, "DRAFTED", { summary: change.summary, changes: change.changes, deliverable_id: stored.deliverableId });
   const output = { outcome: "DRAFTED", summary: change.summary, changes: change.changes, deliverable_id: stored.deliverableId, version: stored.version };
   await completeStep(targetStep, output, env);

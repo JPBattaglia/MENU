@@ -22,6 +22,10 @@ test('scanner: a clean page has no findings and a bad page reports each rule onc
   for (const r of ['html-lang', 'page-title', 'image-alt', 'link-name', 'button-name', 'label', 'heading-one', 'zoom-blocked', 'duplicate-id', 'landmark-main', 'frame-title']) assert.ok(found.includes(r), `missing ${r}: ${found}`);
   assert.equal(scanHtml(BAD).find((f) => f.rule === 'image-alt').count, 2);
   assert.deepEqual(rules('<html lang="en"><title>x</title><body><main><h1>a</h1><img src="d.png" alt=""></main></body></html>'), [], 'empty alt on decorative images is correct');
+  const page = (form) => `<html lang="en"><title>x</title><body><main><h1>a</h1>${form}</main></body></html>`;
+  assert.deepEqual(rules(page('<label><input type="radio" name="billing" value="month"><span>Monthly</span></label><label>Name<input name="n"></label>')), [], 'a field inside its label is labelled');
+  assert.deepEqual(rules(page('<input name="website" tabindex="-1" autocomplete="off" aria-hidden="true">')), [], 'a hidden spam trap needs no label');
+  assert.deepEqual(rules(page('<label>Name</label><input name="n">')), ['label'], 'a label next to (not around or for) the field does not count');
 });
 
 test('scanner: only same-site pages are followed, with a cap', async () => {
@@ -32,6 +36,14 @@ test('scanner: only same-site pages are followed, with a cap', async () => {
   const fetcher = async (url) => pages[url] ? new Response(pages[url], { headers: { 'content-type': 'text/html' } }) : new Response('no', { status: 404 });
   const site = await scanSite('https://cafe.example/', { maxPages: 3, fetcher });
   assert.equal(site.pages.length, 3);
+  // index.html redirects to / : scanned once.
+  const home = `<html lang="en"><title>x</title><body><main><h1>h</h1><a href="/index.html">home</a><a href="/p1">one</a></main></body></html>`;
+  const redirecting = async (url) => {
+    const final = url === 'https://cafe.example/index.html' ? 'https://cafe.example/' : url;
+    const body = final === 'https://cafe.example/' ? home : BAD;
+    return { ok: true, url: final, headers: new Headers({ 'content-type': 'text/html' }), text: async () => body };
+  };
+  assert.deepEqual((await scanSite('https://cafe.example/', { fetcher: redirecting })).pages.map((p) => p.url), ['https://cafe.example/', 'https://cafe.example/p1']);
   const dead = await scanSite('https://gone.example/', { fetcher });
   assert.equal(dead.scanned, 0);
   const summary = summarize(site);

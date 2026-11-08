@@ -23,6 +23,7 @@ function checkSite({ pages, images = {}, site }) {
     }
     for (const img of tagsOf(html, "img")) {
       const src = img.attrs.src || "";
+      if (src.startsWith("data:image/")) continue; // inline, e.g. the "Website by MENU-MADE" logo
       if (!images[src]) problems.push(`${file}: image ${src} is not in the site`);
       else if (images[src] > MAX_IMAGE_BYTES) problems.push(`${file}: image ${src} is ${Math.round(images[src] / 1024)} KB, over the ${MAX_IMAGE_BYTES / 1000} KB limit`);
     }

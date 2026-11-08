@@ -61,8 +61,12 @@ function scanHtml(html) {
   add("button-name", elementsOf(source, "button").filter(nameless).map(() => "<button>"));
   const labelFor = new Set(elementsOf(source, "label").map((el) => el.attrs.for).filter(Boolean));
   const wrapped = elementsOf(source, "label").map((el) => el.inner).join(" ");
-  const fields = [...tagsOf(source, "input"), ...tagsOf(source, "select"), ...tagsOf(source, "textarea")]
-    .filter((t) => !["hidden", "submit", "button", "image", "reset"].includes(String(t.attrs.type || "").toLowerCase()));
+  // A field inside its <label> is labelled (implicit label), and a field hidden from everyone (aria-hidden, hidden, or
+  // the usual spam trap: tabindex -1) needs none; both were reported as critical problems before (Nov 7, 2026).
+  const unwrapped = strip(source).replace(/<label\b[^>]*>[\s\S]*?<\/label>/gi, "");
+  const hiddenField = (t) => String(t.attrs["aria-hidden"] || "").toLowerCase() === "true" || t.attrs.hidden !== undefined || String(t.attrs.tabindex || "").trim() === "-1";
+  const fields = [...tagsOf(unwrapped, "input"), ...tagsOf(unwrapped, "select"), ...tagsOf(unwrapped, "textarea")]
+    .filter((t) => !["hidden", "submit", "button", "image", "reset"].includes(String(t.attrs.type || "").toLowerCase()) && !hiddenField(t));
   add("label", fields.filter((t) => !(t.attrs["aria-label"] || "").trim() && !(t.attrs["aria-labelledby"] || "").trim() && !(t.attrs.title || "").trim()
     && !(t.attrs.id && labelFor.has(t.attrs.id)) && !(t.attrs.id && new RegExp(`id\\s*=\\s*["']${t.attrs.id}["']`).test(wrapped)))
     .map((t) => `<input${t.attrs.name ? ` name="${t.attrs.name}"` : ""}>`));
@@ -122,8 +126,12 @@ async function scanSite(startUrl, { maxPages = 10, fetcher = fetch, timeoutMs = 
   const first = await get(startUrl);
   if (first.error) return { pages: [{ url: startUrl, error: first.error, findings: [] }], scanned: 0, failed: 1 };
   pages.push({ url: first.url, findings: scanHtml(first.html) });
+  // A link that redirects to a page already scanned (index.html to /, say) is not counted twice.
+  const done = new Set([first.url]);
   for (const link of sameSiteLinks(first.html, first.url, maxPages - 1)) {
     const page = await get(link);
+    if (!page.error && done.has(page.url)) continue;
+    if (!page.error) done.add(page.url);
     pages.push(page.error ? { url: link, error: page.error, findings: [] } : { url: page.url, findings: scanHtml(page.html) });
   }
   return { pages, scanned: pages.filter((p) => !p.error).length, failed: pages.filter((p) => p.error).length };
