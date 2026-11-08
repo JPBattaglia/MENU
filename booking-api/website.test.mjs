@@ -202,7 +202,10 @@ test('end to end: intake, AI copy, checks, owner preview, approval, live site, b
     const home = await call(f, preview);
     assert.equal(home.status, 200); assert.equal(home.headers.get('x-robots-tag'), 'noindex, nofollow'); assert.match(home.headers.get('content-security-policy'), /default-src 'none'/);
     const html = await home.text(); assert.match(html, /Fresh pizza, made daily/); assert.match(html, /<h1/);
-    for (const p of ['menu.html', 'about.html', 'contact.html', 'gallery.html']) assert.equal((await call(f, preview + p)).status, 200, p);
+    for (const p of ['menu.html', 'about.html', 'contact.html']) assert.equal((await call(f, preview + p)).status, 200, p);
+    assert.match(html, /class="mm-credit"/, 'built in one of the nine designs');
+    assert.match(html, /action="https:\/\/menu-made\.com\/api\/site-form\//.test(await (await call(f, preview + 'contact.html')).text()) ? /./ : /contact form missing/);
+    assert.equal(JSON.parse(f.row(`SELECT metadata_json FROM assets WHERE json_extract(metadata_json, '$.website.style') IS NOT NULL`).metadata_json).website.style, 'generator:bistro', 'an older style choice (modern) maps to a design');
     const img = await call(f, preview + 'img/photo-1.png'); assert.equal(img.status, 200); assert.equal(img.headers.get('content-type'), 'image/png');
     assert.equal((await call(f, preview + 'nope.html')).status, 404);
     assert.equal((await call(f, preview.replace(/\/[^/]+\/$/, '/' + 'x'.repeat(30) + '.' + 'y'.repeat(30) + '/'))).status, 403);

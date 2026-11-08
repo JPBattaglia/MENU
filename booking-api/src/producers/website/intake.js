@@ -9,7 +9,8 @@ import { signLinkToken, verifyLinkToken } from "../../lib/links.js";
 import { sha256Hex } from "../../lib/util.js";
 import { refreshOnboardingState } from "../../onboarding/onboarding.js";
 import { loadDeliveryContext } from "../../approvals/release.js";
-import { STYLES, hexOk } from "./styles.js";
+import { hexOk } from "./styles.js";
+import { DESIGNS, OLD_STYLE_DESIGN } from "./templates/designs.js";
 import { prefillFromPreview } from "../../marketing/website-preview.js";
 
 const LINK_KIND = "siteintake";
@@ -24,7 +25,7 @@ const FIELDS = [
   { key: "address", label: "Street address", type: "text", required: true, max: 160 },
   { key: "hours", label: "Opening hours", type: "textarea", required: true, max: 400, help: "One line per day or range. Example: Mon-Fri: 11am-9pm" },
   { key: "contact_email", label: "Public email address (optional)", type: "text", required: false, max: 120 },
-  { key: "style", label: "Style", type: "select", required: true, options: Object.entries(STYLES).map(([key, st]) => [key, `${st.label} - ${st.blurb}`])},
+  { key: "style", label: "Design", type: "select", required: true, options: DESIGNS.map((d) => [d.key, `${d.label} - ${d.blurb}`]), help: "The same nine designs as the free website preview at menu-made.com/website-design.html. Your photos, logo and colour go into it." },
   { key: "brand_color", label: "Brand colour (optional, like #b3261e)", type: "text", required: false, max: 7 },
   { key: "subdomain", label: "Your web address", type: "text", required: false, max: 30, help: "Letters, numbers and dashes. Your site will be at yourname.menu-made.com. Leave blank and we'll choose one." },
   { key: "domain", label: "Your own domain, if you have one (optional)", type: "text", required: false, max: 80, help: "Like www.yourrestaurant.com. We'll email the exact steps to point it at your site." },
@@ -96,7 +97,7 @@ function formPage(projectId, token, values, { error = null, locked = false } = {
   if (locked) return simplePage(200, "We're building your website", "<p>Thank you - we have everything we need and your website is being built. You'll get an email with a preview link soon.</p>");
   return simplePage(error ? 400 : 200, "Tell us about your business", `${error ? `<p style="color:#9b1c1c"><strong>${escapeHtml(error)}</strong></p>` : ""}
 <form method="post" action="/api/site-intake/${escapeHtml(projectId)}" enctype="multipart/form-data"><input type="hidden" name="t" value="${escapeHtml(token)}">
-${FIELDS.map((f) => input(f, values[f.key] ?? (f.key === "kind" ? "restaurant" : f.key === "style" ? "modern" : ""))).join("")}
+${FIELDS.map((f) => input(f, values[f.key] ?? (f.key === "kind" ? "restaurant" : f.key === "style" ? "bistro" : ""))).join("")}
 <p><label for="logo"><strong>Logo (optional)</strong></label><br><input id="logo" name="logo" type="file" accept="image/png,image/jpeg,image/webp"><br><small>PNG, JPG or WebP, under 1.5 MB.</small></p>
 <p><label for="photos"><strong>Photos (optional, up to ${MAX_PHOTOS})</strong></label><br><input id="photos" name="photos" type="file" accept="image/png,image/jpeg,image/webp" multiple><br><small>Your food, your space, your team. Each under 1.5 MB. Please only upload photos you own or have the right to use.</small></p>
 <button type="submit">Send</button></form>`);
@@ -111,7 +112,7 @@ function validate(values) {
   for (const f of FIELDS) {
     const v = values[f.key] || "";
     if (f.required && !v) return `${f.label} is required.`;
-    if (f.type === "select" && v && !f.options.some(([k]) => k === v)) return `Choose a valid option for ${f.label}.`;
+    if (f.type === "select" && v && !f.options.some(([k]) => k === v) && !(f.key === "style" && OLD_STYLE_DESIGN[v])) return `Choose a valid option for ${f.label}.`;
   }
   if (values.brand_color && !hexOk(values.brand_color)) return "Brand colour must look like #b3261e, or be left blank.";
   if (values.contact_email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(values.contact_email)) return "That email address doesn't look right.";

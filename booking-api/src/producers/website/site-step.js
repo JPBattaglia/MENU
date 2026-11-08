@@ -1,4 +1,6 @@
 // Website Package PRODUCE step (stage 7): intake -> AI copy -> pages -> automated checks -> a SITE_BUILD draft.
+// Since Nov 7, 2026 (owner) the pages are one of the nine generator designs, the one chosen on the intake form (older
+// style choices map to the closest design), stored as style "generator:<design>" so Website Care keeps it.
 // Nothing is live until the owner approves (the shared DELIVER step). A build that fails its checks, or copy that fails its
 // quality checks twice, is never shown to the buyer: the owner is told what failed.
 import { ownerEmailAddress } from "../../lib/config.js";
@@ -10,7 +12,9 @@ import { loadDeliveryContext } from "../../approvals/release.js";
 import { completeStep } from "../../workflows/runner.js";
 import { finishRun } from "../menu-care/care-step.js";
 import { storeDeliverable } from "../shared/deliverables.js";
-import { buildSite } from "./build.js";
+import { inlined } from "../site-files/files-step.js";
+import { formAction } from "../site-files/site-form.js";
+import { buildDesignSite, designForStyle } from "./templates/index.js";
 import { checkSite } from "./check.js";
 import { writeCopy } from "./copy.js";
 
@@ -70,13 +74,16 @@ async function runWebsiteProduceStep(targetStep, env, deps = {}) {
   if (written.capped) return blocked("monthly AI limit reached", [written.capped]);
   if (written.problems.length) return blocked("the website copy failed the quality checks", written.problems);
 
-  const pages = buildSite(site, written.copy);
+  const design = designForStyle(site.style);
+  const files = buildDesignSite(site, written.copy, design.key, { formAction: await formAction(env, context.id) });
+  const pages = Object.fromEntries(Object.keys(files).filter((f) => f.endsWith(".html")).map((f) => [f, inlined(files, f)]));
   const problems = checkSite({ pages, images: Object.fromEntries(images.map((i) => [i.path, i.size])), site });
   if (problems.length) return blocked("the built website failed its checks", problems);
 
-  const build = { version: 1, slug: siteRow.slug, style: site.style, built_at: new Date().toISOString(), pages, images, site, copy: written.copy };
+  const style = `generator:${design.key}`;
+  const build = { version: 1, slug: siteRow.slug, style, built_at: new Date().toISOString(), pages, images, site, copy: written.copy };
   const stored = await storeDeliverable(env, context, { type: "SITE_BUILD", filename: `${siteRow.slug}-site-v.json`, mime: "application/json", bytes: new TextEncoder().encode(JSON.stringify(build)), folder: "site-build",
-    metadata: { website: { slug: siteRow.slug, style: site.style, pages: Object.keys(pages).length, images: images.length, attempts: written.attempts, tagline: written.copy.tagline } } });
+    metadata: { website: { slug: siteRow.slug, style, pages: Object.keys(pages).length, images: images.length, attempts: written.attempts, tagline: written.copy.tagline } } });
   const output = { outcome: "PRODUCED", slug: siteRow.slug, pages: Object.keys(pages).length, images: images.length, build_deliverable: stored.deliverableId, version: stored.version };
   await completeStep(targetStep, output, env);
   return output;

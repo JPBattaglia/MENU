@@ -59,7 +59,7 @@ async function stageStart(env, app, test) {
   const answers = {
     kind: "restaurant", about: "Website Self-Test Cafe is a small family cafe. We bake bread every morning and serve soup and sandwiches at lunch.",
     offerings: "# Lunch\nTomato soup | Roasted tomatoes and basil | $7\nCheese sandwich | Aged cheddar on fresh bread | $9\n# Drinks\nDrip coffee | Fresh brewed | $3",
-    phone: "(512) 555-0147", address: "123 Main Street, Austin, TX", hours: "Mon-Fri: 7am-3pm\nSat: 8am-2pm", style: "modern", subdomain: `selftest-${short}`, photo_captions: "Our morning bread"
+    phone: "(512) 555-0147", address: "123 Main Street, Austin, TX", hours: "Mon-Fri: 7am-3pm\nSat: 8am-2pm", style: "fresh", subdomain: `selftest-${short}`, photo_captions: "Our morning bread"
   };
   for (const [k, v] of Object.entries(answers)) form.append(k, v);
   // Real-looking logo and photos (owner decision Oct 28, 2026): this site is also the public website sample.

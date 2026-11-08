@@ -10,7 +10,7 @@
 import { BASE_CSS, brandOr, esc, inkOn, nameEl, page, siteData } from "./common.js";
 import { logoTreatment } from "../../menu-qr/design.js";
 import { luminance } from "../../menu-qr/style.js";
-import { DESIGNS, DESIGN_KEYS, designFor } from "./designs.js";
+import { DESIGNS, DESIGN_KEYS, designFor, designForStyle } from "./designs.js";
 
 const PAGES = { "index.html": "Home", "menu.html": "Menu", "about.html": "About", "contact.html": "Contact" };
 
@@ -167,4 +167,4 @@ const PARTS_CSS = (brand) => `.page-band{position:relative;display:flex;align-it
 .logo-boxed{border-radius:10px;border:2px solid ${brand};box-shadow:0 3px 12px rgba(0,0,0,.18)}
 @media(max-width:600px){.brand .logo{height:44px;max-width:140px}.mark .logo{height:56px}.top .logo{height:96px}.crest .logo,.hero .logo{height:96px}.rail .logo{height:84px}header a.cta{white-space:nowrap}.brand{font-size:min(1em,20px)}}`;
 
-export { DESIGNS, DESIGN_KEYS, PAGES, buildDesignSite, composePage, designFor };
+export { DESIGNS, DESIGN_KEYS, PAGES, buildDesignSite, composePage, designFor, designForStyle };

@@ -300,5 +300,9 @@ ${d.intro ? `<p class="tonight">${esc(d.intro)}</p>` : ""}
 const DESIGNS = [trattoria, bistro, nightMarket, farmhouse, fineDining, fresh, cafePop, coastal, taproom];
 const DESIGN_KEYS = DESIGNS.map((x) => x.key);
 const designFor = (key) => DESIGNS.find((x) => x.key === key) || null;
+// Website Package intakes made before the nine designs (owner, Nov 7, 2026) chose an older style; each maps to the
+// design closest to it.
+const OLD_STYLE_DESIGN = { classic: "trattoria", modern: "bistro", bold: "night", rustic: "farmhouse", elegant: "fine", fresh: "fresh", playful: "pop", midnight: "taproom", minimal: "fine" };
+const designForStyle = (style) => designFor(style) || designFor(OLD_STYLE_DESIGN[style]) || designFor("bistro");
 
-export { DESIGNS, DESIGN_KEYS, designFor };
+export { DESIGNS, DESIGN_KEYS, OLD_STYLE_DESIGN, designFor, designForStyle };
