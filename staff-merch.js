@@ -259,7 +259,7 @@
       body: JSON.stringify({ quote_id: state.quote.quote_id, rate_id: document.querySelector('input[name="rate"]:checked')?.value, customer }) });
     const data = await res.json().catch(() => ({}));
     if (data.ok && data.url) { location.href = data.url; return; }
-    $('payBtn').disabled = false; $('payBtn').textContent = 'Pay securely';
+    $('payBtn').disabled = false; $('payBtn').textContent = 'Checkout securely';
     status(data.error || 'Checkout could not open. Please try again.', 'quoteStatus');
   }
 

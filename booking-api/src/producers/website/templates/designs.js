@@ -297,7 +297,7 @@ ${d.intro ? `<p class="tonight">${esc(d.intro)}</p>` : ""}
   }
 };
 
-const DESIGNS = [trattoria, bistro, nightMarket, farmhouse, fineDining, fresh, cafePop, coastal, taproom];
+const DESIGNS = [bistro, trattoria, nightMarket, farmhouse, fineDining, fresh, cafePop, coastal, taproom];
 const DESIGN_KEYS = DESIGNS.map((x) => x.key);
 const designFor = (key) => DESIGNS.find((x) => x.key === key) || null;
 // Website Package intakes made before the nine designs (owner, Nov 7, 2026) chose an older style; each maps to the

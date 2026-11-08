@@ -174,7 +174,7 @@ async function handleProspectFollowups(request, env, { now = Date.now() } = {}) 
   const seen = new Set();
   const prospects = [
     ...opened.filter((r) => !seen.has(r.id) && seen.add(r.id)).map((r) => ({ kind: "opened", demo_kind: r.kind || "menu", id: r.id, name: r.name, city: r.city, email: r.email, website: r.website,
-      url: r.kind === "website" ? `${SITE}/api/website-preview/view/${r.token}/d/trattoria/index.html` : `${SITE}/api/menu-preview/${r.token}`, opens: r.open_count })),
+      url: r.kind === "website" ? `${SITE}/api/website-preview/view/${r.token}/d/bistro/index.html` : `${SITE}/api/menu-preview/${r.token}`, opens: r.open_count })),
     ...previewless.filter((r) => !seen.has(r.id) && seen.add(r.id)).map((r) => ({ kind: "no_preview", id: r.id, name: r.name, city: r.city, email: r.email, website: r.website, gaps_json: r.gaps_json, menu_url: r.menu_url, offer_code: r.offer_code }))
   ].slice(0, 50);
   return json({ ok: true, prospects, price: dollars(firstYearCents()) });

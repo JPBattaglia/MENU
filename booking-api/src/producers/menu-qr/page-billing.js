@@ -289,13 +289,13 @@ async function sendPaymentEmail(projectId, state, kind, env) {
   const html = brandedEmailHtml({
     preheader: `${amount} for ${state.extra_pages} extra menu ${state.extra_pages === 1 ? "page" : "pages"}, then we start your menu.`,
     eyebrow: reminder ? "PAYMENT REMINDER" : "ONE MORE STEP",
-    heading: `Pay for ${state.extra_pages === 1 ? "1 extra page" : `${state.extra_pages} extra pages`} to start your menu`,
+    heading: `Checkout for ${state.extra_pages === 1 ? "1 extra page" : `${state.extra_pages} extra pages`} to start your menu`,
     paragraphs: [`Hi ${escapeHtml(context.first_name || "there")},`, ...lines.map(escapeHtml)],
     rows: [["Pages in your menu", String(state.counted_pages)], ["Pages already paid for", String(covered)], ["Balance", amount]],
-    buttons: [{ label: `Pay ${amount}`, url: payUrl, primary: true }],
+    buttons: [{ label: `Checkout ${amount}`, url: payUrl, primary: true }],
     footnote: "Page count wrong, or want to send a shorter menu? Reply to this email before paying."
   });
-  const text = [`Hi ${context.first_name || "there"},`, "", ...lines, "", `Pay ${amount}: ${payUrl}`, "",
+  const text = [`Hi ${context.first_name || "there"},`, "", ...lines, "", `Checkout ${amount}: ${payUrl}`, "",
     "Page count wrong, or want to send a shorter menu? Reply to this email before paying.", "", "The MENU-MADE team"].join("\n");
   const sent = await sendTransactionalEmail(env, {
     to: String(context.customer_email).trim(),
@@ -410,7 +410,7 @@ async function handleExtraPagesPay(request, env, projectId) {
   if (token.expired) return simplePage(410, "Link expired", "<p>This payment link has expired. Reply to your email from MENU-MADE and we'll send a new one.</p>");
   const state = await loadPageBilling(projectId, env);
   if (!state || state.status !== "PAYMENT_REQUIRED") {
-    return simplePage(200, "Nothing to pay", state?.status === "PAID"
+    return simplePage(200, "Nothing to check out", state?.status === "PAID"
       ? "<p>Thanks — the extra pages are paid and your menu is in production. We'll email you when it's ready.</p>"
       : "<p>There's no balance on this order. We'll email you when your menu is ready.</p>");
   }
