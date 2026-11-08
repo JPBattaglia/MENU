@@ -10,9 +10,9 @@ const script = await readFile(new URL('./start.js', import.meta.url), 'utf8');
 const markup = await readFile(new URL('./contact.html', import.meta.url), 'utf8');
 
 const OFFERS = [
-  { code: 'BUNDLE_STARTER', name: 'Starter Plan', kind: 'BUNDLE', on_sale: true, prices: { month: 7900, year: 79000 }, includes: ['REVIEW_REPLIES', 'ACCESSIBILITY_MONITORING'], requires_setup: null },
-  { code: 'BUNDLE_GROWTH', name: 'Growth Plan', kind: 'BUNDLE', on_sale: true, prices: { month: 17900, year: 179000 }, includes: ['REVIEW_REPLIES', 'ACCESSIBILITY_MONITORING', 'GOOGLE_PROFILE_CARE'], requires_setup: null },
-  { code: 'BUNDLE_PRO', name: 'Pro Plan', kind: 'BUNDLE', on_sale: false, prices: { month: 27900, year: 279000 }, includes: ['REVIEW_REPLIES', 'ACCESSIBILITY_MONITORING', 'GOOGLE_PROFILE_CARE', 'SOCIAL_POSTS', 'WEBSITE_CARE'], requires_setup: null },
+  { code: 'BUNDLE_STARTER', name: 'Starter Plan', kind: 'BUNDLE', on_sale: true, prices: { month: 7900, year: 79000 }, includes: ['MENU_CARE', 'REVIEW_REPLIES', 'ACCESSIBILITY_MONITORING'], requires_setup: null },
+  { code: 'BUNDLE_GROWTH', name: 'Growth Plan', kind: 'BUNDLE', on_sale: true, prices: { month: 17900, year: 179000 }, includes: ['MENU_CARE', 'REVIEW_REPLIES', 'ACCESSIBILITY_MONITORING', 'GOOGLE_PROFILE_CARE'], requires_setup: null },
+  { code: 'BUNDLE_PRO', name: 'Pro Plan', kind: 'BUNDLE', on_sale: false, prices: { month: 27900, year: 279000 }, includes: ['MENU_CARE', 'REVIEW_REPLIES', 'ACCESSIBILITY_MONITORING', 'GOOGLE_PROFILE_CARE', 'SOCIAL_POSTS', 'WEBSITE_CARE'], requires_setup: null },
   { code: 'MENU_CARE', name: 'Menu Care', kind: 'PLAN', on_sale: true, prices: { month: 2900, year: 29000 }, includes: ['MENU_CARE'], requires_setup: null },
   { code: 'REVIEW_REPLIES', name: 'Review Replies', kind: 'PLAN', on_sale: true, prices: { month: 4900, year: 49000 }, includes: ['REVIEW_REPLIES'], requires_setup: null },
   { code: 'GOOGLE_PROFILE_CARE', name: 'Google Profile Care', kind: 'PLAN', on_sale: true, prices: { month: 14900, year: 149000 }, includes: ['GOOGLE_PROFILE_CARE'], requires_setup: null },
@@ -110,7 +110,7 @@ test('every card on the page is a catalog offer, and no price is typed into the 
 });
 
 test('a plan link selects that plan with its interval and shows today and the renewal', async () => {
-  const p = await page('?plan=BUNDLE_GROWTH&interval=year');
+  const p = await page('?plan=BUNDLE_GROWTH&interval=year&have=menu');
   assert.deepEqual(p.state(), { plan: 'BUNDLE_GROWTH', once: [] });
   assert.equal(p.get('cartTotal').textContent, '$1,790.00');
   assert.equal(p.get('recurringRow').hidden, false);
@@ -121,7 +121,7 @@ test('a plan link selects that plan with its interval and shows today and the re
 });
 
 test('one plan per order: choosing another plan replaces it and says so', async () => {
-  const p = await page('?plan=BUNDLE_STARTER');
+  const p = await page('?plan=BUNDLE_STARTER&have=menu');
   await p.buttons.get('REVIEW_REPLIES').fire('click');
   assert.deepEqual(p.state(), { plan: 'REVIEW_REPLIES', once: [] });
   assert.match(p.get('status').textContent, /one plan at a time/);
@@ -154,7 +154,7 @@ test('an offer that is not on sale cannot be bought live, but can in test mode',
   assert.deepEqual(p.state(), { plan: null, once: [] });
   assert.equal(p.buttons.get('BUNDLE_PRO').textContent, 'Opening soon');
   assert.equal(p.buttons.get('BUNDLE_PRO').disabled, true);
-  const t = await page('?plan=BUNDLE_PRO&checkout=test');
+  const t = await page('?plan=BUNDLE_PRO&checkout=test&have=menu');
   assert.deepEqual(t.state(), { plan: 'BUNDLE_PRO', once: [] });
   t.fill();
   await t.get('checkoutBtn').fire('click');
@@ -174,7 +174,7 @@ test('menu page count is priced from the catalog package and invalid counts bloc
 });
 
 test('checkout sends the plan with its interval, one-time items, and the short briefs', async () => {
-  const p = await page('?plan=BUNDLE_STARTER&interval=year');
+  const p = await page('?plan=BUNDLE_STARTER&interval=year&have=menu');
   await p.buttons.get('GOOGLE_VISIBILITY').fire('click');
   p.fill();
   await p.get('checkoutBtn').fire('click');
@@ -215,16 +215,24 @@ test('each plan starts from its foundation (owner, Nov 8, 2026): Menu Care bring
   const existing = await page('?plan=MENU_CARE&have=menu');
   assert.deepEqual(existing.state(), { plan: 'MENU_CARE', once: [] }, 'links to existing menu customers add nothing');
 
-  // Menu Care as an add-on to a plan: the plan's services plus Menu Care become your own plan.
-  const starter = await page('?plan=BUNDLE_STARTER&add=menu');
-  await starter.get('menuAddon').fire('click', { target: { closest: () => ({}) } });
-  const s = JSON.parse(vm.runInNewContext('JSON.stringify(order)', starter.context));
+  // Every plan starts with the menu: Starter brings Online Menu + QR; yearly makes its setup free.
+  const starter = await page('?plan=BUNDLE_STARTER&interval=month');
+  assert.deepEqual(starter.state(), { plan: 'BUNDLE_STARTER', once: ['ONLINE_MENU_QR'] });
+  assert.equal(starter.get('cartTotal').textContent, '$223.00', '$79 + $144 menu');
+  const yearly = await page('?plan=BUNDLE_STARTER&interval=year');
+  assert.equal(yearly.get('cartTotal').textContent, '$790.00', 'menu setup free with yearly');
+  assert.equal(yearly.get('menuSetupAmount').textContent, 'Free with yearly');
+  assert.match(yearly.get('menuPlanNote').textContent, /Already have a menu with us\? Remove it/);
+
+  // Menu Care added to a single service: the two become your own plan; taking it off goes back.
+  const single = await page('?plan=REVIEW_REPLIES&add=menu');
+  await single.get('menuAddon').fire('click', { target: { closest: () => ({}) } });
+  const s = JSON.parse(vm.runInNewContext('JSON.stringify(order)', single.context));
   assert.equal(s.plan, 'CUSTOM_PLAN');
-  assert.deepEqual(s.custom, ['MENU_CARE', 'REVIEW_REPLIES', 'ACCESSIBILITY_MONITORING']);
-  await starter.get('menuAddon').fire('click', { target: { closest: () => ({}) } });
-  const back = JSON.parse(vm.runInNewContext('JSON.stringify(order)', starter.context));
-  assert.equal(back.plan, 'CUSTOM_PLAN', 'taking Menu Care off leaves the other two services');
-  assert.deepEqual(back.custom, ['REVIEW_REPLIES', 'ACCESSIBILITY_MONITORING']);
+  assert.deepEqual(s.custom, ['MENU_CARE', 'REVIEW_REPLIES']);
+  await single.get('menuAddon').fire('click', { target: { closest: () => ({}) } });
+  const back = JSON.parse(vm.runInNewContext('JSON.stringify(order)', single.context));
+  assert.equal(back.plan, 'REVIEW_REPLIES', 'taking Menu Care off leaves the one service');
 
   const wc = await page('?plan=WEBSITE_CARE');
   assert.equal(wc.get('checkoutBtn').disabled, true, 'Website Care without a site cannot check out');

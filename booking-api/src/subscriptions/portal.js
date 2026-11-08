@@ -11,20 +11,25 @@ import { subscriptionEnvironment } from "./sync.js";
 const PORTAL_LINK_TTL_DAYS = 365;
 
 // Which plan switches the billing page offers (owner, Nov 8, 2026). Stripe can't limit "from -> to" pairs, so each
-// subscription opens the live billing page with the configuration that fits it:
-// - a plan that keeps something online (Menu Care: the menu; Website Care: the site; Guest App: the app) only
-//   switches to plans that keep it (Website Care <-> Pro), or between monthly and yearly;
-// - Pro and Website Care are offered only to businesses with a site Menu-made built;
+// subscription opens the live billing page with the configuration that fits it. A plan never switches to one that
+// drops what it keeps online (the menu, the site, the app), and never to one that needs something the business lacks:
+// - Starter, Growth and Menu Care (they keep the menu) switch among themselves, plus Pro with a Menu-made site;
+// - Pro, Website Care and Guest App only switch between monthly and yearly;
+// - Review Replies, Google Profile Care, Accessibility Monitoring and Social Posts switch among themselves (the plans
+//   include the menu, which starts at checkout);
 // - your own plan (and anything not listed) gets the default configuration, which allows no switching.
 // The configurations live in Stripe (metadata mm_portal) and are listed in subscription-catalog.json.
 const PORTAL_CONFIGS = {
   SWITCH_OPEN: "bpc_1UZZonHw7f6jhUv8SA2U89ys",
-  SWITCH_SITE: "bpc_1UZZozHw7f6jhUv8mpVX7Gea",
+  SWITCH_MENU: "bpc_1UZZp9Hw7f6jhUv8KGQlsFCL",
+  SWITCH_MENU_SITE: "bpc_1UZZozHw7f6jhUv8mpVX7Gea",
+  SWITCH_PRO: "bpc_1UZZz8Hw7f6jhUv8Yh2uw6ce",
   SWITCH_WEBSITE: "bpc_1UZZp4Hw7f6jhUv88dahB8lC",
-  SWITCH_MENU_CARE: "bpc_1UZZp9Hw7f6jhUv8KGQlsFCL",
   SWITCH_GUEST_APP: "bpc_1UZZpDHw7f6jhUv8Zj6szLc6"
 };
-const OPEN_PLANS = new Set(["BUNDLE_STARTER", "BUNDLE_GROWTH", "REVIEW_REPLIES", "GOOGLE_PROFILE_CARE", "ACCESSIBILITY_MONITORING", "SOCIAL_POSTS"]);
+const OPEN_PLANS = new Set(["REVIEW_REPLIES", "GOOGLE_PROFILE_CARE", "ACCESSIBILITY_MONITORING", "SOCIAL_POSTS"]);
+const MENU_PLANS = new Set(["BUNDLE_STARTER", "BUNDLE_GROWTH", "MENU_CARE"]);
+const ONLY = { BUNDLE_PRO: "SWITCH_PRO", WEBSITE_CARE: "SWITCH_WEBSITE", GUEST_APP: "SWITCH_GUEST_APP" };
 
 async function portalConfigurationKey(env, subscriptionId) {
   const row = await env.DB.prepare(`
@@ -33,16 +38,15 @@ async function portalConfigurationKey(env, subscriptionId) {
       WHERE s.id = ?
     `).bind(subscriptionId).first();
   if (!row) return null;
-  if (row.code === "BUNDLE_PRO" || row.code === "WEBSITE_CARE") return "SWITCH_WEBSITE";
-  if (row.code === "MENU_CARE") return "SWITCH_MENU_CARE";
-  if (row.code === "GUEST_APP") return "SWITCH_GUEST_APP";
-  if (!OPEN_PLANS.has(row.code)) return null;
+  if (ONLY[row.code]) return ONLY[row.code];
+  if (OPEN_PLANS.has(row.code)) return "SWITCH_OPEN";
+  if (!MENU_PLANS.has(row.code)) return null;
   const site = await env.DB.prepare(`
       SELECT 1 FROM orders ord JOIN order_items i ON i.order_id = ord.id JOIN offers o ON o.id = i.offer_id
       WHERE ord.business_id = ? AND ord.payment_status IN ('PAID', 'PARTIALLY_REFUNDED') AND o.code IN ('SITE_FILES', 'WEBSITE_PACKAGE')
       LIMIT 1
     `).bind(row.business_id).first();
-  return site ? "SWITCH_SITE" : "SWITCH_OPEN";
+  return site ? "SWITCH_MENU_SITE" : "SWITCH_MENU";
 }
 
 async function billingPortalLink(env, subscriptionId) {

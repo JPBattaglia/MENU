@@ -51,21 +51,21 @@
     "BUNDLE_STARTER": {
       "name": "Starter Plan",
       "product": "prod_VVKbKRMN5J266n",
-      "includes": ["REVIEW_REPLIES", "ACCESSIBILITY_MONITORING"],
+      "includes": ["MENU_CARE", "REVIEW_REPLIES", "ACCESSIBILITY_MONITORING"],
       "monthly": { "price": "price_1UUJweHw7f6jhUv8gW0UlQfE", "amount": 7900 },
       "annual": { "price": "price_1UUJx4Hw7f6jhUv8H56xNtR0", "amount": 79000 }
     },
     "BUNDLE_GROWTH": {
       "name": "Growth Plan",
       "product": "prod_VVKb8E54P6cyhq",
-      "includes": ["REVIEW_REPLIES", "ACCESSIBILITY_MONITORING", "GOOGLE_PROFILE_CARE"],
+      "includes": ["MENU_CARE", "REVIEW_REPLIES", "ACCESSIBILITY_MONITORING", "GOOGLE_PROFILE_CARE"],
       "monthly": { "price": "price_1UUJwhHw7f6jhUv8lRAL6qhh", "amount": 17900 },
       "annual": { "price": "price_1UUJx5Hw7f6jhUv8yrDptjRK", "amount": 179000 }
     },
     "BUNDLE_PRO": {
       "name": "Pro Plan",
       "product": "prod_VVKbx3bkMst6Cz",
-      "includes": ["REVIEW_REPLIES", "ACCESSIBILITY_MONITORING", "GOOGLE_PROFILE_CARE", "SOCIAL_POSTS", "WEBSITE_CARE"],
+      "includes": ["MENU_CARE", "REVIEW_REPLIES", "ACCESSIBILITY_MONITORING", "GOOGLE_PROFILE_CARE", "SOCIAL_POSTS", "WEBSITE_CARE"],
       "monthly": { "price": "price_1UUJwkHw7f6jhUv8PEZWGIUd", "amount": 29900 },
       "annual": { "price": "price_1UUJx6Hw7f6jhUv8YxoO1atJ", "amount": 299000 }
     }
@@ -146,15 +146,18 @@
     { "date": "2026-11-08", "offer": "BUNDLE_PRO", "migration": "0048_plans_without_menu_care.sql",
       "monthly": { "price": "price_1UZS5EHw7f6jhUv8ugqPaNA2", "amount": 27900 },
       "annual": { "price": "price_1UZS5GHw7f6jhUv8g3LN6Vex", "amount": 279000 },
-      "note": "Owner: Menu Care comes out of Starter, Growth and Pro (an add-on now; the bundles section's includes are updated, prices are the launch ones). Pro $279 so it stays below the same services as Your own plan ($292)." }
+      "note": "Owner: Menu Care comes out of Starter, Growth and Pro (an add-on now; the bundles section's includes are updated, prices are the launch ones). Pro $279 so it stays below the same services as Your own plan ($292)." },
+    { "date": "2026-11-08", "offer": "BUNDLE_STARTER,BUNDLE_GROWTH,BUNDLE_PRO", "migration": "0049_plans_include_the_menu.sql",
+      "note": "Owner, later Nov 8: reversed the add-on. Every plan includes Menu Care again and starts with the menu: Online Menu + QR is added at checkout, and its $144 setup is free with yearly billing. Prices stay $79 / $169 / $279." }
   ],
   "portal_configurations": {
-    "note": "Owner, Nov 8, 2026: limit plan switches. Live billing-page configurations the worker picks per subscription (src/subscriptions/portal.js). The default bpc_1UVOqcHw7f6jhUv83wtzyORj (also behind the Stripe login page) allows no switching; your own plan uses it.",
+    "note": "Owner, Nov 8, 2026: limit plan switches. Live billing-page configurations the worker picks per subscription (src/subscriptions/portal.js). A plan never switches to one that drops what it keeps online (menu, site, app). The default bpc_1UVOqcHw7f6jhUv83wtzyORj (also behind the Stripe login page) allows no switching; your own plan uses it.",
     "default": "bpc_1UVOqcHw7f6jhUv83wtzyORj",
-    "SWITCH_OPEN": { "id": "bpc_1UZZonHw7f6jhUv8SA2U89ys", "products": ["BUNDLE_STARTER", "BUNDLE_GROWTH", "REVIEW_REPLIES", "GOOGLE_PROFILE_CARE", "ACCESSIBILITY_MONITORING", "SOCIAL_POSTS"] },
-    "SWITCH_SITE": { "id": "bpc_1UZZozHw7f6jhUv8mpVX7Gea", "products": ["BUNDLE_STARTER", "BUNDLE_GROWTH", "BUNDLE_PRO", "REVIEW_REPLIES", "GOOGLE_PROFILE_CARE", "ACCESSIBILITY_MONITORING", "SOCIAL_POSTS", "WEBSITE_CARE"] },
-    "SWITCH_WEBSITE": { "id": "bpc_1UZZp4Hw7f6jhUv88dahB8lC", "products": ["WEBSITE_CARE", "BUNDLE_PRO"] },
-    "SWITCH_MENU_CARE": { "id": "bpc_1UZZp9Hw7f6jhUv8KGQlsFCL", "products": ["MENU_CARE"] },
+    "SWITCH_OPEN": { "id": "bpc_1UZZonHw7f6jhUv8SA2U89ys", "products": ["REVIEW_REPLIES", "GOOGLE_PROFILE_CARE", "ACCESSIBILITY_MONITORING", "SOCIAL_POSTS"] },
+    "SWITCH_MENU": { "id": "bpc_1UZZp9Hw7f6jhUv8KGQlsFCL", "products": ["BUNDLE_STARTER", "BUNDLE_GROWTH", "MENU_CARE"] },
+    "SWITCH_MENU_SITE": { "id": "bpc_1UZZozHw7f6jhUv8mpVX7Gea", "products": ["BUNDLE_STARTER", "BUNDLE_GROWTH", "BUNDLE_PRO", "MENU_CARE"] },
+    "SWITCH_PRO": { "id": "bpc_1UZZz8Hw7f6jhUv8Yh2uw6ce", "products": ["BUNDLE_PRO"] },
+    "SWITCH_WEBSITE": { "id": "bpc_1UZZp4Hw7f6jhUv88dahB8lC", "products": ["WEBSITE_CARE"] },
     "SWITCH_GUEST_APP": { "id": "bpc_1UZZpDHw7f6jhUv8Zj6szLc6", "products": ["GUEST_APP"] }
   }
 }

@@ -4,7 +4,7 @@
 //   - Website Package alone starts Website Care with a 90-day trial in the same checkout
 //   - Guest App needs the Guest App Setup in the same cart
 //   - "Your own plan" (CUSTOM_PLAN, Nov 6, 2026): the item carries includes (2+ monthly services); priced here, never by the browser
-import { CheckoutValidationError } from "../checkout/quote.js";
+import { CheckoutValidationError, MENU_PACKAGE_PRICING } from "../checkout/quote.js";
 import { parseJsonOrNull } from "../lib/http.js";
 import { stripeRequest } from "../lib/stripe.js";
 import { CUSTOM_CODE, CustomPlanError, normalizeInterval, resolveCustomPlan, resolvePlan } from "./plans.js";
@@ -120,6 +120,18 @@ async function buildSubscriptionCart(itemsInput, data, env, environment) {
       const codes = new Set(normalizedItems.map((item) => String(item.offerCode).toUpperCase()));
       if (plan?.requiresSetup && !codes.has(plan.requiresSetup)) {
         throw new CheckoutValidationError(`The ${plan.offerName} plan needs its setup in the same checkout.`);
+      }
+      // Every plan starts with the menu (owner, Nov 8, 2026): with a yearly plan that includes Menu Care, the Online
+      // Menu + QR setup and first-year hosting ($144) are free; extra menu pages are still charged. A free line is
+      // left off the Stripe checkout but stays on the order, so the menu is still made.
+      if (plan?.interval === "YEAR" && plan.includes.includes("MENU_CARE")) {
+        for (const item of normalizedItems) {
+          if (!item.menuPackage) continue;
+          const waived = Math.min(item.priceCents, MENU_PACKAGE_PRICING.setupCents + MENU_PACKAGE_PRICING.hostingFirstYearCents);
+          item.priceCents -= waived;
+          item.menuPackage = { ...item.menuPackage, waived_cents: waived, waived_reason: "yearly plan", total_cents: item.priceCents };
+          item.extraMetadata = { ...(item.extraMetadata || {}), setup_waived_cents: waived };
+        }
       }
     },
     orderItem() {

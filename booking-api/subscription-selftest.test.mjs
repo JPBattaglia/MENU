@@ -142,8 +142,8 @@ function fakeStripe({ renewalCreatesInvoice = true, portalProration = 'none' } =
 function setup(options = {}) {
   const DB = createD1();
   DB.raw.exec(migration);
-  // Live catalog: Growth $169 (0039) and plans without Menu Care, Pro $279 (0048, owner Nov 8, 2026).
-  for (const f of ['0039_growth_169.sql', '0048_plans_without_menu_care.sql']) DB.raw.exec(readFileSync(new URL('./migrations/' + f, import.meta.url), 'utf8'));
+  // Live catalog: Growth $169 (0039), Pro $279 (0048), plans with Menu Care (0049, owner Nov 8, 2026).
+  for (const f of ['0039_growth_169.sql', '0048_plans_without_menu_care.sql', '0049_plans_include_the_menu.sql']) DB.raw.exec(readFileSync(new URL('./migrations/' + f, import.meta.url), 'utf8'));
   const stripe = fakeStripe(options);
   const emails = [];
   const env = {
@@ -183,7 +183,7 @@ async function withFetch(fake, fn) {
   try { return await fn(); } finally { globalThis.fetch = original; }
 }
 
-test('subscription self-test: Growth renews on a test clock with 3 new jobs, and cancel stops them', async () => {
+test('subscription self-test: Growth renews on a test clock with 4 new jobs, and cancel stops them', async () => {
   const f = setup();
   await withFetch(f.fetch, async () => {
     let result;
@@ -196,15 +196,15 @@ test('subscription self-test: Growth renews on a test clock with 3 new jobs, and
     }
     assert.equal(result.status, 'PASSED', `${result.stage}: ${result.error}\n${result.log_json}`);
     const log = JSON.parse(result.log_json).map((l) => l.note);
-    assert.ok(log.some((l) => /3 entitlements and 3 first-month jobs/.test(l)), log.join('\n'));
+    assert.ok(log.some((l) => /4 entitlements and 4 first-month jobs/.test(l)), log.join('\n'));
     assert.ok(log.some((l) => /billing portal link opens a portal session/.test(l)));
     assert.equal(f.stripe.portalSessions, 1);
-    assert.ok(log.some((l) => /Renewal created exactly 3 jobs/.test(l)));
+    assert.ok(log.some((l) => /Renewal created exactly 4 jobs/.test(l)));
     assert.ok(log.some((l) => /No jobs after cancel/.test(l)));
     assert.ok(log.some((l) => /Cancel scheduled: still ACTIVE with every service until the period ends/.test(l)), 'Growth cancels the way the billing portal does');
     // Test jobs never reach a producer; the clock is deleted.
     assert.equal(f.row(`SELECT COUNT(*) AS n FROM workflow_runs WHERE trigger_type = 'SUBSCRIPTION_PERIOD' AND status != 'CANCELLED'`).n, 0);
-    assert.equal(f.row(`SELECT COUNT(*) AS n FROM projects WHERE status = 'CANCELLED'`).n, 6);
+    assert.equal(f.row(`SELECT COUNT(*) AS n FROM projects WHERE status = 'CANCELLED'`).n, 8);
     assert.equal(f.stripe.deletedClocks.length, 1);
     assert.deepEqual(f.stripe.endpointEvents, ['checkout.session.completed', 'invoice.paid', 'invoice.payment_failed',
       'customer.subscription.created', 'customer.subscription.updated', 'customer.subscription.deleted']);
@@ -239,16 +239,16 @@ async function runToEnd(f, ticks = 14) {
   return result;
 }
 
-test('subscription self-test: Pro bundle ($279) renews with 5 jobs per month and cancels', async () => {
+test('subscription self-test: Pro bundle ($279) renews with 6 jobs per month and cancels', async () => {
   const f = setup({ kind: 'SUBSCRIPTION_PRO' });
   await withFetch(f.fetch, async () => {
     const result = await runToEnd(f);
     assert.equal(result.status, 'PASSED', `${result.stage}: ${result.error}\n${result.log_json}`);
     const log = JSON.parse(result.log_json).map((l) => l.note).join('\n');
     assert.match(log, /Pro bundle checkout .* paid/);
-    assert.match(log, /5 entitlements and 5 first-month jobs/);
-    assert.match(log, /Renewal created exactly 5 jobs/);
-    assert.equal(f.row(`SELECT COUNT(*) AS n FROM projects WHERE status = 'CANCELLED'`).n, 10);
+    assert.match(log, /6 entitlements and 6 first-month jobs/);
+    assert.match(log, /Renewal created exactly 6 jobs/);
+    assert.equal(f.row(`SELECT COUNT(*) AS n FROM projects WHERE status = 'CANCELLED'`).n, 12);
   });
 });
 
@@ -259,7 +259,7 @@ test('subscription lifecycle (Starter): portal-style switch to Growth, declined 
     assert.equal(result.status, 'PASSED', `${result.stage}: ${result.error}\n${result.log_json}`);
     const log = JSON.parse(result.log_json).map((l) => l.note).join('\n');
     assert.match(log, /Starter bundle checkout .* paid/);
-    assert.match(log, /2 entitlements and 2 first-month jobs/);
+    assert.match(log, /3 entitlements and 3 first-month jobs/);
     assert.match(log, /Switched to BUNDLE_GROWTH as the portal would .*proration always_invoice/);
     assert.match(log, /Renewal declined: subscription PAST_DUE, entitlements SUSPENDED, no renewal jobs/);
     const sw = f.stripe.updates.find((u) => u['items[0][price_data][product]']);

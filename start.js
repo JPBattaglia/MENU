@@ -71,7 +71,7 @@ let menuNote = '';
 function bringMenu() {
   if (!planIncludes('MENU_CARE') || order.once.has(MENU) || hasOwnMenu || !sellable(offer(MENU))) return;
   order.once.add(MENU);
-  menuNote = 'Menu Care updates a menu we host, so Online Menu + QR was added. Already have a menu with us? Remove it.';
+  menuNote = 'Your plan starts with your menu online, so Online Menu + QR was added (its setup is free with yearly billing). Already have a menu with us? Remove it.';
 }
 let uploadedDocumentRequest = null;
 let previewDocumentId = ''; // a free preview's stored menu file, reused so the buyer doesn't upload it again
@@ -128,8 +128,13 @@ function menuQuote() {
   if (!pkg || !raw || !Number.isInteger(pages) || pages < 1 || pages > pkg.max_pages) return null;
   const extraPages = Math.max(0, pages - pkg.included_pages);
   const extrasCents = extraPages * pkg.additional_page_cents;
-  return { pages, extraPages, extrasCents, totalCents: pkg.setup_cents + pkg.hosting_first_year_cents + extrasCents, pkg };
+  // Every plan starts with the menu (owner, Nov 8, 2026): a yearly plan with Menu Care makes the setup and first-year
+  // hosting free (the server applies the same rule); extra pages are still charged.
+  const free = menuIncluded();
+  const baseCents = free ? 0 : pkg.setup_cents + pkg.hosting_first_year_cents;
+  return { pages, extraPages, extrasCents, totalCents: baseCents + extrasCents, free, pkg };
 }
+function menuIncluded() { return interval() === 'year' && planIncludes('MENU_CARE'); }
 
 // The plan the checkout will start. A Website Package bought without a plan starts Website Care on a trial.
 function effectivePlan() {
@@ -212,7 +217,7 @@ function lineFor(code, kind) {
     small.textContent = Catalog.label(o, interval()) + (interval() === 'year' ? ' · billed yearly' : ' · billed monthly');
   } else if (code === MENU) {
     const quote = menuQuote();
-    small.textContent = quote ? `${quote.pages} page${quote.pages === 1 ? '' : 's'} · first-year hosting included` : 'Enter your page count';
+    small.textContent = quote ? `${quote.pages} page${quote.pages === 1 ? '' : 's'} · first-year hosting included${quote.free ? ' · setup free with your yearly plan' : ''}` : 'Enter your page count';
   } else if (code === 'GUEST_APP_SETUP') {
     small.textContent = Catalog.label(o, interval()) + ' · one-time app build';
   } else {
@@ -242,9 +247,15 @@ function render(openEmptyChoices = true) {
   els.menuPages.required = hasMenu;
   const validPages = !hasMenu || Boolean(quote);
   setFieldState(els.menuPages, $('menuPagesError'), validPages, `Enter a whole number from 1 to ${offer(MENU)?.menu_package?.max_pages || 50}.`);
+  const planNote = $('menuPlanNote');
+  if (planNote) {
+    const text = hasMenu && /^BUNDLE_/.test(order.plan || '') ? menuNote : '';
+    planNote.textContent = text;
+    planNote.hidden = !text;
+  }
   if (quote) {
-    $('menuSetupAmount').textContent = money(quote.pkg.setup_cents);
-    $('menuHostingAmount').textContent = money(quote.pkg.hosting_first_year_cents);
+    $('menuSetupAmount').textContent = quote.free ? 'Free with yearly' : money(quote.pkg.setup_cents);
+    $('menuHostingAmount').textContent = quote.free ? 'Free with yearly' : money(quote.pkg.hosting_first_year_cents);
     $('extraPagesLabel').textContent = `Additional pages · ${quote.extraPages}`;
     $('extraPagesAmount').textContent = money(quote.extrasCents);
   }
@@ -306,7 +317,8 @@ function renderMenuAddon() {
   const panel = $('menuAddon');
   if (!panel) return;
   const on = planIncludes('MENU_CARE');
-  panel.hidden = !offers || !(order.once.has(MENU) || on) || !sellable(offer('MENU_CARE'));
+  // The plans include Menu Care, so the panel is for the menu on its own or with single services.
+  panel.hidden = !offers || !(order.once.has(MENU) || on) || !sellable(offer('MENU_CARE')) || /^BUNDLE_/.test(order.plan || '');
   if (panel.hidden) return;
   panel.querySelectorAll('[data-price]').forEach(el => { const o = offer(el.dataset.price); el.textContent = o ? Catalog.label(o, interval()) : ''; });
   const button = panel.querySelector('[data-menu-care-add]');
