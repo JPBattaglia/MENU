@@ -34,9 +34,9 @@ const OWN_APPS = [
       site_screens: ["/", "/plans.html", "/online-menu.html"],
       menu: [
         "# Plans",
-        "Starter | Menu Care, Review Replies and Accessibility Monitoring | $79/mo",
+        "Starter | Review Replies and Accessibility Monitoring | $79/mo",
         "Growth | Everything in Starter, plus Google Profile Care | $169/mo",
-        "Pro | Everything in Growth, plus Social Posts and Website Care | $299/mo",
+        "Pro | Everything in Growth, plus Social Posts and Website Care | $279/mo",
         "# One-time services",
         "Online Menu + QR | Your menu as a phone page, a QR code for every table and a print-ready PDF | $144",
         "Website Package | A new website of up to 5 pages, with 3 months of Website Care | $499",

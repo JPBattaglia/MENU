@@ -10,9 +10,9 @@ const script = await readFile(new URL('./start.js', import.meta.url), 'utf8');
 const markup = await readFile(new URL('./contact.html', import.meta.url), 'utf8');
 
 const OFFERS = [
-  { code: 'BUNDLE_STARTER', name: 'Starter Plan', kind: 'BUNDLE', on_sale: true, prices: { month: 7900, year: 79000 }, includes: ['MENU_CARE', 'REVIEW_REPLIES', 'ACCESSIBILITY_MONITORING'], requires_setup: null },
-  { code: 'BUNDLE_GROWTH', name: 'Growth Plan', kind: 'BUNDLE', on_sale: true, prices: { month: 17900, year: 179000 }, includes: ['MENU_CARE', 'REVIEW_REPLIES', 'ACCESSIBILITY_MONITORING', 'GOOGLE_PROFILE_CARE'], requires_setup: null },
-  { code: 'BUNDLE_PRO', name: 'Pro Plan', kind: 'BUNDLE', on_sale: false, prices: { month: 29900, year: 299000 }, includes: ['MENU_CARE', 'REVIEW_REPLIES', 'ACCESSIBILITY_MONITORING', 'GOOGLE_PROFILE_CARE', 'SOCIAL_POSTS', 'WEBSITE_CARE'], requires_setup: null },
+  { code: 'BUNDLE_STARTER', name: 'Starter Plan', kind: 'BUNDLE', on_sale: true, prices: { month: 7900, year: 79000 }, includes: ['REVIEW_REPLIES', 'ACCESSIBILITY_MONITORING'], requires_setup: null },
+  { code: 'BUNDLE_GROWTH', name: 'Growth Plan', kind: 'BUNDLE', on_sale: true, prices: { month: 17900, year: 179000 }, includes: ['REVIEW_REPLIES', 'ACCESSIBILITY_MONITORING', 'GOOGLE_PROFILE_CARE'], requires_setup: null },
+  { code: 'BUNDLE_PRO', name: 'Pro Plan', kind: 'BUNDLE', on_sale: false, prices: { month: 27900, year: 279000 }, includes: ['REVIEW_REPLIES', 'ACCESSIBILITY_MONITORING', 'GOOGLE_PROFILE_CARE', 'SOCIAL_POSTS', 'WEBSITE_CARE'], requires_setup: null },
   { code: 'MENU_CARE', name: 'Menu Care', kind: 'PLAN', on_sale: true, prices: { month: 2900, year: 29000 }, includes: ['MENU_CARE'], requires_setup: null },
   { code: 'REVIEW_REPLIES', name: 'Review Replies', kind: 'PLAN', on_sale: true, prices: { month: 4900, year: 49000 }, includes: ['REVIEW_REPLIES'], requires_setup: null },
   { code: 'GOOGLE_PROFILE_CARE', name: 'Google Profile Care', kind: 'PLAN', on_sale: true, prices: { month: 14900, year: 149000 }, includes: ['GOOGLE_PROFILE_CARE'], requires_setup: null },
@@ -37,7 +37,8 @@ function element() {
     addEventListener(n, fn) { if (!listeners.has(n)) listeners.set(n, []); listeners.get(n).push(fn); },
     async fire(n, event = {}) { for (const fn of listeners.get(n) || []) await fn({ preventDefault() {}, target: this, ...event }); },
     append(...kids) { this.children.push(...kids); }, appendChild(kid) { this.children.push(kid); },
-    focus() { this.focused = true; }, scrollIntoView() { this.scrolled = true; }
+    focus() { this.focused = true; }, scrollIntoView() { this.scrolled = true; },
+    querySelectorAll() { return []; }, querySelector() { return this.kid || (this.kid = element()); }
   };
 }
 
@@ -88,7 +89,7 @@ async function page(route = '', { catalogFails = false } = {}) {
   await new Promise(r => setTimeout(r, 0));
   const state = () => JSON.parse(vm.runInNewContext('JSON.stringify({ plan: order.plan, once: [...order.once] })', context));
   const fill = () => { for (const [id, v] of Object.entries({ lead_name: 'Test Buyer', lead_business: 'Test Cafe', lead_email: 'test@example.com', conversionUrl: 'https://example.com', conversionGoal: 'More reservations', googleMode: 'existing' })) get(id).value = v; get('scopeConfirm').checked = true; };
-  return { location, get, state, fill, sent, documents, tracking, buttons, cards, setInterval: Catalog.setInterval, fail() { failing = true; }, recover() { failing = false; } };
+  return { context, location, get, state, fill, sent, documents, tracking, buttons, cards, setInterval: Catalog.setInterval, fail() { failing = true; }, recover() { failing = false; } };
 }
 
 test('an empty Start page charges nothing and sends nothing', async () => {
@@ -121,8 +122,8 @@ test('a plan link selects that plan with its interval and shows today and the re
 
 test('one plan per order: choosing another plan replaces it and says so', async () => {
   const p = await page('?plan=BUNDLE_STARTER');
-  await p.buttons.get('MENU_CARE').fire('click');
-  assert.deepEqual(p.state(), { plan: 'MENU_CARE', once: [] });
+  await p.buttons.get('REVIEW_REPLIES').fire('click');
+  assert.deepEqual(p.state(), { plan: 'REVIEW_REPLIES', once: [] });
   assert.match(p.get('status').textContent, /one plan at a time/);
 });
 
@@ -185,7 +186,7 @@ test('checkout sends the plan with its interval, one-time items, and the short b
 });
 
 test('your own plan from the plans page: the picks, the one-time services and the total reach checkout', async () => {
-  const p = await page('?custom=SOCIAL_POSTS,MENU_CARE,ACCESSIBILITY_MONITORING&add=google&interval=month');
+  const p = await page('?custom=SOCIAL_POSTS,MENU_CARE,ACCESSIBILITY_MONITORING&add=google&interval=month&have=menu');
   const s = p.state();
   assert.equal(s.plan, 'CUSTOM_PLAN');
   assert.deepEqual(s.once, ['GOOGLE_VISIBILITY']);
@@ -198,10 +199,39 @@ test('your own plan from the plans page: the picks, the one-time services and th
     { key: 'CUSTOM_PLAN', qty: 1, interval: 'month', includes: ['MENU_CARE', 'SOCIAL_POSTS', 'ACCESSIBILITY_MONITORING'] },
     { key: 'GOOGLE_VISIBILITY', qty: 1 }
   ]);
-  const one = await page('?custom=MENU_CARE');
+  const one = await page('?custom=MENU_CARE&have=menu');
   assert.equal(one.state().plan, 'MENU_CARE', 'one service is that service on its own');
   const overlap = await page('?custom=GOOGLE_PROFILE_CARE,REVIEW_REPLIES');
   assert.equal(overlap.state().plan, 'GOOGLE_PROFILE_CARE', 'Google Profile Care already answers reviews');
+});
+
+test('each plan starts from its foundation (owner, Nov 8, 2026): Menu Care brings the menu, Website Care needs the site', async () => {
+  const mc = await page('?plan=MENU_CARE');
+  assert.deepEqual(mc.state(), { plan: 'MENU_CARE', once: ['ONLINE_MENU_QR'] }, 'Menu Care brings Online Menu + QR');
+  assert.match(mc.get('menuAddonNote').textContent, /Already have a menu with us\? Remove it/);
+  await mc.get('cartItems').fire('click', { target: { dataset: { remove: 'ONLINE_MENU_QR' } } });
+  assert.deepEqual(mc.state(), { plan: 'MENU_CARE', once: [] }, 'removing the menu keeps Menu Care for the menu they have');
+  assert.match(mc.get('menuAddonNote').textContent, /menu you already have/);
+  const existing = await page('?plan=MENU_CARE&have=menu');
+  assert.deepEqual(existing.state(), { plan: 'MENU_CARE', once: [] }, 'links to existing menu customers add nothing');
+
+  // Menu Care as an add-on to a plan: the plan's services plus Menu Care become your own plan.
+  const starter = await page('?plan=BUNDLE_STARTER&add=menu');
+  await starter.get('menuAddon').fire('click', { target: { closest: () => ({}) } });
+  const s = JSON.parse(vm.runInNewContext('JSON.stringify(order)', starter.context));
+  assert.equal(s.plan, 'CUSTOM_PLAN');
+  assert.deepEqual(s.custom, ['MENU_CARE', 'REVIEW_REPLIES', 'ACCESSIBILITY_MONITORING']);
+  await starter.get('menuAddon').fire('click', { target: { closest: () => ({}) } });
+  const back = JSON.parse(vm.runInNewContext('JSON.stringify(order)', starter.context));
+  assert.equal(back.plan, 'CUSTOM_PLAN', 'taking Menu Care off leaves the other two services');
+  assert.deepEqual(back.custom, ['REVIEW_REPLIES', 'ACCESSIBILITY_MONITORING']);
+
+  const wc = await page('?plan=WEBSITE_CARE');
+  assert.equal(wc.get('checkoutBtn').disabled, true, 'Website Care without a site cannot check out');
+  assert.match(wc.get('orderProblem').textContent, /starts with your site/);
+  assert.match(wc.get('orderProblem').children[0].href, /^website-design\.html\?then=plan%3DWEBSITE_CARE/);
+  const site = await page('?plan=WEBSITE_CARE&service=sitefiles');
+  assert.equal(site.get('orderProblem').hidden, true);
 });
 
 test('briefs are validated before payment', async () => {

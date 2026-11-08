@@ -51,21 +51,21 @@
     "BUNDLE_STARTER": {
       "name": "Starter Plan",
       "product": "prod_VVKbKRMN5J266n",
-      "includes": ["MENU_CARE", "REVIEW_REPLIES", "ACCESSIBILITY_MONITORING"],
+      "includes": ["REVIEW_REPLIES", "ACCESSIBILITY_MONITORING"],
       "monthly": { "price": "price_1UUJweHw7f6jhUv8gW0UlQfE", "amount": 7900 },
       "annual": { "price": "price_1UUJx4Hw7f6jhUv8H56xNtR0", "amount": 79000 }
     },
     "BUNDLE_GROWTH": {
       "name": "Growth Plan",
       "product": "prod_VVKb8E54P6cyhq",
-      "includes": ["MENU_CARE", "REVIEW_REPLIES", "ACCESSIBILITY_MONITORING", "GOOGLE_PROFILE_CARE"],
+      "includes": ["REVIEW_REPLIES", "ACCESSIBILITY_MONITORING", "GOOGLE_PROFILE_CARE"],
       "monthly": { "price": "price_1UUJwhHw7f6jhUv8lRAL6qhh", "amount": 17900 },
       "annual": { "price": "price_1UUJx5Hw7f6jhUv8yrDptjRK", "amount": 179000 }
     },
     "BUNDLE_PRO": {
       "name": "Pro Plan",
       "product": "prod_VVKbx3bkMst6Cz",
-      "includes": ["MENU_CARE", "REVIEW_REPLIES", "ACCESSIBILITY_MONITORING", "GOOGLE_PROFILE_CARE", "SOCIAL_POSTS", "WEBSITE_CARE"],
+      "includes": ["REVIEW_REPLIES", "ACCESSIBILITY_MONITORING", "GOOGLE_PROFILE_CARE", "SOCIAL_POSTS", "WEBSITE_CARE"],
       "monthly": { "price": "price_1UUJwkHw7f6jhUv8PEZWGIUd", "amount": 29900 },
       "annual": { "price": "price_1UUJx6Hw7f6jhUv8YxoO1atJ", "amount": 299000 }
     }
@@ -142,6 +142,10 @@
     { "date": "2026-11-06", "offer": "BUNDLE_GROWTH", "migration": "0039_growth_169.sql",
       "monthly": { "price": "price_1UYuSPHw7f6jhUv8FJPdUNRq", "amount": 16900 },
       "annual": { "price": "price_1UYuSRHw7f6jhUv8x9I0cJxe", "amount": 169000 },
-      "note": "Owner: Growth $169 so it stays below the same services as Your own plan. The bundles section keeps the launch prices migration 0001 created." }
+      "note": "Owner: Growth $169 so it stays below the same services as Your own plan. The bundles section keeps the launch prices migration 0001 created." },
+    { "date": "2026-11-08", "offer": "BUNDLE_PRO", "migration": "0048_plans_without_menu_care.sql",
+      "monthly": { "price": "price_1UZS5EHw7f6jhUv8ugqPaNA2", "amount": 27900 },
+      "annual": { "price": "price_1UZS5GHw7f6jhUv8g3LN6Vex", "amount": 279000 },
+      "note": "Owner: Menu Care comes out of Starter, Growth and Pro (an add-on now; the bundles section's includes are updated, prices are the launch ones). Pro $279 so it stays below the same services as Your own plan ($292)." }
   ]
 }

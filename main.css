@@ -2736,6 +2736,9 @@ a.is-soon{opacity:.85;background:transparent!important;color:var(--gold)!importa
 .mm-product{padding:28px;border-radius:var(--radius-lg);border:1px solid rgba(0,214,230,.4);background:rgba(1,47,52,.75);scroll-margin-top:110px}
 .mm-product-head h3{margin:0;font-size:28px}
 .mm-product-short{margin:4px 0 0;color:var(--muted)}
+.mm-product-plans{margin:6px 0 0;font-size:.9rem;font-weight:600;color:var(--brand-soft, inherit)}
+.mm-product-plans a{color:inherit}
+.mm-addon-note{margin:18px auto 0;max-width:720px;text-align:center}
 .mm-product-body{display:grid;grid-template-columns:1.2fr 1fr;gap:28px;margin-top:18px}
 .mm-product-body :is(h3,h4){margin:0 0 6px;font-size:17px;color:var(--gold)}
 .mm-product-body p{margin:0 0 14px;line-height:1.5}
