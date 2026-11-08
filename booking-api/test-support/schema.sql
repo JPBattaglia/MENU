@@ -622,3 +622,6 @@ ALTER TABLE menu_previews ADD COLUMN design TEXT;
 
 -- 0046 (Nov 7, 2026)
 ALTER TABLE menu_previews ADD COLUMN reminder_sent_at TEXT;
+
+-- 0047 (Nov 7, 2026)
+ALTER TABLE website_previews ADD COLUMN reminder_sent_at TEXT;

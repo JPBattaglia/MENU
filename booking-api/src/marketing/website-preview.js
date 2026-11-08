@@ -26,6 +26,7 @@ import { writeCopy } from "../producers/website/copy.js";
 import { generate } from "../ai/generate.js";
 import { pausedForSale } from "../lib/switches.js";
 import { verifyLinkToken } from "../lib/links.js";
+import { ownerEmailAddress } from "../lib/config.js";
 import { verifyRenderer } from "../producers/social-posts/render-jobs.js";
 import { DRAFTS_AUDIENCE, DRAFTS_WORKFLOW } from "./prospects.js";
 import { readProspectMenu } from "./demo-menu.js";
@@ -588,4 +589,57 @@ async function prefillFromPreview(env, email) {
   return out;
 }
 
-export { detailFields, hideNameField, designUrl, chooseUrl, wrapDesign, storeDesigns, handleWebsitePreviewCreate, handleWebsitePreviewView, handleWebsitePreviewHandoff, handleWebsitePreviewCustomize, handleWebsitePreviewImage, applyOwnForm, MAX_PHOTOS, handleProspectSiteDemo, prefillFromPreview, offeringsFromMenu, wrapPage, fallbackCopy, PREVIEW_HOURS, PER_NETWORK_DAY };
+// ---------- One reminder before the preview ends (owner, Nov 7, 2026) ----------
+// Same rule as menu previews (public-preview.js runPreviewReminders): one email about 2 days in, 9 am to 7 pm Pacific,
+// only with 3+ hours left, never to the owner's inbox, and not when a paid order already uses this preview. Prospect
+// demos have their own outreach and are left out. Runs on the half-hour cron tick (the menu one runs on the hour), up
+// to 10 previews a tick, so the two never share a tick's D1 budget.
+const REMINDER_AFTER_HOURS = 46;
+const REMINDER_MIN_LEFT_HOURS = 3;
+const pacificHour = (ms) => Number(new Intl.DateTimeFormat("en-US", { hour: "numeric", hourCycle: "h23", timeZone: "America/Los_Angeles" }).format(new Date(ms)));
+const endsText = (iso) => new Date(iso).toLocaleString("en-US", { weekday: "long", hour: "numeric", minute: "2-digit", timeZone: "America/Los_Angeles" });
+
+async function runWebsitePreviewReminders(env, { now = Date.now(), force = false } = {}) {
+  if (!env.DB) return [];
+  const minute = new Date(now).getUTCMinutes();
+  if (!force && (minute < 30 || minute >= 35 || pacificHour(now) < 9 || pacificHour(now) >= 19)) return [];
+  const { results = [] } = await env.DB.prepare(`
+      SELECT token, email, business, expires_at FROM website_previews
+      WHERE status = 'READY' AND source IN ('public', 'rep') AND reminder_sent_at IS NULL AND created_at <= ? AND expires_at > ?
+      ORDER BY created_at ASC LIMIT 10
+    `).bind(new Date(now - REMINDER_AFTER_HOURS * 3600000).toISOString(), new Date(now + REMINDER_MIN_LEFT_HOURS * 3600000).toISOString()).all();
+  const owner = String(ownerEmailAddress(env) || "").toLowerCase();
+  const sent = [];
+  for (const row of results) {
+    const mark = () => env.DB.prepare(`UPDATE website_previews SET reminder_sent_at = ? WHERE token = ?`).bind(new Date(now).toISOString(), row.token).run();
+    const email = String(row.email || "").trim().toLowerCase();
+    // Already bought from this preview (checkout stores site_preview on the order item): nothing to remind about.
+    const ordered = await env.DB.prepare(`SELECT 1 AS x FROM order_items oi JOIN orders o ON o.id = oi.order_id WHERE oi.metadata_json LIKE ? AND o.payment_status = 'PAID' LIMIT 1`)
+      .bind(`%"site_preview":"${row.token}"%`).first().catch(() => null);
+    if (!email || email === owner || ordered) { await mark(); continue; }
+    const url = viewUrl(row.token);
+    const ends = endsText(row.expires_at);
+    const result = await sendTransactionalEmail(env, {
+      to: email,
+      subject: `Your website preview ends ${ends}`,
+      html: brandedEmailHtml({
+        preheader: `${DESIGNS.length} designs of your website, free until ${ends}.`,
+        eyebrow: "YOUR WEBSITE",
+        heading: `${row.business}'s website preview ends soon`,
+        paragraphs: [
+          `Your free website preview ends <strong>${escapeHtml(ends)}</strong> (Pacific time).`,
+          `Haven't picked a design yet? Tap <strong>Generate site</strong> to see all ${DESIGNS.length}, and <strong>Customize</strong> to add your logo, photos, colour and details.`,
+          `When one looks right, tap <strong>Choose this site</strong>: ${SITE_FILES_PRICE} for the whole site as files you own, or add Website Care and we host it for you.`
+        ],
+        buttons: [{ label: "See my website designs", url, primary: true }],
+        footnote: "This is the only reminder we'll send about this preview."
+      }),
+      text: `Your website preview ends ${ends} (Pacific).\nSee all ${DESIGNS.length} designs: ${url}\nTap Choose this site (${SITE_FILES_PRICE}) on the one you want.\nThis is the only reminder about this preview.`,
+      idempotencyKey: `website-preview-reminder/${row.token}`, purpose: "WEBSITE_PREVIEW", templateKey: "website_preview_reminder_v1"
+    }).catch((error) => ({ ok: false, error }));
+    if (result?.ok) { await mark(); sent.push(row.token); }
+  }
+  return sent;
+}
+
+export { runWebsitePreviewReminders, detailFields, hideNameField, designUrl, chooseUrl, wrapDesign, storeDesigns, handleWebsitePreviewCreate, handleWebsitePreviewView, handleWebsitePreviewHandoff, handleWebsitePreviewCustomize, handleWebsitePreviewImage, applyOwnForm, MAX_PHOTOS, handleProspectSiteDemo, prefillFromPreview, offeringsFromMenu, wrapPage, fallbackCopy, PREVIEW_HOURS, PER_NETWORK_DAY };

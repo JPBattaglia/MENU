@@ -5,7 +5,7 @@ import assert from 'node:assert/strict';
 import { createD1, createR2 } from './test-support/d1.mjs';
 
 const { default: worker } = await import('./src/worker.js');
-const { offeringsFromMenu, prefillFromPreview, PER_NETWORK_DAY } = await import('./src/marketing/website-preview.js');
+const { offeringsFromMenu, prefillFromPreview, runWebsitePreviewReminders, PER_NETWORK_DAY } = await import('./src/marketing/website-preview.js');
 
 const MENU = { sections: [{ name: 'Pizza', items: [{ name: 'Margherita', description: 'Mozzarella and basil', price: '$15' }, { name: 'Marinara', description: '', price: '$12' }] }], notes: '', unreadable: '' };
 const COPY = { tagline: 'Pizza with mozzarella and basil', intro: 'Sample Pizza serves Margherita and Marinara pizza. Call ahead or stop by.', about: ['Sample Pizza makes Margherita pizza with mozzarella and basil, and a simple Marinara, for guests who stop by or call ahead.'], meta_description: 'Sample Pizza: Margherita and Marinara pizza, hours, address and phone number.', meta_about: 'About Sample Pizza and the pizza we make every day.' };
@@ -282,4 +282,46 @@ test('Customize: "Logo background" and the logo measurement are kept and reach t
   const { logoBgSelect } = await import('./src/marketing/logo-measure.js');
   assert.match(logoBgSelect('dark'), /<option value="dark" selected>Dark badge<\/option>/);
   assert.match(logoBgSelect(), /<option value="auto" selected>Automatic<\/option>/);
+});
+
+test('website previews: one reminder about 2 days in, skipped once a paid order uses the preview', async (t) => {
+  const made = async () => {
+    const f = setup();
+    stubApis(t);
+    const out = await (await f.create({ request_id: await f.upload(), email: 'owner@pizza.example', business: "Sal's Pizza", phone: '(415) 555-0100' })).json();
+    const created = Date.parse(f.env.DB.raw.prepare(`SELECT created_at FROM website_previews WHERE token = ?`).get(out.token).created_at);
+    return { f, token: out.token, created };
+  };
+  const { f, token, created } = await made();
+  const sent = [];
+  const original = globalThis.fetch;
+  globalThis.fetch = async (input, init) => {
+    if (String(input?.url || input) === 'https://api.resend.com/emails') { sent.push(JSON.parse(init.body)); return Response.json({ id: 'em_r' }); }
+    return original(input, init);
+  };
+  t.after(() => { globalThis.fetch = original; });
+  assert.deepEqual(await runWebsitePreviewReminders(f.env, { now: created + 30 * 3600000, force: true }), [], 'not on day 1');
+  assert.deepEqual(await runWebsitePreviewReminders(f.env, { now: created + 47 * 3600000, force: true }), [token]);
+  const mail = sent.find((e) => /website preview ends/.test(e.subject));
+  assert.ok(mail && [].concat(mail.to).includes('owner@pizza.example'));
+  assert.match(mail.html, new RegExp(`/api/website-preview/view/${token}/d/`));
+  assert.match(mail.html, /Sal&#039;s Pizza&#039;s website preview ends soon/);
+  assert.doesNotMatch(mail.html, /&amp;#039;|&amp;amp;/, 'no double escaping');
+  assert.deepEqual(await runWebsitePreviewReminders(f.env, { now: created + 50 * 3600000, force: true }), [], 'only once');
+
+  // Not on the hour tick, and not at night.
+  const g = await made();
+  let at = g.created + 47 * 3600000;
+  while (Number(new Intl.DateTimeFormat('en-US', { hour: 'numeric', hourCycle: 'h23', timeZone: 'America/Los_Angeles' }).format(new Date(at))) !== 12) at += 3600000;
+  at -= new Date(at).getUTCMinutes() * 60000;
+  assert.deepEqual(await runWebsitePreviewReminders(g.f.env, { now: at }), [], 'not at :00 (the menu reminders run then)');
+  assert.deepEqual(await runWebsitePreviewReminders(g.f.env, { now: at + 30 * 60000 }), [g.token], 'at :30');
+
+  // Bought from this preview: no reminder, marked so it isn't checked again.
+  const h = await made();
+  h.f.env.DB.raw.exec(`PRAGMA foreign_keys = OFF`);
+  h.f.env.DB.raw.prepare(`INSERT INTO orders (id, created_at, updated_at, customer_id, status, subtotal_cents, total_cents, payment_status) VALUES ('o9', 'x', 'x', 'c', 'PAID', 0, 0, 'PAID')`).run();
+  h.f.env.DB.raw.prepare(`INSERT INTO order_items (id, order_id, offer_id, offer_version_id, unit_price_cents, line_total_cents, metadata_json) VALUES ('i9', 'o9', 'x', 'x', 0, 0, ?)`).run(JSON.stringify({ offer_code: 'SITE_FILES', site_preview: h.token, site_design: 'bistro' }));
+  assert.deepEqual(await runWebsitePreviewReminders(h.f.env, { now: h.created + 47 * 3600000, force: true }), []);
+  assert.ok(h.f.env.DB.raw.prepare(`SELECT reminder_sent_at FROM website_previews WHERE token = ?`).get(h.token).reminder_sent_at);
 });

@@ -4,7 +4,7 @@ import { handleSiteForm } from "./producers/site-files/site-form.js";
 import { handleDomainLookup } from "./producers/website/registrar.js";
 import { runDomainPurchases } from "./producers/website/domain-purchase.js";
 import { handleDomainRenewDone, handleDomainRenewPay, runDomainRenewals } from "./producers/website/domain-renewal.js";
-import { handleWebsitePreviewCreate, handleWebsitePreviewView, handleWebsitePreviewHandoff, handleWebsitePreviewCustomize, handleWebsitePreviewImage, handleProspectSiteDemo } from "./marketing/website-preview.js";
+import { handleWebsitePreviewCreate, handleWebsitePreviewView, handleWebsitePreviewHandoff, handleWebsitePreviewCustomize, handleWebsitePreviewImage, handleProspectSiteDemo, runWebsitePreviewReminders } from "./marketing/website-preview.js";
 import { handleOrderCancel } from "./account/cancel.js";
 import { handleBuyerRevision } from "./approvals/buyer-revision.js";
 import { handleApprovalRequest, handleBatchApprovalRequest } from "./approvals/approvals.js";
@@ -443,6 +443,8 @@ const mmWorkerWithBooking = {
       await runDomainRenewals(env).catch((error) => console.error("Domain renewals failed:", error instanceof Error ? error.message : String(error)));
       // Menu previews: one reminder about 2 days in when no order came from it (hourly, 9 am to 7 pm Pacific).
       await runPreviewReminders(env).catch((error) => console.error("Preview reminders failed:", error instanceof Error ? error.message : String(error)));
+      // Website previews: the same single reminder, on the half-hour tick.
+      await runWebsitePreviewReminders(env).catch((error) => console.error("Website preview reminders failed:", error instanceof Error ? error.message : String(error)));
       await advanceSelfTests(env, app).catch((error) => console.error("Self-test failed:", error instanceof Error ? error.message : String(error)));
       await advanceSubscriptionSelfTests(env, app).catch((error) => console.error("Subscription self-test failed:", error instanceof Error ? error.message : String(error)));
       await advanceRoutingSelfTests(env, app).catch((error) => console.error("Routing self-test failed:", error instanceof Error ? error.message : String(error)));
