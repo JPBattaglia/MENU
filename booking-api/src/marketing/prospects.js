@@ -120,7 +120,7 @@ async function handleProspectBatch(request, env) {
 //   POST /api/system/prospects/lookup  { id: "sf/...", name, address, opened_on }  (prospects.yml OIDC)
 //        -> { ok, website, email, phone, cached? }
 const LOOKUP_MODEL = "claude-haiku-5-5";
-const LOOKUP_CAP_TOKENS = 3_000_000;
+const LOOKUP_CAP_TOKENS = 6_000_000; // ~26k tokens a lookup (Nov 8 live run): ~230 a month, a few cents each
 const LOOKUP_SCHEMA = { type: "object", properties: {
   website: { type: "string", description: "The business's own website (https URL), or an empty string" },
   email: { type: "string", description: "A contact email shown publicly for this business, or an empty string" },
