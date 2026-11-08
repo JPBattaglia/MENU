@@ -4,6 +4,8 @@ import { extractMenuFromFile, menuColors, structureMenuText } from "./claude-rea
 import { assertMenuRendered, buildDesignedMenuHtml, buildMenuDraftHtml, loadLogoDataUri } from "./design.js";
 import { fetchMenuSource, getInputValue, loadPreparedPayload } from "./inputs.js";
 import { completeStep, loadProject } from "../../workflows/runner.js";
+import { menuPreviewChoice } from "../../marketing/public-preview.js";
+import { designStyle } from "./menu-designs.js";
 
 async function runGenerateMenuDraftStep(targetStep, env) {
   if (!env.ASSETS) {
@@ -54,13 +56,19 @@ async function runGenerateMenuDraftStep(targetStep, env) {
     source.menu = read.menu;
     source.extraction = read.extraction;
   }
-  const logoDataUri = await loadLogoDataUri(getInputValue(preparedPayload.inputs, "logo"), env).catch(() => null);
+  // The menu generator (Nov 7, 2026): the design chosen in the free preview, with its logo, colour and line under
+  // the name. What the order itself was given (logo, colours) comes first.
+  const choice = await menuPreviewChoice(env, project.order_id).catch(() => null);
+  const chosen = choice?.design && choice.design !== "yours" ? choice.design : null;
+  const logoDataUri = await loadLogoDataUri(getInputValue(preparedPayload.inputs, "logo"), env).catch(() => null) || choice?.logoDataUri || null;
   const draftHtml = source.menu ? buildDesignedMenuHtml({
     businessName,
-    // No colours given: use the ones the menu itself is printed in, as the free preview does.
-    brandColors: brandColors || menuColors(source.menu),
+    // No colours given: the preview's Customize colour, else (for the buyer's own design) the menu's printed colours.
+    brandColors: brandColors || choice?.custom?.color || (chosen ? "" : menuColors(source.menu)),
     menu: source.menu,
-    logoDataUri
+    logoDataUri,
+    ...(chosen ? { style: designStyle(chosen, source.menu) } : {}),
+    subtitle: choice?.custom?.subtitle
   }) : buildMenuDraftHtml({
     businessName,
     brandColors,

@@ -616,3 +616,6 @@ CREATE TABLE IF NOT EXISTS site_form_messages (
 );
 CREATE INDEX IF NOT EXISTS idx_site_form_messages_project ON site_form_messages (project_id, created_at);
 CREATE INDEX IF NOT EXISTS idx_site_form_messages_ip ON site_form_messages (ip_hash, created_at);
+
+-- 0045 (Nov 7, 2026)
+ALTER TABLE menu_previews ADD COLUMN design TEXT;

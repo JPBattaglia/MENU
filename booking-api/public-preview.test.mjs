@@ -5,7 +5,10 @@ import assert from 'node:assert/strict';
 import { createD1, createR2 } from './test-support/d1.mjs';
 
 const { default: worker } = await import('./src/worker.js');
-const { publicPreviewPage, MAX_OPENS, PER_NETWORK_DAY, PER_EMAIL } = await import('./src/marketing/public-preview.js');
+const { publicPreviewPage, menuPreviewChoice, MAX_OPENS, PER_NETWORK_DAY, PER_EMAIL } = await import('./src/marketing/public-preview.js');
+const { MENU_DESIGNS } = await import('./src/producers/menu-qr/menu-designs.js');
+const { buildDesignedMenuHtml } = await import('./src/producers/menu-qr/design.js');
+const { parseMenuHtml } = await import('./src/producers/menu-care/menu-edit.js');
 
 const MENU = { sections: [{ name: 'Starters', items: [{ name: 'Garlic Bread', description: 'House focaccia', price: '$9' }] }], notes: '', unreadable: '', colors: ['#a8322d', '#f3ead8', 'not-a-colour'] };
 const PHONE = 'Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X)';
@@ -57,7 +60,8 @@ test('an upload becomes a watermarked, unprintable phone preview with no QR, and
   assert.match(html, /--primary: #a8322d/, "the menu's own colour, not black and white; the cream paper colour is skipped");
   assert.match(html, /PREVIEW%20%C2%B7%20NOT%20LIVE/);
   assert.match(html, /@media print/);
-  assert.match(html, /contact\.html\?service=menu&amp;preview=[a-f0-9]{36}/);
+  assert.match(html, /\/api\/menu-preview\/choose\/[a-f0-9]{36}\/yours/, '"Make it live" saves the design on screen first');
+  assert.match(html, /Design 1 of 9: Your printed menu/);
   assert.doesNotMatch(html, /<svg[^>]*qr|data-qr|\/api\/menu\//i, 'no QR code and no hosted menu address');
   assert.equal(calls.claude, 1);
   assert.equal(calls.email, 1);
@@ -192,4 +196,107 @@ test('rep mode: a valid rep link skips the public limits, a forged one does not,
   const res = await worker.fetch(new Request('https://menu-made.com/api/menu-preview/rep-link', { method: 'POST' }), f.env, { waitUntil() {} });
   assert.equal(res.status, 200);
   assert.equal(calls.email, before + 1);
+});
+
+// ---------- Menu generator (owner, Nov 7, 2026) ----------
+
+const PNG = new Uint8Array([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0, 0, 0, 13, 73, 72, 68, 82]);
+
+async function madePreview(t) {
+  const f = setup();
+  const calls = stubClaude(t);
+  const requestId = await f.upload();
+  const { token } = await (await f.create({ request_id: requestId, email: 'owner@cafe.example', business: 'Sample Cafe' })).json();
+  const customize = (fields) => {
+    const form = new FormData();
+    for (const [k, v] of Object.entries(fields)) form.append(k, v);
+    return worker.fetch(new Request(`https://menu-made.com/api/menu-preview/customize/${token}`, { method: 'POST', body: form }), f.env, { waitUntil() {} });
+  };
+  return { f, calls, token, requestId, customize };
+}
+
+test('the menu generator: one read, nine designs, "Generate menu" goes round them all', async (t) => {
+  const { f, calls, token } = await madePreview(t);
+  assert.equal(calls.claude, 1, 'the menu is read once for all designs');
+  assert.equal(MENU_DESIGNS.length, 9);
+  const seen = new Set();
+  for (const [i, d] of MENU_DESIGNS.entries()) {
+    const res = await f.get(`/api/menu-preview/view/${token}/${d.key}`);
+    assert.equal(res.status, 200, d.key);
+    const html = await res.text();
+    assert.match(html, new RegExp(`Design ${i + 1} of 9: ${d.label}`));
+    assert.match(html, /Garlic Bread/);
+    assert.match(html, /PREVIEW%20%C2%B7%20NOT%20LIVE/, 'every design is watermarked');
+    const next = MENU_DESIGNS[(i + 1) % MENU_DESIGNS.length].key;
+    assert.ok(html.includes(`/api/menu-preview/view/${token}/${next}">Generate menu`), `${d.key} -> ${next}`);
+    assert.ok(html.includes(`/api/menu-preview/choose/${token}/${d.key}`));
+    seen.add(/<meta name="mm-style" content="([^"]*)"/.exec(html)?.[1] || 'standard');
+  }
+  assert.equal(seen.size, 9, 'nine different looks');
+  const modern = await (await f.get(`/api/menu-preview/view/${token}/modern`)).text();
+  assert.match(modern, /header \{ background: var\(--primary\)/, 'band header');
+  assert.equal((await f.get(`/api/menu-preview/view/${token}/nosuch`)).status, 410);
+  assert.equal(f.env.DB.raw.prepare(`SELECT open_count FROM menu_previews`).get().open_count, 10, 'every design opened counts');
+});
+
+test('Customize: logo, colour and the line under the name reach every design, with no new read', async (t) => {
+  const { f, calls, token, customize } = await madePreview(t);
+  const res = await customize({ design: 'diner', logo: new File([PNG], 'logo.png', { type: 'image/png' }), brand: '#1d4e89', use_brand: '1', subtitle: 'Dinner Menu' });
+  assert.equal(res.status, 303);
+  assert.equal(res.headers.get('location'), `https://menu-made.com/api/menu-preview/view/${token}/diner`);
+  for (const key of ['yours', 'diner', 'night']) {
+    const html = await (await f.get(`/api/menu-preview/view/${token}/${key}`)).text();
+    assert.match(html, /<header>\s*<img src="data:image\/png;base64,/, `${key} has the logo`);
+    assert.match(html, /<p>Dinner Menu<\/p>/, `${key} has the line`);
+    assert.match(html, /Using your logo, your colour, your line under the name/);
+  }
+  const classic = await (await f.get(`/api/menu-preview/view/${token}/classic`)).text();
+  assert.match(/<meta name="mm-style" content="([^"]*)"/.exec(classic)[1], /&quot;heading&quot;:&quot;#1d4e89&quot;/, 'brand colour leads the headings');
+  assert.equal(calls.claude, 1);
+
+  const bad = await customize({ design: 'diner', logo: new File([new Uint8Array([1, 2, 3, 4, 5])], 'x.png', { type: 'image/png' }) });
+  assert.equal(bad.status, 400);
+  const off = await customize({ design: 'classic', brand: '#1d4e89', subtitle: 'Menu' });
+  assert.equal(off.status, 303);
+  const plain = await (await f.get(`/api/menu-preview/view/${token}/classic`)).text();
+  assert.doesNotMatch(/<meta name="mm-style" content="([^"]*)"/.exec(plain)[1], /#1d4e89/, 'unticked colour goes back to the design\'s own');
+  assert.match(plain, /<p>Menu<\/p>/);
+  assert.match(plain, /<img src="data:image\/png/, 'the logo stays');
+});
+
+test('"Make it live" saves the design and opens checkout; the paid menu finds the choice from the order', async (t) => {
+  const { f, token, requestId, customize } = await madePreview(t);
+  await customize({ design: 'bistro', brand: '#7a1f2b', use_brand: '1', subtitle: 'Since 1998' });
+  const res = await f.get(`/api/menu-preview/choose/${token}/bistro`);
+  assert.equal(res.status, 303);
+  assert.equal(res.headers.get('location'), `https://menu-made.com/contact.html?service=menu&preview=${token}`);
+  assert.equal(f.env.DB.raw.prepare(`SELECT design FROM menu_previews`).get().design, 'bistro');
+  assert.equal((await f.get(`/api/menu-preview/choose/${token}/nosuch`)).status, 404);
+
+  f.env.DB.raw.exec(`PRAGMA foreign_keys = OFF`);
+  f.env.DB.raw.prepare(`INSERT INTO orders (id, created_at, updated_at, customer_id, status, subtotal_cents, total_cents, payment_status, notes) VALUES ('o1', '2026-11-07', '2026-11-07', 'c1', 'PAID', 0, 0, 'PAID', ?)`).run(`Brief\nDocument ref: ${requestId}`);
+  const choice = await menuPreviewChoice(f.env, 'o1');
+  assert.equal(choice.design, 'bistro');
+  assert.equal(choice.custom.color, '#7a1f2b');
+  assert.equal(choice.custom.subtitle, 'Since 1998');
+  assert.equal(await menuPreviewChoice(f.env, 'missing'), null);
+});
+
+test('a preview made before the generator still opens as it was', async (t) => {
+  const f = setup();
+  const token = 'b'.repeat(36);
+  f.env.DB.raw.prepare(`INSERT INTO menu_previews (token, request_id, email, business, status, created_at, expires_at) VALUES (?, ?, 'o@x.example', 'Old Cafe', 'READY', ?, ?)`).run(token, crypto.randomUUID(), new Date().toISOString(), new Date(Date.now() + 86400000).toISOString());
+  await f.env.ASSETS.put(`menu-previews/${token}.html`, '<html><body>old page</body></html>');
+  const res = await f.get(`/api/menu-preview/view/${token}`);
+  assert.equal(res.status, 200);
+  assert.match(await res.text(), /old page/);
+});
+
+test('the line under the name and the band header survive a Menu Care update', () => {
+  const html = buildDesignedMenuHtml({ businessName: 'Cafe', brandColors: '', menu: { sections: [{ name: 'Mains', items: [{ name: 'Soup', price: '8' }] }] }, logoDataUri: null,
+    style: MENU_DESIGNS.find((d) => d.key === 'diner').style, subtitle: 'All Day Menu' });
+  const live = parseMenuHtml(html);
+  assert.equal(live.subtitle, 'All Day Menu');
+  assert.equal(live.style.header, 'band');
+  assert.equal(parseMenuHtml(buildDesignedMenuHtml({ businessName: 'Cafe', menu: { sections: [{ name: 'Mains', items: [{ name: 'Soup', price: '8' }] }] }, logoDataUri: null })).subtitle, 'Menu');
 });

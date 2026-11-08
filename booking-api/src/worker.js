@@ -1,5 +1,5 @@
 import { handleAdminQueue } from "./admin/queue.js";
-import { handlePreviewCreate, handlePreviewView, handlePreviewHandoff, handleRepLink } from "./marketing/public-preview.js";
+import { handlePreviewCreate, handlePreviewView, handlePreviewHandoff, handlePreviewCustomize, handlePreviewChoose, handleRepLink } from "./marketing/public-preview.js";
 import { handleSiteForm } from "./producers/site-files/site-form.js";
 import { handleDomainLookup } from "./producers/website/registrar.js";
 import { runDomainPurchases } from "./producers/website/domain-purchase.js";
@@ -159,10 +159,15 @@ var worker_default = {
     if (url.pathname === "/api/system/prospects/site-demo" && request.method === "POST") return handleProspectSiteDemo(request, env);
     if (url.pathname === "/api/menu-preview/rep-link" && (request.method === "GET" || request.method === "POST")) return handleRepLink(request, env);
     if (url.pathname === "/api/menu-preview/create" && (request.method === "POST" || request.method === "OPTIONS")) return handlePreviewCreate(request, env);
-    const publicPreview = url.pathname.match(/^\/api\/menu-preview\/(view|handoff)\/([a-f0-9]{36})$/);
-    if (publicPreview && (request.method === "GET" || request.method === "HEAD")) {
-      return publicPreview[1] === "view" ? handlePreviewView(request, env, publicPreview[2]) : handlePreviewHandoff(env, publicPreview[2]);
+    const publicPreview = url.pathname.match(/^\/api\/menu-preview\/(view|handoff)\/([a-f0-9]{36})(?:\/([a-z]{2,20}))?$/);
+    if (publicPreview && (request.method === "GET" || request.method === "HEAD") && (publicPreview[1] === "view" || !publicPreview[3])) {
+      return publicPreview[1] === "view" ? handlePreviewView(request, env, publicPreview[2], { design: publicPreview[3] || null }) : handlePreviewHandoff(env, publicPreview[2]);
     }
+    // Menu generator (Nov 7, 2026): Customize rebuilds every design; "Make it live" saves the design, then checkout.
+    const menuCustomize = url.pathname.match(/^\/api\/menu-preview\/customize\/([a-f0-9]{36})$/);
+    if (menuCustomize && request.method === "POST") return handlePreviewCustomize(request, env, menuCustomize[1]);
+    const menuChoose = url.pathname.match(/^\/api\/menu-preview\/choose\/([a-f0-9]{36})\/([a-z]{2,20})$/);
+    if (menuChoose && request.method === "GET") return handlePreviewChoose(env, menuChoose[1], menuChoose[2]);
     const previewMatch = url.pathname.match(/^\/api\/menu-preview\/([a-f0-9]{36})$/);
     if (previewMatch && (request.method === "GET" || request.method === "HEAD")) return handleMenuPreview(request, env, previewMatch[1]);
     const storeAppDoneMatch = url.pathname.match(/^\/api\/store-app\/([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})\/done$/i);
