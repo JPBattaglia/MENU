@@ -213,15 +213,57 @@ test('social pack: posts written from the brief only, then drawn; a claim not in
   });
 });
 
-test('logo: no logo upload asked, 18 files drawn, delivered after approval', async () => {
+test('logo: Nino is emailed the brief, uploads his concepts and final files, the owner approves, the buyer gets them', async () => {
   const f = setup('NINO_LOGO');
   await withFetch(f.fetch, async () => {
     await startDesignBrief(f.env, { projectId: f.projectId });
     const page = await (await call(f, linksIn(f.emails[0].text, '/api/design-brief/')[0])).text();
     assert.doesNotMatch(page, /name="logo"/);
+    assert.match(page, /name="ideas"/, 'the brief asks for ideas');
     f.emails.length = 0;
-    await briefAndProduce(f, 'NINO_LOGO', { business_name: 'Sample Cafe', tagline: '', style: 'rustic', brand_colors: '' });
+    await briefAndProduce(f, 'NINO_LOGO', { business_name: 'Sample Cafe', tagline: '', style: 'rustic', brand_colors: '', ideas: 'A coffee cup with steam', usage: 'Sign and cups' });
+    assert.equal(f.row(`SELECT COUNT(*) AS n FROM deliverables`).n, 0, 'nothing is drawn automatically');
+    assert.equal(f.row(`SELECT status FROM workflow_runs`).status, 'WAITING');
+    const nino = f.emails.find((e) => /New logo to design: Sample Cafe/.test(e.subject));
+    assert.ok(nino, 'Nino emailed');
+    assert.deepEqual([].concat(nino.to), ['hello@ninobattaglia.com']);
+    assert.match(nino.text, /A coffee cup with steam/);
+    const [upload] = linksIn(nino.text, '/api/nino-logo/');
+    assert.match(await (await call(f, upload)).text(), /Upload the logo designs/);
+    const post = (form) => call(f, upload, { method: 'POST', body: form });
+    const bad = new FormData(); bad.append('concept_1', new File([PNG], 'c1.png', { type: 'image/png' })); bad.append('pack', new File([new TextEncoder().encode('not a zip')], 'x.zip'));
+    assert.match(await (await post(bad)).text(), /isn&#039;t a ZIP/);
+    const { createZip } = await import('./src/producers/social-posts/zip.js');
+    const zip = createZip([{ name: 'Sample-Cafe-logo/concept-1.png', data: PNG }, { name: 'Sample-Cafe-logo/concept-1.svg', data: new TextEncoder().encode('<svg/>') }]);
+    const good = new FormData();
+    good.append('concept_1', new File([PNG], 'c1.png', { type: 'image/png' })); good.append('concept_1_name', 'Steam cup');
+    good.append('concept_2', new File([PNG], 'c2.png', { type: 'image/png' }));
+    good.append('pack', new File([zip], 'final.zip', { type: 'application/zip' })); good.append('note', 'Concept 1 works best on the sign.');
+    const res = await post(good);
+    assert.match(await res.text(), /2 concepts and the final files are in/);
+    assert.match(await (await post(good)).text(), /already in/, 'a second submit stores nothing');
+    await api.runScheduledProduction(f.env); await Promise.all(f.pending);
+    const preview = f.row(`SELECT a.storage_key FROM deliverables d JOIN assets a ON a.id = d.asset_id WHERE d.deliverable_type = 'NINO_DESIGN_PREVIEW'`);
+    const html = await (await f.env.ASSETS.get(preview.storage_key)).text();
+    assert.match(html, /Concept 1: Steam cup/); assert.match(html, /data:image\/png;base64,/); assert.match(html, /Concept 1 works best on the sign/);
+    const pack = f.row(`SELECT a.original_filename, a.size_bytes FROM deliverables d JOIN assets a ON a.id = d.asset_id WHERE d.deliverable_type = 'NINO_DESIGN_PACK'`);
+    assert.equal(pack.original_filename, 'Sample-Cafe-logo.zip'); assert.equal(pack.size_bytes, zip.length, 'the ZIP is stored as Nino sent it');
     await approveAndDeliver(f);
+  });
+});
+
+test('logo: a test-mode order emails the owner instead of Nino, and a logo waiting 4 days alerts the owner once', async () => {
+  const f = setup('NINO_LOGO');
+  f.env.DB.raw.prepare(`UPDATE orders SET stripe_checkout_session_id = 'cs_test_x'`).run();
+  await withFetch(f.fetch, async () => {
+    await briefAndProduce(f, 'NINO_LOGO', { business_name: 'Sample Cafe', tagline: '', style: 'modern', brand_colors: '' });
+    const ask = f.emails.find((e) => /New logo to design/.test(e.subject));
+    assert.match(ask.subject, /\(test order\)/); assert.deepEqual([].concat(ask.to), ['info@menu-made.com']);
+    const { alertStaleHandLogos } = await import('./src/producers/nino-design/hand-logo.js');
+    assert.equal(await alertStaleHandLogos(f.env), 0, 'not yet');
+    assert.equal(await alertStaleHandLogos(f.env, { now: Date.now() + 5 * 864e5 }), 1);
+    assert.equal(await alertStaleHandLogos(f.env, { now: Date.now() + 6 * 864e5 }), 0, 'once');
+    assert.ok(f.emails.some((e) => /still waiting on Nino/.test(e.subject)));
   });
 });
 

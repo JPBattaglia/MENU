@@ -12,7 +12,7 @@ const infoOf = (files) => parseJsonOrNull(files?.find((f) => f.deliverable_type 
 
 function summary(product, info) {
   if (product.code === "NINO_SOCIAL_PACK") return `${info.posts || 9} posts, each as a feed and a story graphic, with captions.`;
-  if (product.code === "NINO_LOGO") return `${info.options || 6} wordmark options, each transparent, on white and on dark.`;
+  if (product.code === "NINO_LOGO") return info.hand_designed ? `${info.concepts || 1} logo concept${info.concepts === 1 ? "" : "s"} designed by hand by Nino, with ${info.files || "the"} final file${info.files === 1 ? "" : "s"}.` : `${info.options || 6} wordmark options, each transparent, on white and on dark.`;
   if (product.code === "NINO_MENU_DESIGN") return `${info.pages || ""} print-ready page${info.pages === 1 ? "" : "s"} (${info.paid_pages || ""} paid), ${info.items || 0} items.${info.unreadable ? ` Reader note: ${info.unreadable}` : ""}`;
   return "A letter-size print flyer (300 dpi) and a square version for social media.";
 }
