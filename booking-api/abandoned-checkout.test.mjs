@@ -2,6 +2,9 @@
 // link that reopens the same order in a new Stripe session (old session expired first).
 // Run: node --no-warnings --test booking-api/abandoned-checkout.test.mjs
 import { test } from 'node:test';
+// A signature that is always wrong: change the first signature character. (Replacing the last characters, as before,
+// could by chance leave the signature valid, since the final base64 character carries spare bits.)
+const forge = (t) => { const [body, sig] = t.split('.'); return `${body}.${sig[0] === 'A' ? 'B' : 'A'}${sig.slice(1)}`; };
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { createD1, createR2 } from './test-support/d1.mjs';
@@ -164,7 +167,7 @@ test('the link: GET shows the order without opening Stripe, POST expires the old
     assert.equal(params.get('line_items[0][price_data][unit_amount]'), '18400', '5 pages: $129 + 2 x $20 + $15 hosting');
     assert.equal(h.row(`SELECT COUNT(*) AS n FROM orders`).n, 1, 'no second order');
 
-    const forged = await h.call(path.split('?')[0], { method: 'POST', body: new URLSearchParams({ t: token.slice(0, -2) + 'xx' }) });
+    const forged = await h.call(path.split('?')[0], { method: 'POST', body: new URLSearchParams({ t: forge(token) }) });
     assert.equal(forged.status, 404);
     h.sql(`UPDATE orders SET status = 'PAID', payment_status = 'PAID' WHERE id = ?`, started.order_id);
     const afterPaid = await h.call(path);
