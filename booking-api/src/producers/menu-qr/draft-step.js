@@ -60,7 +60,11 @@ async function runGenerateMenuDraftStep(targetStep, env) {
   // the name. What the order itself was given (logo, colours) comes first.
   const choice = await menuPreviewChoice(env, project.order_id).catch(() => null);
   const chosen = choice?.design && choice.design !== "yours" ? choice.design : null;
-  const logoDataUri = await loadLogoDataUri(getInputValue(preparedPayload.inputs, "logo"), env).catch(() => null) || choice?.logoDataUri || null;
+  const orderLogo = await loadLogoDataUri(getInputValue(preparedPayload.inputs, "logo"), env).catch(() => null);
+  const logoDataUri = orderLogo || choice?.logoDataUri || null;
+  // The preview's logo comes with its measurement and the buyer's "Logo background" choice; a logo given with the
+  // order is unmeasured (design.js: a JPEG gets a border, anything else a soft halo).
+  const logo = orderLogo ? null : choice?.logoDataUri ? { info: choice.custom?.logo_info || null, mode: choice.custom?.logo_bg || "auto" } : null;
   const draftHtml = source.menu ? buildDesignedMenuHtml({
     businessName,
     // A generator design keeps its own colours; the order's colour (or the preview's Customize colour) is only its
@@ -70,7 +74,8 @@ async function runGenerateMenuDraftStep(targetStep, env) {
     menu: source.menu,
     logoDataUri,
     ...(chosen ? { style: designStyle(chosen, source.menu) } : {}),
-    subtitle: choice?.custom?.subtitle
+    subtitle: choice?.custom?.subtitle,
+    logo
   }) : buildMenuDraftHtml({
     businessName,
     brandColors,

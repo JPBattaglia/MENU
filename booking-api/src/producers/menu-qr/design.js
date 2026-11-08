@@ -1,5 +1,5 @@
 import { bytesToBase64, escapeHtml2 } from "../../lib/util.js";
-import { styleCss, styleMeta, toStyle } from "./style.js";
+import { luminance, mix, styleCss, styleMeta, toStyle } from "./style.js";
 
 var NAMED_MENU_COLORS = {
   tan: "#b8956a", red: "#a8322d", green: "#2f6b45", navy: "#1f2a44", gold: "#b8902b", black: "#1b1b1b",
@@ -57,7 +57,59 @@ async function loadLogoDataUri(asset, env) {
 // subtitle: the line under the name ("Menu" unless the buyer changed it with Customize in the menu generator).
 // highlight: one colour for the design's highlights only (dividers, nav, numbers, borders), leaving its header and
 // headings as designed (owner, Nov 7, 2026: a chosen colour on the headings made every design look the same).
-function buildDesignedMenuHtml({ businessName, brandColors, menu, logoDataUri, style, subtitle, highlight }) {
+// ---------- Logo legibility (owner, Nov 7, 2026: "in some menus the logo doesn't show very well") ----------
+// The menu generator measures an uploaded logo in the buyer's browser (public-preview.js) and sends
+// "t=<has see-through parts 0|1>;l=<average luminance 0-1>;c=<ink coverage of its outline box 0-1>;b=<solid box 0|1>".
+// Per design, the logo then gets one treatment against the header behind it:
+//   none   it already stands out (contrast >= 4.5)
+//   halo   a soft glow following the logo's own shape (contrast 3 to 4.5), light behind a dark logo, dark behind a light one
+//   badge  a rounded plate in a tone of the design (contrast under 3, or a fine-lined logo)
+//   boxed  a logo with its own solid background: rounded corners, a highlight-colour border
+// mode (Customize "Logo background"): auto | none | light | dark | accent. Unmeasured logos: JPEG = boxed, else halo.
+// The measurement and mode stay in the page (data-logo) so Menu Care updates keep the same treatment.
+const LOGO_MODES = ["auto", "none", "light", "dark", "accent"];
+
+function parseLogoInfo(text) {
+  const raw = Object.fromEntries(String(text || "").split(";").map((part) => part.split("=")).filter((kv) => kv.length === 2));
+  const num = (v, lo, hi) => (Number.isFinite(Number(v)) && String(v).trim() !== "" ? Math.min(hi, Math.max(lo, Number(v))) : null);
+  const info = { t: num(raw.t, 0, 1), l: num(raw.l, 0, 1), c: num(raw.c, 0, 1), b: num(raw.b, 0, 1) };
+  return info.l === null && info.b === null ? null : info;
+}
+const logoInfoText = (info) => (info ? ["t", "l", "c", "b"].filter((k) => info[k] !== null && info[k] !== undefined).map((k) => `${k}=${info[k]}`).join(";") : "");
+
+function logoTreatment({ info, mode, isJpeg, headerBg, theme, accent }) {
+  const bgDark = luminance(headerBg) < 0.25;
+  const paper = theme ? theme.paper : "#fbf8f3";
+  const ink = theme ? theme.text : "#1d1d1b";
+  const light = mix(luminance(paper) > 0.4 ? paper : ink, "#ffffff", 0.45);
+  const dark = mix(luminance(paper) > 0.4 ? ink : paper, "#000000", 0.2);
+  const pick = LOGO_MODES.includes(mode) ? mode : "auto";
+  if (pick === "none") return { kind: "none" };
+  if (pick === "light") return { kind: "badge", plate: light };
+  if (pick === "dark") return { kind: "badge", plate: dark };
+  if (pick === "accent") return { kind: "badge", plate: accent };
+  if (!info) return isJpeg ? { kind: "boxed" } : { kind: "halo", glow: bgDark ? "#ffffff" : "#000000" };
+  if (info.b === 1) return { kind: "boxed" };
+  const l = info.l ?? 0.5;
+  const bgL = luminance(headerBg);
+  const ratio = (Math.max(l, bgL) + 0.05) / (Math.min(l, bgL) + 0.05);
+  if (ratio >= 4.5) return { kind: "none" };
+  if ((info.c !== null && info.c < 0.35) || ratio < 3) return { kind: "badge", plate: l < 0.4 ? light : dark };
+  return { kind: "halo", glow: l < 0.4 ? "#ffffff" : "#000000" };
+}
+
+function logoImgHtml({ logoDataUri, alt, logo, theme, primary, accent }) {
+  if (!logoDataUri) return "";
+  const banded = theme ? ["band", "arch", "hero", "ticket"].includes(theme.header) : true;
+  const headerBg = theme ? (banded ? theme.heading : theme.paper) : primary;
+  const t = logoTreatment({ info: logo?.info || null, mode: logo?.mode, isJpeg: /^data:image\/jpe?g/i.test(logoDataUri), headerBg, theme, accent });
+  const vars = t.kind === "badge" ? ` style="--plate: ${t.plate}"` : t.kind === "halo" ? ` style="--glow: ${t.glow}"` : "";
+  const data = [logoInfoText(logo?.info), `m=${LOGO_MODES.includes(logo?.mode) ? logo.mode : "auto"}`].filter(Boolean).join(";");
+  return `<img src="${escapeHtml2(logoDataUri)}" alt="${alt} logo" class="logo-${t.kind}"${vars} data-logo="${escapeHtml2(data)}">`;
+}
+
+// logo: { info, mode } for the logo's legibility treatment (see logoTreatment above).
+function buildDesignedMenuHtml({ businessName, brandColors, menu, logoDataUri, style, subtitle, highlight, logo }) {
   // The look of the customer's own menu, when the reader saw one (style.js); otherwise the standard page.
   let theme = toStyle(style ?? menu?.style);
   const esc = escapeHtml2;
@@ -110,6 +162,9 @@ ${styleMeta(theme)}
   body { margin: 0; background: var(--paper); color: var(--ink); font: 16px/1.5 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
   header { background: var(--primary); color: #fff; text-align: center; padding: 36px 20px 30px; }
   header img { display: block; max-height: 84px; max-width: 70%; margin: 0 auto 14px; object-fit: contain; }
+  header img.logo-halo { filter: drop-shadow(0 0 1px var(--glow)) drop-shadow(0 0 1px var(--glow)) drop-shadow(0 0 7px color-mix(in srgb, var(--glow) 70%, transparent)); }
+  header img.logo-badge { box-sizing: content-box; padding: 12px 18px; border-radius: 16px; background: var(--plate); box-shadow: 0 3px 12px rgba(0,0,0,.18); }
+  header img.logo-boxed { border-radius: 10px; border: 2px solid var(--accent); box-shadow: 0 3px 12px rgba(0,0,0,.18); }
   h1 { margin: 0; font: 600 clamp(28px, 7vw, 44px)/1.1 "Iowan Old Style", "Palatino Linotype", Palatino, Georgia, serif; letter-spacing: .5px; }
   header p { margin: 8px 0 0; font-size: 13px; letter-spacing: 3px; text-transform: uppercase; opacity: .85; }
   .jump { position: sticky; top: 0; z-index: 2; display: flex; gap: 8px; overflow-x: auto; padding: 10px 16px; background: rgba(251, 248, 243, .96); border-bottom: 1px solid var(--rule); scrollbar-width: none; }
@@ -133,7 +188,7 @@ ${styleMeta(theme)}
 </head>
 <body>
   <header>
-    ${logoDataUri ? `<img src="${esc(logoDataUri)}" alt="${name} logo">` : ""}
+    ${logoImgHtml({ logoDataUri, alt: name, logo, theme, primary, accent: theme ? theme.accent : accent })}
     <h1>${name}</h1>
     <p>${line}</p>
   </header>
@@ -276,7 +331,7 @@ function buildMenuDraftHtml({
 </html>`;
 }
 
-export {
+export { parseLogoInfo, LOGO_MODES,
   NAMED_MENU_COLORS,
   parseBrandColors,
   colorLuminance,
