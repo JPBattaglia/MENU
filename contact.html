@@ -100,11 +100,11 @@
           <section class="service-choice-group" aria-labelledby="bundleChoiceTitle">
             <h3 id="bundleChoiceTitle">Plans</h3>
             <article class="service-card mm-choice" data-code="BUNDLE_STARTER" data-kind="plan" data-name="Starter plan">
-              <h3>Starter plan</h3><p>Every review answered and your site checked monthly. Includes Review Replies and Accessibility Monitoring.</p>
+              <h3>Starter plan</h3><p>Your menu online and kept current, and every review answered. Includes your menu with QR codes (setup free with yearly), Menu Care, Review Replies and Accessibility Monitoring.</p>
               <div class="service-bottom"><span class="price"><span class="mm-price" data-price-for="BUNDLE_STARTER">$79/mo</span></span><button class="btn primary js-add" type="button" data-select-label="Choose Starter" aria-pressed="false">Loading…</button></div>
             </article>
             <article class="service-card mm-choice" data-code="BUNDLE_GROWTH" data-kind="plan" data-name="Growth plan">
-              <h3>Growth plan</h3><p>Everything in Starter, plus a busy Google profile. Includes Google Profile Care (with review replies) and Accessibility Monitoring.</p>
+              <h3>Growth plan</h3><p>Everything in Starter, plus a busy Google profile. Includes your menu with QR codes (setup free with yearly), Menu Care, Google Profile Care (with review replies) and Accessibility Monitoring.</p>
               <div class="service-bottom"><span class="price"><span class="mm-price" data-price-for="BUNDLE_GROWTH">$169/mo</span></span><button class="btn primary js-add" type="button" data-select-label="Choose Growth" aria-pressed="false">Loading…</button></div>
             </article>
             <article class="service-card mm-choice" data-code="BUNDLE_PRO" data-kind="plan" data-name="Pro plan">
@@ -189,7 +189,7 @@
               <button class="btn secondary" type="button" data-addon-add="WEBSITE_CARE">Add</button>
             </div>
             <div class="site-addon" data-addon="BUNDLE_PRO">
-              <div><strong>Pro Plan</strong> <span class="site-addon-price" data-price="BUNDLE_PRO"></span><small>Website Care plus Google Profile Care (with review replies), Social Posts and Accessibility Monitoring.</small></div>
+              <div><strong>Pro Plan</strong> <span class="site-addon-price" data-price="BUNDLE_PRO"></span><small>Website Care plus Menu Care, Google Profile Care (with review replies), Social Posts and Accessibility Monitoring.</small></div>
               <button class="btn secondary" type="button" data-addon-add="BUNDLE_PRO">Add</button>
             </div>
             <fieldset class="site-addon-own">
@@ -214,6 +214,7 @@
           </section>
 
           <div class="menu-config" id="menuConfig" hidden>
+            <p class="mini" id="menuPlanNote" aria-live="polite" hidden></p>
             <div class="field">
               <label for="menuPages">How many pages is your current menu?</label>
               <input id="menuPages" name="menu_pages" type="number" min="1" max="50" step="1" value="3" inputmode="numeric" aria-describedby="menuPagesHelp menuPagesError">
@@ -340,7 +341,7 @@
 </footer>
 <script src="section-parallax.js?v=20261015-unified" defer></script>
 <script src="document-upload.js?v=20261028-stage9" defer></script>
-<script src="start.js?v=20261108-foundation" defer></script>
+<script src="start.js?v=20261108-menuplans" defer></script>
 <script src="booking.js?v=20261016-buyer-flow" defer></script>
 </body>
 </html>

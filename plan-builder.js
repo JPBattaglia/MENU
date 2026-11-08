@@ -119,9 +119,11 @@
     }
     let oneTimeCents = 0;
     for (const code of oneTime) {
-      const cents = once(code) || 0;
+      // The menu setup is free with a yearly plan that includes Menu Care (owner, Nov 8, 2026).
+      const free = code === 'ONLINE_MENU_QR' && Catalog.interval === 'year' && monthly.includes('MENU_CARE');
+      const cents = free ? 0 : (once(code) || 0);
       oneTimeCents += cents;
-      lines.append(row(nameOf(code) + (code === 'ONLINE_MENU_QR' ? ' (first year, up to 3 pages)' : ' (one time)'), money(cents)));
+      lines.append(row(nameOf(code) + (code === 'ONLINE_MENU_QR' ? ' (first year, up to 3 pages)' : ' (one time)'), free ? 'Free with yearly' : money(cents)));
     }
     if (monthly.includes('GUEST_APP')) {
       const setup = once('GUEST_APP_SETUP') || 0;

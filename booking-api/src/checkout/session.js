@@ -138,7 +138,9 @@ async function openStripeSession(env, environment, { cart, normalizedItems, orde
     const autoTax = !cart.plan && normalizedItems.some((item) => item.taxCode);
     // A domain is registered in the buyer's name: the registry needs their address and phone.
     const domainBought = normalizedItems.some((item) => item.domain);
-    normalizedItems.forEach((item, index) => appendCheckoutLineItem(params, item, index, environment, { autoTax }));
+    // A setup made free by a yearly plan (menu setup) stays on the order but has nothing to charge.
+    const lines = cart.plan ? normalizedItems.filter((item) => item.priceCents > 0) : normalizedItems;
+    lines.forEach((item, index) => appendCheckoutLineItem(params, item, index, environment, { autoTax }));
     if (autoTax || domainBought) params.append("billing_address_collection", "required");
     if (domainBought) params.append("phone_number_collection[enabled]", "true");
     if (autoTax) {
@@ -146,7 +148,7 @@ async function openStripeSession(env, environment, { cart, normalizedItems, orde
       if (cart.stripeCustomerId) params.append("customer_update[address]", "auto");
     }
     if (cart.plan) {
-      appendSubscriptionParams(params, cart, normalizedItems.length, environment, pending);
+      appendSubscriptionParams(params, cart, lines.length, environment, pending);
     }
     if (resumed) params.append("metadata[resumed]", "1");
     let stripeData;

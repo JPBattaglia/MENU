@@ -34,7 +34,7 @@ const OWN_APPS = [
       site_screens: ["/", "/plans.html", "/online-menu.html"],
       menu: [
         "# Plans",
-        "Starter | Review Replies and Accessibility Monitoring | $79/mo",
+        "Starter | Menu Care, Review Replies and Accessibility Monitoring | $79/mo",
         "Growth | Everything in Starter, plus Google Profile Care | $169/mo",
         "Pro | Everything in Growth, plus Social Posts and Website Care | $279/mo",
         "# One-time services",

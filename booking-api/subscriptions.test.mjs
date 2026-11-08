@@ -144,8 +144,7 @@ test('catalog migration matches subscription-catalog.json and keeps everything o
       assert.deepEqual(versions.map((v) => [v.billing_interval, v.price_cents, v.stripe_price_id]),
         [['MONTH', plan.monthly.amount, plan.monthly.price], ['YEAR', plan.annual.amount, plan.annual.price]], code);
       assert.ok(versions.every((v) => v.is_public === 0 && v.billing_type === 'RECURRING'));
-      // 0001 launched the bundles with Menu Care; 0048 (Nov 8, 2026) takes it out, tested on its own below.
-      assert.deepEqual(JSON.parse(versions[0].scope_json).includes, plan.includes ? ['MENU_CARE', ...plan.includes] : [code]);
+      assert.deepEqual(JSON.parse(versions[0].scope_json).includes, plan.includes || [code]);
     }
     for (const code of ['WEBSITE_PACKAGE', 'GUEST_APP_SETUP']) {
       assert.equal(h.one(`SELECT v.stripe_price_id FROM offers o JOIN offer_versions v ON v.offer_id = o.id WHERE o.code = ?`, code).stripe_price_id, catalog.one_time[code].price);
@@ -175,7 +174,7 @@ test('site catalog lists every plan with monthly and annual prices, bundle conte
       assert.equal(by[code].on_sale, false, code);
     }
     assert.equal(by.BUNDLE_GROWTH.kind, 'BUNDLE');
-    assert.deepEqual(by.BUNDLE_GROWTH.includes, ['MENU_CARE', ...catalog.bundles.BUNDLE_GROWTH.includes]); // as 0001 launched it
+    assert.deepEqual(by.BUNDLE_GROWTH.includes, catalog.bundles.BUNDLE_GROWTH.includes);
     assert.equal(by.GUEST_APP.requires_setup, 'GUEST_APP_SETUP');
     assert.equal(by.WEBSITE_PACKAGE.price_cents, catalog.one_time.WEBSITE_PACKAGE.amount);
     assert.equal(by.ONLINE_MENU_QR.on_sale, true);
@@ -224,6 +223,30 @@ test('a setup rides along as a one-time line in the same subscription checkout',
     assert.equal(p.get('line_items[0][price_data][recurring][interval]'), null);
     assert.equal(p.get('line_items[1][price_data][recurring][interval]'), 'month');
     assert.equal(h.one(`SELECT total_cents FROM orders WHERE id = ?`, res.body.order_id).total_cents, 14900 + 14900);
+  } finally { h.restore(); }
+});
+
+test('every plan starts with the menu (owner, Nov 8, 2026): its setup is free with a yearly plan that includes Menu Care', async () => {
+  const h = setup();
+  try {
+    const year = await h.checkout({ items: [{ key: 'BUNDLE_STARTER' }, { key: 'ONLINE_MENU_QR' }], interval: 'year', menu_pages: 5, customer: buyer });
+    assert.equal(year.status, 200, JSON.stringify(year.body));
+    let p = h.stripe.sessions.at(-1).params;
+    // 5 pages: the $144 setup and hosting are free; the 2 extra pages ($40) are still charged.
+    assert.equal(p.get('line_items[0][price_data][unit_amount]'), '4000');
+    assert.equal(p.get('line_items[1][price_data][recurring][interval]'), 'year');
+    const menuLine = h.one(`SELECT i.line_total_cents, i.metadata_json FROM order_items i JOIN offers o ON o.id = i.offer_id WHERE i.order_id = ? AND o.code = 'ONLINE_MENU_QR'`, year.body.order_id);
+    assert.equal(menuLine.line_total_cents, 4000);
+    assert.equal(JSON.parse(menuLine.metadata_json).setup_waived_cents, 14400);
+    const three = await h.checkout({ items: [{ key: 'BUNDLE_STARTER' }, { key: 'ONLINE_MENU_QR' }], interval: 'year', menu_pages: 3, customer: buyer });
+    assert.equal(three.status, 200, JSON.stringify(three.body));
+    p = h.stripe.sessions.at(-1).params;
+    assert.equal(p.get('line_items[0][price_data][recurring][interval]'), 'year', 'a free menu leaves only the plan on the Stripe page');
+    assert.equal(p.get('line_items[1][quantity]'), null);
+    assert.ok(h.one(`SELECT 1 AS ok FROM order_items i JOIN offers o ON o.id = i.offer_id WHERE i.order_id = ? AND o.code = 'ONLINE_MENU_QR'`, three.body.order_id), 'the menu is still on the order, so it is made');
+    const month = await h.checkout({ items: [{ key: 'BUNDLE_STARTER' }, { key: 'ONLINE_MENU_QR' }], interval: 'month', menu_pages: 3, customer: buyer });
+    assert.equal(h.stripe.sessions.at(-1).params.get('line_items[0][price_data][unit_amount]'), '14400', 'monthly pays the setup');
+    assert.equal(month.status, 200);
   } finally { h.restore(); }
 });
 
@@ -492,6 +515,40 @@ test('billing portal link opens a Stripe portal session for that subscriber only
   } finally { h.restore(); }
 });
 
+test('billing page switches are limited (owner, Nov 8, 2026): each live subscription opens the configuration that fits it', async () => {
+  const h = setup();
+  try {
+    const { row } = await growthSubscriber(h);
+    h.env.DB.raw.prepare(`UPDATE entitlements SET metadata_json = json_set(COALESCE(metadata_json, '{}'), '$.environment', 'live') WHERE subscription_id = ?`).run(row.id);
+    const { PORTAL_CONFIGS } = await import('./src/subscriptions/portal.js');
+    const open = async () => {
+      const link = new URL(await billingPortalLink(h.env, row.id));
+      assert.equal((await h.call(link.pathname + link.search)).status, 303);
+      return h.stripe.portal.at(-1).configuration;
+    };
+    const planIs = (code) => h.env.DB.raw.prepare(`UPDATE subscriptions SET offer_id = (SELECT id FROM offers WHERE code = ?) WHERE id = ?`).run(code, row.id);
+    assert.equal(await open(), PORTAL_CONFIGS.SWITCH_MENU, 'Growth keeps the menu: Starter, Growth, Menu Care; no Pro without a site');
+    const site = h.one(`SELECT o.id AS offer_id, v.id AS version_id FROM offers o JOIN offer_versions v ON v.offer_id = o.id WHERE o.code IN ('SITE_FILES', 'WEBSITE_PACKAGE') LIMIT 1`);
+    assert.ok(site, 'a website offer exists');
+    const t0 = '2026-11-08T10:00:00.000Z';
+    h.env.DB.raw.prepare(`INSERT INTO orders (id, created_at, updated_at, customer_id, business_id, status, subtotal_cents, total_cents, payment_status) VALUES ('ord_site', ?, ?, ?, ?, 'PAID', 29900, 29900, 'PAID')`).run(t0, t0, row.customer_id, row.business_id);
+    h.env.DB.raw.prepare(`INSERT INTO order_items (id, order_id, offer_id, offer_version_id, unit_price_cents, line_total_cents) VALUES ('oi_site', 'ord_site', ?, ?, 29900, 29900)`).run(site.offer_id, site.version_id);
+    assert.equal(await open(), PORTAL_CONFIGS.SWITCH_MENU_SITE, 'with a Menu-made site, Pro is offered too');
+    planIs('MENU_CARE');
+    assert.equal(await open(), PORTAL_CONFIGS.SWITCH_MENU_SITE);
+    planIs('BUNDLE_PRO');
+    assert.equal(await open(), PORTAL_CONFIGS.SWITCH_PRO, 'Pro keeps the menu and the site: monthly <-> yearly only');
+    planIs('WEBSITE_CARE');
+    assert.equal(await open(), PORTAL_CONFIGS.SWITCH_WEBSITE);
+    planIs('SOCIAL_POSTS');
+    assert.equal(await open(), PORTAL_CONFIGS.SWITCH_OPEN, 'single services that keep nothing online switch among themselves');
+    planIs('GUEST_APP');
+    assert.equal(await open(), PORTAL_CONFIGS.SWITCH_GUEST_APP);
+    planIs('CUSTOM_PLAN');
+    assert.equal(await open(), undefined, 'your own plan uses the default, which allows no switching');
+  } finally { h.restore(); }
+});
+
 // "Your own plan" (owner, Nov 6, 2026): ticked monthly services at one price, 10% off for two, 20% off for three or more.
 test('your own plan: priced by the server, 10% off two services, 20% off three or more, rounded down to whole dollars', async () => {
   const h = setup();
@@ -563,23 +620,23 @@ test('your own plan: the subscription gets exactly the services picked, at the p
   } finally { h.restore(); }
 });
 
-test('Plans without Menu Care, Pro $279 (owner, Nov 8, 2026): bundles drop MENU_CARE; Pro uses the new price; old Pro prices still map', async () => {
+test('Pro $279 (owner, Nov 8, 2026): 0048 then 0049 leave every bundle with Menu Care; Pro uses the new price; old Pro prices still map', async () => {
   const h = setup();
   try {
-    for (const f of ['0039_growth_169.sql', '0048_plans_without_menu_care.sql', '0048_plans_without_menu_care.sql']) {
+    for (const f of ['0039_growth_169.sql', '0048_plans_without_menu_care.sql', '0048_plans_without_menu_care.sql', '0049_plans_include_the_menu.sql', '0049_plans_include_the_menu.sql']) {
       h.env.DB.raw.exec(readFileSync(new URL('./migrations/' + f, import.meta.url), 'utf8'));
     }
     const cat = await (await h.call('/api/catalog')).json();
     const by = (code) => cat.offers.find((o) => o.code === code);
     assert.deepEqual(by('BUNDLE_PRO').prices, { month: 27900, year: 279000 });
-    for (const code of ['BUNDLE_STARTER', 'BUNDLE_GROWTH', 'BUNDLE_PRO']) assert.ok(!by(code).includes.includes('MENU_CARE'), code);
+    for (const code of ['BUNDLE_STARTER', 'BUNDLE_GROWTH', 'BUNDLE_PRO']) assert.deepEqual(by(code).includes, catalog.bundles[code].includes, code);
     const res = await h.checkout({ items: [{ key: 'BUNDLE_PRO' }], interval: 'month', customer: buyer });
     assert.equal(res.status, 200, JSON.stringify(res.body));
     assert.equal(h.stripe.sessions.at(-1).params.get('line_items[0][price_data][unit_amount]'), '27900');
     const { planForStripePrice } = await import('./src/subscriptions/plans.js');
     const old = await planForStripePrice({ id: catalog.bundles.BUNDLE_PRO.monthly.price, recurring: { interval: 'month' } }, null, h.env);
     assert.equal(old.offerCode, 'BUNDLE_PRO', 'a subscription on the old $299 price is still Pro');
-    assert.ok(!old.includes.includes('MENU_CARE'));
+    assert.ok(old.includes.includes('MENU_CARE'));
   } finally { h.restore(); }
 });
 

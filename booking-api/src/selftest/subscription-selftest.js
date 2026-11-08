@@ -19,14 +19,14 @@ import { billingPortalLink } from "../subscriptions/portal.js";
 import { resolvePlan } from "../subscriptions/plans.js";
 
 const KIND = "SUBSCRIPTION_GROWTH";
-const GROWTH_PLANS = ["ACCESSIBILITY_MONITORING", "GOOGLE_PROFILE_CARE", "REVIEW_REPLIES"]; // Menu Care left the plans Nov 8, 2026
+const GROWTH_PLANS = ["ACCESSIBILITY_MONITORING", "GOOGLE_PROFILE_CARE", "MENU_CARE", "REVIEW_REPLIES"];
 // What each kind buys and expects (included plans sorted). minute = its daily start in the 15:00 UTC hour.
 const RUNS = {
   // Growth cancels the way the billing portal does (at the end of the period: still producing until then).
   SUBSCRIPTION_GROWTH: { plan: "BUNDLE_GROWTH", label: "Growth", plans: GROWTH_PLANS, minute: 30, cancelAtPeriodEnd: true },
-  SUBSCRIPTION_STARTER: { plan: "BUNDLE_STARTER", label: "Starter", plans: ["ACCESSIBILITY_MONITORING", "REVIEW_REPLIES"], minute: 40,
+  SUBSCRIPTION_STARTER: { plan: "BUNDLE_STARTER", label: "Starter", plans: ["ACCESSIBILITY_MONITORING", "MENU_CARE", "REVIEW_REPLIES"], minute: 40,
     lifecycle: { switchTo: "BUNDLE_GROWTH", switchPlans: GROWTH_PLANS } },
-  SUBSCRIPTION_PRO: { plan: "BUNDLE_PRO", label: "Pro", plans: ["ACCESSIBILITY_MONITORING", "GOOGLE_PROFILE_CARE", "REVIEW_REPLIES", "SOCIAL_POSTS", "WEBSITE_CARE"], minute: 50 }
+  SUBSCRIPTION_PRO: { plan: "BUNDLE_PRO", label: "Pro", plans: ["ACCESSIBILITY_MONITORING", "GOOGLE_PROFILE_CARE", "MENU_CARE", "REVIEW_REPLIES", "SOCIAL_POSTS", "WEBSITE_CARE"], minute: 50 }
 };
 const KINDS = Object.keys(RUNS);
 const runOf = (test) => RUNS[test.kind] || RUNS[KIND];

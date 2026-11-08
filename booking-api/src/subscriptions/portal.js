@@ -10,6 +10,45 @@ import { subscriptionEnvironment } from "./sync.js";
 
 const PORTAL_LINK_TTL_DAYS = 365;
 
+// Which plan switches the billing page offers (owner, Nov 8, 2026). Stripe can't limit "from -> to" pairs, so each
+// subscription opens the live billing page with the configuration that fits it. A plan never switches to one that
+// drops what it keeps online (the menu, the site, the app), and never to one that needs something the business lacks:
+// - Starter, Growth and Menu Care (they keep the menu) switch among themselves, plus Pro with a Menu-made site;
+// - Pro, Website Care and Guest App only switch between monthly and yearly;
+// - Review Replies, Google Profile Care, Accessibility Monitoring and Social Posts switch among themselves (the plans
+//   include the menu, which starts at checkout);
+// - your own plan (and anything not listed) gets the default configuration, which allows no switching.
+// The configurations live in Stripe (metadata mm_portal) and are listed in subscription-catalog.json.
+const PORTAL_CONFIGS = {
+  SWITCH_OPEN: "bpc_1UZZonHw7f6jhUv8SA2U89ys",
+  SWITCH_MENU: "bpc_1UZZp9Hw7f6jhUv8KGQlsFCL",
+  SWITCH_MENU_SITE: "bpc_1UZZozHw7f6jhUv8mpVX7Gea",
+  SWITCH_PRO: "bpc_1UZZz8Hw7f6jhUv8Yh2uw6ce",
+  SWITCH_WEBSITE: "bpc_1UZZp4Hw7f6jhUv88dahB8lC",
+  SWITCH_GUEST_APP: "bpc_1UZZpDHw7f6jhUv8Zj6szLc6"
+};
+const OPEN_PLANS = new Set(["REVIEW_REPLIES", "GOOGLE_PROFILE_CARE", "ACCESSIBILITY_MONITORING", "SOCIAL_POSTS"]);
+const MENU_PLANS = new Set(["BUNDLE_STARTER", "BUNDLE_GROWTH", "MENU_CARE"]);
+const ONLY = { BUNDLE_PRO: "SWITCH_PRO", WEBSITE_CARE: "SWITCH_WEBSITE", GUEST_APP: "SWITCH_GUEST_APP" };
+
+async function portalConfigurationKey(env, subscriptionId) {
+  const row = await env.DB.prepare(`
+      SELECT s.business_id, o.code FROM subscriptions s
+      JOIN offers o ON o.id = s.offer_id
+      WHERE s.id = ?
+    `).bind(subscriptionId).first();
+  if (!row) return null;
+  if (ONLY[row.code]) return ONLY[row.code];
+  if (OPEN_PLANS.has(row.code)) return "SWITCH_OPEN";
+  if (!MENU_PLANS.has(row.code)) return null;
+  const site = await env.DB.prepare(`
+      SELECT 1 FROM orders ord JOIN order_items i ON i.order_id = ord.id JOIN offers o ON o.id = i.offer_id
+      WHERE ord.business_id = ? AND ord.payment_status IN ('PAID', 'PARTIALLY_REFUNDED') AND o.code IN ('SITE_FILES', 'WEBSITE_PACKAGE')
+      LIMIT 1
+    `).bind(row.business_id).first();
+  return site ? "SWITCH_MENU_SITE" : "SWITCH_MENU";
+}
+
 async function billingPortalLink(env, subscriptionId) {
   const token = await signLinkToken(env, { kind: "billing", id: subscriptionId, ttlDays: PORTAL_LINK_TTL_DAYS });
   return `${publicBaseUrl(env)}/api/billing-portal/${subscriptionId}?t=${encodeURIComponent(token)}`;
@@ -41,9 +80,15 @@ async function handleBillingPortal(request, env, subscriptionId) {
   }
   try {
     const environment = await subscriptionEnvironment(env, subscriptionId);
+    // Live only: the configurations exist in live mode; test mode keeps the sandbox default.
+    const configuration = environment === "live" ? PORTAL_CONFIGS[await portalConfigurationKey(env, subscriptionId)] : null;
     const session = await stripeRequest(env, environment, "/v1/billing_portal/sessions", {
       method: "POST",
-      params: { customer: subscription.provider_customer_id, return_url: `${publicBaseUrl(env)}/` }
+      params: {
+        customer: subscription.provider_customer_id,
+        return_url: `${publicBaseUrl(env)}/`,
+        ...(configuration ? { configuration } : {})
+      }
     });
     return asJson ? jsonResponse({ ok: true, url: session.url }) : Response.redirect(session.url, 303);
   } catch (error) {
@@ -100,4 +145,4 @@ async function sendSubscriptionWelcome(env, subscription) {
   });
 }
 
-export { billingPortalLink, handleBillingPortal, sendSubscriptionWelcome };
+export { PORTAL_CONFIGS, billingPortalLink, handleBillingPortal, portalConfigurationKey, sendSubscriptionWelcome };
