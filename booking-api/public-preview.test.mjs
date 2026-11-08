@@ -5,7 +5,7 @@ import assert from 'node:assert/strict';
 import { createD1, createR2 } from './test-support/d1.mjs';
 
 const { default: worker } = await import('./src/worker.js');
-const { publicPreviewPage, menuPreviewChoice, MAX_OPENS, PER_NETWORK_DAY, PER_EMAIL } = await import('./src/marketing/public-preview.js');
+const { publicPreviewPage, menuPreviewChoice, PER_NETWORK_DAY, PER_EMAIL } = await import('./src/marketing/public-preview.js');
 const { MENU_DESIGNS } = await import('./src/producers/menu-qr/menu-designs.js');
 const { buildDesignedMenuHtml } = await import('./src/producers/menu-qr/design.js');
 const { parseMenuHtml } = await import('./src/producers/menu-care/menu-edit.js');
@@ -106,15 +106,15 @@ test(`a different menu file gets a new preview, up to ${PER_EMAIL} per email a m
   assert.equal(calls.claude, PER_EMAIL);
 });
 
-test(`a preview stops opening after ${MAX_OPENS} views, so it can't be used as the table menu`, async (t) => {
+test('a preview opens as often as wanted for 3 days, then ends (no open limit: owner, Nov 7, 2026)', async (t) => {
   const f = setup();
   stubClaude(t);
   const { token } = await (await f.create({ request_id: await f.upload(), email: 'owner@cafe.example', business: 'Sample Cafe' })).json();
-  assert.equal((await f.get(`/api/menu-preview/view/${token}`, 'Mimecast link scanner')).status, 200);
-  for (let i = 0; i < MAX_OPENS; i++) assert.equal((await f.get(`/api/menu-preview/view/${token}`)).status, 200);
+  for (let i = 0; i < 120; i++) assert.equal((await f.get(`/api/menu-preview/view/${token}`)).status, 200);
+  f.env.DB.raw.prepare(`UPDATE menu_previews SET expires_at = ?`).run(new Date(Date.now() - 1000).toISOString());
   const ended = await f.get(`/api/menu-preview/view/${token}`);
   assert.equal(ended.status, 410);
-  assert.match(await ended.text(), /Make it live/);
+  assert.match(await ended.text(), /Free previews last 3 days/);
 });
 
 test('limits: per network per day, only fresh uploads, only the uploader, only PDFs or photos', async (t) => {

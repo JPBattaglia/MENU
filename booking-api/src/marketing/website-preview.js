@@ -2,8 +2,8 @@
 // website before paying ($299 since Nov 6, 2026: the generator shows 9 designs and "Choose this site" opens checkout). Built with the paid product's own builder (producers/website/build.js) and copy writer,
 // from what we can read, never invented: their menu (uploaded, or the menu file on their site), their current website's
 // text, or their public listing (prospects with no website). It can't stand in for the product: every page carries a
-// "Preview, not live" watermark and a bar, it can't be printed, it's noindex, and it ends (public: PREVIEW_HOURS or
-// MAX_OPENS opens; prospect emails: PROSPECT_DAYS). "Choose this site" opens Your Website checkout with the business and
+// "Preview, not live" watermark and a bar, it can't be printed, it's noindex, and it ends (public: PREVIEW_HOURS,
+// no open limit (owner, Nov 7, 2026); prospect emails: PROSPECT_DAYS). "Choose this site" opens Your Website checkout with the business and
 // email filled in and the chosen design attached (site_choice).
 //
 //   POST /api/website-preview/create   { request_id, email, business, website?, phone?, address?, hours?, rep?, tracking? }
@@ -32,7 +32,6 @@ import { addMoodPhotos, hasSamplePhotos, ownPhotoCount } from "../producers/webs
 
 const PREVIEW_HOURS = 72;
 const PROSPECT_DAYS = 21;
-const MAX_OPENS = 120;           // design home pages opened (Nov 6, 2026: every page used to count, and 40 ran out in ten minutes of clicking through)
 const PER_DAY = 20;              // each build is 1 to 3 Claude calls
 const PER_NETWORK_DAY = 2;
 const EMAIL_DAYS = 30;
@@ -432,9 +431,6 @@ async function handleWebsitePreviewView(request, env, token, page, { now = Date.
   // Only a design's home page counts as an open (not its menu, about and contact pages); prospect and rep previews
   // (shown by the owner on visits) have no cap.
   const counted = request.method === "GET" && agent && !SCANNER.test(agent) && (page === "index.html" || /^d\/[a-z]+\/index\.html$/.test(page));
-  if (counted && row.source === "public" && Number(row.open_count || 0) >= MAX_OPENS) {
-    return plainGone(410, "This preview has ended", `It's been opened ${MAX_OPENS} times, which is the limit for a free preview. <a href="https://menu-made.com/website-design.html#try-free">Start a new one</a> or reply to our email and we’ll help.`);
-  }
   const object = await env.ASSETS.get(`website-previews/${token}/${page}`);
   if (!object) return gone();
   if (counted) {

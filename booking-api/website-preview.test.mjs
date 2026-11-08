@@ -199,7 +199,7 @@ test('ended and unknown previews show a plain ended page', async (t) => {
   assert.equal((await f.get(`/api/website-preview/view/${'a'.repeat(36)}/index.html`)).status, 410);
 });
 
-test('clicking through every page of all nine designs counts nine opens; the cap is for public previews only', async (t) => {
+test('clicking through every page of all nine designs counts nine opens; there is no open limit', async (t) => {
   const f = setup();
   stubApis(t);
   const out = await (await f.create({ request_id: await f.upload({ email: 'c@pizza.example' }), email: 'c@pizza.example', business: 'Sample Pizza' })).json();
@@ -211,10 +211,8 @@ test('clicking through every page of all nine designs counts nine opens; the cap
   }
   const opens = () => f.env.DB.raw.prepare(`SELECT open_count AS n FROM website_previews WHERE token = ?`).get(out.token).n;
   assert.equal(opens(), DESIGN_KEYS.length);
-  f.env.DB.raw.prepare(`UPDATE website_previews SET open_count = 120`).run();
-  assert.equal((await f.get(`/api/website-preview/view/${out.token}/d/bistro/index.html`)).status, 410, 'public previews end at 120 opens');
-  f.env.DB.raw.prepare(`UPDATE website_previews SET source = 'rep'`).run();
-  assert.equal((await f.get(`/api/website-preview/view/${out.token}/d/bistro/index.html`)).status, 200, 'rep previews (shown on visits) have no cap');
+  f.env.DB.raw.prepare(`UPDATE website_previews SET open_count = 5000`).run();
+  assert.equal((await f.get(`/api/website-preview/view/${out.token}/d/bistro/index.html`)).status, 200, 'no open limit (owner, Nov 7, 2026): only the end date');
 });
 
 async function prospectSetup(rows) {
