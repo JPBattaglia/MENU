@@ -1,7 +1,7 @@
 // Free Online Menu + QR preview for anyone (owner decision Nov 4, 2026): a buyer uploads their menu on
 // menu-made.com/online-menu, sees it as a phone menu, then pays to make it live. It must not be usable for free:
 //   - no QR code, no hosted /api/menu/<slug> address, and a "Preview, not live" watermark on every screen;
-//   - it ends after PREVIEW_HOURS or MAX_OPENS opens, whichever comes first (a table menu would be opened far more);
+//   - it ends after PREVIEW_HOURS (owner, Nov 7, 2026: no open limit; opens are still counted, for the stats);
 //   - printing shows a notice instead of the menu;
 //   - PER_EMAIL previews per email address every 30 days (the same file again reuses its preview), two per network a
 //     day, PER_DAY in total a day (each build is one
@@ -44,7 +44,6 @@ import { ownerEmailAddress } from "../lib/config.js";
 import { simplePage } from "../lib/http.js";
 
 const PREVIEW_HOURS = 72;
-const MAX_OPENS = 60; // every design opened counts (Nov 7, 2026: 25 with 9 designs to click through ran out too fast)
 const PER_DAY = 30;
 const REP_PER_DAY = 40;
 const REP_KIND = "menu-rep";
@@ -350,9 +349,6 @@ async function handlePreviewView(request, env, token, { now = Date.now(), design
   if (!row || row.status !== "READY" || row.expires_at <= new Date(now).toISOString()) return gone();
   const agent = request.headers.get("User-Agent") || "";
   const counted = request.method === "GET" && agent && !SCANNER.test(agent);
-  if (counted && Number(row.open_count || 0) >= MAX_OPENS) {
-    return plainPage(410, "This preview has ended", `It's been opened ${MAX_OPENS} times, which is the limit for a free preview. <a href="${escapeHtml(startUrl(token))}">Make it live</a> to keep it, with a QR code for your tables.`);
-  }
   // The generator's pages; a preview made before the generator has its one page.
   const key = design || (menuDesignFor(row.design) ? row.design : MENU_DESIGNS[0].key);
   const object = await env.ASSETS.get(`menu-previews/${token}/${key}.html`) || (design ? null : await env.ASSETS.get(`menu-previews/${token}.html`));
@@ -442,4 +438,4 @@ async function handlePreviewHandoff(env, token, { now = Date.now() } = {}) {
 }
 
 export { handleRepLink, repUrl, REP_PER_DAY };
-export { handlePreviewCreate, handlePreviewView, handlePreviewHandoff, handlePreviewCustomize, handlePreviewChoose, menuPreviewChoice, publicPreviewPage, renderMenuDesign, loadPreviewLogo, PREVIEW_HOURS, MAX_OPENS, PER_DAY, PER_NETWORK_DAY, PER_EMAIL };
+export { handlePreviewCreate, handlePreviewView, handlePreviewHandoff, handlePreviewCustomize, handlePreviewChoose, menuPreviewChoice, publicPreviewPage, renderMenuDesign, loadPreviewLogo, PREVIEW_HOURS, PER_DAY, PER_NETWORK_DAY, PER_EMAIL };
