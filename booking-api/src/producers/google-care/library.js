@@ -100,7 +100,7 @@ async function markPhoto(env, assetId, field) {
 
 function libraryPage(subscriptionId, token, photos, { error = null, notice = null } = {}) {
   return simplePage(error ? 400 : 200, "Your photo library", `${notice ? `<p><strong>${escapeHtml(notice)}</strong></p>` : ""}${error ? `<p style="color:#9b1c1c"><strong>${escapeHtml(error)}</strong></p>` : ""}
-<p>Photos here are used in your weekly Google posts, and a few each month are added to your Google profile. Food, your room, your team and your storefront all work well. Only add photos you took or have the right to use.</p>
+<p>Photos here go into your posts: your weekly Google posts and your monthly social media posts, and with Google Profile Care a few each month are added to your Google profile. Your room, your team, your storefront and your food all work well. Only add photos you took or have the right to use.</p>
 <p><strong>${photos.length}</strong> photo${photos.length === 1 ? "" : "s"} in your library${photos.length ? `, ${photos.filter((p) => !parseJsonOrNull(p.metadata_json)?.used_upload_at).length} not yet on your profile` : ""}.</p>
 <form method="post" action="/api/photo-library/${escapeHtml(subscriptionId)}" enctype="multipart/form-data"><input type="hidden" name="t" value="${escapeHtml(token)}">
 <p><input type="file" name="photos" accept="image/png,image/jpeg" multiple required><br><small>Up to ${MAX_PER_UPLOAD} at a time. PNG or JPG, at least ${MIN_SIDE} x ${MIN_SIDE} pixels, under 5 MB each.</small></p>

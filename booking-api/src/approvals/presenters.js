@@ -16,6 +16,8 @@ import { googleCareOverrides } from "../producers/google-care/care-step.js";
 import { googleVisibilityOverrides } from "../producers/google-visibility/visibility-step.js";
 import { ninoDesignOverrides } from "../producers/nino-design/presenter.js";
 import { staffMerchOverrides } from "../producers/staff-merch/presenter.js";
+import { photoLibraryLink } from "../producers/google-care/library.js";
+import { parseJsonOrNull } from "../lib/http.js";
 
 function humanize(type) {
   return String(type || "File").toLowerCase().replaceAll("_", " ").replace(/^./, (c) => c.toUpperCase());
@@ -103,7 +105,27 @@ const genericPresenter = {
 };
 
 // Looked up at call time, not module load: these modules import each other in a cycle.
+// Social Posts (owner review, Nov 7, 2026): the delivery email also points to the photo library, because next month's
+// posts use the photos added there.
+const socialPostsOverrides = {
+  async buyerEmail(args) {
+    const mail = await genericPresenter.buyerEmail(args);
+    const project = await args.env?.DB?.prepare(`SELECT metadata_json FROM projects WHERE id = ?`).bind(args.context.id).first().catch(() => null);
+    const subscriptionId = parseJsonOrNull(project?.metadata_json)?.subscription_id;
+    if (!subscriptionId) return mail;
+    const url = await photoLibraryLink(args.env, subscriptionId);
+    const line = "Want your own photos in next month's posts? Add a few to your photo library: your room, your team, your storefront.";
+    return {
+      ...mail,
+      templateKey: "delivery_social_posts_v1",
+      html: mail.html.replace("These links work for", `${escapeHtml(line)} <a href="${escapeHtml(url)}">Open your photo library</a>.<br><br>These links work for`),
+      text: mail.text.replace("These links work for", `${line}\nPhoto library: ${url}\n\nThese links work for`)
+    };
+  }
+};
+
 function presenterFor(workflowKey) {
+  if (workflowKey === "SOCIAL_POSTS_V1") return { ...genericPresenter, ...socialPostsOverrides };
   if (workflowKey === "MENU_QR_V1") return menuQrPresenter;
   if (workflowKey === "MENU_CARE_V1") return { ...genericPresenter, ...menuCareOverrides };
   if (workflowKey === "WEBSITE_CARE_V1") return { ...genericPresenter, ...websiteCareOverrides };

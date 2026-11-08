@@ -21,7 +21,10 @@ import { queueRender } from "../social-posts/render-jobs.js";
 import { storeDeliverable } from "../shared/deliverables.js";
 import { bytesToBase64 } from "../../lib/util.js";
 import { createZip } from "../social-posts/zip.js";
-import { FONT_FAMILIES, flyerSvg, menuPageSvgs, socialSvg } from "./design-svg.js";
+import { FACES, FONT_FAMILIES, flyerSvg, menuPageSvgs, paletteFor } from "./design-svg.js";
+import { layoutPalette, pickLayouts, socialLayout } from "../shared/social-layouts.js";
+import { postPhotos } from "../shared/post-photos.js";
+const lumOf = (hex) => { const n = parseInt(String(hex).slice(1), 16); return ((n >> 16) * 0.299 + ((n >> 8) & 255) * 0.587 + (n & 255) * 0.114) / 255; };
 import { requestHandLogo } from "./hand-logo.js";
 import { productForWorkflow, quoteMenuDesign } from "./products.js";
 
@@ -142,6 +145,7 @@ async function runNinoDesignProduceStep(targetStep, env, deps = {}) {
   const files = [];
   const sections = [];
   const extra = [];
+  let photos = [];
   const info = { product: product.code, variant };
 
   if (product.code === "NINO_FLYER") {
@@ -164,15 +168,31 @@ async function runNinoDesignProduceStep(targetStep, env, deps = {}) {
     if (plan.capped) return blocked("monthly AI limit reached", [plan.capped]);
     if (plan.problems.length) return blocked("the posts failed the quality checks", plan.problems);
     const pad = (n) => String(n).padStart(2, "0");
+    // Six layouts in the chosen style's face and colours, with the buyer's own photos behind some posts (owner review,
+    // Nov 7, 2026: all nine were the same text tile). Request changes moves every post to another layout.
+    const style = brief.style || ["classic", "modern", "bold"][variant % 3];
+    const pal = paletteFor(style, brief.brand_colors);
+    const darkFirst = lumOf(pal.bg) < lumOf(pal.ink);
+    const palette = layoutPalette({ dark: darkFirst ? pal.bg : pal.ink, light: darkFirst ? pal.ink : pal.bg, accent: pal.accent });
+    const f = FACES[style] || FACES.classic;
+    photos = await postPhotos(env, { projectId: context.id });
+    const picks = pickLayouts(plan.posts.map(() => ({ featured: false })), photos.length, variant);
+    const names = [];
     for (const [i, post] of plan.posts.entries()) {
+      const pair = [];
       for (const size of ["square", "story"]) {
-        const r = socialSvg(post, { businessName: business, style: brief.style || ["classic", "modern", "bold"][variant % 3], brandColors: brief.brand_colors, hasLogo }, size);
+        const pick = picks[i];
+        const r = socialLayout({ headline: post.headline, subline: post.subline }, { layout: pick.layout, size, businessName: business, palette, head: { family: f.family, weight: f.weight, em: f.em }, logo: hasLogo, photo: pick.photo, uid: `p${i + 1}${size[0]}` });
         if (r.error) return blocked("a graphic could not be laid out", [`Post ${i + 1}: ${r.error}`]);
-        files.push({ name: `post-${pad(i + 1)}-${size}.png`, svg: r.svg, width: r.width, height: r.height, preview_width: size === "square" ? 360 : 0 });
+        const name = `post-${pad(i + 1)}-${size}.${pick.photo ? "jpg" : "png"}`;
+        pair.push(name);
+        files.push({ name, svg: r.svg, width: r.width, height: r.height, preview_width: size === "square" ? 360 : 0, ...(pick.photo ? { format: "jpg", min_bytes: 8000 } : {}) });
       }
+      names.push(pair);
     }
-    sections.push({ heading: "Feed graphics (stories are in the ZIP too)", files: files.filter((f) => f.name.endsWith("square.png")).map((f) => f.name) });
-    extra.push({ name: "captions.txt", text: [`${business} - social graphics pack`, "", ...plan.posts.map((p, i) => `Post ${pad(i + 1)}: post-${pad(i + 1)}-square.png (feed), post-${pad(i + 1)}-story.png (story)\n${p.caption}\n${p.hashtags.join(" ")}\n`)].join("\n") });
+    sections.push({ heading: "Feed graphics (stories are in the ZIP too)", files: names.map(([square]) => square) });
+    extra.push({ name: "captions.txt", text: [`${business} - social graphics pack`, "", ...plan.posts.map((p, i) => `Post ${pad(i + 1)}: ${names[i][0]} (feed), ${names[i][1]} (story)\n${p.caption}\n${p.hashtags.join(" ")}\n`)].join("\n") });
+    info.photos = photos.length; info.layouts = picks.map((p) => p.layout);
     info.posts = plan.posts.length; info.attempts = plan.attempts;
     info.captions = plan.posts.map((p) => p.caption);
   } else if (product.code === "NINO_MENU_DESIGN") {
@@ -202,6 +222,7 @@ async function runNinoDesignProduceStep(targetStep, env, deps = {}) {
       files: files.map(({ preview_width, ...f }) => f),
       extra,
       assets: logo ? { logo } : {},
+      photos,
       fonts: FONT_FAMILIES,
       preview: { title: `${business} - ${product.name}`, sections, widths: Object.fromEntries(files.filter((f) => f.preview_width).map((f) => [f.name, f.preview_width])) },
       finish

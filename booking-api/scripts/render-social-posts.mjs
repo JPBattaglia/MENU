@@ -8,6 +8,7 @@
 import { readFile, readdir, writeFile } from "node:fs/promises";
 import { createRequire } from "node:module";
 import { createZip } from "../src/producers/social-posts/zip.js";
+import { fillAssets, resolvePhotos, toJpeg } from "./render-assets.mjs";
 
 const API = process.env.RENDER_API || "https://menu-made.com";
 const AUDIENCE = "menu-made-render";
@@ -54,12 +55,12 @@ const escapeHtml = (t) => String(t ?? "").replace(/&/g, "&amp;").replace(/</g, "
 
 // preview.html: small copies of the images on one page (Nino designs), so the owner and buyer can see the work
 // without unzipping anything. Drawn here because the Worker's CPU budget is too small to encode images.
-function previewPage(spec, rasterize, logo) {
+function previewPage(spec, rasterize, logo, photos) {
   const byName = new Map(spec.files.map((f) => [f.name, f]));
   const img = (name) => {
     const file = byName.get(name);
     const width = spec.preview.widths?.[name] || 480;
-    const png = rasterize(logo ? file.svg.replaceAll("__LOGO_DATA_URI__", logo) : file.svg, width);
+    const png = rasterize(fillAssets(file.svg, logo, photos), width);
     const checker = /transparent/.test(name) ? ' class="checker"' : "";
     return `<figure><img${checker} src="data:image/png;base64,${Buffer.from(png).toString("base64")}" alt="${escapeHtml(name)}" width="${width}"><figcaption>${escapeHtml(name)}</figcaption></figure>`;
   };
@@ -69,16 +70,17 @@ function previewPage(spec, rasterize, logo) {
 <body><header><h1>${escapeHtml(spec.preview.title)}</h1><p>Designed by Nino Battaglia's studio. Full-size files are in the ZIP.</p></header><main>${sections}</main></body></html>`;
 }
 
-function buildPack(spec, rasterize) {
+async function buildPack(spec, rasterize, photos = new Map()) {
   const logo = spec.assets?.logo || ""; // the owner's logo as a data URI, kept out of every SVG until now
-  const files = spec.files.map((file) => {
-    const data = rasterize(logo ? file.svg.replaceAll("__LOGO_DATA_URI__", logo) : file.svg, file.width);
-    const size = pngSize(data);
+  const files = [];
+  for (const file of spec.files) {
+    const png = rasterize(fillAssets(file.svg, logo, photos), file.width);
+    const size = pngSize(png);
     if (size.width !== file.width || size.height !== file.height) throw new Error(`${file.name} came out ${size.width}x${size.height}`);
-    return { name: file.name, data };
-  });
+    files.push({ name: file.name, data: file.format === "jpg" ? await toJpeg(png) : png });
+  }
   for (const extra of spec.extra || []) files.push({ name: extra.name, data: new TextEncoder().encode(extra.text) });
-  if (spec.preview) files.push({ name: "preview.html", data: new TextEncoder().encode(previewPage(spec, rasterize, logo)) });
+  if (spec.preview) files.push({ name: "preview.html", data: new TextEncoder().encode(previewPage(spec, rasterize, logo, photos)) });
   return createZip(files);
 }
 
@@ -102,7 +104,7 @@ async function main() {
   const args = process.argv.slice(2);
   if (args[0] === "--spec") {
     const spec = JSON.parse(await readFile(args[1], "utf8"));
-    await writeFile(args[3] || "pack.zip", buildPack(spec, await rasterizer()));
+    await writeFile(args[3] || "pack.zip", await buildPack(spec, await rasterizer(), await resolvePhotos(spec)));
     console.log(`Rendered ${spec.files.length} images locally`);
     return;
   }
@@ -113,7 +115,7 @@ async function main() {
     if (!job) break;
     rasterize = rasterize || await rasterizer();
     const spec = await (await api(`/api/render-jobs/${job}`)).json();
-    const zip = buildPack(spec, rasterize);
+    const zip = await buildPack(spec, rasterize, await resolvePhotos(spec));
     await api(`/api/render-jobs/${job}`, { method: "POST", body: zip, headers: { "Content-Type": "application/zip" } });
     console.log(`Job ${job}: ${spec.files.length} images rendered and uploaded${spec.fonts ? ` (${fontsLoaded?.length || 0} display font files available)` : ""}`);
     done++;

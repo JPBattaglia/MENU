@@ -17,6 +17,8 @@ import { NINO_WORKFLOWS, STYLES, productForWorkflow } from "./products.js";
 const LINK_KIND = "designbrief";
 const MAX_LOGO = 3_000_000;
 const MAX_MENU = 15_000_000;
+const MAX_PHOTO = 5_000_000;
+const MAX_PHOTOS = 6;
 const HEX = /^#[0-9a-f]{6}$/i;
 const NINO_SITE = "https://ninobattaglia.com";
 
@@ -86,10 +88,12 @@ const control = (f, v) => {
 
 function formPage(product, action, token, values, { error = null, hasMenu = false } = {}) {
   const logo = product.logo ? `<p><label for="logo"><strong>Logo (optional)</strong></label><br><input id="logo" name="logo" type="file" accept="image/png,image/jpeg"><br><small>PNG or JPG, under 3 MB. A PNG with a transparent background looks best.</small></p>` : "";
+  // Photos for the Social Graphics Pack (owner review, Nov 7, 2026): used behind some of the posts.
+  const photos = product.photos ? `<p><label for="photos"><strong>Photos for your posts (optional, up to ${MAX_PHOTOS})</strong></label><br><input id="photos" name="photos" type="file" accept="image/png,image/jpeg" multiple><br><small>PNG or JPG, under 5 MB each: the dishes, products or place your posts are about. Only photos you took or may use.</small></p>` : "";
   const menu = product.menuFile ? `<p><label for="menu_file"><strong>Your current menu${hasMenu ? " (uploaded - choose a file only to replace it)" : ""}</strong></label><br><input id="menu_file" name="menu_file" type="file" accept="application/pdf,image/png,image/jpeg" ${hasMenu ? "" : "required"}><br><small>PDF or photo, under 15 MB. Every name, description and price is copied exactly as printed.</small></p>` : "";
   return simplePage(error ? 400 : 200, `Your ${product.name}`, `<p>Nino Battaglia's design studio. Fill this in once and we start designing; you'll see the result before it's final.</p>${error ? `<p style="color:#9b1c1c"><strong>${escapeHtml(error)}</strong></p>` : ""}
 <form method="post" action="${escapeHtml(action)}" enctype="multipart/form-data"><input type="hidden" name="t" value="${escapeHtml(token)}">
-${product.fields.map((f) => control(f, values[f.key])).join("")}${logo}${menu}
+${product.fields.map((f) => control(f, values[f.key])).join("")}${logo}${photos}${menu}
 <button type="submit">Send</button></form>`);
 }
 
@@ -112,13 +116,13 @@ function validate(values, product) {
   return null;
 }
 
-async function storeFile(env, context, file, { kind, max, allowPdf }) {
+async function storeFile(env, context, file, { kind, max, allowPdf, keepOthers = false }) {
   const bytes = new Uint8Array(await file.arrayBuffer());
   if (bytes.length === 0) return { skip: true };
-  if (bytes.length > max) return { error: `The ${kind === "LOGO" ? "logo" : "menu file"} is too large.` };
+  if (bytes.length > max) return { error: `The ${kind === "LOGO" ? "logo" : kind === "PHOTO" ? `photo ${String(file.name || "").slice(0, 60)}` : "menu file"} is too large.` };
   const pdf = allowPdf && bytes.length > 5 && String.fromCharCode(...bytes.slice(0, 5)) === "%PDF-";
   const type = pdf ? { mime: "application/pdf", ext: "pdf" } : sniffImage(bytes);
-  if (!type || type.mime === "image/webp") return { error: kind === "LOGO" ? "The logo must be a PNG or JPG image." : "The menu must be a PDF, PNG or JPG file." };
+  if (!type || type.mime === "image/webp") return { error: kind === "LOGO" ? "The logo must be a PNG or JPG image." : kind === "PHOTO" ? "Photos must be PNG or JPG images." : "The menu must be a PDF, PNG or JPG file." };
   const id = crypto.randomUUID();
   const key = ["customers", context.customer_id, "projects", context.id, "design-brief", `${kind.toLowerCase()}-${id}.${type.ext}`].join("/");
   await env.ASSETS.put(key, bytes, { httpMetadata: { contentType: type.mime } });
@@ -126,8 +130,8 @@ async function storeFile(env, context, file, { kind, max, allowPdf }) {
   await env.DB.prepare(`
       INSERT INTO assets (id, business_id, customer_id, project_id, asset_type, storage_provider, storage_key, original_filename, mime_type, size_bytes, checksum, status, uploaded_at, validated_at, approved_for_use, is_customer_supplied, rights_confirmed, metadata_json)
       VALUES (?, ?, ?, ?, ?, 'R2', ?, ?, ?, ?, ?, 'VALID', ?, ?, 1, 1, 1, ?)
-    `).bind(id, context.business_id || null, context.customer_id, context.id, kind === "LOGO" ? "LOGO" : "MENU_SOURCE", key, String(file.name || kind).slice(0, 100), type.mime, bytes.length, await sha256Hex(bytes), t, t, JSON.stringify({ design_brief: kind.toLowerCase() })).run();
-  await env.DB.prepare(`UPDATE assets SET status = 'ARCHIVED' WHERE project_id = ? AND json_extract(metadata_json, '$.design_brief') = ? AND id != ?`).bind(context.id, kind.toLowerCase(), id).run();
+    `).bind(id, context.business_id || null, context.customer_id, context.id, kind === "LOGO" ? "LOGO" : kind === "PHOTO" ? "PHOTO" : "MENU_SOURCE", key, String(file.name || kind).slice(0, 100), type.mime, bytes.length, await sha256Hex(bytes), t, t, JSON.stringify({ design_brief: kind.toLowerCase() })).run();
+  if (!keepOthers) await env.DB.prepare(`UPDATE assets SET status = 'ARCHIVED' WHERE project_id = ? AND json_extract(metadata_json, '$.design_brief') = ? AND id != ?`).bind(context.id, kind.toLowerCase(), id).run();
   return { id };
 }
 
@@ -136,11 +140,20 @@ async function saved(env, projectId) {
   return Object.fromEntries(rows.map((r) => [r.input_key, r.value_text]));
 }
 
-// Saves a validated brief (also used by the self-tests, which have no browser). files: { logo?: File, menu_file?: File }
+// Saves a validated brief (also used by the self-tests, which have no browser). files: { logo?: File, menu_file?: File, photos?: File[] }
 async function saveBrief(env, context, product, values, files = {}) {
   if (files.logo && product.logo) {
     const stored = await storeFile(env, context, files.logo, { kind: "LOGO", max: MAX_LOGO, allowPdf: false });
     if (stored.error) return { error: stored.error };
+  }
+  const photoFiles = (files.photos || []).filter((f) => f && f.size > 0).slice(0, MAX_PHOTOS);
+  if (photoFiles.length && product.photos) {
+    // A new set replaces the old one.
+    await env.DB.prepare(`UPDATE assets SET status = 'ARCHIVED' WHERE project_id = ? AND json_extract(metadata_json, '$.design_brief') = 'photo'`).bind(context.id).run();
+    for (const photo of photoFiles) {
+      const stored = await storeFile(env, context, photo, { kind: "PHOTO", max: MAX_PHOTO, allowPdf: false, keepOthers: true });
+      if (stored.error) return { error: stored.error };
+    }
   }
   let menuAsset = null;
   if (files.menu_file && product.menuFile) {
@@ -189,7 +202,7 @@ async function handleDesignBrief(request, env, projectId) {
   if (problem) return formPage(product, action, token, values, { error: problem, hasMenu });
   const file = (name) => { const v = form.get(name); return v && typeof v !== "string" ? v : null; };
   if (product.menuFile && !hasMenu && !(file("menu_file")?.size > 0)) return formPage(product, action, token, values, { error: "Please upload your current menu.", hasMenu });
-  const result = await saveBrief(env, context, product, values, { logo: file("logo"), menu_file: file("menu_file") });
+  const result = await saveBrief(env, context, product, values, { logo: file("logo"), menu_file: file("menu_file"), photos: form.getAll("photos").filter((v) => v && typeof v !== "string") });
   if (result.error) return formPage(product, action, token, values, { error: result.error, hasMenu });
   return simplePage(200, "Thank you", `<p>We have what we need and Nino's studio is designing your ${escapeHtml(product.name)} now. You'll get an email when it's ready.</p><p><a class="btn" href="${NINO_SITE}">Back to ninobattaglia.com</a></p>`);
 }

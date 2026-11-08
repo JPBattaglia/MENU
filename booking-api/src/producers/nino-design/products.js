@@ -18,7 +18,8 @@ const NINO_PRODUCTS = {
       { key: "voice", label: "Tone of voice (optional)", type: "text", required: false, max: 80, help: "For example: warm and family-run, playful, upscale." },
       { key: "brand_colors", label: "Brand colours (optional)", type: "text", required: false, max: 60, help: "Up to two colours, like #b3261e, #f2b705. Leave blank and we'll pick from your logo's style." }
     ],
-    logo: true
+    logo: true,
+    photos: true
   },
   NINO_FLYER: {
     code: "NINO_FLYER", workflow: "NINO_FLYER_V1", name: "Flyer", priceCents: 7900,

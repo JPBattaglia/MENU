@@ -209,7 +209,35 @@ test('social pack: posts written from the brief only, then drawn; a claim not in
     assert.equal(f.state.outputs.length, 0, 'the second, clean answer was used');
     const info = JSON.parse(f.row(`SELECT a.metadata_json FROM deliverables d JOIN assets a ON a.id = d.asset_id WHERE d.deliverable_type = 'NINO_DESIGN_PACK'`).metadata_json).nino_design;
     assert.equal(info.posts, 9); assert.equal(info.attempts, 2);
+    assert.equal(info.photos, 0); assert.ok(new Set(info.layouts).size >= 3, 'no photos: the three type layouts take turns');
     await approveAndDeliver(f);
+  });
+});
+
+test('social pack: photos from the brief go behind some posts (saved as JPEG), by signed link', async () => {
+  const f = setup('NINO_SOCIAL_PACK');
+  await withFetch(f.fetch, async () => {
+    const posts = Array.from({ length: 9 }, (_, i) => ({ headline: `Sourdough moment ${i + 1}`, subline: 'Baked every morning', caption: 'Our sourdough loaf is baked every morning, come and get one warm.', hashtags: ['#sourdough', '#bakery', '#cafe'] }));
+    f.state.outputs.push({ posts });
+    const jpg = new Uint8Array(20000); jpg.set([0xff, 0xd8, 0xff, 0xe0]);
+    await startDesignBrief(f.env, { projectId: f.projectId });
+    const page = await (await call(f, linksIn(f.emails[0].text, '/api/design-brief/')[0])).text();
+    assert.match(page, /name="photos"[^>]*multiple/);
+    const form = new FormData();
+    form.append('t', await signLinkToken(f.env, { kind: LINK_KIND, id: f.projectId, ttlDays: 1 }));
+    for (const [k, v] of Object.entries({ business_name: 'Sample Cafe', about: 'A cafe and bakery.', promote: 'Our sourdough loaf, baked every morning.', voice: '', brand_colors: '' })) form.append(k, v);
+    form.append('photos', new File([jpg], 'bread.jpg', { type: 'image/jpeg' }));
+    form.append('photos', new File([jpg], 'room.jpg', { type: 'image/jpeg' }));
+    assert.equal((await call(f, `https://menu-made.com/api/design-brief/${f.projectId}`, { method: 'POST', body: form })).status, 200);
+    assert.equal(f.row(`SELECT COUNT(*) AS n FROM assets WHERE asset_type = 'PHOTO' AND status = 'VALID'`).n, 2);
+    await api.runScheduledProduction(f.env); await Promise.all(f.pending);
+    const info = JSON.parse(f.row(`SELECT a.metadata_json FROM deliverables d JOIN assets a ON a.id = d.asset_id WHERE d.deliverable_type = 'NINO_DESIGN_PACK'`).metadata_json).nino_design;
+    assert.equal(info.photos, 2);
+    assert.ok(info.layouts.filter((l) => l.startsWith('photo-')).length >= 4, 'about half the posts carry a photo');
+    const pack = f.row(`SELECT a.storage_key FROM deliverables d JOIN assets a ON a.id = d.asset_id WHERE d.deliverable_type = 'NINO_DESIGN_PACK'`);
+    const { readZip } = await import('./src/producers/social-posts/zip.js');
+    const names = readZip(new Uint8Array(await (await f.env.ASSETS.get(pack.storage_key)).arrayBuffer())).map((e) => e.name);
+    assert.ok(names.includes('post-01-square.jpg') && names.includes('post-02-square.png'), names.join(','));
   });
 });
 
