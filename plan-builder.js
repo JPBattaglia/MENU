@@ -29,7 +29,14 @@
   }
 
   // Google Profile Care already answers reviews; the Website Package with monthly services needs Website Care in them.
+  // Each plan starts from its foundation (owner, Nov 8, 2026): Menu Care updates a menu Menu-made hosts, so ticking it
+  // ticks Online Menu + QR too (untick it if you already have one with us); Website Care looks after a site Menu-made
+  // built, so with it the checkout button goes through the free site generator and the plan rides along.
   function applyRules(changed) {
+    const mc = box('MENU_CARE'), menu = box('ONLINE_MENU_QR');
+    if (mc && menu && changed === mc && mc.checked) menu.checked = true;
+    const mcNote = $('[data-note="MENU_CARE"]'); if (mcNote) mcNote.hidden = !mc?.checked;
+    const wcNote = $('[data-note="WEBSITE_CARE"]'); if (wcNote) wcNote.hidden = !box('WEBSITE_CARE')?.checked;
     const gpc = box('GOOGLE_PROFILE_CARE'), rr = box('REVIEW_REPLIES');
     rr.disabled = gpc.checked;
     rr.closest('.mm-pick').classList.toggle('is-covered', gpc.checked);
@@ -79,6 +86,8 @@
     else if (monthly.length > 1) params.set('custom', monthly.join(','));
     if (planCode || monthly.length) params.set('interval', Catalog.interval);
     if (oneTime.length) params.set('add', oneTime.join(','));
+    const covers = planCode ? Boolean(offers?.get(planCode)?.includes?.includes('WEBSITE_CARE')) : monthly.includes('WEBSITE_CARE');
+    if (covers) return 'website-design.html?then=' + encodeURIComponent(params.toString()) + '#try-free';
     return 'contact.html?' + params.toString();
   }
 
@@ -138,6 +147,7 @@
       link.href = checkoutUrl([], oneTime, better.code);
     }
     go.href = checkoutUrl(monthly, oneTime);
+    go.textContent = go.href.includes('website-design.html') ? 'Pick your site, then checkout' : 'Continue to checkout';
   }
 
   // The bar shows only while the list is on screen and the total panel isn't.
@@ -160,7 +170,18 @@
     if (event.currentTarget.getAttribute('aria-disabled') === 'true') { event.preventDefault(); boxes()[0]?.focus(); }
   });
   Catalog.onRender(() => render());
-  Catalog.ready.then(map => { offers = map; applyRules(null); render(); }).catch(() => {
+  // From a Services card (owner, Nov 8, 2026): plans.html?pick=CODE#build ticks that service here, so the buyer sees
+  // its price on its own, with other services, and which plan already covers it.
+  function pickFromLink() {
+    const wanted = (new URLSearchParams(location.search).get('pick') || '').split(',').filter(c => /^[A-Z_]+$/.test(c));
+    for (const code of wanted) {
+      const b = box(code);
+      if (!b || b.disabled || b.checked) continue;
+      b.checked = true;
+      applyRules(b);
+    }
+  }
+  Catalog.ready.then(map => { offers = map; pickFromLink(); applyRules(null); render(); }).catch(() => {
     $('[data-empty]').textContent = 'Prices could not be loaded. Refresh the page, or choose a plan above.';
   });
 })();

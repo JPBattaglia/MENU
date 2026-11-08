@@ -14,7 +14,7 @@
   <link rel="stylesheet" href="main.css?v=20261106-addons">
   <script src="funnel.js?v=20261016-service-measurement" defer></script>
   <script src="site-nav.js?v=20261105-nav" defer></script>
-  <script src="site-catalog.js?v=20261103-prices" defer></script>
+  <script src="site-catalog.js?v=20261108-foundation" defer></script>
   <link rel="canonical" href="https://menu-made.com/contact">
   <meta property="og:type" content="website">
   <meta property="og:locale" content="en_US">
@@ -100,16 +100,16 @@
           <section class="service-choice-group" aria-labelledby="bundleChoiceTitle">
             <h3 id="bundleChoiceTitle">Plans</h3>
             <article class="service-card mm-choice" data-code="BUNDLE_STARTER" data-kind="plan" data-name="Starter plan">
-              <h3>Starter plan</h3><p>Your menu current and every review answered. Includes Menu Care, Review Replies, Accessibility Monitoring.</p>
+              <h3>Starter plan</h3><p>Every review answered and your site checked monthly. Includes Review Replies and Accessibility Monitoring.</p>
               <div class="service-bottom"><span class="price"><span class="mm-price" data-price-for="BUNDLE_STARTER">$79/mo</span></span><button class="btn primary js-add" type="button" data-select-label="Choose Starter" aria-pressed="false">Loading…</button></div>
             </article>
             <article class="service-card mm-choice" data-code="BUNDLE_GROWTH" data-kind="plan" data-name="Growth plan">
-              <h3>Growth plan</h3><p>Everything in Starter, plus a busy Google profile. Includes Menu Care, Google Profile Care (with review replies), Accessibility Monitoring.</p>
+              <h3>Growth plan</h3><p>Everything in Starter, plus a busy Google profile. Includes Google Profile Care (with review replies) and Accessibility Monitoring.</p>
               <div class="service-bottom"><span class="price"><span class="mm-price" data-price-for="BUNDLE_GROWTH">$169/mo</span></span><button class="btn primary js-add" type="button" data-select-label="Choose Growth" aria-pressed="false">Loading…</button></div>
             </article>
             <article class="service-card mm-choice" data-code="BUNDLE_PRO" data-kind="plan" data-name="Pro plan">
-              <h3>Pro plan</h3><p>Your whole online presence, handled. Includes Everything in Growth, Social Posts, Website Care.</p>
-              <div class="service-bottom"><span class="price"><span class="mm-price" data-price-for="BUNDLE_PRO">$299/mo</span></span><button class="btn primary js-add" type="button" data-select-label="Choose Pro" aria-pressed="false">Loading…</button></div>
+              <h3>Pro plan</h3><p>Your whole online presence, handled. Everything in Growth, plus Social Posts and Website Care for a site Menu-Made builds.</p>
+              <div class="service-bottom"><span class="price"><span class="mm-price" data-price-for="BUNDLE_PRO">$279/mo</span></span><button class="btn primary js-add" type="button" data-select-label="Choose Pro" aria-pressed="false">Loading…</button></div>
             </article>
           </section>
           <section class="service-choice-group" aria-labelledby="singleChoiceTitle">
@@ -172,6 +172,15 @@
           <p class="mini" id="emptyOrder">Nothing chosen yet. Use “Choose a plan or service” to start.</p>
           <p class="mm-problem" id="orderProblem" role="alert" hidden></p>
 
+          <section class="site-addons" id="menuAddon" aria-labelledby="menuAddonTitle" hidden>
+            <h4 id="menuAddonTitle">Add to your menu</h4>
+            <div class="site-addon">
+              <div><strong>Menu Care</strong> <span class="site-addon-price" data-price="MENU_CARE"></span><small>Send menu changes any time and we update it; your QR codes keep working. After the first year it also keeps your menu online.</small></div>
+              <button class="btn secondary" type="button" data-menu-care-add>Add</button>
+            </div>
+            <p class="mini site-addon-note" id="menuAddonNote" aria-live="polite"></p>
+          </section>
+
           <section class="site-addons" id="siteAddons" aria-labelledby="siteAddonsTitle" hidden>
             <h4 id="siteAddonsTitle">Add to your website</h4>
             <p class="mini">Your site comes as a zip you can put online anywhere. Add a plan and we put it online at your own web address and keep it up to date.</p>
@@ -180,12 +189,11 @@
               <button class="btn secondary" type="button" data-addon-add="WEBSITE_CARE">Add</button>
             </div>
             <div class="site-addon" data-addon="BUNDLE_PRO">
-              <div><strong>Pro Plan</strong> <span class="site-addon-price" data-price="BUNDLE_PRO"></span><small>Website Care plus Menu Care, Review Replies, Google Profile Care, Social Posts and Accessibility Monitoring.</small></div>
+              <div><strong>Pro Plan</strong> <span class="site-addon-price" data-price="BUNDLE_PRO"></span><small>Website Care plus Google Profile Care (with review replies), Social Posts and Accessibility Monitoring.</small></div>
               <button class="btn secondary" type="button" data-addon-add="BUNDLE_PRO">Add</button>
             </div>
             <fieldset class="site-addon-own">
               <legend><strong>Or Website Care plus what you need</strong> <small>10% off with one more service, 20% off with two or more</small></legend>
-              <label><input type="checkbox" value="MENU_CARE"> Menu Care <span data-price="MENU_CARE"></span></label>
               <label><input type="checkbox" value="REVIEW_REPLIES"> Review Replies <span data-price="REVIEW_REPLIES"></span></label>
               <label><input type="checkbox" value="GOOGLE_PROFILE_CARE"> Google Profile Care <span data-price="GOOGLE_PROFILE_CARE"></span></label>
               <label><input type="checkbox" value="SOCIAL_POSTS"> Social Posts <span data-price="SOCIAL_POSTS"></span></label>
@@ -332,7 +340,7 @@
 </footer>
 <script src="section-parallax.js?v=20261015-unified" defer></script>
 <script src="document-upload.js?v=20261028-stage9" defer></script>
-<script src="start.js?v=20261106-addons" defer></script>
+<script src="start.js?v=20261108-foundation" defer></script>
 <script src="booking.js?v=20261016-buyer-flow" defer></script>
 </body>
 </html>

@@ -58,6 +58,21 @@ function customQuote(codes = order.custom) {
 }
 let offers = null;
 let checkoutInFlight = false;
+// Each plan starts from its foundation (owner, Nov 8, 2026). Menu Care updates a menu Menu-made hosts, so it brings
+// Online Menu + QR into the order unless the buyer already has one (removing it says so; ?have=menu skips it, for
+// links sent to existing menu customers). Website Care looks after a site Menu-made builds, so a plan with it needs
+// the site in the same order (?have=site skips that, for existing site customers).
+const startParams = new URLSearchParams(location.search);
+let hasOwnMenu = startParams.get('have') === 'menu';
+const hasOwnSite = startParams.get('have') === 'site';
+const planIncludes = code => order.plan === CUSTOM ? order.custom.includes(code) : Boolean(order.plan && (order.plan === code || offer(order.plan)?.includes?.includes(code)));
+const siteInOrder = () => order.once.has('SITE_FILES') || order.once.has(WEBSITE);
+let menuNote = '';
+function bringMenu() {
+  if (!planIncludes('MENU_CARE') || order.once.has(MENU) || hasOwnMenu || !sellable(offer(MENU))) return;
+  order.once.add(MENU);
+  menuNote = 'Menu Care updates a menu we host, so Online Menu + QR was added. Already have a menu with us? Remove it.';
+}
 let uploadedDocumentRequest = null;
 let previewDocumentId = ''; // a free preview's stored menu file, reused so the buyer doesn't upload it again
 let lockedFieldValues = null;
@@ -131,11 +146,24 @@ function orderProblem() {
       ? 'The Website Package comes with Website Care. Add Website Care to your own plan, or check out the Website Package on its own.'
       : `The Website Package comes with Website Care. Check it out on its own, or with a plan that includes Website Care (Pro or Website Care on its own), and add ${plan.name} in a second checkout.`;
   }
+  if (planIncludes('WEBSITE_CARE') && !siteInOrder() && !hasOwnSite && !TEST_CHECKOUT) {
+    return { text: 'Website Care looks after a site Menu-Made builds, so it starts with your site. Pick yours free in the site generator and this plan comes with it.', href: 'website-design.html?then=' + encodeURIComponent(thenParams()) + '#try-free', label: 'Pick your site' };
+  }
   const codes = order.plan === CUSTOM ? [...order.custom, ...order.once] : [order.plan, ...order.once];
   for (const code of codes.filter(Boolean)) {
     if (offers && !sellable(offer(code))) return `${nameOf(code)} opens soon. Remove it to continue, or ask us about it below.`;
   }
   return '';
+}
+// The plan as link parameters, for the site generator to carry back here (saved by site-preview.js).
+function thenParams() {
+  const q = new URLSearchParams();
+  if (order.plan === CUSTOM) q.set('custom', order.custom.join(','));
+  else if (order.plan) q.set('plan', order.plan);
+  q.set('interval', interval());
+  const extra = [...order.once].filter(c => c !== 'SITE_FILES' && c !== WEBSITE);
+  if (extra.length) q.set('add', extra.join(','));
+  return q.toString();
 }
 
 function updateBriefs() {
@@ -241,8 +269,16 @@ function render(openEmptyChoices = true) {
   }
   els.total.textContent = validPages ? money(today) : 'Enter page count';
   const problem = any ? orderProblem() : '';
-  $('orderProblem').textContent = problem;
-  $('orderProblem').hidden = !problem;
+  const problemEl = $('orderProblem');
+  problemEl.textContent = typeof problem === 'string' ? problem : problem.text + ' ';
+  if (problem && typeof problem !== 'string') {
+    const link = document.createElement('a');
+    link.className = 'cta-pill';
+    link.href = problem.href;
+    link.textContent = problem.label;
+    problemEl.append(link);
+  }
+  problemEl.hidden = !problem;
   $('orderTotalRow').hidden = !any;
   $('emptyOrder').hidden = any;
   $('orderActions').hidden = !any;
@@ -260,8 +296,49 @@ function render(openEmptyChoices = true) {
   updateBriefs();
   updateCards();
   renderSiteAddons();
+  renderMenuAddon();
   renderDomain();
 }
+
+// Menu Care as an add-on (owner, Nov 8, 2026): shown with Online Menu + QR, and whenever Menu Care is in the order.
+// Adding it keeps whatever plan is chosen: a plan plus Menu Care becomes "your own plan" with the same services.
+function renderMenuAddon() {
+  const panel = $('menuAddon');
+  if (!panel) return;
+  const on = planIncludes('MENU_CARE');
+  panel.hidden = !offers || !(order.once.has(MENU) || on) || !sellable(offer('MENU_CARE'));
+  if (panel.hidden) return;
+  panel.querySelectorAll('[data-price]').forEach(el => { const o = offer(el.dataset.price); el.textContent = o ? Catalog.label(o, interval()) : ''; });
+  const button = panel.querySelector('[data-menu-care-add]');
+  button.textContent = on ? 'Added' : 'Add';
+  button.setAttribute('aria-pressed', String(on));
+  button.disabled = checkoutInFlight;
+  panel.querySelector('.site-addon').classList.toggle('is-selected', on);
+  $('menuAddonNote').textContent = on ? (menuNote || (order.plan === CUSTOM ? `Your plan: ${order.custom.map(nameOf).join(', ')}, ${planLabel(CUSTOM)}.` : '')) : '';
+}
+function currentServices() {
+  if (order.plan === CUSTOM) return [...order.custom];
+  if (!order.plan) return [];
+  return [...(offer(order.plan)?.includes || [order.plan])];
+}
+function toggleMenuCare() {
+  if (flowBusy() || !offers) return;
+  const services = currentServices();
+  if (planIncludes('MENU_CARE')) {
+    const rest = services.filter(c => c !== 'MENU_CARE');
+    if (rest.length > 1) setCustom(rest);
+    else if (rest.length === 1) add(rest[0], { quiet: true });
+    else remove(order.plan);
+    menuNote = '';
+  } else if (!services.length) {
+    add('MENU_CARE', { quiet: true });
+  } else {
+    setCustom([...services, 'MENU_CARE']);
+  }
+  clearStatus();
+  render(false);
+}
+$('menuAddon')?.addEventListener('click', event => { if (event.target.closest('[data-menu-care-add]')) toggleMenuCare(); });
 
 // Your own domain: shown under the add-ons once the site is hosted (Website Care, the Pro plan, or your own plan with it).
 const usd = cents => '$' + (cents / 100).toFixed(2);
@@ -354,7 +431,7 @@ fetch((Catalog?.API || '') + '/api/domains').then(r => r.json()).then(data => { 
 
 // "Choose this site" lands here with the site in the order (owner, Nov 6, 2026): Website Care, the Pro plan, or
 // Website Care plus other monthly services (your own plan, 10% / 20% off) are one tap away. One plan per order.
-const SITE_ADDON_EXTRAS = ['MENU_CARE', 'REVIEW_REPLIES', 'GOOGLE_PROFILE_CARE', 'SOCIAL_POSTS', 'ACCESSIBILITY_MONITORING'];
+const SITE_ADDON_EXTRAS = ['REVIEW_REPLIES', 'GOOGLE_PROFILE_CARE', 'SOCIAL_POSTS', 'ACCESSIBILITY_MONITORING'];
 function renderSiteAddons() {
   const panel = $('siteAddons');
   if (!panel) return;
@@ -421,6 +498,7 @@ function add(code, { quiet = false } = {}) {
     order.custom = [];
     order.plan = code;
     if (o.requires_setup) order.once.add(o.requires_setup);
+    bringMenu();
   } else {
     if (order.once.has(code)) return false;
     order.once.add(code);
@@ -439,6 +517,7 @@ function setCustom(codes) {
   order.plan = CUSTOM;
   order.custom = list;
   if (list.includes('GUEST_APP')) order.once.add('GUEST_APP_SETUP');
+  bringMenu();
   window.MenuMadeFunnel?.track('service_selected', CUSTOM);
   render();
   return true;
@@ -452,6 +531,10 @@ function remove(code) {
     if (setup) order.once.delete(setup);
   } else {
     order.once.delete(code);
+    if (code === MENU && planIncludes('MENU_CARE')) {
+      hasOwnMenu = true;
+      menuNote = 'Menu Care will update the menu you already have with us.';
+    }
   }
   clearStatus();
   render();
@@ -630,6 +713,22 @@ render(false);
   for (const raw of (params.get('add') || '').split(',').filter(Boolean)) {
     const code = Object.hasOwn(ALIASES, raw) ? ALIASES[raw] : raw.toUpperCase();
     if (/^[A-Z_]+$/.test(code) && offers.has(code) && !offers.get(code).prices) chosen = add(code, { quiet: true }) || chosen;
+  }
+  // A plan chosen before the site (Pro, or a plan with Website Care): the generator saved it; it joins the site here.
+  if (order.once.has('SITE_FILES') && !order.plan) {
+    let then = null;
+    try { then = JSON.parse(localStorage.getItem('mm-site-then') || 'null'); } catch { /* storage off */ }
+    if (then && typeof then.q === 'string' && Date.now() - Number(then.at) < 4 * 24 * 3600 * 1000) {
+      const q = new URLSearchParams(then.q);
+      if (q.get('interval') === 'year' || q.get('interval') === 'month') Catalog.setInterval(q.get('interval'));
+      const plan = q.get('plan'), custom = (q.get('custom') || '').split(',').filter(Boolean);
+      if (custom.length) setCustom(custom);
+      else if (plan && /^[A-Z_]+$/.test(plan) && offers.has(plan)) add(plan, { quiet: true });
+      for (const code of (q.get('add') || '').split(',').filter(c => /^[A-Z_]+$/.test(c))) {
+        if (offers.has(code) && !offers.get(code).prices) add(code, { quiet: true });
+      }
+      try { localStorage.removeItem('mm-site-then'); } catch { /* storage off */ }
+    }
   }
   render(false);
   if (chosen) { els.picker.open = false; showDetails(false); }

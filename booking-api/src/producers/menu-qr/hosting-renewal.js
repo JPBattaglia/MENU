@@ -193,7 +193,7 @@ async function handleMenuHostingRenewal(request, env, projectId) {
   const form = request.method === "POST" ? await request.formData().catch(() => null) : null;
   const token = String((form ? form.get("t") : url.searchParams.get("t")) || "");
   const payload = await verifyLinkToken(env, token, [KIND], projectId);
-  if (!payload) return page(404, "Link not found", `<p>This link isn't valid.</p><p><a class="btn" href="/contact.html?plan=MENU_CARE">Menu Care</a></p>`);
+  if (!payload) return page(404, "Link not found", `<p>This link isn't valid.</p><p><a class="btn" href="/contact.html?plan=MENU_CARE&have=menu">Menu Care</a></p>`);
   if (payload.expired) return page(410, "This link has expired", `<p>You can still add Menu Care from your account or the Start page.</p><p><a class="btn" href="/account.html">Your account</a></p>`);
   const project = await loadMenuProject(env, projectId);
   if (!project) return page(404, "Menu not found", "<p>We couldn't find this menu.</p>");

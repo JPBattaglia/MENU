@@ -5,6 +5,19 @@
   'use strict';
   const form = document.getElementById('siteTryForm');
   if (!form) return;
+  // A plan with Website Care (Pro, or your own plan) starts here (owner, Nov 8, 2026): keep it on this device so the
+  // checkout that "Choose this site" opens has it ready (start.js reads mm-site-then).
+  const then = new URLSearchParams(location.search).get('then');
+  if (then && then.length < 400) {
+    try { localStorage.setItem('mm-site-then', JSON.stringify({ q: then, at: Date.now() })); } catch { /* storage off */ }
+    const q = new URLSearchParams(then);
+    const names = { BUNDLE_PRO: 'Pro plan', WEBSITE_CARE: 'Website Care' };
+    const label = q.get('custom') ? 'your own plan' : (names[q.get('plan')] || 'your plan');
+    const note = document.createElement('p');
+    note.className = 'mm-try-rep';
+    note.textContent = `Step 1: pick your site here. Your ${label} comes with it to checkout.`;
+    form.prepend(note);
+  }
   const $ = id => document.getElementById(id);
   const status = $('siteTryStatus');
   const button = $('siteTryBtn');

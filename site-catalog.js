@@ -3,7 +3,8 @@
 //   data-price-for="CODE"            filled with that offer's price (plans use the page's billing interval)
 //   data-price-interval="month|year" pins one interval instead of following the toggle
 //   data-saving-for="BUNDLE_CODE"    filled with the monthly or yearly saving against buying the plans separately
-//   data-plan-cta="CODE"             a Choose link: points at the Start page with the interval; off-sale offers say so
+//   data-plan-cta="CODE"             a Choose link: points at the Start page with the interval (plans with Website Care
+//                                    start in the site generator); off-sale offers say so
 //   data-billing-toggle              radio inputs (value month|year) that switch every price on the page
 (() => {
   'use strict';
@@ -71,6 +72,12 @@
         el.href = 'contact.html?ask=' + encodeURIComponent(el.dataset.planCta) + '#inquiry';
         el.textContent = 'Opening soon · ask us';
         el.classList.add('is-soon');
+      } else if (offer?.includes?.includes('WEBSITE_CARE')) {
+        // Website Care looks after a site Menu-made built (owner, Nov 8, 2026): these plans start in the free site
+        // generator, which carries the plan to checkout once the buyer picks a site (start.js reads it back).
+        el.href = 'website-design.html?then=' + encodeURIComponent(params.toString()) + '#try-free';
+        el.textContent = el.dataset.ctaLabel || 'Choose';
+        el.classList.remove('is-soon');
       } else {
         el.href = 'contact.html?' + params.toString();
         el.textContent = el.dataset.ctaLabel || 'Choose';

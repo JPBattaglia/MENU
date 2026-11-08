@@ -144,7 +144,8 @@ test('catalog migration matches subscription-catalog.json and keeps everything o
       assert.deepEqual(versions.map((v) => [v.billing_interval, v.price_cents, v.stripe_price_id]),
         [['MONTH', plan.monthly.amount, plan.monthly.price], ['YEAR', plan.annual.amount, plan.annual.price]], code);
       assert.ok(versions.every((v) => v.is_public === 0 && v.billing_type === 'RECURRING'));
-      assert.deepEqual(JSON.parse(versions[0].scope_json).includes, plan.includes || [code]);
+      // 0001 launched the bundles with Menu Care; 0048 (Nov 8, 2026) takes it out, tested on its own below.
+      assert.deepEqual(JSON.parse(versions[0].scope_json).includes, plan.includes ? ['MENU_CARE', ...plan.includes] : [code]);
     }
     for (const code of ['WEBSITE_PACKAGE', 'GUEST_APP_SETUP']) {
       assert.equal(h.one(`SELECT v.stripe_price_id FROM offers o JOIN offer_versions v ON v.offer_id = o.id WHERE o.code = ?`, code).stripe_price_id, catalog.one_time[code].price);
@@ -174,7 +175,7 @@ test('site catalog lists every plan with monthly and annual prices, bundle conte
       assert.equal(by[code].on_sale, false, code);
     }
     assert.equal(by.BUNDLE_GROWTH.kind, 'BUNDLE');
-    assert.deepEqual(by.BUNDLE_GROWTH.includes, catalog.bundles.BUNDLE_GROWTH.includes);
+    assert.deepEqual(by.BUNDLE_GROWTH.includes, ['MENU_CARE', ...catalog.bundles.BUNDLE_GROWTH.includes]); // as 0001 launched it
     assert.equal(by.GUEST_APP.requires_setup, 'GUEST_APP_SETUP');
     assert.equal(by.WEBSITE_PACKAGE.price_cents, catalog.one_time.WEBSITE_PACKAGE.amount);
     assert.equal(by.ONLINE_MENU_QR.on_sale, true);
@@ -559,6 +560,26 @@ test('your own plan: the subscription gets exactly the services picked, at the p
     assert.match(welcome.text, /\$157\/month/);
     assert.match(welcome.text, /Menu Care/);
     assert.doesNotMatch(welcome.html, /Your own plan is active[\s\S]*switch between monthly and annual/);
+  } finally { h.restore(); }
+});
+
+test('Plans without Menu Care, Pro $279 (owner, Nov 8, 2026): bundles drop MENU_CARE; Pro uses the new price; old Pro prices still map', async () => {
+  const h = setup();
+  try {
+    for (const f of ['0039_growth_169.sql', '0048_plans_without_menu_care.sql', '0048_plans_without_menu_care.sql']) {
+      h.env.DB.raw.exec(readFileSync(new URL('./migrations/' + f, import.meta.url), 'utf8'));
+    }
+    const cat = await (await h.call('/api/catalog')).json();
+    const by = (code) => cat.offers.find((o) => o.code === code);
+    assert.deepEqual(by('BUNDLE_PRO').prices, { month: 27900, year: 279000 });
+    for (const code of ['BUNDLE_STARTER', 'BUNDLE_GROWTH', 'BUNDLE_PRO']) assert.ok(!by(code).includes.includes('MENU_CARE'), code);
+    const res = await h.checkout({ items: [{ key: 'BUNDLE_PRO' }], interval: 'month', customer: buyer });
+    assert.equal(res.status, 200, JSON.stringify(res.body));
+    assert.equal(h.stripe.sessions.at(-1).params.get('line_items[0][price_data][unit_amount]'), '27900');
+    const { planForStripePrice } = await import('./src/subscriptions/plans.js');
+    const old = await planForStripePrice({ id: catalog.bundles.BUNDLE_PRO.monthly.price, recurring: { interval: 'month' } }, null, h.env);
+    assert.equal(old.offerCode, 'BUNDLE_PRO', 'a subscription on the old $299 price is still Pro');
+    assert.ok(!old.includes.includes('MENU_CARE'));
   } finally { h.restore(); }
 });
 
