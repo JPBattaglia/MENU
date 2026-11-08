@@ -234,9 +234,14 @@ test('the menu generator: one read, nine designs, "Generate menu" goes round the
   }
   assert.equal(seen.size, 9, 'nine different looks');
   const modern = await (await f.get(`/api/menu-preview/view/${token}/modern`)).text();
-  assert.match(modern, /header \{ background: var\(--primary\)/, 'band header');
+  assert.match(modern, /header \{ text-align: left;/, 'Modern has its own split header');
+  const diner = await (await f.get(`/api/menu-preview/view/${token}/diner`)).text();
+  assert.match(diner, /repeating-conic-gradient/, 'Diner has its checkered edge');
+  for (const key of ['classic', 'modern', 'diner', 'night']) {
+    assert.match(await (await f.get(`/api/menu-preview/view/${token}/${key}`)).text(), /\.jump a:first-child \{ margin-left: auto; \}/, `${key} nav is centred`);
+  }
   assert.equal((await f.get(`/api/menu-preview/view/${token}/nosuch`)).status, 410);
-  assert.equal(f.env.DB.raw.prepare(`SELECT open_count FROM menu_previews`).get().open_count, 10, 'every design opened counts');
+  assert.equal(f.env.DB.raw.prepare(`SELECT open_count FROM menu_previews`).get().open_count, 15, 'every design opened counts');
 });
 
 test('Customize: logo, colour and the line under the name reach every design, with no new read', async (t) => {
@@ -251,7 +256,9 @@ test('Customize: logo, colour and the line under the name reach every design, wi
     assert.match(html, /Using your logo, your colour, your line under the name/);
   }
   const classic = await (await f.get(`/api/menu-preview/view/${token}/classic`)).text();
-  assert.match(/<meta name="mm-style" content="([^"]*)"/.exec(classic)[1], /&quot;heading&quot;:&quot;#1d4e89&quot;/, 'brand colour leads the headings');
+  const meta = /<meta name="mm-style" content="([^"]*)"/.exec(classic)[1];
+  assert.match(meta, /&quot;accent&quot;:&quot;#1d4e89&quot;/, 'the chosen colour is the highlight');
+  assert.match(meta, /&quot;heading&quot;:&quot;#7a1f2b&quot;/, 'the design keeps its own header and heading colour');
   assert.equal(calls.claude, 1);
 
   const bad = await customize({ design: 'diner', logo: new File([new Uint8Array([1, 2, 3, 4, 5])], 'x.png', { type: 'image/png' }) });
@@ -292,11 +299,13 @@ test('a preview made before the generator still opens as it was', async (t) => {
   assert.match(await res.text(), /old page/);
 });
 
-test('the line under the name and the band header survive a Menu Care update', () => {
+test('the line under the name and the design structure survive a Menu Care update', () => {
   const html = buildDesignedMenuHtml({ businessName: 'Cafe', brandColors: '', menu: { sections: [{ name: 'Mains', items: [{ name: 'Soup', price: '8' }] }] }, logoDataUri: null,
     style: MENU_DESIGNS.find((d) => d.key === 'diner').style, subtitle: 'All Day Menu' });
   const live = parseMenuHtml(html);
   assert.equal(live.subtitle, 'All Day Menu');
-  assert.equal(live.style.header, 'band');
+  assert.equal(live.style.header, 'ticket');
+  assert.equal(live.style.section, 'banner');
+  assert.equal(live.style.layout, 'badge');
   assert.equal(parseMenuHtml(buildDesignedMenuHtml({ businessName: 'Cafe', menu: { sections: [{ name: 'Mains', items: [{ name: 'Soup', price: '8' }] }] }, logoDataUri: null })).subtitle, 'Menu');
 });
