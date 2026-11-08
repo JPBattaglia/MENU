@@ -24,7 +24,19 @@ OFFERS.CONVERSION_FIX = OFFERS.WEBSITE_PACKAGE; // prospects stored before Nov 6
 const FOOTER = "You're receiving this one-time note because your business is listed publicly online. Reply \"no thanks\" and we won't contact you again. Menu-made, 706 Kearny St, San Francisco, CA 94108.";
 const esc = (s) => String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
 
+// New openings (owner, Nov 8, 2026): a business that registered its location with the city in the last 120 days gets
+// a congratulations line ahead of what we noticed. Its subject stays the finding.
+function opening(p, now = Date.now()) {
+  const day = /^\d{4}-\d{2}-\d{2}$/.test(p.opened_on || "") ? Date.parse(`${p.opened_on}T12:00:00Z`) : NaN;
+  return Number.isFinite(day) && day <= now && now - day <= 120 * 86400000 ? `Congratulations on opening ${p.name}! ` : "";
+}
+
 function finding(p) {
+  const [subject, observed] = findingOnly(p);
+  return [subject, opening(p) + observed];
+}
+
+function findingOnly(p) {
   const gaps = JSON.parse(p.gaps_json || "[]");
   const name = p.name;
   const site = String(p.website || "").replace(/^https?:\/\//, "").replace(/^www\./, "").replace(/\/$/, "");

@@ -625,3 +625,9 @@ ALTER TABLE menu_previews ADD COLUMN reminder_sent_at TEXT;
 
 -- 0047 (Nov 7, 2026)
 ALTER TABLE website_previews ADD COLUMN reminder_sent_at TEXT;
+
+-- 0050 (Nov 8, 2026)
+ALTER TABLE prospects ADD COLUMN source TEXT;
+ALTER TABLE prospects ADD COLUMN opened_on TEXT;
+ALTER TABLE prospects ADD COLUMN looked_up_at TEXT;
+CREATE INDEX IF NOT EXISTS prospects_opened_on ON prospects (opened_on);
