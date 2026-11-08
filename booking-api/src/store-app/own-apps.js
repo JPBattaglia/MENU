@@ -51,7 +51,7 @@ const OWN_APPS = [
         "Website Care | Hosting and changes for a website Menu-made built | $49/mo",
         "Accessibility Monitoring | A monthly check that your website works for every guest | $39/mo"
       ].join("\n"),
-      specials: "See your own menu or website free before you pay: upload your menu and get a preview in minutes.",
+      specials: "See your own menu or website free before you checkout: upload your menu and get a preview in minutes.",
       phone: "",
       address: "",
       hours: "",

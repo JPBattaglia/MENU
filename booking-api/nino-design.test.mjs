@@ -254,7 +254,7 @@ test('logo: Nino is emailed the brief, uploads his concepts and final files, the
     assert.equal(f.row(`SELECT status FROM workflow_runs`).status, 'WAITING');
     const nino = f.emails.find((e) => /New logo to design: Sample Cafe/.test(e.subject));
     assert.ok(nino, 'Nino emailed');
-    assert.deepEqual([].concat(nino.to), ['hello@ninobattaglia.com']);
+    assert.deepEqual([].concat(nino.to), ['nino@menu-made.com']);
     assert.match(nino.text, /A coffee cup with steam/);
     const [upload] = linksIn(nino.text, '/api/nino-logo/');
     assert.match(await (await call(f, upload)).text(), /Upload the logo designs/);

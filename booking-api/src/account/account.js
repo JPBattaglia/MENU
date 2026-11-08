@@ -101,7 +101,7 @@ async function sendNoAccountNote(env, email) {
   const base = publicBaseUrl(env);
   const { site, menu } = await latestPreviews(env, email, Date.now());
   const buttons = [
-    ...(site ? [{ label: "See your website preview", url: `${base}/api/website-preview/view/${site.token}/d/trattoria/index.html`, primary: true }] : []),
+    ...(site ? [{ label: "See your website preview", url: `${base}/api/website-preview/view/${site.token}/d/bistro/index.html`, primary: true }] : []),
     ...(menu ? [{ label: "See your menu preview", url: `${base}/api/menu-preview/view/${menu.token}`, primary: !site }] : []),
     { label: site || menu ? "Sign in with another email" : "Try another email", url: `${base}/account.html`, primary: !site && !menu },
     ...(site || menu ? [] : [{ label: "See plans", url: `${base}/plans.html` }])
@@ -280,7 +280,7 @@ async function orderActions(env, orderId) {
     const meta = parseJsonOrNull(project.metadata_json) || {};
     if (meta.page_billing?.status === "PAYMENT_REQUIRED") {
       const token = await signLinkToken(env, { kind: "extra_pages", id: project.id, ttlDays: 30 });
-      actions.push(link("Pay for the extra menu pages", `${publicBaseUrl(env)}/api/extra-pages/${project.id}?t=${encodeURIComponent(token)}`));
+      actions.push(link("Checkout for the extra menu pages", `${publicBaseUrl(env)}/api/extra-pages/${project.id}?t=${encodeURIComponent(token)}`));
     }
     if (project.offer_code === "WEBSITE_PACKAGE" && project.status === "AWAITING_INPUTS") {
       actions.push(link("Tell us about your website", await siteIntakeLink(env, project.id)));

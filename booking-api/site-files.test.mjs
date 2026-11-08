@@ -18,7 +18,7 @@ const COPY = { tagline: 'Neighborhood Italian in North Beach', intro: 'Handmade 
 
 test('every design builds a complete, escaped one-page site from the same business', () => {
   assert.equal(DESIGNS.length, 9);
-  assert.deepEqual(DESIGNS.map((d) => d.key), ['trattoria', 'bistro', 'night', 'farmhouse', 'fine', 'fresh', 'pop', 'coastal', 'taproom']);
+  assert.deepEqual(DESIGNS.map((d) => d.key), ['bistro', 'trattoria', 'night', 'farmhouse', 'fine', 'fresh', 'pop', 'coastal', 'taproom']);
   for (const d of DESIGNS) {
     const files = buildDesignSite({ ...SITE, name: 'Oliva <b>Kitchen</b>' }, COPY, d.key);
     assert.deepEqual(Object.keys(files), ['index.html', 'menu.html', 'about.html', 'contact.html', 'styles.css'], d.key);

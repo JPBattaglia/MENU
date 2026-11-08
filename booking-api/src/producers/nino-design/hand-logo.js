@@ -10,7 +10,6 @@ import { SELF_TEST_EMAIL, brandedEmailHtml, escapeHtml, sendTransactionalEmail }
 import { nowIso, parseJsonOrNull, simplePage } from "../../lib/http.js";
 import { signLinkToken, verifyLinkToken } from "../../lib/links.js";
 import { bytesToBase64 } from "../../lib/util.js";
-import { NINO_REPLY_TO } from "../../nino-mail.js";
 import { isTestOrder, loadDeliveryContext } from "../../approvals/release.js";
 import { completeStep } from "../../workflows/runner.js";
 import { sniffImage } from "../website/intake.js";
@@ -23,7 +22,9 @@ const MAX_PACK_BYTES = 40 * 1024 * 1024;
 const STALE_DAYS = 4;
 const e = escapeHtml;
 
-const designerEmail = (env) => env.NINO_DESIGNER_EMAIL || NINO_REPLY_TO;
+// Nino's own inbox (owner, Nov 7, 2026); NINO_DESIGNER_EMAIL overrides it.
+const NINO_EMAIL = "nino@menu-made.com";
+const designerEmail = (env) => env.NINO_DESIGNER_EMAIL || NINO_EMAIL;
 const uploadLink = async (env, stepId) => `${publicBaseUrl(env)}/api/nino-logo/${stepId}?t=${encodeURIComponent(await signLinkToken(env, { kind: KIND, id: stepId, ttlDays: LINK_DAYS }))}`;
 
 const BRIEF_LABELS = [["business_name", "Name for the logo"], ["tagline", "Tagline"], ["style", "Style"], ["brand_colors", "Colours"], ["ideas", "Ideas, likes and dislikes"], ["usage", "Where it will be used"]];

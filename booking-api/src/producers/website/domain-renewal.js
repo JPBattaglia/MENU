@@ -103,8 +103,8 @@ async function emailBuyerRenewal(env, row, number) {
   const reminder = number > 1;
   const lines = [
     `${row.domain} is registered in your name until ${expires}. To keep it for another year, the renewal is ${amount}.`,
-    "Nothing renews without your OK: if you don't pay, the domain expires and your website goes back to its menu-made.com address only.",
-    "Pay any time before it expires; we take care of the rest."
+    "Nothing renews without your OK: without a checkout, the domain expires and your website goes back to its menu-made.com address only.",
+    "Checkout any time before it expires; we take care of the rest."
   ];
   const sent = await sendTransactionalEmail(env, {
     to: String(who.email).trim(),

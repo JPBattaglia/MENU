@@ -209,7 +209,7 @@
             <div class="field">
               <label for="menuPages">How many pages is your current menu?</label>
               <input id="menuPages" name="menu_pages" type="number" min="1" max="50" step="1" value="3" inputmode="numeric" aria-describedby="menuPagesHelp menuPagesError">
-              <div class="mini" id="menuPagesHelp">Count every page of the menu you’ll upload. Up to 3 pages are included. We check the page count of your file; if it has more pages, we email you a link to pay the difference before we start.</div>
+              <div class="mini" id="menuPagesHelp">Count every page of the menu you’ll upload. Up to 3 pages are included. We check the page count of your file; if it has more pages, we email you a checkout link for the difference before we start.</div>
               <div class="validation-msg" id="menuPagesError" aria-live="polite"></div>
             </div>
             <dl class="menu-breakdown" aria-label="Menu price breakdown">
@@ -230,7 +230,7 @@
             <button class="btn secondary" id="clearBtn" type="button" disabled>Clear</button>
           </div>
           <div class="status" id="status" role="status" aria-live="polite"></div>
-          <details class="billing-details" id="billingDetails" hidden><summary>How billing works</summary><p class="mini">Today’s total covers your first month or year of the plan and any one-time services. Plans renew automatically. You can switch plans or cancel from the billing link in your plan emails; cancelling stops the plan at the end of the paid period. You’ll see the final total at Stripe before paying.</p></details>
+          <details class="billing-details" id="billingDetails" hidden><summary>How billing works</summary><p class="mini">Today’s total covers your first month or year of the plan and any one-time services. Plans renew automatically. You can switch plans or cancel from the billing link in your plan emails; cancelling stops the plan at the end of the paid period. You’ll see the final total at Stripe before you checkout.</p></details>
 
           <div class="intake" id="intakeStep">
             <div class="two">
