@@ -107,7 +107,7 @@ async function uploadScreenshot(asc, setId, name, bytes, fetchImpl) {
 // common rejection cause, so each kind of app says what it really does and how payment works (Nov 9, 2026).
 const RESTAURANT_NOTES = "A restaurant's own app: menu, specials, hours, location, a visit rewards card (6-digit code shown at the counter) and notifications. No sign-in.";
 
-async function submitApple({ creds, bundleId, listing, images, contact, reviewNotes = "" }, { fetchImpl = fetch } = {}) {
+async function submitApple({ creds, bundleId, listing, images, contact, reviewNotes = "", settings = {} }, { fetchImpl = fetch } = {}) {
   const asc = appleClient(creds, fetchImpl);
   try {
     const app = (await asc("GET", `/apps?filter[bundleId]=${encodeURIComponent(bundleId)}&limit=1`, null, "app")).data?.[0];
@@ -148,6 +148,32 @@ async function submitApple({ creds, bundleId, listing, images, contact, reviewNo
       const infoLocs = (await asc("GET", `/appInfos/${info.id}/appInfoLocalizations`, null, "name")).data || [];
       const infoLoc = infoLocs.find((l) => l.attributes?.locale === loc.attributes?.locale) || infoLocs[0];
       if (infoLoc) await asc("PATCH", `/appInfoLocalizations/${infoLoc.id}`, { data: { type: "appInfoLocalizations", id: infoLoc.id, attributes: { name: listing.name, subtitle: listing.subtitle, ...urlAttrs({ privacyPolicyUrl: listing.privacy_url }) } } }, "name");
+      // Primary category (Apple refuses review without one, Nov 9, 2026). Only set when missing, so an owner's own
+      // choice in App Store Connect stands.
+      const current = (await asc("GET", `/appInfos/${info.id}/primaryCategory`, null, "category").catch((e) => { if (/ 404:/.test(e.message)) return {}; throw e; })).data;
+      if (!current?.id) {
+        await asc("PATCH", `/appInfos/${info.id}`, { data: { type: "appInfos", id: info.id, relationships: { primaryCategory: { data: { type: "appCategories", id: settings.category || "FOOD_AND_DRINK" } } } } }, "category");
+      }
+    }
+
+    // Content rights declaration (does the app show content owned by someone else?), only when not answered yet.
+    if (!app.attributes?.contentRightsDeclaration) {
+      await asc("PATCH", `/apps/${app.id}`, { data: { type: "apps", id: app.id, attributes: { contentRightsDeclaration: settings.contentRights || "DOES_NOT_USE_THIRD_PARTY_CONTENT" } } }, "content rights");
+    }
+
+    // Price: every Mobile App is free to download. Set only when the app has no price schedule yet.
+    const schedule = await asc("GET", `/apps/${app.id}/appPriceSchedule`, null, "price").catch((e) => { if (/ 404:/.test(e.message)) return {}; throw e; });
+    if (!schedule?.data?.id) {
+      const points = (await asc("GET", `/apps/${app.id}/appPricePoints?filter[territory]=USA&limit=200`, null, "price")).data || [];
+      const free = points.find((p) => Number(p.attributes?.customerPrice) === 0);
+      if (!free) throw new StepError("price", "Apple didn't offer a free price point for this app; set Pricing to Free in App Store Connect.");
+      await asc("POST", "/appPriceSchedules", {
+        data: { type: "appPriceSchedules", relationships: {
+          app: { data: { type: "apps", id: app.id } },
+          baseTerritory: { data: { type: "territories", id: "USA" } },
+          manualPrices: { data: [{ type: "appPrices", id: "${free-price}" }] } } },
+        included: [{ type: "appPrices", id: "${free-price}", attributes: { startDate: null }, relationships: { appPricePoint: { data: { type: "appPricePoints", id: free.id } } } }]
+      }, "price");
     }
 
     const sets = (await asc("GET", `/appStoreVersionLocalizations/${loc.id}/appScreenshotSets`, null, "screenshots")).data || [];

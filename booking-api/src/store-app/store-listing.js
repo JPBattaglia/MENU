@@ -266,6 +266,13 @@ async function emailBuyerLive(env, storeApp, context, links, test) {
 // The owner's own apps (own-apps.js) have no phone in the app on purpose; App Review calls the owner (Nov 9, 2026).
 const OWNER_REVIEW_PHONE = "+1 945 363 7155";
 
+// App Store category and content-rights answer (owner, Nov 9, 2026). Restaurant apps: Food & Drink, and they show
+// only the restaurant's own menu and details. Menu-made's app shows free-licence stock photos in website previews.
+const OWN_APP_SETTINGS = {
+  "com.menumade.menumade": { category: "BUSINESS", contentRights: "USES_THIRD_PARTY_CONTENT" },
+  "com.menumade.ninobattaglia": { category: "SHOPPING", contentRights: "DOES_NOT_USE_THIRD_PARTY_CONTENT" }
+};
+
 // App Review notes for the owner's own apps (hybrid apps, hybrid.js). Written for guidelines 2.1 (how to reach every
 // feature, no sign-in needed), 4.2 (native screens, not a wrapped site) and 3.1.3(e) (payment for goods and services
 // used outside the app goes through the website's card checkout, not In-App Purchase).
@@ -293,7 +300,8 @@ async function submitBoth(env, storeApp, listing, context, deps) {
     : await submitApple({
       creds: apiKey, bundleId: storeApp.bundle_id, listing, images,
       contact: { first_name: context.first_name || "Restaurant", last_name: context.last_name || "Owner", phone: reviewPhone, email: context.customer_email },
-      reviewNotes: Number(storeApp.own_app) === 1 ? OWN_APP_NOTES[storeApp.bundle_id] || "" : ""
+      reviewNotes: Number(storeApp.own_app) === 1 ? OWN_APP_NOTES[storeApp.bundle_id] || "" : "",
+      settings: (Number(storeApp.own_app) === 1 && OWN_APP_SETTINGS[storeApp.bundle_id]) || { category: "FOOD_AND_DRINK", contentRights: "DOES_NOT_USE_THIRD_PARTY_CONTENT" }
     }, deps);
   let play = null;
   try { play = await loadCredential(env, scope, "GOOGLE_PLAY_ACCOUNT"); } catch { play = null; }
