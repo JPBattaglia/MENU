@@ -93,6 +93,7 @@ import { emailMerchTracking, handleMerchCheckout, handleMerchLogo, handleMerchLo
 import { advanceNinoDesignSelfTests } from "./selftest/nino-design-selftest.js";
 import { advanceStaffMerchSelfTests } from "./selftest/staff-merch-selftest.js";
 import { handleOwnerOutputs, runOwnerOutputsLink } from "./admin/outputs.js";
+import { handleHybridContent } from "./store-app/hybrid.js";
 
 var worker_default = {
   async fetch(request, env, ctx) {
@@ -318,6 +319,9 @@ var worker_default = {
         env
       );
     }
+    // Hybrid Mobile Apps (src/store-app/hybrid.js): live content for the owner's two apps' native screens.
+    const hybridMatch = url.pathname.match(/^\/api\/app-hybrid\/([a-z]{1,20})$/);
+    if (hybridMatch) return handleHybridContent(request, env, hybridMatch[1]);
     if (request.method === "GET" && url.pathname === "/api/catalog") {
       return getSiteCatalog(env);
     }
@@ -431,7 +435,15 @@ const mmWorkerWithBooking = {
       }
     }
     if (['/api/booking', '/api/inquiry'].includes(new URL(request.url).pathname)) {
-      return mmBookingHandler.fetch(request, mmBookingEnvironment(env), ctx);
+      const response = await mmBookingHandler.fetch(request, mmBookingEnvironment(env), ctx);
+      const origin = request.headers.get("Origin") || "";
+      if (origin === "capacitor://localhost" || origin === "https://localhost") {
+        const out = new Response(response.body, response);
+        out.headers.set("Access-Control-Allow-Origin", origin);
+        out.headers.set("Vary", "Origin");
+        return out;
+      }
+      return response;
     }
     return worker_default.fetch(request, env, ctx);
   },

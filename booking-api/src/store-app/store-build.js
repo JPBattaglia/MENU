@@ -27,6 +27,7 @@ import { keysReady, storeScope } from "./restaurant-keys.js";
 import { OWNER, OWNER_BUNDLE_ID } from "./keys.js";
 import { pausedWorkflows } from "../lib/switches.js";
 import { dispatchRefused } from "../lib/dispatch-alert.js";
+import { hybridUrlForBundle } from "./hybrid.js";
 
 const BUILD_AUDIENCE = "menu-made-store-build";
 const BUILD_WORKFLOW = "JPBattaglia/MENU/.github/workflows/store-app-build.yml@refs/heads/master";
@@ -98,7 +99,9 @@ async function buildConfigFor(env, storeApp, packageId = storeApp.bundle_id) {
       api_base: `${appUrl({ ...env, SITE_WILDCARD: "1" }, row.slug)}api`,
       version: nextVersion(await liveVersionOf(env, storeApp.id)),
       // A site app (own-apps.js) opens this website inside the app; its store screenshots are these pages.
-      ...(siteUrlOf(data) ? { site_url: siteUrlOf(data), site_screens: siteScreensOf(data) } : {})
+      ...(siteUrlOf(data) ? { site_url: siteUrlOf(data), site_screens: siteScreensOf(data) } : {}),
+      // A hybrid app (hybrid.js) shows real app screens from this live content; it takes the place of site_url.
+      ...(hybridUrlForBundle(storeApp.bundle_id) ? { hybrid_url: hybridUrlForBundle(storeApp.bundle_id) } : {})
     },
     icon_svg: draw(0.14),
     android_foreground_svg: draw(0.24),

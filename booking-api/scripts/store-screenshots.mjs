@@ -12,6 +12,34 @@ const [base, out] = process.argv.slice(2);
 if (!base || !out || !process.env.PW_DIR) throw new Error("Usage: PW_DIR=... store-screenshots.mjs <url> <out dir>");
 const { chromium } = createRequire(join(process.env.PW_DIR, "noop.js"))("playwright");
 const cfg = JSON.parse(await readFile(new URL("../../app-shell/www/config.json", import.meta.url), "utf8"));
+// A hybrid app (hybrid.js): its own screens with the live content: every tab, plus a product page for a shop.
+if (cfg.hybrid_url) {
+  await mkdir(out, { recursive: true });
+  const browser = await chromium.launch();
+  let shots = 0;
+  for (const [prefix, viewport] of [["ios", { width: 430, height: 932 }], ["android", { width: 360, height: 640 }]]) {
+    const context = await browser.newContext({ viewport, deviceScaleFactor: 3, isMobile: true, hasTouch: true });
+    const page = await context.newPage();
+    await page.goto(base, { waitUntil: "load" });
+    await page.waitForSelector("body.hy-ready .hy-tabs", { timeout: 60000 });
+    await page.waitForLoadState("networkidle").catch(() => {});
+    const tabs = await page.$$eval(".hy-tabs button", (b) => b.map((x) => x.getAttribute("data-tab")));
+    const plan = [];
+    tabs.forEach((tab, i) => { plan.push([tab, false]); if (i === 0 && (cfg.hybrid_url.endsWith("/nino"))) plan.push([tab, true]); });
+    let n = 0;
+    for (const [tab, detail] of plan.slice(0, 5)) {
+      await page.click(`#hy-t-${tab}`);
+      if (detail) await page.click(".hy-tile");
+      await page.waitForTimeout(1500); // product photos
+      await page.screenshot({ path: join(out, `${prefix}-${++n}.png`) });
+      shots++;
+    }
+    await context.close();
+  }
+  await browser.close();
+  console.log(`Screenshots: ${shots}`);
+  process.exit(0);
+}
 // A site app (own-apps.js) is the business's website inside the app: its pictures are those pages, as a phone shows them.
 if (cfg.site_url) {
   const origin = new URL(cfg.site_url).origin;

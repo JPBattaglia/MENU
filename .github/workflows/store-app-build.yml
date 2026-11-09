@@ -48,7 +48,7 @@ permissions:
 env:
   SAMPLE_CONFIG: ${{ inputs.config || 'app-shell/sample/build.json' }}
   STORE_APP: ${{ inputs.store_app || '' }}
-  CAP_PACKAGES: "@capacitor/core@latest @capacitor/cli@latest @capacitor/ios@latest @capacitor/android@latest @capacitor/push-notifications@latest"
+  CAP_PACKAGES: "@capacitor/core@latest @capacitor/cli@latest @capacitor/ios@latest @capacitor/android@latest @capacitor/push-notifications@latest @capacitor/browser@latest"
 
 jobs:
   # A restaurant's build (store_app set): its build config and icons from the worker, over this job's OIDC token. The
@@ -139,6 +139,17 @@ jobs:
         run: grep -q "connect-src 'self'" app-shell/www/index.html
       - name: Live content endpoint
         run: |
+          hybrid=$(jq -r '.hybrid_url // empty' "$CONFIG")
+          if [ -n "$hybrid" ]; then
+            for i in $(seq 1 20); do
+              if curl -sSf -H "Origin: capacitor://localhost" "$hybrid" -o hybrid.json 2>/dev/null && jq -e '.ok == true and (.tabs | length > 0)' hybrid.json >/dev/null; then
+                jq -r '"hybrid content ok: \(.tabs | length) tabs, \((.products // []) | length) products, \((.plans // []) | length) plans"' hybrid.json | tee -a "$GITHUB_STEP_SUMMARY"
+                exit 0
+              fi
+              echo "not ready yet ($i/20)"; sleep 30
+            done
+            echo "The hybrid content endpoint never answered as expected"; exit 1
+          fi
           if [ -n "$(jq -r '.site_url // empty' "$CONFIG")" ]; then echo "Site app: the website is the content" | tee -a "$GITHUB_STEP_SUMMARY"; exit 0; fi
           base=$(jq -r .api_base "$CONFIG")
           for i in $(seq 1 20); do
@@ -310,6 +321,10 @@ jobs:
           grep -q capacitorDidRegisterForRemoteNotifications ios/App/App/AppDelegate.swift
           plist=ios/App/App/Info.plist
           /usr/libexec/PlistBuddy -c "Add :ITSAppUsesNonExemptEncryption bool false" "$plist" 2>/dev/null || /usr/libexec/PlistBuddy -c "Set :ITSAppUsesNonExemptEncryption false" "$plist"
+          # Hybrid apps (hybrid.js) let a business owner take a photo of a menu for the free preview: Apple requires
+          # the reason in the camera and photo prompts, or the app is rejected (and crashes on the camera).
+          /usr/libexec/PlistBuddy -c "Add :NSCameraUsageDescription string 'Take a photo of your menu to make a free preview.'" "$plist" 2>/dev/null || true
+          /usr/libexec/PlistBuddy -c "Add :NSPhotoLibraryUsageDescription string 'Choose a photo of your menu to make a free preview.'" "$plist" 2>/dev/null || true
           cat > ios/App/App/App.entitlements <<'PLIST'
           <?xml version="1.0" encoding="UTF-8"?>
           <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">

@@ -5,7 +5,9 @@ const mmBookingHandler = (() => {
 const SESSIONS = new Set(['Menu + QR consultation (30 minutes)', 'Website + visibility consultation (30 minutes)', 'Project planning (30 minutes)']);
 const SERVICES = new Set(['Online Menu + QR', 'Conversion Fix', 'Google Visibility', 'Accessibility Upgrade', 'Other project']);
 const TIMES = new Set(['9:00 AM', '10:00 AM', '11:00 AM', '1:00 PM', '2:00 PM', '3:00 PM']);
-const ORIGINS = new Set(['https://menu-made.com', 'https://www.menu-made.com']);
+// The Menu-made Mobile App's free-preview screen (src/store-app/hybrid.js) uploads from the app's own origin
+// (capacitor://localhost on iPhone, https://localhost on Android); the worker adds the CORS header for those two.
+const ORIGINS = new Set(['https://menu-made.com', 'https://www.menu-made.com', 'capacitor://localhost', 'https://localhost']);
 const json = (body, status = 200) => Response.json(body, { status, headers: { 'Cache-Control': 'no-store' } });
 
 async function readBody(request, maxBytes = 8192, multipart = false) {
