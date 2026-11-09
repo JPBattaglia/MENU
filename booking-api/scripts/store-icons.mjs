@@ -16,6 +16,13 @@ const answer = JSON.parse(await readFile(input, "utf8"));
 if (!answer.ok || !answer.config || !answer.icon_svg || !answer.android_foreground_svg) throw new Error("The build config answer is incomplete");
 if (!/^#[0-9a-f]{6}$/i.test(answer.config.brand_color || "")) throw new Error("brand_color must be #rrggbb");
 
+// A hybrid app's icon picture can be a file in this repo (booking-api/src/store-app/hybrid.js HYBRID_LOOK): it takes
+// the place of the worker's placeholder in every picture.
+if (answer.logo_file) {
+  if (!/^assets\/own-apps\/[a-z0-9-]+\.png$/.test(answer.logo_file) || !answer.logo_placeholder) throw new Error("logo_file must be assets/own-apps/<name>.png");
+  const uri = `data:image/png;base64,${(await readFile(new URL(`../../${answer.logo_file}`, import.meta.url))).toString("base64")}`;
+  for (const key of ["icon_svg", "android_foreground_svg", "feature_svg"]) if (answer[key]) answer[key] = answer[key].split(answer.logo_placeholder).join(uri);
+}
 const { initWasm, Resvg } = await import("@resvg/resvg-wasm");
 await initWasm(await readFile(require.resolve("@resvg/resvg-wasm/index_bg.wasm")));
 const fonts = await Promise.all(["LiberationSans-Regular.ttf", "LiberationSans-Bold.ttf"].map((f) => readFile(new URL(`../assets/fonts/${f}`, import.meta.url))));

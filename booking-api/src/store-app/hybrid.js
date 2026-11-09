@@ -12,10 +12,14 @@
 // Public data only, cached at the edge for TTL seconds. CORS "*" because the app runs from capacitor://localhost or
 // https://localhost and the store screenshots load it from a local page.
 import { getSiteCatalog } from "../checkout/catalog.js";
+import { queuePush } from "../producers/guest-app/engage.js";
 
 const TTL = 300;
 const MM = "https://menu-made.com";
 const NINO = "https://ninobattaglia.com";
+// Nino's shop API (NinoSite commerce-api): rewards card, ideas board and the last week's new designs (fans.mjs).
+const NINO_API = "https://nino-printful-commerce-api.ijpbattaglia.workers.dev";
+const EARLY_SECONDS = 86400;
 const HYBRID_KEYS = new Set(["menumade", "nino"]);
 const PLAN_ORDER = ["BUNDLE_STARTER", "BUNDLE_GROWTH", "BUNDLE_PRO"];
 
@@ -76,7 +80,9 @@ function menumadeContent(catalog) {
 }
 
 // ---- Nino: designs from the shop's catalog.json ----
-function ninoContent(catalog) {
+// releases: the shop's GET /api/releases answer (designs from the last 7 days, with when each first appeared).
+// A design in its first 24 hours is the app's early access: listed first with early = true; the website holds it back.
+function ninoContent(catalog, releases = null, nowSeconds = Math.floor(Date.now() / 1000)) {
   const shop = catalog?.shop || {};
   const collections = (Array.isArray(shop.collections) ? shop.collections : [])
     .filter((c) => slugOk(c?.id) && c.name).map((c) => ({ id: c.id, name: clean(c.name, 40) })).slice(0, 12);
@@ -101,7 +107,23 @@ function ninoContent(catalog) {
       buy_url: id ? `${NINO}/shop.html?product=${id}` : `${NINO}/shirts/${p.slug}.html`
     };
   }).filter((p) => p.image).slice(0, 400);
-  products.sort((a, b) => Number(b.featured) - Number(a.featured));
+  // New designs: from the shop's list (newer than catalog.json, which is refreshed daily).
+  const known = new Map(products.map((p) => [p.id, p]));
+  for (const d of (Array.isArray(releases?.designs) ? releases.designs : [])) {
+    const id = /^\d{1,20}$/.test(String(d?.id || "")) ? String(d.id) : "";
+    const at = Number(d?.released_at) || 0;
+    if (!id || !at) continue;
+    const early = at > nowSeconds - EARLY_SECONDS;
+    const existing = known.get(id);
+    if (existing) { existing.released_at = at; existing.early = early; continue; }
+    const image = httpsUrl(d.image, `${NINO}/`);
+    if (!image || !d.title) continue;
+    const p = { id, slug: `new-${id}`, title: clean(d.title, 60), category: "New", collections: [], description: "", image, price_cents: Number(d.price_cents) || 0,
+      featured: false, accent: null, colors: [], sizes: [], url: `${NINO}/shop.html?product=${id}`, buy_url: `${NINO}/shop.html?product=${id}`, released_at: at, early };
+    products.push(p); known.set(id, p);
+  }
+  // Early-access designs first, then the newest of the week, then Nino's featured ones.
+  products.sort((a, b) => Number(Boolean(b.early)) - Number(Boolean(a.early)) || (b.released_at || 0) - (a.released_at || 0) || Number(b.featured) - Number(a.featured));
   return {
     ok: true,
     key: "nino",
@@ -112,12 +134,22 @@ function ninoContent(catalog) {
     hero: { eyebrow: "Original artwork / everyday expression", line1: "Wear your", line2: "perspective", text: "Original artwork on shirts. Find the design that feels like you." },
     name: "NINO BATTAGLIA",
     tagline: "by Nino, an SF artist",
-    tabs: ["shop", "work", "rewards", "cart"],
+    tabs: ["shop", "ideas", "rewards", "cart", "work"],
+    // The app talks to the shop directly for these (each member's own card and votes): fans.mjs in NinoSite.
+    fans_api: NINO_API,
+    // Shop links get ?app=<member key> added by the app, so orders count toward the rewards (site.js keeps it).
+    app_param: "app",
     collections,
     products,
     shop_note: "Every design is printed to order. Free 3-inch sticker of the design with every order.",
     links: { work: `${NINO}/art.html`, cart: `${NINO}/cart.html`, services: `${NINO}/services.html`, help: `${NINO}/support.html` },
-    rewards: { enabled: false, note: "Points on every order are on the way. Turn on notifications to hear about new designs first." }
+    rewards: {
+      enabled: true,
+      steps: [{ at: 3, tier: "canvas", title: "Free 8x10 canvas print", text: "With your 3rd shirt" }, { at: 6, tier: "hoodie", title: "Free hoodie", text: "With your 6th shirt" }],
+      note: "Every shirt you buy in the app counts. After the hoodie it starts again.",
+      early: "New designs land here 24 hours before the website. Turn on notifications to hear the moment one drops."
+    },
+    ideas: { title: "Ideas board", text: "Tell Nino what to draw next, and vote for the ideas you'd wear. Nino reads every one." }
   };
 }
 
@@ -138,9 +170,13 @@ async function buildContent(env, key, fetchImpl) {
     if (!catalog?.ok) throw new Error("catalog unavailable");
     return menumadeContent(catalog);
   }
-  const res = await fetchImpl(`${NINO}/catalog.json`, { headers: { Accept: "application/json", "User-Agent": "MenuMadeApp/1.0" }, cf: { cacheTtl: TTL } });
+  const [res, rel] = await Promise.all([
+    fetchImpl(`${NINO}/catalog.json`, { headers: { Accept: "application/json", "User-Agent": "MenuMadeApp/1.0" }, cf: { cacheTtl: TTL } }),
+    fetchImpl(`${NINO_API}/api/releases`, { headers: { Accept: "application/json" } }).catch(() => null)
+  ]);
   if (!res.ok) throw new Error(`catalog ${res.status}`);
-  return ninoContent(await res.json());
+  const releases = rel?.ok ? await rel.json().catch(() => null) : null;
+  return ninoContent(await res.json(), releases);
 }
 
 async function handleHybridContent(request, env, key, { fetchImpl = fetch, cacheStore = globalThis.caches?.default } = {}) {
@@ -162,7 +198,41 @@ async function handleHybridContent(request, env, key, { fetchImpl = fetch, cache
 // Which store apps are hybrid: the owner's own two (own-apps.js), by bundle id. A bought Mobile App keeps the
 // restaurant screens until the hybrid version is offered for sale.
 const HYBRID_BUNDLES = new Map([["com.menumade.menumade", "menumade"], ["com.menumade.ninobattaglia", "nino"]]);
+// New-design pushes for Nino's app (hourly, from the scheduled run): one notification for the designs that entered
+// their 24-hour early access since the last one. Remembers the ids it announced (worker_settings, last 200).
+const DROPS_KEY = "nino_app_drops_announced";
+async function announceNinoDrops(env, { fetchImpl = fetch, nowSeconds = Math.floor(Date.now() / 1000) } = {}) {
+  if (!env.DB) return { skipped: "no_db" };
+  const res = await fetchImpl(`${NINO_API}/api/releases`, { headers: { Accept: "application/json" } });
+  if (!res.ok) return { skipped: `releases_${res.status}` };
+  const body = await res.json();
+  const early = (body?.designs || []).filter((d) => Number(d.released_at) > nowSeconds - EARLY_SECONDS && /^\d{1,20}$/.test(String(d.id)));
+  if (!early.length) return { none: true };
+  const row = await env.DB.prepare(`SELECT value FROM worker_settings WHERE key = ?`).bind(DROPS_KEY).first();
+  let done = [];
+  try { done = JSON.parse(row?.value || "[]"); } catch { done = []; }
+  const fresh = early.filter((d) => !done.includes(String(d.id)));
+  if (!fresh.length) return { none: true };
+  const app = await env.DB.prepare(`SELECT id FROM guest_apps WHERE slug = 'ninos-ts' LIMIT 1`).first();
+  if (!app) return { skipped: "no_app" };
+  const name = clean(fresh[0].title, 40);
+  const sent = await queuePush(env, app.id, fresh.length === 1
+    ? { title: `New design: ${name}`, body: "It's in the app now, 24 hours before the website.", source: "NEW_DESIGN" }
+    : { title: `${fresh.length} new Nino designs`, body: `${name} and more, in the app now, 24 hours before the website.`, source: "NEW_DESIGN" });
+  if (!sent.ok && sent.reason !== "empty") return { skipped: sent.reason };
+  const next = [...fresh.map((d) => String(d.id)), ...done].slice(0, 200);
+  await env.DB.prepare(`INSERT INTO worker_settings (key, value, updated_at) VALUES (?, ?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated_at = excluded.updated_at`).bind(DROPS_KEY, JSON.stringify(next), new Date().toISOString()).run();
+  return { announced: fresh.map((d) => String(d.id)) };
+}
+
 const hybridUrl = (key) => (HYBRID_KEYS.has(key) ? `${MM}/api/app-hybrid/${key}` : "");
+// Each app's picture for the loading screen (spins while the content loads) and, for Nino, the app icon
+// (owner, Nov 8: Nino's blue "N" mark; the file is in this repo, so the build draws the icon from it).
+const HYBRID_LOOK = {
+  menumade: { logo_url: `${MM}/MENU%3D.png` },
+  nino: { logo_url: `${MM}/assets/own-apps/nino-app-logo.png`, icon_file: "assets/own-apps/nino-app-logo.png" }
+};
+const hybridLookForBundle = (bundleId) => HYBRID_LOOK[HYBRID_BUNDLES.get(String(bundleId || ""))] || null;
 const hybridUrlForBundle = (bundleId) => hybridUrl(HYBRID_BUNDLES.get(String(bundleId || "")) || "");
 
-export { HYBRID_BUNDLES, HYBRID_KEYS, hybridUrlForBundle, TTL as HYBRID_TTL, handleHybridContent, hybridUrl, menumadeContent, ninoContent };
+export { announceNinoDrops, hybridLookForBundle, HYBRID_BUNDLES, HYBRID_KEYS, hybridUrlForBundle, TTL as HYBRID_TTL, handleHybridContent, hybridUrl, menumadeContent, ninoContent };

@@ -44,6 +44,8 @@ writeFileSync(join(here, "capacitor.config.json"), JSON.stringify({
 writeFileSync(join(here, "www", "config.json"), JSON.stringify({
   app_name: name, brand_color: cfg.brand_color, api_base: cfg.api_base, app_id: cfg.app_id,
   ...(hybrid ? { hybrid_url: hybrid } : {}),
+  // The loading screen's picture (spins while the content loads); menu-made.com only.
+  ...(hybrid && /^https:\/\/menu-made\.com\/[A-Za-z0-9%=._\/-]+\.png$/.test(cfg.logo_url || "") ? { logo_url: cfg.logo_url } : {}),
   ...(site ? { site_url: site.url, site_screens: (Array.isArray(cfg.site_screens) ? cfg.site_screens : []).filter((p) => /^\/[A-Za-z0-9._\/-]*$/.test(p)).slice(0, 3) } : {}),
   // TestFlight and App Store builds use Apple's production push service; only Xcode debug builds use sandbox.
   push_environment: cfg.push_environment === "sandbox" ? "sandbox" : "production"

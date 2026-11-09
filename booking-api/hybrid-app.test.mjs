@@ -23,7 +23,8 @@ const NINO_CATALOG = {
 
 test('nino: designs with absolute https photos, prices, colours, sizes and in-app buy links', () => {
   const c = hybrid.ninoContent(NINO_CATALOG);
-  assert.deepEqual(c.tabs, ['shop', 'work', 'rewards', 'cart']);
+  assert.deepEqual(c.tabs, ['shop', 'ideas', 'rewards', 'cart', 'work']);
+  assert.equal(c.fans_api, 'https://nino-printful-commerce-api.ijpbattaglia.workers.dev');
   assert.deepEqual(c.collections, [{ id: 'retro', name: 'Retro' }]);
   assert.deepEqual(c.products.map((p) => p.slug), ['skull-wave', 'retro-tv'], 'bad slugs and non-https images dropped; featured first');
   const p = c.products[0];
@@ -34,7 +35,7 @@ test('nino: designs with absolute https photos, prices, colours, sizes and in-ap
   assert.equal(p.buy_url, 'https://ninobattaglia.com/shop.html?product=455597876');
   assert.equal(p.url, 'https://ninobattaglia.com/shirts/skull-wave.html');
   assert.equal(c.links.cart, 'https://ninobattaglia.com/cart.html');
-  assert.equal(c.rewards.enabled, false, 'rewards wait for the owner to choose the reward');
+  assert.deepEqual(c.rewards.steps.map((x) => [x.at, x.tier]), [[3, 'canvas'], [6, 'hoodie']]);
 });
 
 test('menumade: the three plans with live prices, described by their included services', () => {
@@ -93,4 +94,36 @@ test('the app shell: configure.mjs writes hybrid_url (and drops site_url), refus
   assert.ok(html.indexOf('hybrid.js') > 0 && html.indexOf('hybrid.js') < html.indexOf('app.js'), 'hybrid.js loads before app.js');
   const js = readFileSync(join(shell, 'www/hybrid.js'), 'utf8');
   assert.doesNotMatch(js, /innerHTML/, 'text only through textContent');
+});
+
+test('nino: designs from the shop\'s new list join the catalog; the first 24 hours are early access and come first', () => {
+  const now = 1_800_000_000;
+  const c = hybrid.ninoContent(NINO_CATALOG, { designs: [
+    { id: '777', title: 'Fresh Drop', image: 'https://ninobattaglia.com/x.webp', price_cents: 2500, released_at: now - 3600 },
+    { id: '455597876', title: 'Skull Wave', image: 'https://x/y', released_at: now - 3 * 86400 },
+    { id: '888', title: 'No picture', image: 'http://insecure/x.png', released_at: now - 10 }
+  ] }, now);
+  assert.deepEqual(c.products.map((p) => [p.slug, Boolean(p.early)]), [['new-777', true], ['skull-wave', false], ['retro-tv', false]]);
+  assert.equal(c.products[0].buy_url, 'https://ninobattaglia.com/shop.html?product=777');
+});
+
+test('new-design pushes: one notification for the designs entering early access, never twice', async () => {
+  const now = 1_800_000_000;
+  const settings = new Map(); const pushes = [];
+  const stmt = (sql, a) => ({
+    first: async () => /FROM worker_settings/.test(sql) ? (settings.has(a[0]) ? { value: settings.get(a[0]) } : null)
+      : /FROM guest_apps/.test(sql) ? { id: 'app-nino' }
+      : /COUNT\(\*\) AS n FROM push_messages/.test(sql) ? { n: 0 } : null,
+    run: async () => { if (/INSERT INTO worker_settings/.test(sql)) settings.set(a[0], a[1]); if (/INSERT INTO push_messages/.test(sql)) pushes.push(a); return { meta: { changes: 1 } }; },
+    all: async () => ({ results: [] })
+  });
+  const db = { prepare: (sql) => ({ ...stmt(sql, []), bind: (...a) => stmt(sql, a) }) };
+  const releases = { designs: [{ id: '1', title: 'Fresh Drop', released_at: now - 60 }, { id: '2', title: 'Old One', released_at: now - 3 * 86400 }] };
+  const fetchImpl = async () => Response.json(releases);
+  const env = { DB: db };
+  const first = await hybrid.announceNinoDrops(env, { fetchImpl, nowSeconds: now });
+  assert.deepEqual(first.announced, ['1']);
+  assert.equal(pushes.length, 1);
+  assert.match(pushes[0][2], /New design: Fresh Drop/);
+  assert.deepEqual((await hybrid.announceNinoDrops(env, { fetchImpl, nowSeconds: now })).none, true, 'not announced twice');
 });
