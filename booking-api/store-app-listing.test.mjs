@@ -329,3 +329,11 @@ test('Apple listing: an empty or bare-domain link is left out, not sent (Apple 4
     { supportUrl: 'https://menu-made.com/contact.html' }
   );
 });
+
+test('Apple review contact: phone goes in +country-code form (Apple 409 on Nov 9)', async () => {
+  const { intlPhone } = await import('./src/store-app/store-submit.js');
+  assert.equal(intlPhone('(415) 555-0100'), '+1 415 555 0100');
+  assert.equal(intlPhone('1-415-555-0100'), '+1 415 555 0100');
+  assert.equal(intlPhone('+44 844 209 0611'), '+448442090611');
+  assert.equal(intlPhone(''), '');
+});
