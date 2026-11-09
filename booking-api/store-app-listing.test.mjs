@@ -65,6 +65,7 @@ function fakeStores({ appleFail = null, playDraft = false, appleState = 'WAITING
       if (path === '/appStoreReviewDetails' && m === 'POST') { seen.review = body.data.attributes; return Response.json({ data: { id: 'R1' } }); }
       if (path.startsWith('/reviewSubmissions?')) return Response.json({ data: [] });
       if (path === '/reviewSubmissions' && m === 'POST') return Response.json({ data: { id: 'RS1' } });
+      if (path.startsWith('/reviewSubmissions/RS1/items')) return Response.json({ data: [] });
       if (path === '/reviewSubmissionItems') return Response.json({ data: { id: 'RSI1' } });
       if (path === '/reviewSubmissions/RS1' && m === 'PATCH') { seen.submitted = body.data.attributes.submitted; return Response.json({ data: {} }); }
       throw new Error(`Unexpected Apple call ${m} ${path}`);
@@ -357,4 +358,16 @@ test("Apple's temporary errors (520, 503, 429) are retried instead of failing th
     assert.equal(hiccups, 3, 'three temporary errors were met');
     assert.equal(f.row(`SELECT status FROM store_apps`).status, 'IN_REVIEW', 'and the submission still went through');
   } finally { setPauseForTests((ms) => new Promise((r) => setTimeout(r, ms))); }
+});
+
+test("Apple's refusal to add the version to the review shows Apple's own reasons (Nov 9: they were swallowed)", async () => {
+  const f = await setup();
+  const stores = fakeStores({ appleFail: { path: '/reviewSubmissionItems', method: 'POST', detail: 'You must provide an age rating.' } });
+  await pictures(f);
+  await tick(f, stores);
+  await approve(f, previewUrl(f.emails[0]), {});
+  await tick(f, stores);
+  const err = f.row(`SELECT submit_error FROM store_app_listings`).submit_error;
+  assert.match(err, /age rating/, 'the owner sees what App Store Connect is missing');
+  assert.ok(!stores.seen.submitted, 'nothing was submitted');
 });

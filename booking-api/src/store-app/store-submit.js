@@ -73,8 +73,9 @@ function appleClient(creds, fetchImpl) {
     if (res.status === 204) return {};
     const data = await res.json().catch(() => ({}));
     if (!res.ok) {
-      const e = (data.errors || [])[0] || {};
-      throw new StepError(step, `Apple answered ${res.status}: ${String(e.detail || e.title || "no detail").slice(0, 300)}`);
+      // Apple often lists several problems at once (e.g. every missing App Store Connect item); show them all.
+      const details = [...new Set((data.errors || []).map((e) => String(e.detail || e.title || "").trim()).filter(Boolean))];
+      throw new StepError(step, `Apple answered ${res.status}: ${(details.join(" | ") || "no detail").slice(0, 900)}`);
     }
     return data;
   };
@@ -161,12 +162,18 @@ async function submitApple({ creds, bundleId, listing, images, contact, reviewNo
 
     const open = (await asc("GET", `/reviewSubmissions?filter[app]=${app.id}&filter[state]=READY_FOR_REVIEW&limit=1`, null, "submit")).data?.[0];
     const submission = open || (await asc("POST", "/reviewSubmissions", { data: { type: "reviewSubmissions", attributes: { platform: "IOS" }, relationships: { app: { data: { type: "apps", id: app.id } } } } }, "submit")).data;
-    await asc("POST", "/reviewSubmissionItems", { data: { type: "reviewSubmissionItems", relationships: { reviewSubmission: { data: { type: "reviewSubmissions", id: submission.id } }, appStoreVersion: { data: { type: "appStoreVersions", id: version.id } } } } }, "submit")
-      .catch((e) => { if (!/ 409:/.test(e.message)) throw e; }); // already in this submission
+    // Add the version to the submission unless it's already in it. Apple's refusal here names what's missing in App
+    // Store Connect (age rating, App Privacy, pricing...), so it is reported, not swallowed (Nov 9, 2026: swallowing
+    // it left only Apple's generic "an appStoreVersions must be included in this review submission").
+    const items = (await asc("GET", `/reviewSubmissions/${submission.id}/items?include=appStoreVersion&limit=50`, null, "submit")).data || [];
+    const included = items.some((i) => i.relationships?.appStoreVersion?.data?.id === version.id);
+    if (!included) {
+      await asc("POST", "/reviewSubmissionItems", { data: { type: "reviewSubmissionItems", relationships: { reviewSubmission: { data: { type: "reviewSubmissions", id: submission.id } }, appStoreVersion: { data: { type: "appStoreVersions", id: version.id } } } } }, "submit version");
+    }
     await asc("PATCH", `/reviewSubmissions/${submission.id}`, { data: { type: "reviewSubmissions", id: submission.id, attributes: { submitted: true } } }, "submit");
     return { ok: true, appId: app.id, versionId: version.id, build: buildVersion || null };
   } catch (error) {
-    return { ok: false, step: error.step || "apple", message: String(error.message || error).slice(0, 400) };
+    return { ok: false, step: error.step || "apple", message: String(error.message || error).slice(0, 1000) };
   }
 }
 
