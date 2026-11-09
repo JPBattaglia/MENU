@@ -443,7 +443,10 @@
       }
       var cached = t.store.get("card");
       if (cached && cached.next) draw(cached);
-      if (data.fans_api) fans("/api/app/card?member=" + encodeURIComponent(t.memberKey())).then(function (c) { if (c._ok && c.next) { t.store.set("card", c); if (current === "rewards") draw(c); } }).catch(function () {});
+      var spin = cached ? null : inlineLoader();
+      if (spin) card.appendChild(spin);
+      if (data.fans_api) fans("/api/app/card?member=" + encodeURIComponent(t.memberKey())).then(function (c) { if (c._ok && c.next) { t.store.set("card", c); if (current === "rewards") draw(c); } }).catch(function () {})
+        .then(function () { if (spin && spin.parentNode) spin.parentNode.removeChild(spin); });
     },
     ideas: function (s) {
       var info = data.ideas || {};
@@ -486,8 +489,10 @@
         }
       }
       function loadIdeas() {
+        var spin = list.firstChild ? null : inlineLoader();
+        if (spin) { empty.hidden = true; list.appendChild(spin); }
         return fans("/api/ideas?member=" + encodeURIComponent(t.memberKey())).then(function (b) { if (b._ok) drawIdeas(b); })
-          .catch(function () { empty.textContent = "You need a connection to see the ideas board."; });
+          .catch(function () { if (spin && spin.parentNode) spin.parentNode.removeChild(spin); empty.hidden = false; empty.textContent = "You need a connection to see the ideas board."; });
       }
       form.addEventListener("submit", function (ev) {
         ev.preventDefault();
@@ -529,11 +534,51 @@
 
   // The loading screen: the app's own picture, spinning, until the first content is on screen.
   var loader = null, loaderAt = 0;
+  // The loading picture: the app's own loading animation when it has one (Nino: the ring of fire, already animated),
+  // else its logo, spinning (Menu-made's gear).
+  function loaderPicture(cls) {
+    var anim = /^https:\/\//.test(cfg.loader_url || "");
+    if (!anim && !/^https:\/\//.test(cfg.logo_url || "")) return null;
+    var img = el("img", cls + (anim ? " is-animated" : "")); img.src = anim ? cfg.loader_url : cfg.logo_url; img.alt = "";
+    return img;
+  }
   function showLoader() {
-    if (!/^https:\/\//.test(cfg.logo_url || "")) return;
+    var img = loaderPicture("hy-loader-img");
+    if (!img) return;
     loader = el("div", "hy-loader"); loader.setAttribute("role", "status"); loader.setAttribute("aria-label", "Loading");
-    var img = el("img", "hy-loader-img"); img.src = cfg.logo_url; img.alt = "";
     loader.appendChild(img); document.body.appendChild(loader); loaderAt = Date.now();
+  }
+  // A small loading picture inside a screen (ideas, rewards), removed by the caller.
+  function inlineLoader() {
+    var box = el("div", "hy-inline-loader"); box.setAttribute("role", "status"); box.setAttribute("aria-label", "Loading");
+    var img = loaderPicture("hy-inline-loader-img"); if (img) box.appendChild(img); else box.appendChild(el("span", "hy-muted", "Loading…"));
+    return box;
+  }
+
+  // The opening clip (owner, Nov 8: Nino's logo animation), once per app start, no sound, with Skip. If it can't start
+  // within a few seconds (no connection, the phone refuses autoplay) the app just goes on.
+  function playIntro(done) {
+    if (!/^https:\/\//.test(cfg.intro_url || "")) { done(); return; }
+    var finished = false;
+    var wrap = el("div", "hy-intro");
+    var v = el("video", "hy-intro-video");
+    v.muted = true; v.defaultMuted = true; v.playsInline = true; v.preload = "auto";
+    v.setAttribute("muted", ""); v.setAttribute("playsinline", ""); v.setAttribute("webkit-playsinline", ""); v.setAttribute("aria-hidden", "true");
+    v.src = cfg.intro_url;
+    var skip = button("Skip", "hy-intro-skip", function () { end(); });
+    wrap.appendChild(v); wrap.appendChild(skip);
+    document.body.appendChild(wrap);
+    function end() {
+      if (finished) return; finished = true;
+      wrap.classList.add("is-done");
+      setTimeout(function () { if (wrap.parentNode) wrap.parentNode.removeChild(wrap); }, 450);
+      done();
+    }
+    var start = setTimeout(end, 3500);
+    v.addEventListener("playing", function () { clearTimeout(start); setTimeout(end, 9000); });
+    v.addEventListener("ended", end);
+    v.addEventListener("error", end);
+    var p = v.play(); if (p && p.catch) p.catch(end);
   }
   function hideLoader() {
     if (!loader) return;
@@ -547,6 +592,7 @@
       document.body.classList.add("hybrid");
       root = document.getElementById("hybrid"); root.hidden = false;
       showLoader();
+      playIntro(function () {});
       var cached = t.store.get("hybrid");
       if (cached && cached.ok && Array.isArray(cached.tabs) && cached.tabs.length) { data = cached; build(); show(cached.tabs[0]); document.body.classList.add("hy-ready"); hideLoader(); }
       startPush();

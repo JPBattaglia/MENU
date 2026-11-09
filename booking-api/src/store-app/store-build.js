@@ -106,7 +106,9 @@ async function buildConfigFor(env, storeApp, packageId = storeApp.bundle_id) {
       ...(siteUrlOf(data) ? { site_url: siteUrlOf(data), site_screens: siteScreensOf(data) } : {}),
       // A hybrid app (hybrid.js) shows real app screens from this live content; it takes the place of site_url.
       ...(hybridUrlForBundle(storeApp.bundle_id) ? { hybrid_url: hybridUrlForBundle(storeApp.bundle_id) } : {}),
-      ...(look?.logo_url ? { logo_url: look.logo_url } : {})
+      ...(look?.logo_url ? { logo_url: look.logo_url } : {}),
+      ...(look?.intro_url ? { intro_url: look.intro_url } : {}),
+      ...(look?.loader_url ? { loader_url: look.loader_url } : {})
     },
     ...(repoLogo ? { logo_file: repoLogo, logo_placeholder: LOGO_PLACEHOLDER } : {}),
     icon_svg: draw(0.14),

@@ -82,10 +82,16 @@ test('the app shell: configure.mjs writes hybrid_url (and drops site_url), refus
   const files = [join(shell, 'capacitor.config.json'), join(shell, 'www/config.json')];
   const before = files.map((f) => (existsSync(f) ? readFileSync(f, 'utf8') : null));
   try {
-    run({ ...base, hybrid_url: 'https://menu-made.com/api/app-hybrid/nino' });
+    run({ ...base, hybrid_url: 'https://menu-made.com/api/app-hybrid/nino', intro_url: 'https://menu-made.com/assets/own-apps/nino-intro.mp4', loader_url: 'https://menu-made.com/assets/own-apps/nino-loader.webp' });
     const www = JSON.parse(readFileSync(join(shell, 'www/config.json'), 'utf8'));
     assert.equal(www.hybrid_url, 'https://menu-made.com/api/app-hybrid/nino');
     assert.equal(www.site_url, undefined);
+    assert.equal(www.intro_url, 'https://menu-made.com/assets/own-apps/nino-intro.mp4');
+    assert.equal(www.loader_url, 'https://menu-made.com/assets/own-apps/nino-loader.webp');
+    run({ ...base, hybrid_url: 'https://menu-made.com/api/app-hybrid/nino', intro_url: 'https://evil.example/x.mp4', loader_url: 'https://menu-made.com/x.svg' });
+    const dropped = JSON.parse(readFileSync(join(shell, 'www/config.json'), 'utf8'));
+    assert.equal(dropped.intro_url, undefined, 'an intro from anywhere but menu-made.com is left out');
+    assert.equal(dropped.loader_url, undefined, 'only webp, gif or png loaders');
     assert.throws(() => run({ ...base, hybrid_url: 'https://evil.example/api/app-hybrid/nino' }));
   } finally {
     files.forEach((f, i) => (before[i] === null ? rmSync(f, { force: true }) : writeFileSync(f, before[i])));

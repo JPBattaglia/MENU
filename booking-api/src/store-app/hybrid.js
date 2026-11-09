@@ -230,7 +230,10 @@ const hybridUrl = (key) => (HYBRID_KEYS.has(key) ? `${MM}/api/app-hybrid/${key}`
 // (owner, Nov 8: Nino's blue "N" mark; the file is in this repo, so the build draws the icon from it).
 const HYBRID_LOOK = {
   menumade: { logo_url: `${MM}/MENU%3D.png` },
-  nino: { logo_url: `${MM}/assets/own-apps/nino-app-logo.png`, icon_file: "assets/own-apps/nino-app-logo.png" }
+  // Owner, Nov 8: the logo animation plays once as the app opens (clip #4, NinoLogoAnimation, no sound); the ring of
+  // fire N (clip #6, NinoGif1, background removed) shows whenever something is loading.
+  nino: { logo_url: `${MM}/assets/own-apps/nino-app-logo.png`, icon_file: "assets/own-apps/nino-app-logo.png",
+    intro_url: `${MM}/assets/own-apps/nino-intro.mp4`, loader_url: `${MM}/assets/own-apps/nino-loader.webp` }
 };
 const hybridLookForBundle = (bundleId) => HYBRID_LOOK[HYBRID_BUNDLES.get(String(bundleId || ""))] || null;
 const hybridUrlForBundle = (bundleId) => hybridUrl(HYBRID_BUNDLES.get(String(bundleId || "")) || "");

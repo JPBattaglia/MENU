@@ -263,6 +263,8 @@ test("owner's own apps: made once by the tick at no charge, owner keys, no buyer
     // Nino's app icon comes from the repo file (the owner's blue N), and its loading screen spins the same picture.
     assert.equal(cfg.body.config.logo_url, 'https://menu-made.com/assets/own-apps/nino-app-logo.png');
     assert.equal(cfg.body.logo_file, 'assets/own-apps/nino-app-logo.png');
+    assert.equal(cfg.body.config.intro_url, 'https://menu-made.com/assets/own-apps/nino-intro.mp4');
+    assert.equal(cfg.body.config.loader_url, 'https://menu-made.com/assets/own-apps/nino-loader.webp');
     assert.ok(cfg.body.icon_svg.includes(cfg.body.logo_placeholder), 'the build swaps the file in for the placeholder');
   } finally {
     globalThis.fetch = async (url, init) => {
