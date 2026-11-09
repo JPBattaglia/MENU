@@ -193,7 +193,7 @@ test("approved: submitted to Apple and Google with the restaurant's keys, then I
   assert.equal(s.info.privacyPolicyUrl, 'https://menu-made.com/privacy.html');
   assert.ok(s.apple.includes('DELETE /appScreenshots/OLD1'), 'old screenshots replaced');
   assert.equal(s.uploads, 3, 'three iPhone screenshots');
-  assert.deepEqual([s.review.contactFirstName, s.review.contactPhone, s.review.contactEmail], ['Joe', '(707) 555-0101', 'joe@joespizza.example'], 'Apple contacts the restaurant');
+  assert.deepEqual([s.review.contactFirstName, s.review.contactPhone, s.review.contactEmail], ['Joe', '+1 707 555 0101', 'joe@joespizza.example'], 'Apple contacts the restaurant');
   assert.equal(s.submitted, true);
   assert.equal(s.playListing.title, "Joe's Pizza");
   assert.equal(s.play.filter((c) => /phoneScreenshots$/.test(c) && c.startsWith('POST')).length, 3);
