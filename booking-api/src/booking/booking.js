@@ -124,7 +124,7 @@ const escapeEmailHtml = value => String(value ?? '').replace(/[&<>"']/g, charact
 function inquiryEmailHtml(data, reference, kind) {
   const owner = kind === 'owner';
   const safe = escapeEmailHtml;
-  const row = (label, value) => `<tr><td style="padding:12px 16px;border-bottom:1px solid #0a7b85;font-size:12px;font-weight:bold;color:#d9f3f6;width:110px;vertical-align:top;">${safe(label)}</td><td style="padding:12px 16px;border-bottom:1px solid #0a7b85;font-size:15px;color:#ffffff;overflow-wrap:anywhere;">${safe(value)}</td></tr>`;
+  const row = (label, value) => `<tr><td style="padding:12px 16px;border-bottom:1px solid #0a6f80;font-size:12px;font-weight:bold;color:#d9f3f6;width:110px;vertical-align:top;">${safe(label)}</td><td style="padding:12px 16px;border-bottom:1px solid #0a6f80;font-size:15px;color:#ffffff;overflow-wrap:anywhere;">${safe(value)}</td></tr>`;
   const heading = owner ? 'New project inquiry' : 'Thanks—your inquiry is received.';
   const intro = owner
     ? `${safe(data.name)} has contacted MENU-MADE about ${safe(data.service)}. Review the details below and reply directly to this email to follow up.`
@@ -132,11 +132,11 @@ function inquiryEmailHtml(data, reference, kind) {
   const summary = (data.document ? row('Document received', data.document.name) : '') + row('Service', data.service) + (owner ? row('Name', data.name) + row('Email', data.email) : '') + (data.business ? row('Business', data.business) : '');
   return `<!doctype html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="color-scheme" content="dark"><meta name="supported-color-schemes" content="dark"><style>a{color:#5ff2ff;}</style><title>${heading}</title></head>
-<body style="margin:0;padding:0;background-color:#012f34;font-family:Arial,Helvetica,sans-serif;">
-<div style="display:none;font-size:1px;color:#012f34;max-height:0;overflow:hidden;">${owner ? 'A new MENU-MADE inquiry is ready for your review.' : 'Your project details are with MENU-MADE. We’ll reply with the next steps.'}</div>
-<table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="background-color:#012f34;"><tr><td align="center" style="padding:28px 12px;">
-<table role="presentation" width="600" cellspacing="0" cellpadding="0" border="0" style="width:100%;max-width:600px;background-color:#013f45;border:1px solid #0a7b85;">
-<tr><td style="background-color:#003344;padding:28px 32px;border-bottom:4px solid #00d6e6;">
+<body style="margin:0;padding:0;background-color:#00222d;font-family:Arial,Helvetica,sans-serif;">
+<div style="display:none;font-size:1px;color:#00222d;max-height:0;overflow:hidden;">${owner ? 'A new MENU-MADE inquiry is ready for your review.' : 'Your project details are with MENU-MADE. We’ll reply with the next steps.'}</div>
+<table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="background-color:#00222d;"><tr><td align="center" style="padding:28px 12px;">
+<table role="presentation" width="600" cellspacing="0" cellpadding="0" border="0" style="width:100%;max-width:600px;background-color:#003344;border:1px solid #0a6f80;">
+<tr><td style="background-color:#00222d;padding:28px 32px;border-bottom:4px solid #00d6e6;">
 <a href="https://menu-made.com" style="text-decoration:none;"><img src="https://menu-made.com/MENU1.png" width="220" alt="MENU-MADE" style="display:block;width:220px;max-width:100%;height:auto;border:0;"></a>
 <p style="margin:14px 0 0;color:#5ff2ff;font-size:12px;letter-spacing:1px;">MENUS · WEBSITES · ONLINE PRESENCE</p></td></tr>
 <tr><td style="padding:32px;">
@@ -144,7 +144,7 @@ function inquiryEmailHtml(data, reference, kind) {
 <h1 style="margin:0 0 24px;font-size:26px;line-height:1.25;color:#ffffff;">${heading}</h1>
 ${owner ? '' : `<p style="margin:0 0 16px;font-size:16px;line-height:1.6;color:#ffffff;">Hi ${safe(data.name)},</p>`}
 <p style="margin:0 0 24px;font-size:16px;line-height:1.6;color:#ffffff;">${intro}</p>
-<table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="background-color:#01545c;border:1px solid #0a7b85;">${summary}</table>
+<table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="background-color:#004a5c;border:1px solid #0a6f80;">${summary}</table>
 <h2 style="margin:24px 0 10px;font-size:16px;color:#ffffff;">Project details</h2>
 <p style="margin:0 0 24px;font-size:15px;line-height:1.6;color:#ffffff;overflow-wrap:anywhere;">${safe(data.notes).replace(/\r?\n/g, '<br>')}</p>
 <p style="margin:0;font-size:15px;line-height:1.6;color:#ffffff;">${owner ? 'Use Reply to contact the customer directly.' : 'Have something to add? Reply directly to this email.'}</p>

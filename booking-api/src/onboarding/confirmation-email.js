@@ -143,7 +143,7 @@ function buildConfirmationEmail(context) {
 <body style="
   margin:0;
   padding:0;
-  background:#012f34;
+  background:#00222d;
   font-family:Arial,Helvetica,sans-serif;
   color:#ffffff;
 ">
@@ -155,7 +155,7 @@ function buildConfirmationEmail(context) {
     border="0"
     style="
       width:100%;
-      background:#012f34;
+      background:#00222d;
       padding:32px 16px;
     "
   >
@@ -170,8 +170,8 @@ function buildConfirmationEmail(context) {
           border="0"
           style="
             max-width:640px;
-            background:#013f45;
-            border:1px solid #0a7b85;
+            background:#003344;
+            border:1px solid #0a6f80;
             border-radius:14px;
             overflow:hidden;
             box-shadow:
@@ -182,7 +182,7 @@ function buildConfirmationEmail(context) {
           <tr>
             <td
               style="
-                background:#003344;
+                background:#00222d;
                 padding:28px 32px;
                 color:#ffffff;
               "
@@ -257,8 +257,8 @@ function buildConfirmationEmail(context) {
                 border="0"
                 style="
                   margin:0 0 26px;
-                  background:#01545c;
-                  border:1px solid #0a7b85;
+                  background:#004a5c;
+                  border:1px solid #0a6f80;
                   border-radius:10px;
                 "
               >
@@ -312,7 +312,7 @@ function buildConfirmationEmail(context) {
           <tr>
             <td
               style="
-                background:#003344;
+                background:#00222d;
                 padding:24px 32px;
                 text-align:center;
                 color:#d9f3f6;

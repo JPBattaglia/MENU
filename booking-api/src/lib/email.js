@@ -65,9 +65,8 @@ function looksLikeEmail(value) {
   return typeof value === "string" && value.length <= 254 && /^[^\s@<>"]+@[^\s@<>"]+\.[^\s@<>"]+$/.test(value.trim());
 }
 
-// Owner decision (Nov 9, 2026): emails use the website's dark greenish blue (main.css --bg #013f45, --bg-deep
-// #012f34, --nav #003344) with white text and cyan highlights (--cyan #00d6e6, --brand-soft #5ff2ff), not white.
-const MAIL = { page: "#012f34", card: "#013f45", bar: "#003344", panel: "#01545c", line: "#0a7b85", text: "#ffffff", soft: "#d9f3f6", cyan: "#00d6e6", link: "#5ff2ff", ink: "#012f34" };
+// Owner decision (Nov 9, 2026): emails use the website's dark blue #003344 (main.css --nav) with white text and cyan highlights (--cyan #00d6e6, --brand-soft #5ff2ff), not white.
+const MAIL = { page: "#00222d", card: "#003344", bar: "#00222d", panel: "#004a5c", line: "#0a6f80", text: "#ffffff", soft: "#d9f3f6", cyan: "#00d6e6", link: "#5ff2ff", ink: "#012f34" };
 const FOOTER_TD = `<tr><td style="padding:24px 32px;background-color:${MAIL.bar};">`;
 const MAIL_HEAD = `<meta name="color-scheme" content="dark"><meta name="supported-color-schemes" content="dark"><style>a{color:${MAIL.link};}</style>`;
 
