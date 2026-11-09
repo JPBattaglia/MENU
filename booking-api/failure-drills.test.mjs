@@ -95,14 +95,17 @@ test('D1 usage: normal usage passes; near the limit fails and emails once a day;
   assert.equal((await record(report(400000), at)).status, 'PASSED');
   const row = () => ({ ...f.DB.raw.prepare(`SELECT id, status, error, log_json FROM self_tests WHERE kind = 'D1_USAGE'`).get() });
   assert.equal(row().id, 'd1-usage-2026-11-01');
-  assert.match(row().log_json, /reads: 500,000 of 5,000,000 today \(10%, on pace for 20%; Menu-made 400,000, Nino shop 100,000\)/);
+  assert.match(row().log_json, /reads: 500,000 of 833,333,333 today's share of the plan \(0%, on pace for 0%; Menu-made 400,000, Nino shop 100,000\)/);
+  // Today's real numbers (Nov 9, 2026: 5.7 million reads) are far inside the $5 plan; no email.
+  assert.equal((await record(report(5600000), at)).status, 'PASSED');
+  assert.equal(f.sent.length, 0);
 
-  assert.equal((await record(report(2100000), at + 3600000)).status, 'FAILED', 'on pace for over 80%');
-  await record(report(2600000), at + 2 * 3600000);
+  assert.equal((await record(report(400000, 900000), at + 3600000)).status, 'FAILED', 'writes on pace for over 80% of a day\'s share');
+  await record(report(400000, 1000000), at + 2 * 3600000);
   assert.equal(f.sent.length, 1, 'one email a day');
-  assert.equal(f.sent[0].subject, 'Cloudflare is near its free daily limit');
-  assert.match(f.sent[0].text, /forward this email to Claude/);
-  assert.doesNotMatch(f.sent[0].text, /Workers Paid/, 'the owner stays on the free plan');
+  assert.equal(f.sent[0].subject, "Cloudflare usage is above the plan's daily share");
+  assert.match(f.sent[0].text, /Nothing stops working/);
+  assert.doesNotMatch(f.sent[0].text, /free plan|forward this email/, 'the account is on Workers Paid since Nov 9, 2026');
   assert.equal(f.n(`SELECT COUNT(*) AS n FROM self_tests WHERE kind = 'D1_USAGE'`), 1, 'one row per day, updated hourly');
 
   const g = setup({ resend: 200 });
@@ -113,18 +116,18 @@ test('D1 usage: normal usage passes; near the limit fails and emails once a day;
 });
 
 test('D1 usage: early in the day the pace is not judged; writes count too', () => {
-  const early = d1.assessUsage({ databases: [{ id: 'x', rows_read: 300000, rows_written: 10 }] }, Date.parse('2026-11-01T01:00:00Z'));
+  const early = d1.assessUsage({ databases: [{ id: 'x', rows_read: 300000000, rows_written: 10 }] }, Date.parse('2026-11-01T01:00:00Z'));
   assert.equal(early.ok, true);
-  const writes = d1.assessUsage({ databases: [{ id: 'x', rows_read: 10, rows_written: 60000 }] }, Date.parse('2026-11-01T20:00:00Z'));
+  const writes = d1.assessUsage({ databases: [{ id: 'x', rows_read: 10, rows_written: 1000000 }] }, Date.parse('2026-11-01T20:00:00Z'));
   assert.equal(writes.ok, false);
   assert.match(writes.problem, /writes 60% used/);
 });
 
-test('Worker requests count against the free daily limit too (all workers on the account)', () => {
-  const v = d1.assessUsage({ databases: [{ id: 'x', rows_read: 10, rows_written: 10 }], workers: [{ script: 'booking-api', requests: 50000 }, { script: 'nino-shop', requests: 10000 }] }, Date.parse('2026-11-01T12:00:00Z'));
+test('Worker requests count against the plan\'s daily share too (all workers on the account)', () => {
+  const v = d1.assessUsage({ databases: [{ id: 'x', rows_read: 10, rows_written: 10 }], workers: [{ script: 'booking-api', requests: 150000 }, { script: 'nino-shop', requests: 50000 }] }, Date.parse('2026-11-01T12:00:00Z'));
   assert.equal(v.ok, false);
   assert.match(v.problem, /Worker requests 60% used, on pace for 120%/);
-  assert.match(v.notes[2], /Worker requests: 60,000 of 100,000 today .*booking-api 50,000, nino-shop 10,000/);
+  assert.match(v.notes[2], /Worker requests: 200,000 of 333,333 today's share of the plan .*booking-api 150,000, nino-shop 50,000/);
 });
 
 test('usage row shows the last tick\'s query count and fails when queries were refused', async () => {
@@ -134,10 +137,10 @@ test('usage row shows the last tick\'s query count and fails when queries were r
   put({ at: 'x', queries: 41, refused: 0 });
   assert.equal((await d1.recordUsage(f.env, body, Date.parse('2026-11-01T12:00:00Z'))).status, 'PASSED');
   assert.match({ ...f.DB.raw.prepare(`SELECT log_json FROM self_tests`).get() }.log_json, /last 5-minute tick: 41 database queries/);
-  put({ at: 'x', queries: 50, refused: 7 });
+  put({ at: 'x', queries: 1000, refused: 7 });
   const o = globalThis.fetch; globalThis.fetch = async () => Response.json({ id: 'e' });
   try { assert.equal((await d1.recordUsage(f.env, body, Date.parse('2026-11-01T13:00:00Z'))).status, 'FAILED'); } finally { globalThis.fetch = o; }
-  assert.match({ ...f.DB.raw.prepare(`SELECT error FROM self_tests`).get() }.error, /hit the 50-query limit \(7 queries refused\)/);
+  assert.match({ ...f.DB.raw.prepare(`SELECT error FROM self_tests`).get() }.error, /hit the 1,000-query limit \(7 queries refused\)/);
 });
 
 test('self-test emails: the first of each UTC day goes to Resend, the rest are logged without sending (owner decision)', async () => {

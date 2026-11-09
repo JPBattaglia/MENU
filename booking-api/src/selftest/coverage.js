@@ -64,7 +64,7 @@ const SYSTEMS = [
   ["Google connection", "GOOGLE_API_HEALTH", "OAuth token refresh and the three Google APIs"],
   ["Payments (live, read-only)", "MONEY_PATHS", "every live Stripe price matches the catalog, a live checkout opens, the webhook is set up and nothing failed to arrive"],
   ["Email (both brands)", "EMAIL_HEALTH", "sending domain verified, DKIM, SPF, DMARC and MX for both domains, every template that ran rendered cleanly, nothing failed to send or bounced"],
-  ["Database usage (both sites)", "D1_USAGE", "today's D1 reads and writes against the free daily limits, hourly from GitHub Actions; one email a day if near"],
+  ["Database usage (both sites)", "D1_USAGE", "today's D1 reads, writes and Worker requests against a day's share of the $5 plan's allowance, hourly from GitHub Actions; one email a day if above"],
   ["Website checks (both sites)", "SITE_CHECK", "every page loads, no broken links or files, no JavaScript errors, no arrows on buttons or links, accessibility, speed (GitHub Actions, daily)"]
 ];
 

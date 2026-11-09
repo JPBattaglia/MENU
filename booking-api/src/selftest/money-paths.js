@@ -38,7 +38,7 @@ async function maybeScheduleDaily(env, now = dailyClock(env)) {
 async function checkMoneyPaths(env, stripe, now = Date.now()) {
   const problems = []; const notes = [];
   const versions = (await env.DB.prepare(`
-      SELECT o.code, o.is_public, v.billing_interval, v.price_cents, v.stripe_price_id
+      SELECT o.code, o.is_public, v.billing_interval, v.price_cents, v.stripe_price_id, v.effective_to
       FROM offers o JOIN offer_versions v ON v.offer_id = o.id
       WHERE o.status = 'ACTIVE' AND v.status = 'ACTIVE' AND v.stripe_price_id IS NOT NULL ORDER BY o.code, v.version_number`).all()).results || [];
 
@@ -50,11 +50,16 @@ async function checkMoneyPaths(env, stripe, now = Date.now()) {
     page = await stripe("/v1/prices", { params: [["limit", "100"], ["starting_after", page.data[page.data.length - 1].id]] });
     for (const p of page.data || []) prices.set(p.id, p);
   }
+  // A version whose effective_to has passed is no longer sold (checkout skips it) but stays ACTIVE so subscriptions
+  // already on its price still map back to the plan (0039_growth_169.sql). Its Stripe price may be archived on
+  // purpose so nobody new lands on it; only versions on sale now must be active.
+  const nowIsoStr = new Date(now).toISOString();
+  const onSale = (v) => !v.effective_to || v.effective_to > nowIsoStr;
   for (const v of versions) {
     const p = prices.get(v.stripe_price_id);
     const label = `${v.code}${v.billing_interval ? ` (${v.billing_interval.toLowerCase()}ly)` : ""}`;
     if (!p) { problems.push(`${label}: price ${v.stripe_price_id} isn't in Stripe live`); continue; }
-    if (!p.active) problems.push(`${label}: Stripe price ${p.id} is archived`);
+    if (!p.active && onSale(v)) problems.push(`${label}: Stripe price ${p.id} is archived`);
     if (Number(p.unit_amount) !== Number(v.price_cents)) problems.push(`${label}: Stripe charges ${p.unit_amount}, the catalog says ${v.price_cents}`);
     const want = v.billing_interval ? INTERVAL[v.billing_interval] : null;
     const got = p.recurring?.interval || null;
@@ -63,7 +68,7 @@ async function checkMoneyPaths(env, stripe, now = Date.now()) {
   notes.push(`${versions.length} live prices checked`);
 
   // 2. One live checkout session for a different public offer each day, expired at once.
-  const sellable = versions.filter((v) => v.is_public);
+  const sellable = versions.filter((v) => v.is_public && onSale(v));
   if (sellable.length) {
     const pick = sellable[Math.floor(now / 86400000) % sellable.length];
     const recurring = Boolean(pick.billing_interval);
