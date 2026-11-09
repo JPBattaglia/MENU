@@ -337,3 +337,24 @@ test('Apple review contact: phone goes in +country-code form (Apple 409 on Nov 9
   assert.equal(intlPhone('+44 844 209 0611'), '+448442090611');
   assert.equal(intlPhone(''), '');
 });
+
+test("Apple's temporary errors (520, 503, 429) are retried instead of failing the submission (Nov 9: '520: no detail')", async () => {
+  const { setPauseForTests } = await import('./src/store-app/store-submit.js');
+  setPauseForTests(async () => {});
+  try {
+    const f = await setup();
+    const stores = fakeStores();
+    let hiccups = 0;
+    const real = stores.fetchImpl;
+    stores.fetchImpl = async (url, init) => {
+      if (String(url).includes('api.appstoreconnect.apple.com') && hiccups < 3) { hiccups++; return new Response('', { status: [520, 503, 429][hiccups - 1] }); }
+      return real(url, init);
+    };
+    await pictures(f);
+    await tick(f, stores);
+    await approve(f, previewUrl(f.emails[0]), {});
+    await tick(f, stores);
+    assert.equal(hiccups, 3, 'three temporary errors were met');
+    assert.equal(f.row(`SELECT status FROM store_apps`).status, 'IN_REVIEW', 'and the submission still went through');
+  } finally { setPauseForTests((ms) => new Promise((r) => setTimeout(r, ms))); }
+});

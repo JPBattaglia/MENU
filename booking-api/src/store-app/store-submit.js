@@ -45,16 +45,31 @@ class StepError extends Error {
 
 // ---------- Apple ----------
 
+const ASC_TRIES = 4;
+const ASC_BACKOFF_MS = [0, 2000, 5000, 10000];
+let pauseImpl = (ms) => new Promise((r) => setTimeout(r, ms));
+const pause = (attempt) => pauseImpl(ASC_BACKOFF_MS[attempt] || 10000);
+function setPauseForTests(fn) { pauseImpl = fn; }
+
 function appleClient(creds, fetchImpl) {
   let token = null;
   return async function asc(method, path, body, step) {
     token = token || await ascToken(creds);
+    // Apple's API sometimes answers 5xx (Nov 9, 2026: "520: no detail" on the first call) or 429; those are retried
+    // a few times before the owner is told, instead of failing the whole submission on one hiccup.
     let res;
-    try {
-      res = await fetchImpl(path.startsWith("https://") ? path : `${ASC}${path}`, {
-        method, headers: { Authorization: `Bearer ${token}`, ...(body ? { "Content-Type": "application/json" } : {}) }, body: body ? JSON.stringify(body) : undefined
-      });
-    } catch (error) { throw new StepError(step, `Apple couldn't be reached (${String(error?.message || error).slice(0, 80)})`); }
+    for (let attempt = 1; ; attempt++) {
+      try {
+        res = await fetchImpl(path.startsWith("https://") ? path : `${ASC}${path}`, {
+          method, headers: { Authorization: `Bearer ${token}`, ...(body ? { "Content-Type": "application/json" } : {}) }, body: body ? JSON.stringify(body) : undefined
+        });
+      } catch (error) {
+        if (attempt < ASC_TRIES) { await pause(attempt); continue; }
+        throw new StepError(step, `Apple couldn't be reached (${String(error?.message || error).slice(0, 80)})`);
+      }
+      if ((res.status >= 500 || res.status === 429) && attempt < ASC_TRIES) { await pause(attempt); continue; }
+      break;
+    }
     if (res.status === 204) return {};
     const data = await res.json().catch(() => ({}));
     if (!res.ok) {
@@ -222,4 +237,4 @@ async function googleLive(packageName, { fetchImpl = fetch } = {}) {
   } catch { return false; }
 }
 
-export { appleStatus, googleLive, submitApple, submitGoogle, urlAttrs, intlPhone };
+export { appleStatus, googleLive, submitApple, submitGoogle, urlAttrs, intlPhone, setPauseForTests };
