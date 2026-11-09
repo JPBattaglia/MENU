@@ -27,7 +27,7 @@ import { keysReady, storeScope } from "./restaurant-keys.js";
 import { OWNER, OWNER_BUNDLE_ID } from "./keys.js";
 import { pausedWorkflows } from "../lib/switches.js";
 import { dispatchRefused } from "../lib/dispatch-alert.js";
-import { hybridUrlForBundle } from "./hybrid.js";
+import { hybridLookForBundle, hybridUrlForBundle } from "./hybrid.js";
 
 const BUILD_AUDIENCE = "menu-made-store-build";
 const BUILD_WORKFLOW = "JPBattaglia/MENU/.github/workflows/store-app-build.yml@refs/heads/master";
@@ -89,7 +89,11 @@ async function buildConfigFor(env, storeApp, packageId = storeApp.bundle_id) {
   const logo = env.ASSETS ? await findAppLogo(env, { id: storeApp.project_id, business_id: row.business_id }) : null;
   const logoObject = logo ? await env.ASSETS.get(logo.storage_key) : null;
   const logoUri = logoObject ? `data:${logo.mime_type};base64,${base64(new Uint8Array(await logoObject.arrayBuffer()))}` : null;
-  const draw = (pad) => { const svg = storeIconSvg(data, { hasLogo: Boolean(logoUri), pad }); return logoUri ? svg.replace(LOGO_PLACEHOLDER, logoUri) : svg; };
+  // A hybrid app whose icon picture lives in the repo (hybrid.js HYBRID_LOOK): the build puts the file in place of
+  // the placeholder (scripts/store-icons.mjs), so the icon never depends on an upload.
+  const look = hybridLookForBundle(storeApp.bundle_id);
+  const repoLogo = look?.icon_file || null;
+  const draw = (pad) => { const svg = storeIconSvg(data, { hasLogo: Boolean(logoUri || repoLogo), pad }); return repoLogo ? svg : logoUri ? svg.replace(LOGO_PLACEHOLDER, logoUri) : svg; };
   return { status: 200, body: {
     ok: true,
     config: {
@@ -101,11 +105,13 @@ async function buildConfigFor(env, storeApp, packageId = storeApp.bundle_id) {
       // A site app (own-apps.js) opens this website inside the app; its store screenshots are these pages.
       ...(siteUrlOf(data) ? { site_url: siteUrlOf(data), site_screens: siteScreensOf(data) } : {}),
       // A hybrid app (hybrid.js) shows real app screens from this live content; it takes the place of site_url.
-      ...(hybridUrlForBundle(storeApp.bundle_id) ? { hybrid_url: hybridUrlForBundle(storeApp.bundle_id) } : {})
+      ...(hybridUrlForBundle(storeApp.bundle_id) ? { hybrid_url: hybridUrlForBundle(storeApp.bundle_id) } : {}),
+      ...(look?.logo_url ? { logo_url: look.logo_url } : {})
     },
+    ...(repoLogo ? { logo_file: repoLogo, logo_placeholder: LOGO_PLACEHOLDER } : {}),
     icon_svg: draw(0.14),
     android_foreground_svg: draw(0.24),
-    feature_svg: featureSvg(data, logoUri)
+    feature_svg: repoLogo ? featureSvg(data, LOGO_PLACEHOLDER) : featureSvg(data, logoUri)
   } };
 }
 

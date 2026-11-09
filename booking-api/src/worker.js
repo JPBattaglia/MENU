@@ -93,7 +93,7 @@ import { emailMerchTracking, handleMerchCheckout, handleMerchLogo, handleMerchLo
 import { advanceNinoDesignSelfTests } from "./selftest/nino-design-selftest.js";
 import { advanceStaffMerchSelfTests } from "./selftest/staff-merch-selftest.js";
 import { handleOwnerOutputs, runOwnerOutputsLink } from "./admin/outputs.js";
-import { handleHybridContent } from "./store-app/hybrid.js";
+import { announceNinoDrops, handleHybridContent } from "./store-app/hybrid.js";
 
 var worker_default = {
   async fetch(request, env, ctx) {
@@ -465,6 +465,8 @@ const mmWorkerWithBooking = {
       // Menu previews: one reminder about 2 days in when no order came from it (hourly, 9 am to 7 pm Pacific).
       await runPreviewReminders(env).catch((error) => console.error("Preview reminders failed:", error instanceof Error ? error.message : String(error)));
       // Logos waiting on Nino for 4+ days: one owner alert each (hourly, on the :15 tick).
+      // Nino's app: a push when a new design enters its 24-hour early access (hourly, on the :25 tick).
+      if (new Date().getUTCMinutes() >= 25 && new Date().getUTCMinutes() < 30) await announceNinoDrops(env).catch((error) => console.error("Nino app drops failed:", error instanceof Error ? error.message : String(error)));
       if (new Date().getUTCMinutes() >= 15 && new Date().getUTCMinutes() < 20) await alertStaleHandLogos(env).catch((error) => console.error("Nino logo check failed:", error instanceof Error ? error.message : String(error)));
       // Owner "Latest outputs" link, when one is requested (self_tests kind OWNER_OUTPUTS_LINK).
       await runOwnerOutputsLink(env).catch((error) => console.error("Outputs link failed:", error instanceof Error ? error.message : String(error)));

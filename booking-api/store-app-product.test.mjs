@@ -260,6 +260,10 @@ test("owner's own apps: made once by the tick at no charge, owner keys, no buyer
     assert.deepEqual(cfg.body.config.site_screens, ['/shop.html', '/shirts/skull-wave.html', '/']);
     // Nov 8, 2026: the owner's own apps are hybrid apps (real app screens from live content).
     assert.equal(cfg.body.config.hybrid_url, 'https://menu-made.com/api/app-hybrid/nino');
+    // Nino's app icon comes from the repo file (the owner's blue N), and its loading screen spins the same picture.
+    assert.equal(cfg.body.config.logo_url, 'https://menu-made.com/assets/own-apps/nino-app-logo.png');
+    assert.equal(cfg.body.logo_file, 'assets/own-apps/nino-app-logo.png');
+    assert.ok(cfg.body.icon_svg.includes(cfg.body.logo_placeholder), 'the build swaps the file in for the placeholder');
   } finally {
     globalThis.fetch = async (url, init) => {
       if (String(url).startsWith('https://api.resend.com/')) { const body = JSON.parse(init.body); emails.push(body); return Response.json({ id: `em_${emails.length}` }); }

@@ -18,9 +18,11 @@
     rewards: "M12 2l3 7h7l-5.5 4.5 2 7.5-6.5-4.5L5.5 21l2-7.5L2 9h7z",
     cart: "M1 1h4l2.7 13.4a2 2 0 0 0 2 1.6h9.7a2 2 0 0 0 2-1.6L23 6H6 M9 21h.01 M20 21h.01",
     back: "M15 18l-6-6 6-6",
-    bell: "M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9 M10.3 21a1.94 1.94 0 0 0 3.4 0"
+    bell: "M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9 M10.3 21a1.94 1.94 0 0 0 3.4 0",
+    ideas: "M9 18h6 M10 22h4 M12 2a7 7 0 0 0-4 12.7c.6.5 1 1.2 1 2.3h6c0-1.1.4-1.8 1-2.3A7 7 0 0 0 12 2z",
+    up: "M12 19V5 M5 12l7-7 7 7"
   };
-  var LABELS = { home: "Home", preview: "Preview", plans: "Plans", account: "Account", shop: "Shop", work: "Work", rewards: "Rewards", cart: "Cart" };
+  var LABELS = { home: "Home", preview: "Preview", plans: "Plans", account: "Account", shop: "Shop", work: "Work", rewards: "Rewards", cart: "Cart", ideas: "Ideas" };
 
   var t, cfg, data, root, screen, current = null, currentOpts = {}, interval = "month", chosenPlan = null, filter = "all", query = "";
 
@@ -39,10 +41,20 @@
   // The in-app browser: the website without leaving the app. In a plain browser (store screenshots) a new tab.
   function openWeb(url) {
     if (!/^https:\/\//.test(String(url || ""))) return;
+    // Nino's shop links carry this phone's member key, so what's bought counts toward the app rewards.
+    if (data && data.app_param && /^https:\/\/ninobattaglia\.com\//.test(url)) url += (url.indexOf("?") < 0 ? "?" : "&") + data.app_param + "=" + encodeURIComponent(t.memberKey());
     var C = window.Capacitor;
     var plugin = C && C.isNativePlatform && C.isNativePlatform() ? ((C.Plugins && C.Plugins.Browser) || (C.registerPlugin ? C.registerPlugin("Browser") : null)) : null;
     if (plugin) { plugin.open({ url: url, toolbarColor: cfg.brand_color }).catch(function () { window.open(url, "_blank"); }); return; }
     window.open(url, "_blank", "noopener");
+  }
+
+  // ---- Nino's shop API (rewards card, ideas): each member's own data, straight from the shop ----
+  function fans(path, body) {
+    var init = body ? { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) } : { cache: "no-store" };
+    return fetch(data.fans_api + path, init).then(function (r) {
+      return r.json().catch(function () { return {}; }).then(function (j) { j._ok = r.ok; return j; });
+    });
   }
 
   // ---- notifications (the same native push the restaurant apps use: <api_base>/push/native) ----
@@ -302,6 +314,7 @@
     var img = el("img"); img.src = p.image; img.alt = ""; img.loading = "lazy"; img.decoding = "async";
     if (p.accent) img.style.background = p.accent + "22";
     b.appendChild(img);
+    if (p.early) b.appendChild(el("span", "hy-badge", "App first"));
     b.appendChild(el("strong", null, p.title));
     b.appendChild(el("span", "hy-muted", (p.category ? p.category + " · " : "") + "From " + money(p.price_cents)));
     b.addEventListener("click", function () { show("shop", { product: p.slug }); });
@@ -314,6 +327,7 @@
     bar.appendChild(back); bar.appendChild(el("strong", null, p.title)); s.appendChild(bar);
     var img = el("img", "hy-hero-img"); img.src = p.image; img.alt = p.title + " shirt"; s.appendChild(img);
     var body = el("div", "hy-pad");
+    if (p.early) body.appendChild(el("p", "hy-badge", "App first: on the website in 24 hours"));
     var top = el("div", "hy-plan-top"); top.appendChild(el("h2", null, p.title)); top.appendChild(el("strong", "hy-price", "From " + money(p.price_cents)));
     body.appendChild(top);
     if (p.description) body.appendChild(el("p", null, p.description));
@@ -387,13 +401,106 @@
       });
     },
     rewards: function (s) {
-      s.appendChild(header("Rewards", "For Nino's regulars"));
+      s.appendChild(header("Rewards", "Free stuff for shirts bought in the app"));
+      var r = data.rewards || {};
+      var steps = r.steps || [];
+      var cycle = steps.length ? steps[steps.length - 1].at : 6;
       var card = el("div", "hy-member");
-      card.appendChild(el("p", "hy-eyebrow", "NINO MEMBER"));
-      card.appendChild(el("h2", null, data.rewards && data.rewards.enabled ? "Your points" : "Coming soon"));
-      card.appendChild(el("p", null, (data.rewards && data.rewards.note) || ""));
+      card.appendChild(el("p", "hy-eyebrow", "Nino member"));
+      var count = el("h2", null, "0 of " + cycle + " shirts");
+      card.appendChild(count);
+      var bar = el("div", "hy-ladder"); var fill = el("span", "hy-ladder-fill"); bar.appendChild(fill);
+      bar.setAttribute("aria-hidden", "true");
+      steps.forEach(function (st) { var m = el("span", "hy-ladder-mark", String(st.at)); m.style.left = (100 * st.at / cycle) + "%"; bar.appendChild(m); });
+      card.appendChild(bar);
+      var next = el("p", null, r.note || ""); card.appendChild(next);
       s.appendChild(card);
+      var list = el("div", "hy-list");
+      var rows = steps.map(function (st) {
+        var item = el("div", "hy-list-item hy-step-reward");
+        item.appendChild(el("strong", null, st.title)); item.appendChild(el("span", "hy-muted", st.text));
+        list.appendChild(item); return item;
+      });
+      s.appendChild(list);
+      var history = el("div", "hy-card"); history.hidden = true; s.appendChild(history);
+      var early = el("div", "hy-card"); early.appendChild(el("strong", null, "24-hour early access")); early.appendChild(el("p", "hy-muted", r.early || "")); s.appendChild(early);
       s.appendChild(pushCard("New drop alerts", "Get a notification when Nino releases a new design."));
+      function draw(c) {
+        var pos = Number(c.position) || 0;
+        count.textContent = pos + " of " + cycle + " shirts";
+        fill.style.width = Math.min(100, 100 * pos / cycle) + "%";
+        if (c.next) next.textContent = c.next.remaining + (c.next.remaining === 1 ? " more shirt" : " more shirts") + " to your free " + (c.next.tier === "canvas" ? "canvas print" : "hoodie") + ". " + (r.note || "");
+        steps.forEach(function (st, i) { rows[i].classList.toggle("is-done", pos >= st.at); });
+        while (history.firstChild) history.removeChild(history.firstChild);
+        var got = c.rewards || [];
+        history.hidden = !got.length;
+        if (got.length) {
+          history.appendChild(el("strong", null, "Your rewards"));
+          got.forEach(function (g) {
+            history.appendChild(el("p", "hy-muted", (g.tier === "canvas" ? "Free canvas print" : "Free hoodie") + ": " + (g.status === "sent" ? "on its way to you" : "ships after the order that earned it")));
+          });
+        }
+      }
+      var cached = t.store.get("card");
+      if (cached && cached.next) draw(cached);
+      if (data.fans_api) fans("/api/app/card?member=" + encodeURIComponent(t.memberKey())).then(function (c) { if (c._ok && c.next) { t.store.set("card", c); if (current === "rewards") draw(c); } }).catch(function () {});
+    },
+    ideas: function (s) {
+      var info = data.ideas || {};
+      s.appendChild(header(info.title || "Ideas board", "What should Nino draw next?"));
+      var form = el("form", "hy-card hy-form"); form.noValidate = true;
+      form.appendChild(el("p", null, info.text || ""));
+      var l1 = el("label", null, "Your idea"); l1.setAttribute("for", "hy-idea"); form.appendChild(l1);
+      var box = el("textarea", "hy-textarea"); box.id = "hy-idea"; box.maxLength = 280; box.rows = 3; box.placeholder = "A skeleton surfing past the Golden Gate…"; form.appendChild(box);
+      var l2 = el("label", null, "Your first name (optional)"); l2.setAttribute("for", "hy-idea-name"); form.appendChild(l2);
+      var nm = el("input"); nm.id = "hy-idea-name"; nm.type = "text"; nm.maxLength = 30; nm.autocomplete = "given-name"; form.appendChild(nm);
+      var send = button("Send to Nino", "hy-btn hy-btn-big"); send.type = "submit"; form.appendChild(send);
+      var msg = el("p", "hy-status"); msg.setAttribute("role", "status"); msg.setAttribute("aria-live", "polite"); form.appendChild(msg);
+      s.appendChild(form);
+      var pending = el("div", "hy-card"); pending.hidden = true; s.appendChild(pending);
+      s.appendChild(el("h3", "hy-label", "Fan favorites"));
+      var list = el("div", "hy-list"); s.appendChild(list);
+      var empty = el("p", "hy-muted hy-pad", "No ideas on the board yet. Be the first!"); s.appendChild(empty);
+      function drawIdeas(b) {
+        while (list.firstChild) list.removeChild(list.firstChild);
+        (b.ideas || []).forEach(function (idea) {
+          var item = el("div", "hy-idea");
+          var txt = el("div", "hy-idea-text"); txt.appendChild(el("p", null, idea.text)); if (idea.name) txt.appendChild(el("span", "hy-muted", idea.name));
+          var v = el("button", "hy-vote"); v.type = "button"; v.setAttribute("aria-pressed", String(Boolean(idea.voted)));
+          v.setAttribute("aria-label", "Vote for this idea, " + (idea.votes || 0) + " votes");
+          v.appendChild(icon("up", 18)); var n = el("span", null, String(idea.votes || 0)); v.appendChild(n);
+          v.addEventListener("click", function () {
+            v.disabled = true;
+            fans("/api/ideas/vote", { member: t.memberKey(), id: idea.id }).then(function (r) {
+              if (r._ok) { v.setAttribute("aria-pressed", String(r.voted)); n.textContent = String(r.votes); v.setAttribute("aria-label", "Vote for this idea, " + r.votes + " votes"); }
+            }).catch(function () {}).then(function () { v.disabled = false; });
+          });
+          item.appendChild(txt); item.appendChild(v); list.appendChild(item);
+        });
+        empty.hidden = (b.ideas || []).length > 0;
+        while (pending.firstChild) pending.removeChild(pending.firstChild);
+        pending.hidden = !(b.pending || []).length;
+        if (!pending.hidden) {
+          pending.appendChild(el("strong", null, "Waiting for Nino's OK"));
+          b.pending.forEach(function (p) { pending.appendChild(el("p", "hy-muted", "“" + p.text + "”")); });
+        }
+      }
+      function loadIdeas() {
+        return fans("/api/ideas?member=" + encodeURIComponent(t.memberKey())).then(function (b) { if (b._ok) drawIdeas(b); })
+          .catch(function () { empty.textContent = "You need a connection to see the ideas board."; });
+      }
+      form.addEventListener("submit", function (ev) {
+        ev.preventDefault();
+        var text = box.value.trim();
+        if (text.length < 8) { msg.textContent = "Tell Nino a little more about your idea."; msg.className = "hy-status is-error"; return; }
+        send.disabled = true; msg.textContent = "Sending…"; msg.className = "hy-status";
+        fans("/api/ideas", { member: t.memberKey(), text: text, name: nm.value.trim() }).then(function (r) {
+          if (r._ok) { box.value = ""; msg.textContent = "Thanks! Nino reads every idea. It shows on the board once he OKs it."; loadIdeas(); }
+          else { msg.textContent = r.message || "That didn't send. Please try again."; msg.className = "hy-status is-error"; }
+        }).catch(function () { msg.textContent = "You need a connection to send an idea."; msg.className = "hy-status is-error"; })
+          .then(function () { send.disabled = false; });
+      });
+      loadIdeas();
     },
     cart: function (s) {
       s.appendChild(header("Cart", "Checkout with Stripe, inside the app"));
@@ -413,9 +520,25 @@
       if (first) { build(); show(c.tabs[0]); } else if (current) show(current, { keep: true, product: currentOpts.product });
       t.status("");
       document.body.classList.add("hy-ready");
+      hideLoader();
     }).catch(function () {
+      hideLoader();
       t.status(data ? "You're offline. Showing what we had last time." : "Couldn't load. Check your connection and try again.");
     });
+  }
+
+  // The loading screen: the app's own picture, spinning, until the first content is on screen.
+  var loader = null, loaderAt = 0;
+  function showLoader() {
+    if (!/^https:\/\//.test(cfg.logo_url || "")) return;
+    loader = el("div", "hy-loader"); loader.setAttribute("role", "status"); loader.setAttribute("aria-label", "Loading");
+    var img = el("img", "hy-loader-img"); img.src = cfg.logo_url; img.alt = "";
+    loader.appendChild(img); document.body.appendChild(loader); loaderAt = Date.now();
+  }
+  function hideLoader() {
+    if (!loader) return;
+    var l = loader; loader = null;
+    setTimeout(function () { l.classList.add("is-done"); setTimeout(function () { if (l.parentNode) l.parentNode.removeChild(l); }, 400); }, Math.max(0, 900 - (Date.now() - loaderAt)));
   }
 
   window.MMHybrid = {
@@ -423,8 +546,9 @@
       cfg = config; t = tools;
       document.body.classList.add("hybrid");
       root = document.getElementById("hybrid"); root.hidden = false;
+      showLoader();
       var cached = t.store.get("hybrid");
-      if (cached && cached.ok && Array.isArray(cached.tabs) && cached.tabs.length) { data = cached; build(); show(cached.tabs[0]); document.body.classList.add("hy-ready"); }
+      if (cached && cached.ok && Array.isArray(cached.tabs) && cached.tabs.length) { data = cached; build(); show(cached.tabs[0]); document.body.classList.add("hy-ready"); hideLoader(); }
       startPush();
       load();
       // Fresh content each time the app comes back to the front (the website may have changed).
