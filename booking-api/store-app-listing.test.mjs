@@ -124,6 +124,14 @@ async function approve(f, url, edits = {}) {
   return call(f, `https://menu-made.com/api/store-app/${ID}/listing`, { method: 'POST', body: form });
 }
 
+test('a hybrid app sends up to 5 screenshots per store (Nov 9: ios-4 was refused); a 6th is still refused', async () => {
+  const f = await setup();
+  const app = { id: ID };
+  const png = PNG();
+  for (const name of ['ios-4', 'ios-5', 'android-4', 'android-5']) assert.equal((await listing.storeListingImage(f.env, app, name, png)).status, 200, name);
+  assert.equal((await listing.storeListingImage(f.env, app, 'ios-6', png)).status, 400);
+});
+
 test('listing text fits every store limit and says what the app does', () => {
   const l = listing.listingText(APP_DATA, { businessName: "Joe's Pizza LLC", baseUrl: 'https://menu-made.com', rewards: true, year: 2026 });
   assert.equal(l.name, "Joe's Pizza");
