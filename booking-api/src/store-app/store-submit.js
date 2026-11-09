@@ -22,6 +22,11 @@ const LIVE_STATES = new Set(["READY_FOR_SALE", "READY_FOR_DISTRIBUTION", "PENDIN
 const REJECTED_STATES = new Set(["REJECTED", "METADATA_REJECTED", "INVALID_BINARY"]);
 const WHATS_NEW = "Updated for the latest iPhone software, with performance and reliability improvements.";
 
+// Apple rejects an empty string in a URL field (409 "must be a valid RFC 3986 URI"); a link we don't have is left out.
+function urlAttrs(map) {
+  return Object.fromEntries(Object.entries(map).filter(([, v]) => typeof v === "string" && /^https?:\/\/\S+$/.test(v.trim())).map(([k, v]) => [k, v.trim()]));
+}
+
 class StepError extends Error {
   constructor(step, message) { super(message); this.step = step; }
 }
@@ -99,7 +104,7 @@ async function submitApple({ creds, bundleId, listing, images, contact }, { fetc
     const loc = locs.find((l) => l.attributes?.locale === "en-US") || locs[0];
     if (!loc) throw new StepError("description", "The App Store version has no language yet; set the primary language to English (U.S.) in App Store Connect.");
     await asc("PATCH", `/appStoreVersionLocalizations/${loc.id}`, { data: { type: "appStoreVersionLocalizations", id: loc.id, attributes: {
-      description: listing.description, keywords: listing.keywords, promotionalText: listing.promo, supportUrl: listing.support_url, marketingUrl: listing.marketing_url,
+      description: listing.description, keywords: listing.keywords, promotionalText: listing.promo, ...urlAttrs({ supportUrl: listing.support_url, marketingUrl: listing.marketing_url }),
       ...(update ? { whatsNew: listing.whats_new || WHATS_NEW } : {}) } } }, "description");
 
     const infos = (await asc("GET", `/apps/${app.id}/appInfos`, null, "name")).data || [];
@@ -107,7 +112,7 @@ async function submitApple({ creds, bundleId, listing, images, contact }, { fetc
     if (info) {
       const infoLocs = (await asc("GET", `/appInfos/${info.id}/appInfoLocalizations`, null, "name")).data || [];
       const infoLoc = infoLocs.find((l) => l.attributes?.locale === loc.attributes?.locale) || infoLocs[0];
-      if (infoLoc) await asc("PATCH", `/appInfoLocalizations/${infoLoc.id}`, { data: { type: "appInfoLocalizations", id: infoLoc.id, attributes: { name: listing.name, subtitle: listing.subtitle, privacyPolicyUrl: listing.privacy_url } } }, "name");
+      if (infoLoc) await asc("PATCH", `/appInfoLocalizations/${infoLoc.id}`, { data: { type: "appInfoLocalizations", id: infoLoc.id, attributes: { name: listing.name, subtitle: listing.subtitle, ...urlAttrs({ privacyPolicyUrl: listing.privacy_url }) } } }, "name");
     }
 
     const sets = (await asc("GET", `/appStoreVersionLocalizations/${loc.id}/appScreenshotSets`, null, "screenshots")).data || [];
@@ -201,4 +206,4 @@ async function googleLive(packageName, { fetchImpl = fetch } = {}) {
   } catch { return false; }
 }
 
-export { appleStatus, googleLive, submitApple, submitGoogle };
+export { appleStatus, googleLive, submitApple, submitGoogle, urlAttrs };

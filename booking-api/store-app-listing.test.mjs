@@ -321,3 +321,11 @@ test('listing text for a shop or a services business: no hours, directions or me
   assert.match(services.description, /See our services and prices, see what's new and call us in one tap\./);
   assert.equal(services.copyright, '2026 Menu-Made LLC');
 });
+
+test('Apple listing: an empty or bare-domain link is left out, not sent (Apple 409 on Nov 9)', async () => {
+  const { urlAttrs } = await import('./src/store-app/store-submit.js');
+  assert.deepEqual(
+    urlAttrs({ supportUrl: 'https://menu-made.com/contact.html', marketingUrl: '', privacyPolicyUrl: 'menu-made.com/privacy.html', other: undefined }),
+    { supportUrl: 'https://menu-made.com/contact.html' }
+  );
+});
