@@ -131,7 +131,7 @@ body.hybrid {
 .hy-price { white-space: nowrap; color: var(--hy-hot); }
 .hy-swatches { display: flex; flex-wrap: wrap; gap: 8px; }
 .hy-swatch { width: 30px; height: 30px; border-radius: 15px; border: 2px solid rgba(255,255,255,.55); }
-.hy-display { font-family: var(--hy-display); text-transform: uppercase; font-size: 50px !important; line-height: .92 !important; letter-spacing: -.01em; }
+.hy-display { font-family: var(--hy-display); text-transform: uppercase; font-size: clamp(30px, 11.5vw, 50px) !important; overflow-wrap: normal; word-break: normal; hyphens: none; line-height: .92 !important; letter-spacing: -.01em; }
 .hy-hot { color: var(--hy-hot); }
 .hy-hot-text { color: var(--hy-hot); font-weight: 700; }
 .hy-lead { font-size: 17px; color: var(--hy-ink); opacity: .9; margin: 0 0 16px; }
