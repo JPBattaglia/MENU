@@ -51,6 +51,9 @@ function menumadeContent(catalog) {
     ok: true,
     key: "menumade",
     kind: "services",
+    // The app's look follows menu-made.com (app-shell/www/app.css, .hy-theme-menumade); pictures come from the site.
+    theme: "menumade",
+    assets: { logo: `${MM}/MENU1.png`, mark: `${MM}/MENU%3D.png` },
     name: "MENU-MADE",
     tagline: "For Food & Bev businesses",
     tabs: ["home", "preview", "plans", "account"],
@@ -103,6 +106,10 @@ function ninoContent(catalog) {
     ok: true,
     key: "nino",
     kind: "shop",
+    // The app's look follows ninobattaglia.com (.hy-theme-nino): the rusted metal backdrop, grain, Barlow Condensed.
+    theme: "nino",
+    assets: { logo: `${NINO}/assets/brand-mark.webp`, backdrop: `${NINO}/assets/metal-bg-portrait.webp`, grain: `${NINO}/assets/grain.webp` },
+    hero: { eyebrow: "Original artwork / everyday expression", line1: "Wear your", line2: "perspective", text: "Original artwork on shirts. Find the design that feels like you." },
     name: "NINO BATTAGLIA",
     tagline: "by Nino, an SF artist",
     tabs: ["shop", "work", "rewards", "cart"],
