@@ -137,14 +137,15 @@ function buildConfirmationEmail(context) {
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width">
   <title>${subject}</title>
+<meta name="color-scheme" content="dark"><meta name="supported-color-schemes" content="dark"><style>a{color:#5ff2ff;}</style>
 </head>
 
 <body style="
   margin:0;
   padding:0;
-  background:#f4f7f8;
+  background:#00222d;
   font-family:Arial,Helvetica,sans-serif;
-  color:#18313a;
+  color:#ffffff;
 ">
   <table
     role="presentation"
@@ -154,7 +155,7 @@ function buildConfirmationEmail(context) {
     border="0"
     style="
       width:100%;
-      background:#f4f7f8;
+      background:#00222d;
       padding:32px 16px;
     "
   >
@@ -169,7 +170,8 @@ function buildConfirmationEmail(context) {
           border="0"
           style="
             max-width:640px;
-            background:#ffffff;
+            background:#003344;
+            border:1px solid #0a6f80;
             border-radius:14px;
             overflow:hidden;
             box-shadow:
@@ -180,7 +182,7 @@ function buildConfirmationEmail(context) {
           <tr>
             <td
               style="
-                background:#003f52;
+                background:#00222d;
                 padding:28px 32px;
                 color:#ffffff;
               "
@@ -198,7 +200,7 @@ function buildConfirmationEmail(context) {
               <div
                 style="
                   margin-top:7px;
-                  color:#42d9eb;
+                  color:#5ff2ff;
                   font-size:14px;
                 "
               >
@@ -226,7 +228,7 @@ function buildConfirmationEmail(context) {
               <h1
                 style="
                   margin:0 0 18px;
-                  color:#003f52;
+                  color:#ffffff;
                   font-size:26px;
                   line-height:1.25;
                 "
@@ -255,8 +257,8 @@ function buildConfirmationEmail(context) {
                 border="0"
                 style="
                   margin:0 0 26px;
-                  background:#f1f8f9;
-                  border:1px solid #d7eaed;
+                  background:#004a5c;
+                  border:1px solid #0a6f80;
                   border-radius:10px;
                 "
               >
@@ -310,10 +312,10 @@ function buildConfirmationEmail(context) {
           <tr>
             <td
               style="
-                background:#003f52;
+                background:#00222d;
                 padding:24px 32px;
                 text-align:center;
-                color:#d8f3f6;
+                color:#d9f3f6;
                 font-size:13px;
                 line-height:1.6;
               "

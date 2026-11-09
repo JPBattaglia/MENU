@@ -65,25 +65,58 @@ function looksLikeEmail(value) {
   return typeof value === "string" && value.length <= 254 && /^[^\s@<>"]+@[^\s@<>"]+\.[^\s@<>"]+$/.test(value.trim());
 }
 
+// Owner decision (Nov 9, 2026): emails use the website's dark blue #003344 (main.css --nav) with white text and cyan highlights (--cyan #00d6e6, --brand-soft #5ff2ff), not white.
+const MAIL = { page: "#00222d", card: "#003344", bar: "#00222d", panel: "#004a5c", line: "#0a6f80", text: "#ffffff", soft: "#d9f3f6", cyan: "#00d6e6", link: "#5ff2ff", ink: "#012f34" };
+const FOOTER_TD = `<tr><td style="padding:24px 32px;background-color:${MAIL.bar};">`;
+const MAIL_HEAD = `<meta name="color-scheme" content="dark"><meta name="supported-color-schemes" content="dark"><style>a{color:${MAIL.link};}</style>`;
+
+// Text that callers pass in was written for a white card (dark greys, a red warning, a green "done"). On the dark
+// card those would vanish, so known colors get light equivalents and any other dark text becomes the soft white.
+const DARK_TO_LIGHT = {
+  "#9b1c1c": "#ff9c8f", "#a11": "#ff9c8f", "#aa1111": "#ff9c8f", "#b42318": "#ff9c8f", "#c0392b": "#ff9c8f",
+  "#1a6b3a": "#7ee2a8", "#1b7a3a": "#7ee2a8", "#d2691e": "#ffc078",
+  "#08747b": MAIL.link, "#00727c": MAIL.link, "#006d77": MAIL.link, "#00a7b5": MAIL.link
+};
+function luminance(hex) {
+  let h = hex.replace("#", "");
+  if (h.length === 3) h = h.split("").map((c) => c + c).join("");
+  const [r, g, b] = [0, 2, 4].map((i) => parseInt(h.slice(i, i + 2), 16) / 255);
+  return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+}
+function onDark(html) {
+  return String(html ?? "")
+    .replace(/(^|[;"\s])(background-color|background|color)\s*:\s*(#[0-9a-fA-F]{6}|#[0-9a-fA-F]{3})\b/g, (m, pre, prop, hex) => {
+      const key = hex.toLowerCase();
+      if (prop === "color") {
+        if (DARK_TO_LIGHT[key]) return `${pre}${prop}:${DARK_TO_LIGHT[key]}`;
+        return luminance(key) < 0.45 ? `${pre}${prop}:${MAIL.soft}` : m;
+      }
+      return luminance(key) > 0.6 ? `${pre}${prop}:${MAIL.panel}` : m;
+    })
+    .replace(/<a (?![^>]*\bstyle=)/g, `<a style="color:${MAIL.link};" `);
+}
+
 function brandedEmailHtml({ preheader, eyebrow, heading, paragraphs = [], buttons = [], rows = [], footnote = "" }) {
-  const p = (html) => `<p style="margin:0 0 16px;font-size:16px;line-height:1.6;color:#26434f;">${html}</p>`;
-  const button = (b) => `<tr><td style="padding:0 0 12px;"><a href="${escapeHtml(b.url)}" style="display:inline-block;background-color:${b.primary ? "#00a7b5" : "#071f2c"};color:#ffffff;text-decoration:none;font-size:15px;font-weight:bold;padding:13px 22px;border-radius:6px;">${escapeHtml(b.label)}</a></td></tr>`;
-  const row = (r) => `<tr><td style="padding:10px 14px;border-bottom:1px solid #dce8ec;font-size:12px;font-weight:bold;color:#45616c;width:120px;vertical-align:top;">${escapeHtml(r[0])}</td><td style="padding:10px 14px;border-bottom:1px solid #dce8ec;font-size:14px;color:#102f3d;overflow-wrap:anywhere;">${escapeHtml(r[1])}</td></tr>`;
-  return `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${escapeHtml(heading)}</title></head>
-<body style="margin:0;padding:0;background-color:#edf3f5;font-family:Arial,Helvetica,sans-serif;">
-<div style="display:none;font-size:1px;color:#edf3f5;max-height:0;overflow:hidden;">${escapeHtml(preheader)}</div>
-<table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="background-color:#edf3f5;"><tr><td align="center" style="padding:28px 12px;">
-<table role="presentation" width="600" cellspacing="0" cellpadding="0" border="0" style="width:100%;max-width:600px;background-color:#ffffff;border:1px solid #dce8ec;">
-<tr><td style="background-color:#071f2c;padding:28px 32px;border-bottom:4px solid #00d6e6;"><a href="https://menu-made.com" style="text-decoration:none;"><img src="https://menu-made.com/MENU1.png" width="220" alt="MENU-MADE" style="display:block;width:220px;max-width:100%;height:auto;border:0;"></a></td></tr>
+  const p = (html) => `<p style="margin:0 0 16px;font-size:16px;line-height:1.6;color:${MAIL.text};">${onDark(html)}</p>`;
+  const button = (b) => b.primary
+    ? `<tr><td style="padding:0 0 12px;"><a href="${escapeHtml(b.url)}" style="display:inline-block;background-color:${MAIL.cyan};color:${MAIL.ink};text-decoration:none;font-size:15px;font-weight:bold;padding:13px 22px;border-radius:6px;">${escapeHtml(b.label)}</a></td></tr>`
+    : `<tr><td style="padding:0 0 12px;"><a href="${escapeHtml(b.url)}" style="display:inline-block;background-color:${MAIL.bar};color:${MAIL.text};text-decoration:none;font-size:15px;font-weight:bold;padding:12px 21px;border:1px solid ${MAIL.cyan};border-radius:6px;">${escapeHtml(b.label)}</a></td></tr>`;
+  const row = (r) => `<tr><td style="padding:10px 14px;border-bottom:1px solid ${MAIL.line};font-size:12px;font-weight:bold;color:${MAIL.soft};width:120px;vertical-align:top;">${escapeHtml(r[0])}</td><td style="padding:10px 14px;border-bottom:1px solid ${MAIL.line};font-size:14px;color:${MAIL.text};overflow-wrap:anywhere;">${escapeHtml(r[1])}</td></tr>`;
+  return `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">${MAIL_HEAD}<title>${escapeHtml(heading)}</title></head>
+<body style="margin:0;padding:0;background-color:${MAIL.page};font-family:Arial,Helvetica,sans-serif;">
+<div style="display:none;font-size:1px;color:${MAIL.page};max-height:0;overflow:hidden;">${escapeHtml(preheader)}</div>
+<table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="background-color:${MAIL.page};"><tr><td align="center" style="padding:28px 12px;">
+<table role="presentation" width="600" cellspacing="0" cellpadding="0" border="0" style="width:100%;max-width:600px;background-color:${MAIL.card};border:1px solid ${MAIL.line};">
+<tr><td style="background-color:${MAIL.bar};padding:28px 32px;border-bottom:4px solid ${MAIL.cyan};"><a href="https://menu-made.com" style="text-decoration:none;"><img src="https://menu-made.com/MENU1.png" width="220" alt="MENU-MADE" style="display:block;width:220px;max-width:100%;height:auto;border:0;"></a></td></tr>
 <tr><td style="padding:32px;">
-<p style="margin:0 0 12px;font-size:12px;font-weight:bold;letter-spacing:1px;color:#08747b;">${escapeHtml(eyebrow)}</p>
-<h1 style="margin:0 0 24px;font-size:26px;line-height:1.25;color:#071f2c;">${escapeHtml(heading)}</h1>
+<p style="margin:0 0 12px;font-size:12px;font-weight:bold;letter-spacing:1px;color:${MAIL.link};">${escapeHtml(eyebrow)}</p>
+<h1 style="margin:0 0 24px;font-size:26px;line-height:1.25;color:${MAIL.text};">${escapeHtml(heading)}</h1>
 ${paragraphs.map(p).join("\n")}
-${rows.length ? `<table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="background-color:#f3f8f9;border:1px solid #dce8ec;margin:0 0 24px;">${rows.map(row).join("")}</table>` : ""}
+${rows.length ? `<table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="background-color:${MAIL.panel};border:1px solid ${MAIL.line};margin:0 0 24px;">${rows.map(row).join("")}</table>` : ""}
 ${buttons.length ? `<table role="presentation" cellspacing="0" cellpadding="0" border="0">${buttons.map(button).join("")}</table>` : ""}
-${footnote ? `<p style="margin:16px 0 0;font-size:13px;line-height:1.6;color:#5b7480;">${footnote}</p>` : ""}
+${footnote ? `<p style="margin:16px 0 0;font-size:13px;line-height:1.6;color:${MAIL.soft};">${onDark(footnote)}</p>` : ""}
 </td></tr>
-<tr><td style="padding:24px 32px;background-color:#071f2c;"><p style="margin:0;font-size:14px;line-height:1.6;color:#e8f6f7;"><a href="https://menu-made.com" style="color:#5ff2ff;">menu-made.com</a> &nbsp;·&nbsp; <a href="mailto:info@menu-made.com" style="color:#5ff2ff;">info@menu-made.com</a></p></td></tr>
+${FOOTER_TD}<p style="margin:0;font-size:14px;line-height:1.6;color:${MAIL.soft};"><a href="https://menu-made.com" style="color:${MAIL.link};">menu-made.com</a> &nbsp;·&nbsp; <a href="mailto:info@menu-made.com" style="color:${MAIL.link};">info@menu-made.com</a></p></td></tr>
 </table></td></tr></table></body></html>`;
 }
 
@@ -98,8 +131,8 @@ function isCustomerEmail(to, purpose, env) {
   return !(kind === "AUTOMATION_ALERT" || kind === "ACCOUNT_SIGN_IN" || kind === "MENU_PREVIEW" || kind === "WEBSITE_PREVIEW" || kind === "SITE_FORM" || kind.startsWith("OWNER") || kind.endsWith("_OWNER"));
 }
 function withAccountLink(html, text) {
-  const block = `<tr><td style="padding:20px 32px;border-top:1px solid #dce8ec;"><p style="margin:0 0 10px;font-size:14px;line-height:1.6;color:#26434f;">Your orders, deliveries and plan links are always in your account. Sign in with this email address; no password needed.</p><a href="${ACCOUNT_URL}" style="display:inline-block;background-color:#071f2c;color:#ffffff;text-decoration:none;font-size:14px;font-weight:bold;padding:10px 18px;border-radius:6px;">Your account</a></td></tr>`;
-  const marker = '<tr><td style="padding:24px 32px;background-color:#071f2c;">';
+  const block = `<tr><td style="padding:20px 32px;border-top:1px solid ${MAIL.line};"><p style="margin:0 0 10px;font-size:14px;line-height:1.6;color:${MAIL.text};">Your orders, deliveries and plan links are always in your account. Sign in with this email address; no password needed.</p><a href="${ACCOUNT_URL}" style="display:inline-block;background-color:${MAIL.bar};color:${MAIL.text};text-decoration:none;font-size:14px;font-weight:bold;padding:9px 17px;border:1px solid ${MAIL.cyan};border-radius:6px;">Your account</a></td></tr>`;
+  const marker = FOOTER_TD;
   const outHtml = typeof html !== "string" || html.includes(ACCOUNT_URL) ? html
     : html.includes(marker) ? html.replace(marker, block + marker)
     : html.includes("</body>") ? html.replace("</body>", `<p style="font-family:Arial,Helvetica,sans-serif;font-size:14px;"><a href="${ACCOUNT_URL}">Your Menu-Made account</a>: orders, deliveries and plan links (sign in with this email).</p></body>`)
@@ -113,8 +146,8 @@ function withAccountLink(html, text) {
 // merch and Nino design deliveries themselves, which already do).
 const MERCH_URL = "https://menu-made.com/staff-merch.html";
 function withCrossSell(html, text) {
-  const block = `<tr><td style="padding:16px 32px;border-top:1px solid #dce8ec;"><p style="margin:0;font-size:14px;line-height:1.6;color:#26434f;">Shirts for your team in Nino Battaglia's designs, with your logo if you like: <a href="${MERCH_URL}" style="color:#00727c;">staff merch</a>. Need a logo, flyer or printed menu? <a href="https://ninobattaglia.com/services.html#design-services" style="color:#00727c;">Design by Nino</a>.</p></td></tr>`;
-  const marker = '<tr><td style="padding:24px 32px;background-color:#071f2c;">';
+  const block = `<tr><td style="padding:16px 32px;border-top:1px solid ${MAIL.line};"><p style="margin:0;font-size:14px;line-height:1.6;color:${MAIL.text};">Shirts for your team in Nino Battaglia's designs, with your logo if you like: <a href="${MERCH_URL}" style="color:${MAIL.link};">staff merch</a>. Need a logo, flyer or printed menu? <a href="https://ninobattaglia.com/services.html#design-services" style="color:${MAIL.link};">Design by Nino</a>.</p></td></tr>`;
+  const marker = FOOTER_TD;
   const outHtml = typeof html === "string" && !html.includes(MERCH_URL) && html.includes(marker) ? html.replace(marker, block + marker) : html;
   const outText = typeof text === "string" && !text.includes(MERCH_URL) ? `${text}\n\nStaff shirts in Nino Battaglia's designs: ${MERCH_URL}\nDesign by Nino (logos, flyers, menus): https://ninobattaglia.com/services.html` : text;
   return { html: outHtml, text: outText };
@@ -257,5 +290,8 @@ export {
   logEmailEvent,
   looksLikeEmail,
   brandedEmailHtml,
+  FOOTER_TD,
+  MAIL,
+  onDark,
   sendTransactionalEmail
 };
