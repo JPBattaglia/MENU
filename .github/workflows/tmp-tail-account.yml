@@ -1,0 +1,17 @@
+# Temporary (Nov 9): who calls /api/account/me every 5 minutes? Tails the worker for 11 minutes. Delete after.
+name: tmp-tail-account
+on:
+  push:
+    branches: [tmp-tail-account]
+jobs:
+  tail:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      WRANGLER_SEND_METRICS: "false"
+    steps:
+      - run: |
+          timeout 660 npx -y wrangler@4 tail menu-checkout --format json --search "/api/account" > tail.jsonl 2>/dev/null || true
+          jq -c 'select(.event.request.url? // "" | test("/api/account")) | {t:.eventTimestamp, url:.event.request.url, m:.event.request.method, ua:.event.request.headers["user-agent"], ref:.event.request.headers.referer, origin:.event.request.headers.origin, cookie:((.event.request.headers.cookie // "") | length > 0), country:.event.request.cf.country, city:.event.request.cf.city, asn:.event.request.cf.asOrganization, status:.event.response.status}' tail.jsonl || head -c 2000 tail.jsonl
