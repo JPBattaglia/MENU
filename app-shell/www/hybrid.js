@@ -95,11 +95,37 @@
   }
 
   // ---- shell ----
+  // The top bar: the brand (logo, as on the website) on every screen, then the screen's own title.
   function header(title, sub) {
     var h = el("header", "hy-head");
-    var box = el("div"); box.appendChild(el("h1", null, title)); if (sub) box.appendChild(el("p", null, sub));
-    h.appendChild(box);
+    var bar = el("div", "hy-brandbar");
+    var logo = data.assets && data.assets.logo;
+    if (data.theme === "nino") {
+      if (logo) { var m = el("img", "hy-mark"); m.src = logo; m.alt = ""; bar.appendChild(m); }
+      var word = el("span", "hy-word"); word.appendChild(el("strong", null, "NINO")); word.appendChild(el("small", null, "BATTAGLIA"));
+      var wrap = el("span", "hy-wordwrap"); wrap.appendChild(word); wrap.appendChild(el("span", "hy-tagline", "Graphic Design & Branding"));
+      bar.appendChild(wrap);
+    } else if (logo) {
+      var l = el("img", "hy-logo"); l.src = logo; l.alt = data.name; bar.appendChild(l);
+      if (data.assets.mark) { var g = el("img", "hy-gear"); g.src = data.assets.mark; g.alt = ""; bar.appendChild(g); }
+    }
+    else bar.appendChild(el("strong", "hy-word", data.name));
+    h.appendChild(bar);
+    if (title) {
+      var box = el("div", "hy-titlebox"); box.appendChild(el("h1", null, title)); if (sub) box.appendChild(el("p", null, sub));
+      h.appendChild(box);
+    }
     return h;
+  }
+  function applyTheme() {
+    if (!data.theme || document.body.classList.contains("hy-theme-" + data.theme)) return;
+    document.body.classList.add("hy-theme-" + data.theme);
+    var fonts = { nino: "family=Barlow+Condensed:wght@600;700;800&family=DM+Sans:wght@400;500;600;700", menumade: "family=Aldrich&family=Philosopher:wght@400;700" }[data.theme];
+    if (fonts) { var link = el("link"); link.rel = "stylesheet"; link.href = "https://fonts.googleapis.com/css2?" + fonts + "&display=swap"; document.head.appendChild(link); }
+    var a = data.assets || {};
+    var root = document.documentElement.style;
+    if (/^https:\/\//.test(a.backdrop || "")) root.setProperty("--hy-backdrop", "url(\"" + a.backdrop + "\")");
+    if (/^https:\/\//.test(a.grain || "")) root.setProperty("--hy-grain", "url(\"" + a.grain + "\")");
   }
   function show(tab, opts) {
     if (!opts || !opts.keep) window.scrollTo(0, 0);
@@ -113,6 +139,7 @@
     if (draw) draw(screen, opts || {});
   }
   function build() {
+    applyTheme();
     while (root.firstChild) root.removeChild(root.firstChild);
     screen = el("div", "hy-screen"); screen.id = "hy-screen"; screen.setAttribute("role", "main");
     var nav = el("nav", "hy-tabs"); nav.setAttribute("aria-label", "Sections");
@@ -129,11 +156,12 @@
   // ---- Menu-made (services) ----
   var SERVICES = {
     home: function (s) {
-      s.appendChild(header(data.name, data.tagline));
+      s.appendChild(header());
       var hero = el("div", "hy-hero");
-      hero.appendChild(el("p", "hy-eyebrow", data.tagline));
+      hero.appendChild(el("p", "hy-pill", data.tagline));
       hero.appendChild(el("h2", null, data.hero.title));
-      hero.appendChild(button(data.hero.action, "hy-btn hy-btn-light", function () { show("preview"); }));
+      hero.appendChild(button(data.hero.action, "hy-btn hy-btn-big", function () { show("preview"); }));
+      hero.appendChild(button("See the plans", "hy-btn hy-btn-ghost hy-btn-big", function () { show("plans"); }));
       s.appendChild(hero);
       s.appendChild(el("h3", "hy-label", "Three steps"));
       var list = el("ol", "hy-steps");
@@ -307,10 +335,27 @@
         var p = data.products.filter(function (x) { return x.slug === opts.product; })[0];
         if (p) { productPage(s, p); return; }
       }
-      var head = header(data.name, data.tagline);
+      s.appendChild(header());
+      var hero = el("div", "hy-hero");
+      var h = data.hero || {};
+      if (h.eyebrow) hero.appendChild(el("p", "hy-eyebrow", h.eyebrow));
+      var big = el("h2", "hy-display"); big.appendChild(document.createTextNode(h.line1 || "")); big.appendChild(el("br"));
+      big.appendChild(el("span", "hy-hot", h.line2 || "")); hero.appendChild(big);
+      if (h.text) hero.appendChild(el("p", "hy-lead", h.text));
+      var feat = data.products.filter(function (p) { return p.featured; })[0] || data.products[0];
+      if (feat && !query && filter === "all") {
+        var card = el("button", "hy-feature"); card.type = "button";
+        var fi = el("img"); fi.src = feat.image; fi.alt = ""; card.appendChild(fi);
+        var ft = el("span", "hy-feature-text"); ft.appendChild(el("span", "hy-eyebrow", "Featured design"));
+        ft.appendChild(el("strong", "hy-display-sm", feat.title)); ft.appendChild(el("span", "hy-hot-text", "From " + money(feat.price_cents)));
+        ft.appendChild(el("span", "hy-btn hy-btn-small", "Shop now")); card.appendChild(ft);
+        card.addEventListener("click", function () { show("shop", { product: feat.slug }); });
+        hero.appendChild(card);
+      }
+      s.appendChild(hero);
       var label = el("label", "hy-sr", "Search designs"); label.setAttribute("for", "hy-q");
-      var q = el("input", "hy-search"); q.id = "hy-q"; q.type = "search"; q.placeholder = "Search designs"; q.value = query;
-      head.appendChild(label); head.appendChild(q); s.appendChild(head);
+      var q = el("input", "hy-search"); q.id = "hy-q"; q.type = "search"; q.placeholder = "Find your design"; q.value = query;
+      var sb = el("div", "hy-searchbox"); sb.appendChild(label); sb.appendChild(q); s.appendChild(sb);
       var chips = el("div", "hy-chips"); chips.setAttribute("role", "group"); chips.setAttribute("aria-label", "Collections");
       [{ id: "all", name: "All" }].concat(data.collections).forEach(function (c) {
         var b = button(c.name, "hy-chip", function () { filter = c.id; show("shop", { keep: true }); });
