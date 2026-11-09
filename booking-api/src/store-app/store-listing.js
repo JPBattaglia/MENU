@@ -263,6 +263,9 @@ async function emailBuyerLive(env, storeApp, context, links, test) {
 
 // ---------- The tick ----------
 
+// The owner's own apps (own-apps.js) have no phone in the app on purpose; App Review calls the owner (Nov 9, 2026).
+const OWNER_REVIEW_PHONE = "+1 945 363 7155";
+
 async function submitBoth(env, storeApp, listing, context, deps) {
   const scope = storeScope(storeApp);
   const images = {};
@@ -274,10 +277,15 @@ async function submitBoth(env, storeApp, listing, context, deps) {
   const out = { apple: null, google: null };
   let apiKey = null;
   try { apiKey = await loadCredential(env, scope, "APPLE_API_KEY"); } catch { apiKey = null; }
-  out.apple = apiKey ? await submitApple({
-    creds: apiKey, bundleId: storeApp.bundle_id, listing, images,
-    contact: { first_name: context.first_name || "Restaurant", last_name: context.last_name || "Owner", phone: String(data.phone || "").trim() || "+1 000 000 0000", email: context.customer_email }
-  }, deps) : { ok: false, step: "keys", message: "No App Store Connect key on file for this restaurant." };
+  // Apple's reviewer calls this number; it is never shown in the app. A made-up number is refused (409), so with no
+  // number the owner is told what's missing instead.
+  const reviewPhone = String(data.review_phone || data.phone || "").trim() || (Number(storeApp.own_app) === 1 ? OWNER_REVIEW_PHONE : "");
+  out.apple = !apiKey ? { ok: false, step: "keys", message: "No App Store Connect key on file for this restaurant." }
+    : !reviewPhone ? { ok: false, step: "review contact", message: "Apple needs a phone number for its reviewer to call, and this app has none. Add the business phone to the app's details, then approve again." }
+    : await submitApple({
+      creds: apiKey, bundleId: storeApp.bundle_id, listing, images,
+      contact: { first_name: context.first_name || "Restaurant", last_name: context.last_name || "Owner", phone: reviewPhone, email: context.customer_email }
+    }, deps);
   let play = null;
   try { play = await loadCredential(env, scope, "GOOGLE_PLAY_ACCOUNT"); } catch { play = null; }
   const sa = play ? parseServiceAccount(play.p8) : null;
