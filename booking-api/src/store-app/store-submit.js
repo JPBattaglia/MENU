@@ -84,7 +84,11 @@ async function uploadScreenshot(asc, setId, name, bytes, fetchImpl) {
 
 // listing: { name, subtitle, description, keywords, promo, support_url, marketing_url, privacy_url, copyright }
 // images: { "ios-1": Uint8Array, ... }  contact: { first_name, last_name, phone, email }
-async function submitApple({ creds, bundleId, listing, images, contact }, { fetchImpl = fetch } = {}) {
+// What App Review is told about the app (App Review Information > Notes, max 4000 bytes). Inaccurate notes are a
+// common rejection cause, so each kind of app says what it really does and how payment works (Nov 9, 2026).
+const RESTAURANT_NOTES = "A restaurant's own app: menu, specials, hours, location, a visit rewards card (6-digit code shown at the counter) and notifications. No sign-in.";
+
+async function submitApple({ creds, bundleId, listing, images, contact, reviewNotes = "" }, { fetchImpl = fetch } = {}) {
   const asc = appleClient(creds, fetchImpl);
   try {
     const app = (await asc("GET", `/apps?filter[bundleId]=${encodeURIComponent(bundleId)}&limit=1`, null, "app")).data?.[0];
@@ -135,7 +139,7 @@ async function submitApple({ creds, bundleId, listing, images, contact }, { fetc
     for (const name of Object.keys(images).filter((n) => n.startsWith("ios-")).sort()) await uploadScreenshot(asc, set.id, `${name}.png`, images[name], fetchImpl);
 
     const detail = { contactFirstName: contact.first_name, contactLastName: contact.last_name, contactPhone: intlPhone(contact.phone), contactEmail: contact.email, demoAccountRequired: false,
-      notes: "A restaurant's own app: menu, specials, hours, location, a visit rewards card (6-digit code shown at the counter) and notifications. No sign-in." };
+      notes: reviewNotes || RESTAURANT_NOTES };
     const existing = (await asc("GET", `/appStoreVersions/${version.id}/appStoreReviewDetail`, null, "review contact").catch((e) => { if (/ 404:/.test(e.message)) return {}; throw e; })).data;
     if (existing?.id) await asc("PATCH", `/appStoreReviewDetails/${existing.id}`, { data: { type: "appStoreReviewDetails", id: existing.id, attributes: detail } }, "review contact");
     else await asc("POST", "/appStoreReviewDetails", { data: { type: "appStoreReviewDetails", attributes: detail, relationships: { appStoreVersion: { data: { type: "appStoreVersions", id: version.id } } } } }, "review contact");

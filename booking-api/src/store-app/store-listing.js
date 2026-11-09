@@ -266,6 +266,14 @@ async function emailBuyerLive(env, storeApp, context, links, test) {
 // The owner's own apps (own-apps.js) have no phone in the app on purpose; App Review calls the owner (Nov 9, 2026).
 const OWNER_REVIEW_PHONE = "+1 945 363 7155";
 
+// App Review notes for the owner's own apps (hybrid apps, hybrid.js). Written for guidelines 2.1 (how to reach every
+// feature, no sign-in needed), 4.2 (native screens, not a wrapped site) and 3.1.3(e) (payment for goods and services
+// used outside the app goes through the website's card checkout, not In-App Purchase).
+const OWN_APP_NOTES = {
+  "com.menumade.menumade": "Menu-Made's app for food and beverage business owners. No sign-in is needed to use it. Native tabs: Home (how it works), Preview (take or choose a photo of a printed menu, or pick a PDF, and get a free preview of it as a phone menu page), Plans (monthly plans and prices) and Account (links to the owner's account, services, our work and contact). Push notifications are optional; the app works fully without them. Payment: plans are business services Menu-Made performs outside the app (menu pages, websites, Google profile and social media management for the business), so checkout opens menu-made.com's card checkout in the in-app browser, per guideline 3.1.3(e); nothing digital is unlocked inside the app. Accounts are made only by buying a plan on the website; signing in uses a link emailed to the buyer. Contact: info@menu-made.com.",
+  "com.menumade.ninobattaglia": "The shop app of Nino Battaglia, a San Francisco artist who sells his own shirt designs. No sign-in is needed. Native tabs: Shop (browse designs and products), Ideas (suggest a design idea and vote on others), Rewards (an in-app card: the 3rd shirt bought through the app earns a free 8x10 canvas, the 6th a free hoodie), Cart and Work (Nino's portfolio). Shirts are physical goods printed and shipped to the buyer, so checkout opens ninobattaglia.com's card checkout in the in-app browser, per guideline 3.1.3(e). Push notifications are optional (new designs); the app works fully without them. Contact: nino@menu-made.com."
+};
+
 async function submitBoth(env, storeApp, listing, context, deps) {
   const scope = storeScope(storeApp);
   const images = {};
@@ -284,7 +292,8 @@ async function submitBoth(env, storeApp, listing, context, deps) {
     : !reviewPhone ? { ok: false, step: "review contact", message: "Apple needs a phone number for its reviewer to call, and this app has none. Add the business phone to the app's details, then approve again." }
     : await submitApple({
       creds: apiKey, bundleId: storeApp.bundle_id, listing, images,
-      contact: { first_name: context.first_name || "Restaurant", last_name: context.last_name || "Owner", phone: reviewPhone, email: context.customer_email }
+      contact: { first_name: context.first_name || "Restaurant", last_name: context.last_name || "Owner", phone: reviewPhone, email: context.customer_email },
+      reviewNotes: Number(storeApp.own_app) === 1 ? OWN_APP_NOTES[storeApp.bundle_id] || "" : ""
     }, deps);
   let play = null;
   try { play = await loadCredential(env, scope, "GOOGLE_PLAY_ACCOUNT"); } catch { play = null; }
