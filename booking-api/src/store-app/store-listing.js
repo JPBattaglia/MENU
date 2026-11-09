@@ -12,7 +12,7 @@
 // Test orders (Stripe test mode) never reach the stores: approval records a sandbox submission and goes straight to
 // LIVE with the buyer email marked as a test (Working rules: test orders never trigger real fulfilment).
 //
-//   POST /api/store-build/listing?store_app=<id>&name=<ios-1..3|android-1..3|play-icon|feature>   (OIDC) one PNG
+//   POST /api/store-build/listing?store_app=<id>&name=<ios-1..5|android-1..5|play-icon|feature>   (OIDC) one PNG
 //   GET  /api/store-app/<id>/listing?t=                    the owner's preview; POST approves (with any edited text)
 //   GET  /api/store-app/<id>/listing/<name>.png?t=         a preview picture
 import { ownerEmailAddress, publicBaseUrl } from "../lib/config.js";
@@ -30,7 +30,9 @@ import { parseServiceAccount } from "./google.js";
 import { appleStatus, googleLive, submitApple, submitGoogle } from "./store-submit.js";
 
 const LISTING_KIND = "storeapp-listing";
-const IMAGE_NAMES = ["ios-1", "ios-2", "ios-3", "android-1", "android-2", "android-3", "play-icon", "feature"];
+// Up to 5 screenshots per store: the hybrid apps take one per tab (4 for Menu-made, 5 for Nino); the Nov 9 builds were
+// refused at ios-4 when only 3 were allowed. Apple takes up to 10, Google Play up to 8.
+const IMAGE_NAMES = ["ios-1", "ios-2", "ios-3", "ios-4", "ios-5", "android-1", "android-2", "android-3", "android-4", "android-5", "play-icon", "feature"];
 const REQUIRED = ["ios-1", "android-1", "android-2", "play-icon", "feature"];
 const MAX_IMAGE_BYTES = 8 * 1024 * 1024;
 const POLL_MS = 3600000;
