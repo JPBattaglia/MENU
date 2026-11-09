@@ -229,6 +229,8 @@
   fetch("config.json").then(function (r) { return r.json(); }).then(function (c) {
     cfg = c;
     brand(c.brand_color);
+    // Hybrid app (hybrid.js): real app screens from live content; takes the place of the site app.
+    if (c.hybrid_url && window.MMHybrid) { window.MMHybrid.start(c, { store: store, api: api, pushPlugin: pushPlugin, status: status }); return; }
     if (c.site_url) { siteApp(c); return; }
     $("name").textContent = c.app_name;
     var cached = store.get("content");

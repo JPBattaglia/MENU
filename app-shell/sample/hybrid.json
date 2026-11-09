@@ -1,0 +1,9 @@
+{
+  "app_id": "com.menumade.samplecafe",
+  "app_name": "Sample Hybrid",
+  "brand_color": "#200705",
+  "api_base": "https://appselftest-gapp1a.menu-made.com/app/api",
+  "hybrid_url": "https://menu-made.com/api/app-hybrid/nino",
+  "version": "1.0.0",
+  "build_number": 1
+}

@@ -11,4 +11,6 @@ may print customer data, keys or signing material.
 
 - `configure.mjs <build.json>` writes `capacitor.config.json` and `www/config.json` from a build config.
 - `sample/build.json` is the fictional Sample Cafe used to prove the pipeline (unsigned builds, no store upload).
+- `sample/hybrid.json` builds the hybrid screens (`www/hybrid.js`, Nov 8, 2026) unsigned, for a manual check: run the
+  workflow with config = app-shell/sample/hybrid.json. The owner's two own apps are hybrid (booking-api/src/store-app/hybrid.js).
 - `www/` holds the app's screens.

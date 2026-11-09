@@ -258,6 +258,8 @@ test("owner's own apps: made once by the tick at no charge, owner keys, no buyer
     const cfg = await buildConfigFor(f.env, { ...nino, status: 'READY_TO_BUILD' });
     assert.equal(cfg.body.config.site_url, 'https://ninobattaglia.com/shop.html');
     assert.deepEqual(cfg.body.config.site_screens, ['/shop.html', '/shirts/skull-wave.html', '/']);
+    // Nov 8, 2026: the owner's own apps are hybrid apps (real app screens from live content).
+    assert.equal(cfg.body.config.hybrid_url, 'https://menu-made.com/api/app-hybrid/nino');
   } finally {
     globalThis.fetch = async (url, init) => {
       if (String(url).startsWith('https://api.resend.com/')) { const body = JSON.parse(init.body); emails.push(body); return Response.json({ id: `em_${emails.length}` }); }

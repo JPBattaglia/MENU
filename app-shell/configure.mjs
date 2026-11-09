@@ -17,8 +17,16 @@ if (!/^https:\/\//.test(cfg.api_base || "")) throw new Error("api_base must be h
 // Site apps (the owner's own apps, booking-api/src/store-app/own-apps.js): the app opens the business's whole website
 // inside the app. Its own domain and Stripe's checkout stay in the app (buying never leaves it); any other site opens
 // in the phone's browser.
+// Hybrid apps (booking-api/src/store-app/hybrid.js, owner decision Nov 8): real app screens drawn from live JSON at
+// hybrid_url; the website opens in the in-app browser (@capacitor/browser) for checkout, cart and long pages. A hybrid
+// app ignores site_url.
+let hybrid = "";
+if (cfg.hybrid_url) {
+  if (!/^https:\/\/menu-made\.com\/api\/app-hybrid\/[a-z]{1,20}$/.test(cfg.hybrid_url)) throw new Error("hybrid_url must be https://menu-made.com/api/app-hybrid/<key>");
+  hybrid = cfg.hybrid_url;
+}
 let site = null;
-if (cfg.site_url) {
+if (cfg.site_url && !hybrid) {
   if (!/^https:\/\/[a-z0-9.-]+\.[a-z]{2,}(\/[^\s]*)?$/i.test(cfg.site_url)) throw new Error("site_url must be an https address");
   const host = new URL(cfg.site_url).hostname.replace(/^www\./, "");
   site = { url: cfg.site_url, hosts: [host, `www.${host}`, "checkout.stripe.com", "*.stripe.com", "*.stripe.network"] };
@@ -35,6 +43,7 @@ writeFileSync(join(here, "capacitor.config.json"), JSON.stringify({
 
 writeFileSync(join(here, "www", "config.json"), JSON.stringify({
   app_name: name, brand_color: cfg.brand_color, api_base: cfg.api_base, app_id: cfg.app_id,
+  ...(hybrid ? { hybrid_url: hybrid } : {}),
   ...(site ? { site_url: site.url, site_screens: (Array.isArray(cfg.site_screens) ? cfg.site_screens : []).filter((p) => /^\/[A-Za-z0-9._\/-]*$/.test(p)).slice(0, 3) } : {}),
   // TestFlight and App Store builds use Apple's production push service; only Xcode debug builds use sandbox.
   push_environment: cfg.push_environment === "sandbox" ? "sandbox" : "production"

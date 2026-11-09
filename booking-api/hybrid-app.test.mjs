@@ -1,0 +1,96 @@
+// Hybrid Mobile Apps (src/store-app/hybrid.js, owner decision Nov 8, 2026): the live content the owner's two apps'
+// native screens draw from, the route, the build config's hybrid_url, and the app shell's configure step.
+// Run: node --no-warnings --test booking-api/hybrid-app.test.mjs
+import { test } from 'node:test';
+import assert from 'node:assert/strict';
+import { execFileSync } from 'node:child_process';
+import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+
+const hybrid = await import('./src/store-app/hybrid.js');
+
+const NINO_CATALOG = {
+  shop: { collections: [{ id: 'retro', name: 'Retro' }, { id: 'bad id!', name: 'x' }] },
+  products: [
+    { id: '455597876', slug: 'skull-wave', title: 'Skull Wave', image: 'assets/products/455597876.webp', category: 'Originals', collections: ['ninos-picks'], description: 'A wave.', featured: true, price: { amount: 2500 }, accent: '#1188ff',
+      options: { colors: [{ name: 'Black', hex: '#141313' }, { name: 'Bad', hex: 'red' }], sizes: ['S', 'M'] } },
+    { id: '1', slug: 'Bad Slug', title: 'Nope', image: 'x.webp' },
+    { id: '2', slug: 'no-image', title: 'No image', image: 'javascript:alert(1)' },
+    { id: '3', slug: 'retro-tv', title: 'Retro TV', image: 'https://ninobattaglia.com/assets/products/3.webp', collections: ['retro'], price: { amount: 2700 } }
+  ]
+};
+
+test('nino: designs with absolute https photos, prices, colours, sizes and in-app buy links', () => {
+  const c = hybrid.ninoContent(NINO_CATALOG);
+  assert.deepEqual(c.tabs, ['shop', 'work', 'rewards', 'cart']);
+  assert.deepEqual(c.collections, [{ id: 'retro', name: 'Retro' }]);
+  assert.deepEqual(c.products.map((p) => p.slug), ['skull-wave', 'retro-tv'], 'bad slugs and non-https images dropped; featured first');
+  const p = c.products[0];
+  assert.equal(p.image, 'https://ninobattaglia.com/assets/products/455597876.webp');
+  assert.equal(p.price_cents, 2500);
+  assert.deepEqual(p.colors, [{ name: 'Black', hex: '#141313' }]);
+  assert.deepEqual(p.sizes, ['S', 'M']);
+  assert.equal(p.buy_url, 'https://ninobattaglia.com/shop.html?product=455597876');
+  assert.equal(p.url, 'https://ninobattaglia.com/shirts/skull-wave.html');
+  assert.equal(c.links.cart, 'https://ninobattaglia.com/cart.html');
+  assert.equal(c.rewards.enabled, false, 'rewards wait for the owner to choose the reward');
+});
+
+test('menumade: the three plans with live prices, described by their included services', () => {
+  const c = hybrid.menumadeContent({ ok: true, offers: [
+    { code: 'BUNDLE_PRO', name: 'Pro Plan', on_sale: true, prices: { month: 27900, year: 279000 }, includes: ['MENU_CARE'] },
+    { code: 'BUNDLE_STARTER', name: 'Starter Plan', on_sale: true, prices: { month: 7900, year: 79000 }, includes: ['MENU_CARE', 'REVIEW_REPLIES', 'ACCESSIBILITY_MONITORING'] },
+    { code: 'BUNDLE_GROWTH', name: 'Growth Plan', on_sale: false, prices: { month: 16900 } },
+    { code: 'MENU_CARE', name: 'Menu Care', on_sale: true, prices: { month: 2900 } },
+    { code: 'REVIEW_REPLIES', name: 'Review Replies', on_sale: true, prices: { month: 4900 } },
+    { code: 'ACCESSIBILITY_MONITORING', name: 'Accessibility Monitoring', on_sale: true, prices: { month: 3900 } }
+  ] });
+  assert.deepEqual(c.tabs, ['home', 'preview', 'plans', 'account']);
+  assert.deepEqual(c.plans.map((p) => [p.name, p.month_cents, p.year_cents]), [['Starter', 7900, 79000], ['Pro', 27900, 279000]], 'off-sale plans hidden, Starter first');
+  assert.equal(c.plans[0].description, 'Includes Menu Care, Review Replies and Accessibility Monitoring');
+  assert.equal(c.plans[0].checkout_year, 'https://menu-made.com/contact.html?plan=BUNDLE_STARTER&interval=year');
+  assert.equal(c.preview.upload_url, 'https://menu-made.com/api/inquiry');
+});
+
+test('the route answers public JSON with CORS, refuses unknown apps, and says unavailable when the source fails', async () => {
+  const req = (key, method = 'GET') => new Request(`https://menu-made.com/api/app-hybrid/${key}`, { method });
+  const ok = await hybrid.handleHybridContent(req('nino'), {}, 'nino', { cacheStore: null, fetchImpl: async () => Response.json(NINO_CATALOG) });
+  assert.equal(ok.status, 200);
+  assert.equal(ok.headers.get('Access-Control-Allow-Origin'), '*');
+  assert.match(ok.headers.get('Cache-Control'), /max-age=300/);
+  assert.equal((await ok.json()).products.length, 2);
+  assert.equal((await hybrid.handleHybridContent(req('other'), {}, 'other', { cacheStore: null })).status, 404);
+  assert.equal((await hybrid.handleHybridContent(req('nino', 'POST'), {}, 'nino', { cacheStore: null })).status, 404);
+  const down = await hybrid.handleHybridContent(req('nino'), {}, 'nino', { cacheStore: null, fetchImpl: async () => new Response('', { status: 500 }) });
+  assert.equal(down.status, 503);
+  assert.equal(down.headers.get('Cache-Control'), 'no-store');
+});
+
+test('only the owner\'s two apps are hybrid', () => {
+  assert.equal(hybrid.hybridUrlForBundle('com.menumade.menumade'), 'https://menu-made.com/api/app-hybrid/menumade');
+  assert.equal(hybrid.hybridUrlForBundle('com.menumade.ninobattaglia'), 'https://menu-made.com/api/app-hybrid/nino');
+  assert.equal(hybrid.hybridUrlForBundle('com.menumade.samplecafe'), '');
+});
+
+test('the app shell: configure.mjs writes hybrid_url (and drops site_url), refuses other addresses; screens load hybrid.js', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'hy-'));
+  const shell = new URL('../app-shell/', import.meta.url).pathname;
+  const run = (cfg) => { const f = join(dir, 'b.json'); writeFileSync(f, JSON.stringify(cfg)); return execFileSync('node', [join(shell, 'configure.mjs'), f], { encoding: 'utf8', stdio: 'pipe' }); };
+  const base = { app_id: 'com.menumade.ninobattaglia', app_name: 'Nino Battaglia', brand_color: '#200705', api_base: 'https://ninos-ts.menu-made.com/app/api', site_url: 'https://ninobattaglia.com/shop.html' };
+  const files = [join(shell, 'capacitor.config.json'), join(shell, 'www/config.json')];
+  const before = files.map((f) => (existsSync(f) ? readFileSync(f, 'utf8') : null));
+  try {
+    run({ ...base, hybrid_url: 'https://menu-made.com/api/app-hybrid/nino' });
+    const www = JSON.parse(readFileSync(join(shell, 'www/config.json'), 'utf8'));
+    assert.equal(www.hybrid_url, 'https://menu-made.com/api/app-hybrid/nino');
+    assert.equal(www.site_url, undefined);
+    assert.throws(() => run({ ...base, hybrid_url: 'https://evil.example/api/app-hybrid/nino' }));
+  } finally {
+    files.forEach((f, i) => (before[i] === null ? rmSync(f, { force: true }) : writeFileSync(f, before[i])));
+  }
+  const html = readFileSync(join(shell, 'www/index.html'), 'utf8');
+  assert.ok(html.indexOf('hybrid.js') > 0 && html.indexOf('hybrid.js') < html.indexOf('app.js'), 'hybrid.js loads before app.js');
+  const js = readFileSync(join(shell, 'www/hybrid.js'), 'utf8');
+  assert.doesNotMatch(js, /innerHTML/, 'text only through textContent');
+});

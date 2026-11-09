@@ -7,6 +7,8 @@
 //   - created here by the 5-minute tick (once; skipped when the bundle id already has a row), not by checkout
 //   - keys: the owner's (scope 'owner'), like the Sample Cafe test app; no buyer store-account step
 //   - the owner's hands-on email lists only the steps for his own accounts (store-flow.js ownSteps)
+// Nov 8, 2026 (owner): both are now hybrid apps (hybrid.js, matched by bundle id): real app screens from live data,
+// the website inside the app only for checkout, cart, account and long pages. site_url stays as the fallback.
 // Content is the Guest App content (business_type shop / services, see guest-app/build.js); changes afterwards go
 // through the normal update link in the monthly email. The logo is fetched once from the business's own website.
 import { ownerEmailAddress } from "../lib/config.js";
