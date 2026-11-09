@@ -162,8 +162,12 @@ async function submitApple({ creds, bundleId, listing, images, contact, reviewNo
     }
 
     // Price: every Mobile App is free to download. Set only when the app has no price schedule yet.
+    // An app can have an empty price schedule (Menu-made's did, Nov 9, 2026), so it counts only with a price in it.
     const schedule = await asc("GET", `/apps/${app.id}/appPriceSchedule`, null, "price").catch((e) => { if (/ 404:/.test(e.message)) return {}; throw e; });
-    if (!schedule?.data?.id) {
+    const priced = schedule?.data?.id
+      ? ((await asc("GET", `/appPriceSchedules/${schedule.data.id}/manualPrices?limit=1`, null, "price").catch(() => ({}))).data || []).length > 0
+      : false;
+    if (!priced) {
       const points = (await asc("GET", `/apps/${app.id}/appPricePoints?filter[territory]=USA&limit=200`, null, "price")).data || [];
       const free = points.find((p) => Number(p.attributes?.customerPrice) === 0);
       if (!free) throw new StepError("price", "Apple didn't offer a free price point for this app; set Pricing to Free in App Store Connect.");
@@ -180,8 +184,15 @@ async function submitApple({ creds, bundleId, listing, images, contact, reviewNo
     let set = sets.find((s) => s.attributes?.screenshotDisplayType === "APP_IPHONE_67");
     if (!set) set = (await asc("POST", "/appScreenshotSets", { data: { type: "appScreenshotSets", attributes: { screenshotDisplayType: "APP_IPHONE_67" }, relationships: { appStoreVersionLocalization: { data: { type: "appStoreVersionLocalizations", id: loc.id } } } } }, "screenshots")).data;
     const old = (await asc("GET", `/appScreenshotSets/${set.id}/appScreenshots`, null, "screenshots")).data || [];
-    for (const shot of old) await asc("DELETE", `/appScreenshots/${shot.id}`, null, "screenshots");
-    for (const name of Object.keys(images).filter((n) => n.startsWith("ios-")).sort()) await uploadScreenshot(asc, set.id, `${name}.png`, images[name], fetchImpl);
+    // Re-uploading on every retry kept Apple "processing" fresh copies when the review was asked for (Nov 9, 2026:
+    // "Asset is being processed"), so screenshots already there with the same names and sizes are kept.
+    const mine = Object.keys(images).filter((n) => n.startsWith("ios-")).sort();
+    const want = mine.map((n) => `${n}.png:${images[n].length}`).sort().join("|");
+    const have = old.map((o) => `${o.attributes?.fileName}:${o.attributes?.fileSize}`).sort().join("|");
+    if (!mine.length || want !== have) {
+      for (const shot of old) await asc("DELETE", `/appScreenshots/${shot.id}`, null, "screenshots");
+      for (const name of mine) await uploadScreenshot(asc, set.id, `${name}.png`, images[name], fetchImpl);
+    }
 
     const detail = { contactFirstName: contact.first_name, contactLastName: contact.last_name, contactPhone: intlPhone(contact.phone), contactEmail: contact.email, demoAccountRequired: false,
       notes: reviewNotes || RESTAURANT_NOTES };
