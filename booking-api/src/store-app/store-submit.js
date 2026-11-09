@@ -27,6 +27,18 @@ function urlAttrs(map) {
   return Object.fromEntries(Object.entries(map).filter(([, v]) => typeof v === "string" && /^https?:\/\/\S+$/.test(v.trim())).map(([k, v]) => [k, v.trim()]));
 }
 
+// Apple wants the review contact's phone as +<country code> <number> (409 on Nov 9 for "(415) 555-0100").
+// US/Canada numbers without a country code get +1; anything already starting with + keeps its own code.
+function intlPhone(value) {
+  const raw = String(value || "").trim();
+  const digits = raw.replace(/\D/g, "");
+  if (!digits) return raw;
+  if (raw.startsWith("+")) return `+${digits}`;
+  if (digits.length === 10) return `+1 ${digits.slice(0, 3)} ${digits.slice(3, 6)} ${digits.slice(6)}`;
+  if (digits.length === 11 && digits.startsWith("1")) return `+1 ${digits.slice(1, 4)} ${digits.slice(4, 7)} ${digits.slice(7)}`;
+  return `+${digits}`;
+}
+
 class StepError extends Error {
   constructor(step, message) { super(message); this.step = step; }
 }
@@ -122,7 +134,7 @@ async function submitApple({ creds, bundleId, listing, images, contact }, { fetc
     for (const shot of old) await asc("DELETE", `/appScreenshots/${shot.id}`, null, "screenshots");
     for (const name of Object.keys(images).filter((n) => n.startsWith("ios-")).sort()) await uploadScreenshot(asc, set.id, `${name}.png`, images[name], fetchImpl);
 
-    const detail = { contactFirstName: contact.first_name, contactLastName: contact.last_name, contactPhone: contact.phone, contactEmail: contact.email, demoAccountRequired: false,
+    const detail = { contactFirstName: contact.first_name, contactLastName: contact.last_name, contactPhone: intlPhone(contact.phone), contactEmail: contact.email, demoAccountRequired: false,
       notes: "A restaurant's own app: menu, specials, hours, location, a visit rewards card (6-digit code shown at the counter) and notifications. No sign-in." };
     const existing = (await asc("GET", `/appStoreVersions/${version.id}/appStoreReviewDetail`, null, "review contact").catch((e) => { if (/ 404:/.test(e.message)) return {}; throw e; })).data;
     if (existing?.id) await asc("PATCH", `/appStoreReviewDetails/${existing.id}`, { data: { type: "appStoreReviewDetails", id: existing.id, attributes: detail } }, "review contact");
@@ -206,4 +218,4 @@ async function googleLive(packageName, { fetchImpl = fetch } = {}) {
   } catch { return false; }
 }
 
-export { appleStatus, googleLive, submitApple, submitGoogle, urlAttrs };
+export { appleStatus, googleLive, submitApple, submitGoogle, urlAttrs, intlPhone };
