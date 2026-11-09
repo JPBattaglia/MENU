@@ -98,7 +98,10 @@ const SPARSE = { name: 'locations/70', title: 'Corner Cafe', categories: { prima
 const COMPLETE = { ...SPARSE, categories: { ...SPARSE.categories, additionalCategories: [{ name: 'categories/gcid:pasta', displayName: 'Pasta shop' }] },
   phoneNumbers: { primaryPhone: '(510) 555-0100' }, websiteUri: 'https://cornercafe.example', profile: { description: 'x'.repeat(300) },
   regularHours: { periods: [{ openDay: 'MONDAY', openTime: { hours: 8 }, closeDay: 'MONDAY', closeTime: { hours: 15 } }] },
-  specialHours: { specialHourPeriods: [{ startDate: { year: 2026, month: 11, day: 26 }, closed: true }] } };
+  // Special hours for every holiday the audit looks ahead to from the real clock (the step runs at Date.now()), plus
+  // Thanksgiving 2026 for the fixed-date checks; a hard-coded list made this test fail once Christmas came in range.
+  specialHours: { specialHourPeriods: [...new Set(['2026-11-26', ...upcomingHolidays(new Date()).map((h) => h.date)])]
+    .map((d) => { const [year, month, day] = d.split('-').map(Number); return { startDate: { year, month, day }, closed: true }; }) } };
 
 function services({ location = SPARSE, attributes = [], media = { mediaItems: [], totalMediaItemCount: 2 }, description } = {}) {
   const log = { patches: [], attributes: [], media: [], emails: [], prompts: [] };
