@@ -41,7 +41,7 @@ function fakeStores({ appleFail = null, playDraft = false, appleState = 'WAITING
       const path = u.replace('https://api.appstoreconnect.apple.com/v1', '');
       seen.apple.push(`${m} ${path.split('?')[0]}`);
       const body = init.body ? JSON.parse(init.body) : null;
-      if (appleFail && path.startsWith(appleFail.path) && m === appleFail.method) return Response.json({ errors: [{ detail: appleFail.detail }] }, { status: 409 });
+      if (appleFail && path.startsWith(appleFail.path) && m === appleFail.method) return Response.json({ errors: [appleFail.associated ? { detail: 'This resource cannot be reviewed, please check associated errors to see why.', meta: { associatedErrors: { '/v1/appStoreVersions/V1': appleFail.associated.map((d) => ({ detail: d })) } } } : { detail: appleFail.detail }] }, { status: 409 });
       if (path.startsWith('/apps?')) return Response.json({ data: [{ id: 'APP1' }] });
       if (path.startsWith('/apps/APP1/appStoreVersions')) return Response.json({ data: [
         ...(liveVersion ? [{ id: 'V0', attributes: { appStoreState: 'READY_FOR_SALE', versionString: liveVersion } }] : []),
@@ -370,4 +370,16 @@ test("Apple's refusal to add the version to the review shows Apple's own reasons
   const err = f.row(`SELECT submit_error FROM store_app_listings`).submit_error;
   assert.match(err, /age rating/, 'the owner sees what App Store Connect is missing');
   assert.ok(!stores.seen.submitted, 'nothing was submitted');
+});
+
+test("Apple's associated errors (the real reasons a version can't be reviewed) reach the owner", async () => {
+  const f = await setup();
+  const stores = fakeStores({ appleFail: { path: '/reviewSubmissionItems', method: 'POST', associated: ['You must provide an age rating.', 'App Privacy answers are missing.'] } });
+  await pictures(f);
+  await tick(f, stores);
+  await approve(f, previewUrl(f.emails[0]), {});
+  await tick(f, stores);
+  const err = f.row(`SELECT submit_error FROM store_app_listings`).submit_error;
+  assert.match(err, /age rating/);
+  assert.match(err, /App Privacy/);
 });

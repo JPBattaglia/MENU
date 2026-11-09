@@ -74,7 +74,10 @@ function appleClient(creds, fetchImpl) {
     const data = await res.json().catch(() => ({}));
     if (!res.ok) {
       // Apple often lists several problems at once (e.g. every missing App Store Connect item); show them all.
-      const details = [...new Set((data.errors || []).map((e) => String(e.detail || e.title || "").trim()).filter(Boolean))];
+      // A 409 "cannot be reviewed, check associated errors" carries the real list in meta.associatedErrors
+      // ({ "/v1/...": [{ detail }] }), e.g. a missing age rating or App Privacy answers (Nov 9, 2026).
+      const nested = (data.errors || []).flatMap((e) => Object.values(e?.meta?.associatedErrors || {}).flat());
+      const details = [...new Set([...nested, ...(data.errors || [])].map((e) => String(e?.detail || e?.title || "").trim()).filter(Boolean))];
       throw new StepError(step, `Apple answered ${res.status}: ${(details.join(" | ") || "no detail").slice(0, 900)}`);
     }
     return data;
