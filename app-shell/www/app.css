@@ -58,9 +58,11 @@ body.hybrid {
 .hy-screen { position: relative; max-width: 640px; margin: 0 auto; padding: 0 0 calc(100px + env(safe-area-inset-bottom)); }
 .hy-head { display: block; position: sticky; top: 0; z-index: 5; background: var(--hy-bar); border-bottom: 1px solid var(--hy-bar-line); -webkit-backdrop-filter: blur(14px); backdrop-filter: blur(14px); padding: calc(env(safe-area-inset-top) + 10px) 18px 12px; }
 .hy-brandbar { display: flex; align-items: center; gap: 12px; min-height: 44px; }
-.hy-logo { height: 32px; width: auto; display: block; }
-.hy-gear { width: 40px; height: 40px; margin-left: auto; object-fit: contain; }
-.hy-mark { width: 44px; height: 44px; object-fit: contain; border-radius: 50%; }
+/* The restaurant screens' rule for "header img" (a 56 px white tile) must not touch the brand pictures here. */
+.hy-head img { background: none; border-radius: 0; flex: none; }
+.hy-logo { height: 30px; width: auto; display: block; }
+.hy-gear { width: 42px; height: 42px; margin-left: auto; object-fit: contain; }
+.hy-head .hy-mark { width: 46px; height: 46px; object-fit: contain; }
 .hy-wordwrap { display: flex; flex-direction: column; }
 .hy-word { display: flex; flex-direction: column; line-height: .9; font-family: var(--hy-display); }
 .hy-word strong { font-size: 30px; font-weight: 800; letter-spacing: .01em; }
