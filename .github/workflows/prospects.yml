@@ -1,10 +1,9 @@
 # Marketing (Nov 1, 2026): weekly prospect finder (tools/prospects/find.mjs). Food and drink businesses in San Francisco
 # and nearby cities from OpenStreetMap, each website checked for what Menu-made fixes. Results go to the private
-# database over this job's OIDC token (no secret); this public log shows counts only.
+# database over this job's OIDC token (no secret); this public log shows counts only. Started by the worker on Mondays
+# at 5:23 am Pacific (booking-api/src/marketing/prospect-kick.js), not GitHub's timer, since Nov 9, 2026.
 name: Prospects
 on:
-  schedule:
-    - cron: "23 13 * * 1"   # Mondays 5:23 am PST, ahead of the Monday drafting
   workflow_dispatch:
 permissions:
   contents: read
