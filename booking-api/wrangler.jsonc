@@ -1,5 +1,8 @@
 // Deploy config for the live `menu-checkout` worker (NOT the static site — that is ../wrangler.jsonc).
 // Deploy: cd booking-api && npx wrangler deploy
+// Since Nov 9, 2026 every push to master is tested and deployed by Cloudflare Workers Builds (root /booking-api,
+// build "npm install && npm test", deploy "npx wrangler deploy"), so deploys don't depend on GitHub Actions minutes
+// (the free allowance ran out that day). .github/workflows/menu-checkout.yml still runs when Actions has minutes.
 // Secrets (Stripe, Resend, Anthropic, runner secret) live in Cloudflare only and are never written here.
 {
   "$schema": "node_modules/wrangler/config-schema.json",
