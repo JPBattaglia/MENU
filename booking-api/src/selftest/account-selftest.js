@@ -13,6 +13,7 @@ import { dailyClock } from "./daily-clock.js";
 const KIND = "ACCOUNT_SIGNIN";
 const DAILY_HOUR_UTC = 16;
 const DAILY_MINUTE_FROM = 20;
+const STUCK_MINUTES = 30;
 
 async function maybeScheduleDaily(env, now = dailyClock(env)) {
   if (!now) return;
@@ -65,9 +66,18 @@ async function runAccountCheck(env, deps = {}) {
 async function advanceAccountSelfTests(env, deps = {}) {
   if (!env.DB) return [];
   await maybeScheduleDaily(env, deps.now).catch(() => null);
-  const tests = (await env.DB.prepare(`SELECT * FROM self_tests WHERE kind = ? AND status = 'REQUESTED' ORDER BY created_at LIMIT 2`).bind(KIND).all()).results || [];
+  // Nov 9, 2026: the Nov 8 run never finished (the worker ran out of subrequests before it could record the result), so
+  // the row stayed REQUESTED and every 5-minute tick ran it again: ~420,000 D1 rows an hour until the free daily limit
+  // blocked the account. A run is now claimed (RUNNING) before it starts, and one still RUNNING after STUCK_MINUTES is
+  // marked FAILED instead of being run again.
+  await env.DB.prepare(`UPDATE self_tests SET status = 'FAILED', error = 'Did not finish (worker stopped before recording a result)', finished_at = ?, updated_at = ? WHERE kind = ? AND status = 'RUNNING' AND updated_at < ?`)
+    .bind(nowIso(), nowIso(), KIND, new Date(Date.now() - STUCK_MINUTES * 60000).toISOString()).run().catch(() => null);
+  const tests = (await env.DB.prepare(`SELECT * FROM self_tests WHERE kind = ? AND status = 'REQUESTED' ORDER BY created_at LIMIT 1`).bind(KIND).all()).results || [];
   const results = [];
   for (const test of tests) {
+    const claimed = await env.DB.prepare(`UPDATE self_tests SET status = 'RUNNING', updated_at = ? WHERE id = ? AND status = 'REQUESTED'`).bind(nowIso(), test.id).run();
+    if (!claimed?.meta?.changes) continue;
+    test.status = "RUNNING";
     try {
       const summary = await runAccountCheck(env, deps);
       await updateTest(env, test, { status: "PASSED", stage: "DONE", log: `PASSED: ${summary}` });

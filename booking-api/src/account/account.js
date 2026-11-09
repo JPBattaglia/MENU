@@ -297,6 +297,11 @@ async function orderActions(env, orderId) {
   return actions;
 }
 
+// Caps (Nov 9, 2026): the self-test buyer has 212 businesses and 111 plans, and loading them all ran the worker out of
+// subrequests. A real customer has a handful; the newest plans and the first businesses by name are shown.
+const MAX_BUSINESSES = 25;
+const MAX_PLANS = 20;
+
 async function accountSummary(env, customerId) {
   const customer = await env.DB.prepare(`SELECT id, email, first_name, last_name FROM customers WHERE id = ?`).bind(customerId).first();
   const businesses = (await env.DB.prepare(`
@@ -304,7 +309,7 @@ async function accountSummary(env, customerId) {
       WHERE b.id IN (SELECT business_id FROM customer_businesses WHERE customer_id = ?)
          OR b.id IN (SELECT business_id FROM orders WHERE customer_id = ? AND business_id IS NOT NULL)
          OR b.id IN (SELECT business_id FROM subscriptions WHERE customer_id = ?)
-      ORDER BY b.name
+      ORDER BY b.name LIMIT ${MAX_BUSINESSES}
     `).bind(customerId, customerId, customerId).all()).results || [];
   const businessList = [];
   for (const business of businesses) {
@@ -325,7 +330,7 @@ async function accountSummary(env, customerId) {
 
   const subs = (await env.DB.prepare(`
       SELECT s.*, o.name AS offer_name, o.code AS offer_code FROM subscriptions s LEFT JOIN offers o ON o.id = s.offer_id
-      WHERE s.customer_id = ? ORDER BY s.created_at DESC
+      WHERE s.customer_id = ? ORDER BY s.created_at DESC LIMIT ${MAX_PLANS}
     `).bind(customerId).all()).results || [];
   const plans = [];
   for (const sub of subs) plans.push(await planSummary(env, sub));
