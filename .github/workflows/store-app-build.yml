@@ -331,6 +331,8 @@ jobs:
           <plist version="1.0"><dict><key>aps-environment</key><string>production</string></dict></plist>
           PLIST
           sed -i '' 's/^          //' ios/App/App/App.entitlements
+      - name: Free a signing certificate slot (each fresh Mac makes a new development certificate)
+        run: node booking-api/scripts/asc-free-cert-slot.mjs "$RUNNER_TEMP/AuthKey.p8" "$ASC_KEY_ID" "$ASC_ISSUER_ID"
       - name: Archive (signed)
         working-directory: app-shell/ios/App
         run: |
