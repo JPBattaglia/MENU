@@ -165,6 +165,22 @@ test('the ACCOUNT_SIGNIN self-test signs the self-test buyer in and out and pass
   } finally { h.restore(); }
 });
 
+test('a self-test run that never finished is not run again every tick (Nov 9 D1 read-limit loop)', async () => {
+  const h = setup();
+  try {
+    const { advanceAccountSelfTests } = await import('./src/selftest/account-selftest.js');
+    h.sql(`UPDATE customers SET email = 'delivered@resend.dev' WHERE id = 'cust'`);
+    const old = new Date(Date.now() - 2 * 3600000).toISOString();
+    h.sql(`INSERT INTO self_tests (id, kind, status, requested_by, created_at, updated_at) VALUES ('stuck', 'ACCOUNT_SIGNIN', 'RUNNING', 'daily', ?, ?)`, old, old);
+    const results = await advanceAccountSelfTests(h.env, { now: new Date('2026-10-29T03:00:00Z'), fetch: async () => new Response('ok') });
+    assert.deepEqual(results, [], 'a claimed run is never picked up again');
+    const row = h.row(`SELECT status, error FROM self_tests WHERE id = 'stuck'`);
+    assert.equal(row.status, 'FAILED');
+    assert.match(row.error, /Did not finish/);
+    assert.equal(h.row(`SELECT COUNT(*) AS n FROM account_sessions`).n, 0, 'no sign-in attempted');
+  } finally { h.restore(); }
+});
+
 test('customer emails carry the Your account button; owner alerts and the sign-in email do not', async () => {
   const { isCustomerEmail, withAccountLink, brandedEmailHtml } = await import('./src/lib/email.js');
   const env = { OWNER_EMAIL: 'owner@example.com' };
