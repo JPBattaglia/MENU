@@ -238,6 +238,15 @@ test("owner's own apps: made once by the tick at no charge, owner keys, no buyer
     assert.match(ninoMail.html, /Already done for you: the Apple App ID/);
     assert.match(ninoMail.html, /New App/); assert.match(ninoMail.html, /Create app/); assert.match(ninoMail.html, /firebase-adminsdk-fbsvc/);
     assert.doesNotMatch(ninoMail.html, /D-U-N-S|invite|Guest App/i, 'no buyer account steps');
+    // Hybrid apps collect data (forms, checkout, ideas, rewards): per-app privacy answers, never "we do not collect".
+    assert.doesNotMatch(ninoMail.html, /do not collect|No<\/strong> to "collect or share"/);
+    assert.match(ninoMail.html, /Yes, we collect data from this app/);
+    assert.match(ninoMail.html, /Physical Address \(shipping\)/);
+    assert.match(ninoMail.html, /Identifiers &gt; User ID/);
+    assert.match(ninoMail.html, /Leave Payment Info unticked/);
+    const mmMail = emails.find((e) => /MENU-MADE|Menu-made/i.test(e.subject) && e !== ninoMail);
+    assert.match(mmMail.html, /Photos or Videos/);
+    assert.doesNotMatch(mmMail.html, /Physical Address|User ID/);
     // Done is refused until google-services.json names the app.
     const ownerToken = await signLinkToken(f.env, { kind: flow.OWNER_KIND, id: nino.id, ttlDays: 30 });
     const press = () => { const fd = new FormData(); fd.set('t', ownerToken); return call(f, `https://menu-made.com/api/store-app/${nino.id}/done`, { method: 'POST', body: fd }); };
