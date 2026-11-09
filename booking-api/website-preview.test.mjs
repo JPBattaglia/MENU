@@ -312,7 +312,10 @@ test('website previews: one reminder about 2 days in, skipped once a paid order 
   // Not on the hour tick, and not at night.
   const g = await made();
   let at = g.created + 47 * 3600000;
-  while (Number(new Intl.DateTimeFormat('en-US', { hour: 'numeric', hourCycle: 'h23', timeZone: 'America/Los_Angeles' }).format(new Date(at))) !== 12) at += 3600000;
+  // The first daytime hour (10 am to 5 pm Pacific) from 47 hours in. Waiting for noon could land past 69 hours when the
+  // test runs mid-afternoon Pacific, and by then the preview is too close to its end for a reminder.
+  const ptHour = (ms) => Number(new Intl.DateTimeFormat('en-US', { hour: 'numeric', hourCycle: 'h23', timeZone: 'America/Los_Angeles' }).format(new Date(ms)));
+  while (ptHour(at) < 10 || ptHour(at) > 17) at += 3600000;
   at -= new Date(at).getUTCMinutes() * 60000;
   assert.deepEqual(await runWebsitePreviewReminders(g.f.env, { now: at }), [], 'not at :00 (the menu reminders run then)');
   assert.deepEqual(await runWebsitePreviewReminders(g.f.env, { now: at + 30 * 60000 }), [g.token], 'at :30');
