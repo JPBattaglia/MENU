@@ -14,7 +14,7 @@ const RUNBOOK = {
   R5: { title: "Graphics waiting to be drawn", happened: "GitHub hasn't drawn waiting images (social posts, app icons, Nino designs) for over an hour, so nothing has reached you for approval.", action: "Follow the GitHub steps in the email above (enable or re-run the \"Render social posts\" workflow); if it still waits, forward this email to Claude." },
   R6: { title: "A self-test failed", happened: "A sandbox test order for one service didn't pass. Real buyers may hit the same problem.", action: "Forward this email to Claude." },
   R7: { title: "Daily check", happened: "Once a day: a service's self-test didn't pass or went stale, or a real order needs you.", action: "Do what each line says; for anything else, forward this email to Claude." },
-  R8: { title: "Database near its free limit", happened: "Cloudflare's free daily database limit is close. If reached, checkouts and sites stop until 5 pm Pacific.", action: "Forward this email to Claude; it cuts the reads for free (you stay on the free plan)." },
+  R8: { title: "Cloudflare usage above the plan's daily share", happened: "Database reads, writes or Worker requests today are above a 30th of what the $5 Workers Paid plan includes each month. Nothing stops; extra usage is billed.", action: "Nothing. Claude sees it on the coverage page and finds what grew." },
   R9: { title: "App notifications problem", happened: "A Mobile App notification couldn't be sent (Apple or Google refused it).", action: "Forward this email to Claude." },
   R13: { title: "A logo is waiting on Nino", happened: "Nino was sent a logo brief 4 or more days ago and hasn't uploaded the designs. The buyer is waiting.", action: "Check in with Nino and forward him the upload button in this email." },
   R10: { title: "GitHub refused a job", happened: "GitHub didn't accept a job from the worker; app builds, images and notifications wait (nothing is lost).", action: "Tell Claude \"GitHub token refused\"; it walks you through a new token, about 3 minutes." }
@@ -30,6 +30,7 @@ const RUNBOOK_BY_TEMPLATE = {
   self_test_failed_v1: "R6",
   coverage_report_v2: "R7",
   d1_near_limit_v1: "R8",
+  d1_near_limit_v2: "R8",
   native_push_alert_v1: "R9",
   github_dispatch_refused_v1: "R10",
   nino_logo_stale_v1: "R13"

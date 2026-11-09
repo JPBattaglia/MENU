@@ -448,7 +448,7 @@ const mmWorkerWithBooking = {
     return worker_default.fetch(request, env, ctx);
   },
   async scheduled(event, realEnv, ctx) {
-    // Stage 12, task 8: count this tick's D1 queries (Workers Free allows 50 per invocation).
+    // Stage 12, task 8: count this tick's D1 queries (Workers Paid allows 1,000 per invocation).
     const counter = realEnv.DB ? countingDb(realEnv.DB) : null;
     const env = counter ? { ...realEnv, DB: counter.db } : realEnv;
     const app = (request) => mmWorkerWithBooking.fetch(request, env, ctx);

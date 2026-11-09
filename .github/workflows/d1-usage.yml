@@ -1,7 +1,7 @@
-# Hourly free-plan usage check (Stage 12, tasks 7-8). Reads today's Worker requests and the rows read and written for every D1 database on the
-# Cloudflare account (Menu-made and the Nino shop share the free plan's daily limits) and posts the totals to the
+# Hourly plan usage check (Stage 12, tasks 7-8). Reads today's Worker requests and the rows read and written for every D1 database on the
+# Cloudflare account (Menu-made and the Nino shop share the $5 Workers Paid plan's allowance) and posts the totals to the
 # worker over GitHub OIDC (no secret). The worker records it on the coverage map and emails the owner once a day if
-# usage is near the limit. Uses the deploy token, which can read account analytics.
+# usage is above a day's share. Uses the deploy token, which can read account analytics.
 name: d1-usage
 on:
   schedule: [{ cron: "17 * * * *" }]

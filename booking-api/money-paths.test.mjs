@@ -68,6 +68,24 @@ test('catches a wrong amount, an archived price, a wrong interval and a missing 
   assert.match(r.error, /STORE_APP_SETUP: price price_sa isn't in Stripe live/);
 });
 
+test('a retired version (effective_to passed) may have an archived price; it is never used for the live checkout', async () => {
+  const f = setup();
+  // Like Growth's $179 prices after the drop to $169 (0039_growth_169.sql): the old versions stay ACTIVE so existing
+  // subscriptions still map, their Stripe prices are archived so nobody new lands on them.
+  f.sql(`UPDATE offer_versions SET effective_to = '2026-10-31T00:00:00.000Z' WHERE id = 'v_MENU_CARE_0'`);
+  f.stripe.prices.get('price_mc_m').active = false;
+  for (let d = 0; d < 3; d++) {
+    const r = await f.run();
+    assert.equal(r.status, 'PASSED', r.error);
+    assert.notEqual(f.stripe.session['line_items[0][price]'], 'price_mc_m', 'the retired price is never opened in a live checkout');
+  }
+  // Still caught when the retired price no longer matches what subscribers on it are charged.
+  f.stripe.prices.get('price_mc_m').unit_amount = 3900;
+  const r = await f.run();
+  assert.equal(r.status, 'FAILED');
+  assert.match(r.error, /MENU_CARE \(monthly\): Stripe charges 3900/);
+});
+
 test('catches a disabled webhook, a missing event and failed deliveries', async () => {
   const f = setup();
   f.stripe.endpoint.status = 'disabled';
