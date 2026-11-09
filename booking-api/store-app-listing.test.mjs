@@ -52,6 +52,12 @@ function fakeStores({ appleFail = null, playDraft = false, appleState = 'WAITING
       if (path === '/appStoreVersions/V1' && m === 'GET') return Response.json({ data: { id: 'V1', attributes: { appStoreState: state.appleState } } });
       if (path === '/appStoreVersions/V1/appStoreVersionLocalizations') return Response.json({ data: [{ id: 'L1', attributes: { locale: 'en-US' } }] });
       if (path === '/appStoreVersionLocalizations/L1') { seen.description = body.data.attributes; return Response.json({ data: { id: 'L1' } }); }
+      if (path === '/appInfos/I1/primaryCategory') return Response.json({ data: null });
+      if (path === '/appInfos/I1' && m === 'PATCH') { seen.category = body.data.relationships.primaryCategory.data.id; return Response.json({ data: { id: 'I1' } }); }
+      if (path === '/apps/APP1' && m === 'PATCH') { seen.contentRights = body.data.attributes.contentRightsDeclaration; return Response.json({ data: { id: 'APP1' } }); }
+      if (path === '/apps/APP1/appPriceSchedule') return Response.json({ errors: [{ detail: 'not found' }] }, { status: 404 });
+      if (path.startsWith('/apps/APP1/appPricePoints')) return Response.json({ data: [{ id: 'PP9', attributes: { customerPrice: '0.99' } }, { id: 'PP0', attributes: { customerPrice: '0.0' } }] });
+      if (path === '/appPriceSchedules' && m === 'POST') { seen.pricePoint = body.included[0].relationships.appPricePoint.data.id; return Response.json({ data: { id: 'PS1' } }); }
       if (path === '/apps/APP1/appInfos') return Response.json({ data: [{ id: 'I1', attributes: { appStoreState: 'PREPARE_FOR_SUBMISSION' } }] });
       if (path === '/appInfos/I1/appInfoLocalizations') return Response.json({ data: [{ id: 'IL1', attributes: { locale: 'en-US' } }] });
       if (path === '/appInfoLocalizations/IL1') { seen.info = body.data.attributes; return Response.json({ data: {} }); }
@@ -196,6 +202,9 @@ test("approved: submitted to Apple and Google with the restaurant's keys, then I
   assert.equal(s.uploads, 3, 'three iPhone screenshots');
   assert.deepEqual([s.review.contactFirstName, s.review.contactPhone, s.review.contactEmail], ['Joe', '+1 707 555 0101', 'joe@joespizza.example'], 'Apple contacts the restaurant');
   assert.equal(s.submitted, true);
+  assert.equal(s.category, 'FOOD_AND_DRINK', 'a restaurant app gets the Food & Drink category');
+  assert.equal(s.contentRights, 'DOES_NOT_USE_THIRD_PARTY_CONTENT');
+  assert.equal(s.pricePoint, 'PP0', 'the app is set to free');
   assert.equal(s.playListing.title, "Joe's Pizza");
   assert.equal(s.play.filter((c) => /phoneScreenshots$/.test(c) && c.startsWith('POST')).length, 3);
   assert.deepEqual(s.release, { versionCodes: ['14'], status: 'completed' }, 'the newest internal build goes to production');
