@@ -191,7 +191,7 @@ test('customer emails carry the Your account button; owner alerts and the sign-i
   assert.equal(isCustomerEmail('joe@joespizza.example', 'ACCOUNT_SIGN_IN', env), false);
   const out = withAccountLink(brandedEmailHtml({ preheader: 'p', eyebrow: 'e', heading: 'h', paragraphs: ['x'] }), 'Hello');
   assert.equal((out.html.match(/https:\/\/menu-made\.com\/account/g) || []).length, 1);
-  assert.match(out.html, /Your account<\/a><\/td><\/tr><tr><td style="padding:24px 32px;background-color:#071f2c;">/);
+  assert.match(out.html, /Your account<\/a><\/td><\/tr><tr><td style="padding:24px 32px;background-color:#003344;">/);
   assert.match(out.text, /Your account .*https:\/\/menu-made\.com\/account$/);
   assert.deepEqual(withAccountLink(out.html, out.text), out, 'never added twice');
 });
