@@ -39,6 +39,7 @@ import { handleD1Usage } from "./selftest/d1-usage.js";
 import { handleProspects, handleProspectBatch, handleProspectStatus, handleProspectLookup, handleSendPlan } from "./marketing/prospects.js";
 import { handleProspectDemo, handleMenuPreview, handleProspectFollowups } from "./marketing/demo-menu.js";
 import { handleWeeklyNumbers } from "./marketing/weekly-numbers.js";
+import { kickProspectJobs } from "./marketing/prospect-kick.js";
 import { countingDb, saveTickCount } from "./lib/query-count.js";
 import { advanceMoneyPathsSelfTests } from "./selftest/money-paths.js";
 import { advanceEmailHealthSelfTests } from "./selftest/email-health.js";
@@ -458,6 +459,8 @@ const mmWorkerWithBooking = {
       await runScheduledProduction(env).catch((error) => {
         console.error("Scheduled production failed:", error instanceof Error ? error.message : String(error));
       });
+      // Prospect search, drafts and auto-send: started by the worker on time (GitHub's own timer ran hours late).
+      await kickProspectJobs(env).catch((error) => console.error("Prospect jobs failed:", error instanceof Error ? error.message : String(error)));
       // Domains bought at checkout: register, point, tell the buyer (every tick, a few at a time).
       await runDomainPurchases(env).catch((error) => console.error("Domain purchases failed:", error instanceof Error ? error.message : String(error)));
       // Domain renewals: once a day, pay-link emails before expiry; auto-renew on only once the buyer has paid.

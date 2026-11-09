@@ -3,13 +3,12 @@
 # sent by this job: the owner reviews each one in Apple Mail and taps Send. Separately, the weekday "send" run emails
 # prospects itself from jp@getmenumade.com (owner, Nov 5, 2026; needs ZOHO_APP_PASSWORD), warming up from 3 a day;
 # once warmed up it replaces the new iCloud drafts.
+# Started by the worker (booking-api/src/marketing/prospect-kick.js), not GitHub's timer, since Nov 9, 2026: drafts
+# Mondays 7:37 am and Thursdays 8:41 am Pacific, the send run weekdays at 10:19 am (GitHub's timer ran them hours late or
+# skipped days). The github.event.schedule checks below are left for a manual timer, if one is ever added back.
 # Needs the ICLOUD_USER and ICLOUD_APP_PASSWORD repository secrets. This public log shows counts only.
 name: Prospect drafts
 on:
-  schedule:
-    - cron: "37 15 * * 1"   # Mondays 7:37 am PST, after the 5:23 am prospect search
-    - cron: "41 16 * * 4"   # Thursdays 8:41 am PST: new drafts + day-3 follow-ups (owner doubled outreach, Nov 5, 2026)
-    - cron: "19 18 * * 1-5" # Weekdays 10:19 am PST: auto-send from jp@getmenumade.com (warm-up caps; send.mjs)
   workflow_dispatch:
     inputs:
       batch_size:
