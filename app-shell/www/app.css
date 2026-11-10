@@ -202,6 +202,8 @@ body.hy-theme-menumade .hy-loader { background: linear-gradient(#013f45, #012f34
 .hy-idea { display: flex; align-items: center; gap: 12px; padding: 14px 14px 14px 18px; background: var(--hy-card); border: 1px solid var(--hy-card-line); border-radius: var(--hy-radius); }
 .hy-idea-text { flex: 1; min-width: 0; }
 .hy-idea-text p { margin: 0 0 4px; }
+.hy-idea-actions { display: flex; flex-wrap: wrap; gap: 4px 14px; margin-top: 6px; }
+.hy-linkbtn { padding: 6px 0; min-height: 32px; border: 0; background: none; color: var(--hy-muted, inherit); opacity: .8; font: inherit; font-size: 13px; text-decoration: underline; cursor: pointer; }
 .hy-vote { flex: none; display: flex; flex-direction: column; align-items: center; gap: 2px; min-width: 52px; min-height: 52px; padding: 6px; border-radius: 12px; border: 1px solid var(--hy-card-line); background: var(--hy-field); color: var(--hy-ink); font: inherit; font-weight: 800; }
 .hy-vote[aria-pressed=true] { background: var(--hy-hot); border-color: var(--hy-hot); color: #1a0703; }
 .hy-tile { position: relative; }
