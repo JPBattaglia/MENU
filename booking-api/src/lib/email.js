@@ -68,7 +68,9 @@ function looksLikeEmail(value) {
 // Owner decision (Nov 9, 2026): emails use the website's dark blue #003344 (main.css --nav) with white text and cyan highlights (--cyan #00d6e6, --brand-soft #5ff2ff), not white.
 const MAIL = { page: "#00222d", card: "#003344", bar: "#00222d", panel: "#004a5c", line: "#0a6f80", text: "#ffffff", soft: "#d9f3f6", cyan: "#00d6e6", link: "#5ff2ff", ink: "#012f34" };
 const FOOTER_TD = `<tr><td style="padding:24px 32px;background-color:${MAIL.bar};">`;
-const MAIL_HEAD = `<meta name="color-scheme" content="dark"><meta name="supported-color-schemes" content="dark"><style>a{color:${MAIL.link};}</style>`;
+// "light dark" (not "dark" alone): Apple Mail in light mode repaints a dark-only email with light backgrounds and dark
+// text (owner saw it Nov 9, 2026). Declaring both tells clients the design already works in either mode, so they leave it.
+const MAIL_HEAD = `<meta name="color-scheme" content="light dark"><meta name="supported-color-schemes" content="light dark"><style>:root{color-scheme:light dark;supported-color-schemes:light dark;}a{color:${MAIL.link};}</style>`;
 
 // Text that callers pass in was written for a white card (dark greys, a red warning, a green "done"). On the dark
 // card those would vanish, so known colors get light equivalents and any other dark text becomes the soft white.

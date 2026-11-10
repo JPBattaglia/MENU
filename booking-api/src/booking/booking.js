@@ -131,7 +131,7 @@ function inquiryEmailHtml(data, reference, kind) {
     : `Thanks for contacting MENU-MADE. We’ve received your inquiry about <strong>${safe(data.service)}</strong> and will review your project details. We’ll reply to discuss the next steps.`;
   const summary = (data.document ? row('Document received', data.document.name) : '') + row('Service', data.service) + (owner ? row('Name', data.name) + row('Email', data.email) : '') + (data.business ? row('Business', data.business) : '');
   return `<!doctype html>
-<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="color-scheme" content="dark"><meta name="supported-color-schemes" content="dark"><style>a{color:#5ff2ff;}</style><title>${heading}</title></head>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="color-scheme" content="light dark"><meta name="supported-color-schemes" content="light dark"><style>:root{color-scheme:light dark;supported-color-schemes:light dark;}a{color:#5ff2ff;}</style><title>${heading}</title></head>
 <body style="margin:0;padding:0;background-color:#00222d;font-family:Arial,Helvetica,sans-serif;">
 <div style="display:none;font-size:1px;color:#00222d;max-height:0;overflow:hidden;">${owner ? 'A new MENU-MADE inquiry is ready for your review.' : 'Your project details are with MENU-MADE. We’ll reply with the next steps.'}</div>
 <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="background-color:#00222d;"><tr><td align="center" style="padding:28px 12px;">
