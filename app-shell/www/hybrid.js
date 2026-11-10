@@ -403,6 +403,9 @@
         if (sizes.length && !st.size) variant = null;
         var shown = (variant && variant.image) || (option.colors.filter(function (c) { return c.name === st.color; })[0] || {}).image || option.image || p.image;
         if (shown && img.getAttribute("src") !== shown) img.src = shown;
+        // Shirt photos fill the frame; every other product is shown whole. A sticker's picture is its artwork cut to the
+        // edge and often not square (owner, Nov 10, 2026: "stickers are too big and can't be seen fully"), so it gets room.
+        img.classList.toggle("is-whole", option.type !== "tshirt"); img.classList.toggle("is-sticker", option.type === "sticker");
         img.alt = p.title + " " + option.label.toLowerCase() + (st.color ? ", " + st.color : "");
         price.textContent = variant ? money(variant.price_cents) : "From " + money(option.from_cents);
 
@@ -447,7 +450,7 @@
           if (!line && items.length >= MAX_LINES) { msg.textContent = "Your cart is full. Check out, then add more."; msg.className = "hy-status is-error"; return; }
           if (cartUnits(items) + st.qty > MAX_UNITS || (line && line.quantity + st.qty > MAX_EACH)) { msg.textContent = "That's more than one order can hold (" + MAX_EACH + " of one item, " + MAX_UNITS + " in all)."; msg.className = "hy-status is-error"; return; }
           if (line) line.quantity += st.qty;
-          else items.push({ product_id: variant.product_id, variant_id: variant.id, quantity: st.qty, title: d.title, label: option.label, color: variant.color || "", size: variant.size || "", price_cents: variant.price_cents, image: shown || "", slug: p.slug });
+          else items.push({ product_id: variant.product_id, variant_id: variant.id, quantity: st.qty, title: d.title, label: option.label, color: variant.color || "", size: variant.size || "", price_cents: variant.price_cents, image: shown || "", slug: p.slug, type: option.type });
           saveCart(items); thanks = null;
           note = "Added to your cart."; st.qty = 1; render();
         });
@@ -698,7 +701,7 @@
       var list = el("div", "hy-cart");
       items.forEach(function (i) {
         var row = el("div", "hy-cart-line");
-        var pic = el("img"); pic.src = i.image || ""; pic.alt = ""; pic.loading = "lazy"; row.appendChild(pic);
+        var pic = el("img", i.type === "sticker" ? "is-whole is-sticker" : i.type && i.type !== "tshirt" ? "is-whole" : null); pic.src = i.image || ""; pic.alt = ""; pic.loading = "lazy"; row.appendChild(pic);
         var info = el("div", "hy-cart-info");
         info.appendChild(el("strong", null, i.title));
         info.appendChild(el("span", "hy-muted", [i.label, [i.color, i.size].filter(Boolean).join(" / ")].filter(Boolean).join(" · ")));
