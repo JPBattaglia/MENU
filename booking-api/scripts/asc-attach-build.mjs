@@ -37,6 +37,27 @@ export function groupAddResult(add) {
   return `answer ${add?.status}${why ? ` (${why})` : ""}`;
 }
 
+// Makes this app an internal TestFlight group like the first one found on another app of the account: same name, same
+// testers, every build delivered automatically. Returns { group, message }; logs counts only, never names or emails.
+export async function copyInternalGroup(call, appId) {
+  const all = await call(`/betaGroups?filter[isInternalGroup]=true&include=app&limit=50`);
+  const donors = internalGroups(all.body?.data).filter((g) => g?.relationships?.app?.data?.id !== appId);
+  if (!donors.length) return { group: null, message: all.ok ? "none on this app and none on the account to copy" : `none on this app (could not list the account's groups: ${groupAddResult(all)})` };
+  let donor = null, testers = [];
+  for (const g of donors) {
+    const list = (await call(`/betaGroups/${g.id}/betaTesters?limit=50`)).body?.data || [];
+    if (list.length) { donor = g; testers = list; break; }
+  }
+  if (!donor) return { group: null, message: "none on this app; the account's groups have no testers to copy" };
+  const created = await call(`/betaGroups`, { method: "POST", body: JSON.stringify({ data: { type: "betaGroups",
+    attributes: { name: donor.attributes?.name || "Internal testers", isInternalGroup: true, hasAccessToAllBuilds: true },
+    relationships: { app: { data: { type: "apps", id: appId } } } } }) });
+  if (!created.ok || !created.body?.data?.id) return { group: null, message: `could not be made (${groupAddResult(created)})` };
+  const group = created.body.data;
+  const add = await call(`/betaGroups/${group.id}/relationships/betaTesters`, { method: "POST", body: JSON.stringify({ data: testers.map((t) => ({ type: "betaTesters", id: t.id })) }) });
+  return { group, message: add.ok ? `made for this app with ${testers.length} tester${testers.length === 1 ? "" : "s"} from the account's other app` : `made, but its testers could not be added (${groupAddResult(add)})` };
+}
+
 async function main([keyPath, keyId, issuerId, bundleId, version, build]) {
   if (!keyPath || !keyId || !issuerId || !bundleId || !version || !/^\d+$/.test(build || "")) {
     throw new Error("Usage: asc-attach-build.mjs <AuthKey.p8> <key id> <issuer id> <bundle id> <version> <build>");
@@ -71,8 +92,15 @@ async function main([keyPath, keyId, issuerId, bundleId, version, build]) {
   }
   console.log(`Build ${build} processed`);
 
-  // 2. Internal TestFlight groups.
-  const groups = internalGroups((await call(`/apps/${appId}/betaGroups?limit=50`)).body?.data);
+  // 2. Internal TestFlight groups. An app with none gets a copy of the internal group another app on this Apple
+  // account already has (owner, Nov 10, 2026: his Menu-made app wasn't in TestFlight because the "Me" group was only
+  // made on the Nino app). A restaurant's own account has no such group, so nothing is made there.
+  let groups = internalGroups((await call(`/apps/${appId}/betaGroups?limit=50`)).body?.data);
+  if (!groups.length) {
+    const made = await copyInternalGroup(call, appId);
+    console.log(`TestFlight internal group: ${made.message}`);
+    if (made.group) groups = [made.group];
+  }
   for (const g of groups) {
     // A group with automatic distribution already gets every build; Apple answers 422 if one is added by hand.
     if (g?.attributes?.hasAccessToAllBuilds) { console.log("TestFlight internal group: gets every build automatically"); continue; }
