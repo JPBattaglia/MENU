@@ -303,11 +303,13 @@ async function announceNinoDrops(env, { fetchImpl = fetch, nowSeconds = Math.flo
 const hybridUrl = (key) => (HYBRID_KEYS.has(key) ? `${MM}/api/app-hybrid/${key}` : "");
 // Each app's picture for the loading screen (spins while the content loads) and, for Nino, the app icon
 // (owner, Nov 8: Nino's blue "N" mark; the file is in this repo, so the build draws the icon from it).
+// label: the name under the app's icon on the phone (owner, Nov 10, 2026: "just Nino" and "just MΞNU"). The App Store
+// and Google Play listing names stay Nino Battaglia and MENU-MADE (app_name).
 const HYBRID_LOOK = {
-  menumade: { logo_url: `${MM}/MENU%3D.png` },
+  menumade: { logo_url: `${MM}/MENU%3D.png`, label: "M\u039eNU" },
   // Owner, Nov 8: the logo animation plays once as the app opens (clip #4, NinoLogoAnimation, no sound); the ring of
   // fire N (clip #6, NinoGif1, background removed) shows whenever something is loading.
-  nino: { logo_url: `${MM}/assets/own-apps/nino-app-logo.png`, icon_file: "assets/own-apps/nino-app-logo.png",
+  nino: { label: "Nino", logo_url: `${MM}/assets/own-apps/nino-app-logo.png`, icon_file: "assets/own-apps/nino-app-logo.png",
     intro_url: `${MM}/assets/own-apps/nino-intro.mp4`, loader_url: `${MM}/assets/own-apps/nino-loader.webp` }
 };
 const hybridLookForBundle = (bundleId) => HYBRID_LOOK[HYBRID_BUNDLES.get(String(bundleId || ""))] || null;

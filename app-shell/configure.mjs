@@ -12,6 +12,10 @@ if (!APP_ID.test(cfg.app_id || "")) throw new Error("app_id must look like com.m
 if (!/^#[0-9a-f]{6}$/i.test(cfg.brand_color || "")) throw new Error("brand_color must be #rrggbb");
 const name = String(cfg.app_name || "").trim();
 if (!name || name.length > 30) throw new Error("app_name must be 1-30 characters (App Store limit)");
+// The name under the icon on the phone (CFBundleDisplayName on iPhone, the launcher label on Android). Defaults to
+// app_name, which stays the App Store and Google Play listing name.
+const label = String(cfg.app_label || "").trim() || name;
+if (label.length > 30 || /[<>&"]/.test(label)) throw new Error("app_label must be 1-30 characters without < > & or quotes");
 if (!/^https:\/\//.test(cfg.api_base || "")) throw new Error("api_base must be https");
 
 // Site apps (the owner's own apps, booking-api/src/store-app/own-apps.js): the app opens the business's whole website
@@ -34,7 +38,7 @@ if (cfg.site_url && !hybrid) {
 
 writeFileSync(join(here, "capacitor.config.json"), JSON.stringify({
   appId: cfg.app_id,
-  appName: name,
+  appName: label,
   webDir: "www",
   backgroundColor: cfg.brand_color,
   ...(site ? { server: { allowNavigation: site.hosts } } : {}),
