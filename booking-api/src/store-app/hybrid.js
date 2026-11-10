@@ -12,6 +12,7 @@
 // Public data only, cached at the edge for TTL seconds. CORS "*" because the app runs from capacitor://localhost or
 // https://localhost and the store screenshots load it from a local page.
 import { getSiteCatalog } from "../checkout/catalog.js";
+import { MENU_PACKAGE_PRICING } from "../checkout/quote.js";
 import { queuePush } from "../producers/guest-app/engage.js";
 
 const TTL = 300;
@@ -51,6 +52,13 @@ function menumadeContent(catalog) {
     checkout_month: `${MM}/contact.html?plan=${o.code}&interval=month`,
     checkout_year: `${MM}/contact.html?plan=${o.code}&interval=year`
   }));
+  // Services (the Account tab's own list, so "All services" no longer opens the website): everything on sale that
+  // isn't a bundle or one of Nino's design services, with its price from the same catalog.
+  const dollars = (cents) => `$${(Number(cents) / 100).toLocaleString("en-US", { maximumFractionDigits: 2 })}`;
+  const services = offers.filter((o) => o && o.on_sale && o.kind !== "BUNDLE" && !PLAN_ORDER.includes(o.code) && !/^NINO_/.test(String(o.code || "")) && o.name)
+    .map((o) => ({ name: clean(o.name, 60), text: clean(o.short_description, 220), price: o.prices?.month ? `${dollars(o.prices.month)}/mo` : o.price_cents ? dollars(o.price_cents) : "" }))
+    .filter((x) => x.price).slice(0, 20);
+  const menuPrice = dollars(MENU_PACKAGE_PRICING.setupCents + MENU_PACKAGE_PRICING.hostingFirstYearCents);
   return {
     ok: true,
     key: "menumade",
@@ -61,20 +69,59 @@ function menumadeContent(catalog) {
     name: "MENU-MADE",
     tagline: "For Food & Bev businesses",
     tabs: ["home", "preview", "plans", "account"],
-    hero: { title: "Your menu online, see it before you checkout", action: "Try a free menu preview" },
+    // Home (owner, Nov 10, 2026: "looks wrong and needs to be better since it's the first thing a user sees"):
+    // a picture, what the app does in one line, the two generators, real work, then the steps and plans.
+    hero: {
+      title: "Your menu and your website, made from the menu you already have",
+      text: "Upload a PDF or a photo of your menu. See it as a phone menu and as a whole website, free, before you checkout.",
+      image: `${MM}/home-digital-presence.webp`, action: "Try a free menu preview"
+    },
     steps: [
-      { title: "Free menu preview", text: "Upload your PDF menu", tab: "preview" },
-      { title: "Free website preview", text: "Nine designs, built from your info", url: `${MM}/website-design.html` },
-      { title: "Pick a plan", text: "Starter, Growth or Pro", tab: "plans" }
+      { title: "Upload your menu", text: "A PDF or a photo is all we need" },
+      { title: "Pick a design", text: "Nine for your menu, nine for your website" },
+      { title: "Make it live", text: "Checkout only when it looks right" }
     ],
+    // The two generators (the Preview tab). Each runs inside the app: the form, the wait, the designs in a frame on the
+    // app's own screen and its three buttons. buttons = what the chooser page says each of the three does.
+    upload_url: `${MM}/api/inquiry`,
+    generators: [
+      { key: "menu", title: "Menu generator", count: 9, text: "Your printed menu becomes a phone menu page with a QR code.",
+        create_url: `${MM}/api/menu-preview/create`, state_url: `${MM}/api/menu-preview/state/`, start: "Make my menu preview",
+        busy: ["Reading your menu…", "Finding the sections, dishes and prices…", "Drawing your menu in nine designs…"], wait: "This takes about a minute. Keep the app open.",
+        buttons: [
+          { label: "Generate menu", text: "Shows your menu in the next of nine designs. Tap it as often as you like." },
+          { label: "Customize", text: "Adds your logo, your colour and your name the way you want it, on every design." },
+          { label: "Make it live", text: `Orders the design on screen: your menu online with its QR code, ${menuPrice} for the first year.` }
+        ] },
+      { key: "site", title: "Website generator", count: 9, text: "The same menu becomes a whole website: home, menu, about and contact pages.",
+        create_url: `${MM}/api/website-preview/create`, state_url: `${MM}/api/website-preview/state/`, start: "Build my website preview", city: true,
+        busy: ["Reading your menu…", "Writing your pages…", "Building your website in nine designs…"], wait: "This takes a minute or two. Keep the app open.",
+        buttons: [
+          { label: "Generate site", text: "Shows your website in the next of nine designs. Tap it as often as you like." },
+          { label: "Customize", text: "Adds your logo, photos, colour, hours and links to every design." },
+          { label: "Choose this site", text: "Orders the design on screen: $299 for the whole site as files you own. Hosting is optional." }
+        ] }
+    ],
+    // Kept for app builds from before Nov 10, 2026 (their Preview tab reads these).
     preview: { create_url: `${MM}/api/menu-preview/create`, upload_url: `${MM}/api/inquiry`, more_url: `${MM}/online-menu.html` },
     plans,
     plans_note: "On a yearly plan the menu setup and first-year hosting are free.",
+    services,
+    // Work we've made (the Account tab's own gallery; the pictures are the ones on menu-made.com/portfolio.html).
+    work: [
+      { title: "Fahy's Fog & Barrel", text: "Website and menu", image: `${MM}/assets/work/fahys-website.webp` },
+      { title: "My Happy Donut", text: "Website and menu", image: `${MM}/assets/work/happy-donut-website.webp` },
+      { title: "Pinecrest Diner", text: "Dinner menu as a phone page", image: `${MM}/assets/work/pinecrest-dinner-preview.webp` },
+      { title: "Ella's Wood Fired Pizza", text: "Printed menu", image: `${MM}/assets/work/ellas-menu.webp` },
+      { title: "Li Po", text: "Website", image: `${MM}/assets/work/lipo-website.webp` },
+      { title: "Nino Battaglia", text: "Website and shop", image: `${MM}/assets/work/nino-website.webp` }
+    ],
+    contact: { email: "info@menu-made.com" },
     links: [
       { label: "Your account", text: "Orders, plans and billing", url: `${MM}/account.html` },
-      { label: "All services", text: "Everything Menu-made does", url: `${MM}/services.html` },
-      { label: "Our work", text: "Sites and menus we've made", url: `${MM}/portfolio.html` },
-      { label: "Contact us", text: "info@menu-made.com", url: `${MM}/contact.html` }
+      { label: "All services", text: "Everything Menu-made does", url: `${MM}/services.html`, screen: "services" },
+      { label: "Our work", text: "Sites and menus we've made", url: `${MM}/portfolio.html`, screen: "work" },
+      { label: "Contact us", text: "info@menu-made.com", url: `${MM}/contact.html`, mailto: "info@menu-made.com" }
     ]
   };
 }

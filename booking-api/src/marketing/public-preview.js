@@ -36,6 +36,7 @@ import { brandedEmailHtml, escapeHtml, sendTransactionalEmail } from "../lib/ema
 import { menuColors, readMenuWithClaude } from "../producers/menu-qr/claude-reader.js";
 import { LOGO_MODES, buildDesignedMenuHtml, parseLogoInfo } from "../producers/menu-qr/design.js";
 import { MENU_DESIGNS, designStyle, menuDesignFor } from "../producers/menu-qr/menu-designs.js";
+import { frameAware, wantsJson, preflight } from "./framed.js";
 import { sniffImage } from "../producers/website/intake.js";
 import { MENU_PACKAGE_PRICING } from "../checkout/quote.js";
 import { pausedForSale } from "../lib/switches.js";
@@ -413,14 +414,52 @@ async function handlePreviewView(request, env, token, { now = Date.now(), design
     // Prospect previews: the day-3 follow-up goes to owners who opened theirs.
     if (row.campaign === "prospect") await env.DB.prepare(`UPDATE prospect_demos SET open_count = open_count + 1, first_opened_at = COALESCE(first_opened_at, ?), last_opened_at = ? WHERE token = ?`).bind(t, t, token).run();
   }
-  return new Response(request.method === "HEAD" ? null : object.body, { status: 200, headers: { "Content-Type": "text/html; charset=utf-8", "Cache-Control": "no-store", "X-Robots-Tag": "noindex, nofollow", "Referrer-Policy": "no-referrer" } });
+  return new Response(request.method === "HEAD" ? null : frameAware(await object.text()), { status: 200, headers: { "Content-Type": "text/html; charset=utf-8", "Cache-Control": "no-store", "X-Robots-Tag": "noindex, nofollow", "Referrer-Policy": "no-referrer" } });
+}
+
+// The Menu-made app's generator screen (app-shell/www/hybrid.js): which designs there are, where each one's page is,
+// what the three buttons say and what Customize currently holds, so the app draws its own controls and form.
+// GET /api/menu-preview/state/<token>. The token is the secret, as for the pages themselves.
+async function handlePreviewState(request, env, token, { now = Date.now() } = {}) {
+  if (request.method === "OPTIONS") return preflight();
+  const gone = () => json({ ok: false, ended: true, error: `This preview has ended. Free previews last ${PREVIEW_HOURS / 24} days.` }, 410);
+  if (!/^[a-f0-9]{36}$/.test(token) || !env.DB || !env.ASSETS) return gone();
+  const row = await env.DB.prepare(`SELECT status, expires_at, design, campaign FROM menu_previews WHERE token = ?`).bind(token).first();
+  if (!row || row.status !== "READY" || row.expires_at <= new Date(now).toISOString()) return gone();
+  const data = parseJsonOrNull(await (await env.ASSETS.get(`menu-previews/${token}/data.json`))?.text());
+  if (!data?.menu) return gone();
+  const custom = data.custom || {};
+  const brand = hexOk(custom.color) ? custom.color : "";
+  const n = MENU_DESIGNS.length;
+  return json({
+    ok: true, kind: "menu", business: custom.name || data.business || "", ends_at: row.expires_at,
+    design: menuDesignFor(row.design) ? row.design : MENU_DESIGNS[0].key,
+    designs: MENU_DESIGNS.map((d) => ({ key: d.key, label: d.label, blurb: d.blurb, url: designUrl(token, d.key), choose_url: chooseUrl(token, d.key) })),
+    next_label: "Generate menu", choose_label: `Make it live: ${dollars(firstYearCents())} for the first year`,
+    note: `Free preview: no QR code, ends in ${PREVIEW_HOURS / 24} days.`,
+    customize: {
+      url: `${SITE}/api/menu-preview/customize/${token}`, title: "Customize your menu", submit: `Update all ${n} designs`,
+      busy: "Updating your menu. This takes a few seconds.", left: Math.max(0, MAX_CUSTOMIZE - Number(data.customized || 0)),
+      fields: [
+        { name: "logo", type: "file", label: "Logo", hint: custom.logo ? "A new logo replaces the one in use. PNG, JPG or WebP, up to 1.5 MB" : "PNG, JPG or WebP, up to 1.5 MB", accept: "image/png,image/jpeg,image/webp", measure: true },
+        { name: "logo_bg", type: "select", label: "Logo background", hint: "Automatic picks one per design so the logo stands out", value: custom.logo_bg || "auto", options: [["auto", "Automatic"], ["none", "None"], ["light", "Light badge"], ["dark", "Dark badge"], ["accent", "Highlight colour badge"]] },
+        { name: "business_name", type: "text", label: "Business name", hint: "As it shows on the menu", max: 80, value: custom.name || data.business || "" },
+        { name: "hide_name", type: "checkbox", label: "Hide the name (my logo already shows it)", value: custom.hide_name === true },
+        { name: "brand", type: "color", label: "Highlight colour", value: brand || "#00a7b5" },
+        { name: "use_brand", type: "checkbox", label: "Use it for lines, borders and accents", value: Boolean(brand) },
+        { name: "subtitle", type: "text", label: "Line under your name", hint: "For example Dinner Menu, Est. 1998", max: 60, value: custom.subtitle || "Menu" }
+      ]
+    }
+  });
 }
 
 // "Customize": a logo (stored beside the preview), a brand colour and the line under the name, applied to every
 // design from the stored read (no AI call); back to the design the buyer was on.
 async function handlePreviewCustomize(request, env, token, { now = Date.now() } = {}) {
-  const gone = () => plainPage(410, "This preview has ended", `<a href="${escapeHtml(`${SITE}/online-menu`)}">Start a new one</a>.`);
-  const oops = (text) => plainPage(400, "That didn't work", `${escapeHtml(text)} <a href="javascript:history.back()">Go back</a> and try again.`);
+  if (request.method === "OPTIONS") return preflight();
+  const app = wantsJson(request);   // the Menu-made app's own Customize form reads the answer; the web form follows the redirect
+  const gone = () => app ? json({ ok: false, ended: true, error: "This preview has ended." }, 410) : plainPage(410, "This preview has ended", `<a href="${escapeHtml(`${SITE}/online-menu`)}">Start a new one</a>.`);
+  const oops = (text) => app ? json({ ok: false, error: text }, 400) : plainPage(400, "That didn't work", `${escapeHtml(text)} <a href="javascript:history.back()">Go back</a> and try again.`);
   if (!/^[a-f0-9]{36}$/.test(token) || !env.DB || !env.ASSETS) return gone();
   const row = await env.DB.prepare(`SELECT status, expires_at FROM menu_previews WHERE token = ?`).bind(token).first();
   if (!row || row.status !== "READY" || row.expires_at <= new Date(now).toISOString()) return gone();
@@ -457,6 +496,7 @@ async function handlePreviewCustomize(request, env, token, { now = Date.now() } 
     custom.subtitle = line && line.toLowerCase() !== "menu" ? line : "";
   }
   await storeMenuDesigns(env, token, { ...data, custom, customized: Number(data.customized || 0) + 1 });
+  if (app) return json({ ok: true, design: design.key });
   return new Response(null, { status: 303, headers: { Location: designUrl(token, design.key), "Cache-Control": "no-store" } });
 }
 
@@ -500,4 +540,4 @@ async function handlePreviewHandoff(env, token, { now = Date.now() } = {}) {
 }
 
 export { handleRepLink, repUrl, REP_PER_DAY };
-export { runPreviewReminders, handlePreviewCreate, handlePreviewView, handlePreviewHandoff, handlePreviewCustomize, handlePreviewChoose, menuPreviewChoice, publicPreviewPage, renderMenuDesign, loadPreviewLogo, storeMenuDesigns, viewUrl, PREVIEW_HOURS, PROSPECT_DAYS, PER_DAY, PER_NETWORK_DAY, PER_EMAIL };
+export { runPreviewReminders, handlePreviewCreate, handlePreviewView, handlePreviewState, handlePreviewHandoff, handlePreviewCustomize, handlePreviewChoose, menuPreviewChoice, publicPreviewPage, renderMenuDesign, loadPreviewLogo, storeMenuDesigns, viewUrl, PREVIEW_HOURS, PROSPECT_DAYS, PER_DAY, PER_NETWORK_DAY, PER_EMAIL };

@@ -120,8 +120,10 @@
       var tag = el("span", "hy-tagline hy-tagline-side"); tag.appendChild(el("span", null, "Graphic Design")); tag.appendChild(el("span", null, "& Branding"));
       bar.appendChild(tag);
     } else if (logo) {
-      var l = el("img", "hy-logo"); l.src = logo; l.alt = data.name; bar.appendChild(l);
+      // The gear is the website's menu button; the app has no menu behind it, so it sits left of the MENU logo as part
+      // of the brand (owner, Nov 10, 2026) and not on the right, where it looked like a button that did nothing.
       if (data.assets.mark) { var g = el("img", "hy-gear"); g.src = data.assets.mark; g.alt = ""; bar.appendChild(g); }
+      var l = el("img", "hy-logo"); l.src = logo; l.alt = data.name; bar.appendChild(l);
     }
     else bar.appendChild(el("strong", "hy-word", data.name));
     h.appendChild(bar);
@@ -148,6 +150,7 @@
       if (b.getAttribute("data-tab") === tab) b.setAttribute("aria-current", "page"); else b.removeAttribute("aria-current");
     });
     push.listeners = [];
+    document.body.classList.remove("hy-studio");
     while (screen.firstChild) screen.removeChild(screen.firstChild);
     var draw = (data.kind === "shop" ? SHOP : SERVICES)[tab];
     if (draw) draw(screen, opts || {});
@@ -169,106 +172,309 @@
   }
 
   // ---- Menu-made (services) ----
+  // ---- Menu-made: the generators run inside the app (owner, Nov 10, 2026: "too much redirects to the website and
+  // needs to be rebuilt with as much native as possible"). The form, the wait, the designs (in a frame on this
+  // screen) and the three buttons are the app's own; only checkout opens the website. ----
+  var gen = { kind: null, step: "choose", state: null, index: 0, error: "" }, account = null;
+  function genSpec(kind) { return (data.generators || []).filter(function (g) { return g.key === kind; })[0] || null; }
+  function saved(kind) {
+    var all = t.store.get("previews") || {}; var p = all[kind];
+    return p && /^[a-f0-9]{36}$/.test(p.token || "") && Date.now() - (p.at || 0) < 72 * 3600000 ? p : null;
+  }
+  function remember(kind, token, business) { var all = t.store.get("previews") || {}; if (token) all[kind] = { token: token, at: Date.now(), business: business || "" }; else delete all[kind]; t.store.set("previews", all); }
+  // The wait while a menu is read or designs are rebuilt: the app's gear, turning, with what is happening now.
+  function busyScreen(lines, wait) {
+    var box = el("div", "hy-busy"); box.setAttribute("role", "status"); box.setAttribute("aria-live", "polite");
+    var pic = loaderPicture("hy-busy-img"); if (pic) box.appendChild(pic); else box.appendChild(el("span", "hy-busy-ring"));
+    var line = el("strong", "hy-busy-line", lines[0] || "Working…"); box.appendChild(line);
+    if (wait) box.appendChild(el("p", "hy-muted", wait));
+    var i = 0; var timer = setInterval(function () {
+      if (!document.body.contains(box)) { clearInterval(timer); return; }
+      if (i < lines.length - 1) { i++; line.textContent = lines[i]; }
+    }, 9000);
+    return box;
+  }
+  function openGenerator(kind) {
+    var p = saved(kind);
+    gen = { kind: kind, step: p ? "studio" : "form", state: null, index: 0, error: "", token: p ? p.token : null };
+    show("preview");
+  }
+  // The same measurement the website's Customize makes of a chosen logo, so each design can make it stand out.
+  function measureLogo(file) {
+    if (!file || !window.createImageBitmap) return Promise.resolve("");
+    return createImageBitmap(file).then(function (bmp) {
+      var k = Math.min(1, 160 / Math.max(bmp.width, bmp.height)), w = Math.max(1, Math.round(bmp.width * k)), h = Math.max(1, Math.round(bmp.height * k));
+      var c = document.createElement("canvas"); c.width = w; c.height = h; var x = c.getContext("2d"); x.drawImage(bmp, 0, 0, w, h);
+      var d = x.getImageData(0, 0, w, h).data, lin = function (v) { v /= 255; return v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4); };
+      var ink = 0, clear = 0, sum = 0, edge = 0, edgeSolid = 0, x0 = w, y0 = h, x1 = -1, y1 = -1;
+      for (var y = 0; y < h; y++) for (var i = 0; i < w; i++) {
+        var p = (y * w + i) * 4, a = d[p + 3];
+        if (y === 0 || y === h - 1 || i === 0 || i === w - 1) { edge++; if (a > 200) edgeSolid++; }
+        if (a < 16) { clear++; continue; }
+        if (a > 128) { ink++; sum += 0.2126 * lin(d[p]) + 0.7152 * lin(d[p + 1]) + 0.0722 * lin(d[p + 2]); if (i < x0) x0 = i; if (i > x1) x1 = i; if (y < y0) y0 = y; if (y > y1) y1 = y; }
+      }
+      var box = (x1 - x0 + 1) * (y1 - y0 + 1);
+      return "t=" + (clear / (w * h) > 0.05 ? 1 : 0) + ";l=" + (ink ? (sum / ink).toFixed(3) : "0.5") + ";c=" + (box > 0 ? (ink / box).toFixed(2) : "1") + ";b=" + (edge && edgeSolid / edge > 0.9 ? 1 : 0);
+    }).catch(function () { return ""; });
+  }
+
+  // Preview tab, first page: pick a generator. Each card says what its three buttons do, so the screen that follows
+  // makes sense the first time.
+  function chooser(s) {
+    s.appendChild(header("Free preview", "See it before you checkout"));
+    (data.generators || []).forEach(function (g) {
+      var card = el("div", "hy-card hy-gen");
+      var top = el("div", "hy-plan-top"); top.appendChild(el("h2", null, g.title)); top.appendChild(el("span", "hy-pill", g.count + " designs")); card.appendChild(top);
+      card.appendChild(el("p", null, g.text));
+      card.appendChild(el("h3", "hy-label hy-label-in", "The three buttons you'll see"));
+      var list = el("ul", "hy-keys");
+      (g.buttons || []).forEach(function (b) { var li = el("li"); li.appendChild(el("span", "hy-key", b.label)); li.appendChild(el("span", "hy-muted", b.text)); list.appendChild(li); });
+      card.appendChild(list);
+      var have = saved(g.key);
+      card.appendChild(button(have ? "Open my " + (g.key === "menu" ? "menu" : "website") + " preview" : "Start the " + g.title.toLowerCase(), "hy-btn hy-btn-big", function () { openGenerator(g.key); }));
+      if (have) card.appendChild(button("Start again with another menu", "hy-link", function () { remember(g.key, null); openGenerator(g.key); }));
+      s.appendChild(card);
+    });
+  }
+
+  // The generator's form: business, email and the menu file; then the wait; then the designs.
+  function genForm(s, g) {
+    var bar = el("div", "hy-bar");
+    var back = el("button", "hy-icon-btn"); back.type = "button"; back.setAttribute("aria-label", "Back to the generators"); back.appendChild(icon("back"));
+    back.addEventListener("click", function () { gen = { kind: null, step: "choose" }; show("preview"); });
+    bar.appendChild(back); bar.appendChild(el("strong", null, g.title)); s.appendChild(bar);
+    var me = t.store.get("me") || {};
+    var form = el("form", "hy-card hy-form"); form.noValidate = true;
+    form.appendChild(el("p", null, g.key === "menu" ? "Upload the menu you have now. You'll see it as a phone menu in " + g.count + " designs." : "Upload the menu you have now. You'll see a whole website built from it, in " + g.count + " designs."));
+    function field(id, label, type, value, extra) {
+      var l = el("label", null, label); l.setAttribute("for", id); form.appendChild(l);
+      var i = el("input"); i.id = id; i.type = type; i.value = value || ""; for (var k in extra || {}) i.setAttribute(k, extra[k]); form.appendChild(i);
+      return i;
+    }
+    var biz = field("hy-biz", "Business name", "text", me.business, { autocomplete: "organization", maxlength: "120" });
+    var email = field("hy-email", "Email (we send you the link too)", "email", me.email, { autocomplete: "email", inputmode: "email", maxlength: "150" });
+    var city = g.city ? field("hy-city", "City (optional: we look up your phone, address and hours)", "text", me.city, { autocomplete: "address-level2", maxlength: "80" }) : null;
+    form.appendChild(el("p", "hy-file-label", "Your menu: a PDF or a photo, up to 5 MB"));
+    var pick = el("input"); pick.type = "file"; pick.accept = "application/pdf,image/png,image/jpeg,image/webp"; pick.hidden = true; pick.id = "hy-file";
+    var cam = el("input"); cam.type = "file"; cam.accept = "image/*"; cam.setAttribute("capture", "environment"); cam.hidden = true;
+    var chosen = null; var fileName = el("p", "hy-muted", "No file chosen yet.");
+    [pick, cam].forEach(function (input) {
+      input.addEventListener("change", function () { chosen = input.files[0] || null; fileName.textContent = chosen ? "Chosen: " + (chosen.name || "photo") : "No file chosen yet."; });
+      form.appendChild(input);
+    });
+    var row = el("div", "hy-row hy-wrap");
+    row.appendChild(button("Choose file", "hy-btn hy-btn-ghost", function () { pick.click(); }));
+    row.appendChild(button("Take a photo", "hy-btn hy-btn-ghost", function () { cam.click(); }));
+    form.appendChild(row); form.appendChild(fileName);
+    var go = button(g.start, "hy-btn hy-btn-big"); go.type = "submit"; form.appendChild(go);
+    var status = el("div", "hy-status" + (gen.error ? " is-error" : ""), gen.error || ""); status.setAttribute("role", "status"); status.setAttribute("aria-live", "polite"); form.appendChild(status);
+    function say(text) { status.textContent = text || ""; status.className = "hy-status is-error"; }
+    form.addEventListener("submit", function (ev) {
+      ev.preventDefault();
+      var b = biz.value.trim(), e = email.value.trim(), c = city ? city.value.trim() : "";
+      if (!b) { say("Add your business name."); biz.focus(); return; }
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e)) { say("Add an email address we can send the link to."); email.focus(); return; }
+      if (!chosen) { say("Choose your menu file or take a photo."); return; }
+      if (!/^(application\/pdf|image\/(png|jpeg|webp))$/.test(chosen.type) || !chosen.size || chosen.size > 5 * 1024 * 1024) { say("Previews work from a PDF or a photo (PNG, JPEG or WebP) up to 5 MB."); return; }
+      t.store.set("me", { business: b, email: e, city: c });
+      // The wait takes the whole screen: the gear turning and what is happening now. It stays if the buyer looks at
+      // another tab and comes back.
+      gen.step = "busy"; gen.business = b; gen.error = "";
+      show("preview");
+      var requestId = crypto.randomUUID ? crypto.randomUUID() : String(Date.now()) + Math.random().toString(16).slice(2);
+      var name = chosen.name && /\.(pdf|png|jpe?g|webp)$/i.test(chosen.name) ? chosen.name : "menu." + ({ "application/pdf": "pdf", "image/png": "png", "image/webp": "webp" }[chosen.type] || "jpg");
+      var body = new FormData();
+      body.append("payload", JSON.stringify({ type: "inquiry", purpose: "checkout", service: "Other project", name: b, business: b, email: e, notes: "Free " + (g.key === "menu" ? "menu" : "website") + " preview (Menu-made app)", website: "", requestId: requestId }));
+      body.append("document", chosen, name);
+      function fail(text) { gen.error = text; gen.step = "form"; if (current === "preview") show("preview"); }
+      fetch(data.upload_url, { method: "POST", body: body }).then(function (r) {
+        return r.json().catch(function () { return null; }).then(function (j) {
+          if (!r.ok || !j || j.ok !== true) throw new Error(r.status === 429 ? "Too many tries. Please wait an hour and try again." : "Your menu couldn't be sent. Please try again.");
+        });
+      }).then(function () {
+        return fetch(g.create_url, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ request_id: requestId, email: e, business: b, city: c, tracking: { campaign: "app" } }) })
+          .then(function (r) { return r.json().catch(function () { return null; }).then(function (j) { return { r: r, j: j || {} }; }); });
+      }).then(function (out) {
+        var j = out.j, token = j.token || (/\/(?:view)\/([a-f0-9]{36})/.exec(j.url || j.start || "") || [])[1];
+        if ((out.r.ok && j.ok && token) || (j.used && token)) { remember(g.key, token, b); gen = { kind: g.key, step: "studio", state: null, index: 0, error: "", token: token }; if (current === "preview") show("preview"); return; }
+        fail(j.error || "Something went wrong making your preview. Please try again.");
+      }).catch(function (err) { fail(err && err.message && !/fetch|network|load failed/i.test(err.message) ? err.message : "You need a connection to make a preview."); });
+    });
+    s.appendChild(form);
+  }
+
+  // The designs: the generated page in a frame on this screen, and the generator's three buttons under it.
+  function studio(s, g) {
+    var bar = el("div", "hy-bar");
+    var back = el("button", "hy-icon-btn"); back.type = "button"; back.setAttribute("aria-label", "Back to the generators"); back.appendChild(icon("back"));
+    back.addEventListener("click", function () { gen = { kind: null, step: "choose" }; show("preview"); });
+    var title = el("strong", null, g.title); bar.appendChild(back); bar.appendChild(title); s.appendChild(bar);
+    var stage = el("div", "hy-stage"); s.appendChild(stage);
+    document.body.classList.add("hy-studio");
+    function load() {
+      while (stage.firstChild) stage.removeChild(stage.firstChild);
+      stage.appendChild(busyScreen(["Opening your designs…"]));
+      fetch(g.state_url + gen.token, { cache: "no-store" }).then(function (r) { return r.json().catch(function () { return {}; }); }).then(function (st) {
+        if (!document.body.contains(stage)) return;
+        if (!st.ok || !Array.isArray(st.designs) || !st.designs.length) {
+          if (st.ended) remember(g.key, null);
+          while (stage.firstChild) stage.removeChild(stage.firstChild);
+          var gone = el("div", "hy-card"); gone.appendChild(el("p", null, st.error || "Your preview couldn't be opened."));
+          gone.appendChild(button(st.ended ? "Make a new preview" : "Try again", "hy-btn hy-btn-big", function () { if (st.ended) { gen.step = "form"; show("preview"); } else load(); }));
+          stage.appendChild(gone); return;
+        }
+        gen.state = st;
+        if (!gen.picked) { var at = st.designs.map(function (d) { return d.key; }).indexOf(st.design); gen.index = at < 0 ? 0 : at; gen.picked = true; }
+        draw();
+      }).catch(function () {
+        if (!document.body.contains(stage)) return;
+        while (stage.firstChild) stage.removeChild(stage.firstChild);
+        var off = el("div", "hy-card"); off.appendChild(el("p", null, "You need a connection to see your designs.")); off.appendChild(button("Try again", "hy-btn hy-btn-big", load)); stage.appendChild(off);
+      });
+    }
+    function draw() {
+      var st = gen.state, d = st.designs[gen.index % st.designs.length];
+      while (stage.firstChild) stage.removeChild(stage.firstChild);
+      title.textContent = g.title;
+      var label = el("p", "hy-design"); label.appendChild(el("strong", null, "Design " + (gen.index % st.designs.length + 1) + " of " + st.designs.length + ": " + d.label)); label.appendChild(el("span", "hy-muted", " · " + d.blurb)); stage.appendChild(label);
+      var wrap = el("div", "hy-frame");
+      var wait = busyScreen(["Drawing " + d.label + "…"]); wait.classList.add("hy-frame-wait"); wrap.appendChild(wait);
+      var frame = el("iframe"); frame.title = d.label + " design of your " + (g.key === "menu" ? "menu" : "website");
+      frame.setAttribute("referrerpolicy", "no-referrer");
+      frame.addEventListener("load", function () { if (wait.parentNode) wait.parentNode.removeChild(wait); });
+      frame.src = d.url + (d.url.indexOf("?") < 0 ? "?" : "&") + "v=" + (gen.rev || 0);
+      wrap.appendChild(frame); stage.appendChild(wrap);
+      var tools = el("div", "hy-tools");
+      var two = el("div", "hy-tools-row");
+      two.appendChild(button(st.next_label || "Next design", "hy-btn hy-btn-ghost", function () { gen.index = (gen.index + 1) % st.designs.length; draw(); }));
+      two.appendChild(button("Customize", "hy-btn hy-btn-ghost", function () { customize(); }));
+      tools.appendChild(two);
+      tools.appendChild(button(st.choose_label || "Choose this design", "hy-btn hy-btn-big", function () { openWeb(d.choose_url); }));
+      if (st.note) tools.appendChild(el("p", "hy-muted hy-tools-note", st.note + " Checkout opens Menu-made's secure checkout inside the app."));
+      stage.appendChild(tools);
+    }
+    // Customize: the app's own form, drawn from what the generator says it holds now; every design is rebuilt.
+    function customize() {
+      var st = gen.state, c = st.customize, d = st.designs[gen.index % st.designs.length];
+      var sheet = el("div", "hy-sheet"); sheet.setAttribute("role", "dialog"); sheet.setAttribute("aria-modal", "true"); sheet.setAttribute("aria-label", c.title);
+      var box = el("form", "hy-sheet-box hy-form"); box.noValidate = true;
+      var head = el("div", "hy-plan-top"); head.appendChild(el("h2", null, c.title));
+      var x = button("Close", "hy-link", function () { close(); }); head.appendChild(x); box.appendChild(head);
+      if (!c.left) box.appendChild(el("p", "hy-status is-error", "This preview has been updated as many times as a free preview allows."));
+      var inputs = [];
+      (c.fields || []).forEach(function (f, n) {
+        if (f.group) { box.appendChild(el("h3", "hy-label hy-label-in hy-sheet-group", f.group)); return; }
+        var id = "hy-c-" + n, input;
+        if (f.type === "checkbox") {
+          var row = el("label", "hy-check"); input = el("input"); input.type = "checkbox"; input.checked = f.value === true; row.appendChild(input); row.appendChild(el("span", null, f.label)); box.appendChild(row);
+        } else {
+          var l = el("label", null, f.label); l.setAttribute("for", id); box.appendChild(l);
+          if (f.type === "select") { input = el("select"); (f.options || []).forEach(function (o) { var op = el("option", null, o[1]); op.value = o[0]; input.appendChild(op); }); input.value = f.value; }
+          else if (f.type === "textarea") { input = el("textarea", "hy-textarea"); input.rows = 4; input.value = f.value || ""; if (f.max) input.maxLength = f.max; }
+          else if (f.type === "file") { input = el("input"); input.type = "file"; input.accept = f.accept || "image/*"; if (f.multiple) input.multiple = true; }
+          else if (f.type === "color") { input = el("input", "hy-color"); input.type = "color"; input.value = f.value || "#00a7b5"; }
+          else { input = el("input"); input.type = "text"; input.value = f.value || ""; if (f.max) input.maxLength = f.max; if (f.input) { input.setAttribute("inputmode", f.input); if (f.input !== "url") input.type = f.input; } }
+          input.id = id; box.appendChild(input);
+          if (f.hint) box.appendChild(el("p", "hy-hint", f.hint));
+        }
+        inputs.push({ f: f, input: input });
+      });
+      var msg = el("p", "hy-status"); msg.setAttribute("role", "status"); msg.setAttribute("aria-live", "polite");
+      var send = button(c.submit || "Update the designs", "hy-btn hy-btn-big"); send.type = "submit"; send.disabled = !c.left;
+      box.appendChild(send); box.appendChild(msg);
+      sheet.appendChild(box); document.body.appendChild(sheet); document.body.classList.add("hy-sheet-open");
+      function close() { if (sheet.parentNode) sheet.parentNode.removeChild(sheet); document.body.classList.remove("hy-sheet-open"); }
+      box.addEventListener("submit", function (ev) {
+        ev.preventDefault();
+        var body = new FormData(); body.append("design", d.key);
+        var logo = null, tooMany = "";
+        inputs.forEach(function (it) {
+          var f = it.f, i = it.input;
+          if (f.type === "file") {
+            var files = Array.prototype.slice.call(i.files || []);
+            if (f.max_files && files.length > f.max_files) tooMany = "Choose up to " + f.max_files + " photos.";
+            files.forEach(function (file) { body.append(f.name, file, file.name || f.name); });
+            if (f.measure && files[0]) logo = files[0];
+          } else if (f.type === "checkbox") { if (i.checked) body.append(f.name, "1"); else if (f.off != null) body.append(f.name, f.off); }
+          else body.append(f.name, i.value);
+        });
+        if (tooMany) { msg.textContent = tooMany; msg.className = "hy-status is-error"; return; }
+        box.hidden = true; var wait = busyScreen([c.busy || "Updating your designs…"]); wait.classList.add("hy-sheet-box"); sheet.appendChild(wait);
+        measureLogo(logo).then(function (info) {
+          body.append("logo_info", info);
+          return fetch(c.url, { method: "POST", body: body, headers: { Accept: "application/json" } });
+        }).then(function (r) { return r.json().catch(function () { return {}; }); }).then(function (j) {
+          if (j.ok) { gen.rev = (gen.rev || 0) + 1; close(); load(); return; }
+          if (wait.parentNode) wait.parentNode.removeChild(wait); box.hidden = false;
+          msg.textContent = j.error || "That didn't update. Please try again."; msg.className = "hy-status is-error";
+        }).catch(function () { if (wait.parentNode) wait.parentNode.removeChild(wait); box.hidden = false; msg.textContent = "You need a connection to update your designs."; msg.className = "hy-status is-error"; });
+      });
+    }
+    if (gen.state) draw(); else load();
+  }
+
   var SERVICES = {
     home: function (s) {
       s.appendChild(header());
-      var hero = el("div", "hy-hero");
+      var h = data.hero || {};
+      var hero = el("div", "hy-hero hy-home");
+      if (/^https:\/\//.test(h.image || "")) { var pic = el("img", "hy-home-img"); pic.src = h.image; pic.alt = ""; hero.appendChild(pic); }
       hero.appendChild(el("p", "hy-pill", data.tagline));
-      hero.appendChild(el("h2", null, data.hero.title));
-      hero.appendChild(button(data.hero.action, "hy-btn hy-btn-big", function () { show("preview"); }));
-      hero.appendChild(button("See the plans", "hy-btn hy-btn-ghost hy-btn-big", function () { show("plans"); }));
+      hero.appendChild(el("h2", null, h.title));
+      if (h.text) hero.appendChild(el("p", "hy-lead", h.text));
       s.appendChild(hero);
-      s.appendChild(el("h3", "hy-label", "Three steps"));
+      var gens = data.generators || [];
+      if (gens.length) {
+        s.appendChild(el("h3", "hy-label", "Start here, free"));
+        var grid = el("div", "hy-duo");
+        gens.forEach(function (g) {
+          var b = el("button", "hy-duo-card"); b.type = "button";
+          b.appendChild(icon(g.key === "menu" ? "preview" : "work", 28));
+          b.appendChild(el("strong", null, g.title)); b.appendChild(el("span", "hy-muted", g.text));
+          b.appendChild(el("span", "hy-pill", g.count + " designs"));
+          b.addEventListener("click", function () { openGenerator(g.key); });
+          grid.appendChild(b);
+        });
+        s.appendChild(grid);
+      } else s.appendChild(button(h.action || "Try a free preview", "hy-btn hy-btn-big", function () { show("preview"); }));
+      s.appendChild(el("h3", "hy-label", "How it works"));
       var list = el("ol", "hy-steps");
-      data.steps.forEach(function (step, i) {
-        var li = el("li"); var b = el("button", "hy-step"); b.type = "button";
+      (data.steps || []).forEach(function (step, i) {
+        var li = el("li"); var b = el("div", "hy-step");
         b.appendChild(el("span", "hy-num", String(i + 1)));
         var txt = el("span", "hy-step-text"); txt.appendChild(el("strong", null, step.title)); txt.appendChild(el("span", "hy-muted", step.text));
-        b.appendChild(txt);
-        b.addEventListener("click", function () { if (step.tab) show(step.tab); else openWeb(step.url); });
-        li.appendChild(b); list.appendChild(li);
+        b.appendChild(txt); li.appendChild(b); list.appendChild(li);
       });
       s.appendChild(list);
-      s.appendChild(pushCard("News from Menu-made", "Get a notification when your preview is ready and when there's something new."));
+      if ((data.work || []).length) {
+        s.appendChild(el("h3", "hy-label", "Made by Menu-made"));
+        var strip = el("div", "hy-strip");
+        data.work.forEach(function (w) {
+          var b = el("button", "hy-strip-card"); b.type = "button";
+          var img = el("img"); img.src = w.image; img.alt = ""; img.loading = "lazy"; b.appendChild(img);
+          b.appendChild(el("strong", null, w.title)); b.appendChild(el("span", "hy-muted", w.text));
+          b.addEventListener("click", function () { account = "work"; show("account"); });
+          strip.appendChild(b);
+        });
+        s.appendChild(strip);
+      }
+      if ((data.plans || []).length) {
+        var low = data.plans.reduce(function (m, p) { return Math.min(m, p.month_cents || m); }, Infinity);
+        var plan = el("div", "hy-card");
+        plan.appendChild(el("strong", null, "Keep it running"));
+        plan.appendChild(el("p", "hy-muted", "Plans keep your menu, Google profile and website up to date" + (isFinite(low) ? ", from " + money(low) + " a month." : ".")));
+        plan.appendChild(button("See the plans", "hy-btn hy-btn-ghost hy-btn-big", function () { show("plans"); }));
+        s.appendChild(plan);
+      }
+      s.appendChild(pushCard("News from Menu-made", "Get a notification when there's something new."));
     },
     preview: function (s) {
-      s.appendChild(header("Free menu preview", "See it before you checkout"));
-      var p = data.preview;
-      var form = el("form", "hy-card hy-form"); form.noValidate = true;
-      form.appendChild(el("p", null, "Upload the menu you have now. We turn it into a phone-friendly menu with a QR code, and you see it before you checkout."));
-      function field(id, label, type, extra) {
-        var l = el("label", null, label); l.setAttribute("for", id); form.appendChild(l);
-        var i = el("input"); i.id = id; i.type = type; for (var k in extra || {}) i.setAttribute(k, extra[k]); form.appendChild(i);
-        return i;
-      }
-      var biz = field("hy-biz", "Business name", "text", { autocomplete: "organization", maxlength: "120" });
-      var email = field("hy-email", "Email (we send you the link)", "email", { autocomplete: "email", inputmode: "email", maxlength: "200" });
-      var fileLabel = el("p", "hy-file-label", "Your menu: a PDF or a photo, up to 5 MB");
-      form.appendChild(fileLabel);
-      var pick = el("input"); pick.type = "file"; pick.accept = "application/pdf,image/png,image/jpeg,image/webp"; pick.hidden = true; pick.id = "hy-file";
-      var cam = el("input"); cam.type = "file"; cam.accept = "image/*"; cam.setAttribute("capture", "environment"); cam.hidden = true;
-      var chosen = null; var fileName = el("p", "hy-muted", "No file chosen yet.");
-      [pick, cam].forEach(function (input) {
-        input.addEventListener("change", function () { chosen = input.files[0] || null; fileName.textContent = chosen ? "Chosen: " + (chosen.name || "photo") : "No file chosen yet."; });
-        form.appendChild(input);
-      });
-      var row = el("div", "hy-row hy-wrap");
-      row.appendChild(button("Choose file", "hy-btn hy-btn-ghost", function () { pick.click(); }));
-      row.appendChild(button("Take a photo", "hy-btn hy-btn-ghost", function () { cam.click(); }));
-      form.appendChild(row); form.appendChild(fileName);
-      var go = button("Make my preview", "hy-btn hy-btn-big"); go.type = "submit"; form.appendChild(go);
-      var status = el("div", "hy-status"); status.setAttribute("role", "status"); status.setAttribute("aria-live", "polite"); form.appendChild(status);
-      var upload = null, busy = false;
-      function say(text, isError) { status.textContent = text || ""; status.className = "hy-status" + (isError ? " is-error" : ""); }
-      form.addEventListener("submit", function (ev) {
-        ev.preventDefault();
-        if (busy) return;
-        var b = biz.value.trim(), e = email.value.trim();
-        if (!b) { say("Add your business name.", true); biz.focus(); return; }
-        if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e)) { say("Add an email address we can send the link to.", true); email.focus(); return; }
-        if (!chosen) { say("Choose your menu file or take a photo.", true); return; }
-        if (!/^(application\/pdf|image\/(png|jpeg|webp))$/.test(chosen.type) || !chosen.size || chosen.size > 5 * 1024 * 1024) { say("Previews work from a PDF or a photo (PNG, JPEG or WebP) up to 5 MB.", true); return; }
-        busy = true; go.disabled = true; go.textContent = "Sending your menu…"; say("");
-        var key = [b, e.toLowerCase(), chosen.name, chosen.size].join("|");
-        var sending = (upload && upload.key === key) ? Promise.resolve(upload) : (function () {
-          var requestId = crypto.randomUUID ? crypto.randomUUID() : String(Date.now()) + Math.random().toString(16).slice(2);
-          var name = chosen.name && /\.(pdf|png|jpe?g|webp)$/i.test(chosen.name) ? chosen.name : "menu." + ({ "application/pdf": "pdf", "image/png": "png", "image/webp": "webp" }[chosen.type] || "jpg");
-          var body = new FormData();
-          body.append("payload", JSON.stringify({ type: "inquiry", purpose: "checkout", service: "Other project", name: b, business: b, email: e, notes: "Free menu preview (Menu-made app)", website: "", requestId: requestId }));
-          body.append("document", chosen, name);
-          return fetch(p.upload_url, { method: "POST", body: body }).then(function (r) {
-            return r.json().catch(function () { return null; }).then(function (j) {
-              if (!r.ok || !j || j.ok !== true) throw new Error(r.status === 429 ? "Too many tries. Please wait an hour and try again." : "Your menu couldn't be sent. Please try again.");
-              upload = { key: key, requestId: requestId }; return upload;
-            });
-          });
-        })();
-        sending.then(function (u) {
-          go.textContent = "Reading your menu…";
-          say("Reading your menu. This takes about a minute; keep the app open.");
-          return fetch(p.create_url, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ request_id: u.requestId, email: e, business: b, tracking: {} }) })
-            .then(function (r) { return r.json().catch(function () { return null; }).then(function (j) { return { r: r, j: j }; }); });
-        }).then(function (out) {
-          var j = out.j || {};
-          while (status.firstChild) status.removeChild(status.firstChild);
-          if (out.r.ok && j.ok && j.url) {
-            status.className = "hy-status is-ok";
-            status.appendChild(el("p", null, j.reused ? "You already have a preview of this menu." : "Your preview is ready. We've emailed you the link too."));
-            status.appendChild(button("Open my menu", "hy-btn hy-btn-big", function () { openWeb(j.url); }));
-            return;
-          }
-          if (j.used && j.start) { status.className = "hy-status is-error"; status.appendChild(el("p", null, j.error || "")); status.appendChild(button("Start my order", "hy-btn", function () { openWeb(j.start); })); return; }
-          if (out.r.status === 404 || out.r.status === 410) upload = null;
-          say(j.error || "Something went wrong making your preview. Please try again.", true);
-        }).catch(function (err) {
-          say(err && err.message && !/fetch|network/i.test(err.message) ? err.message : "You need a connection to make a preview.", true);
-        }).then(function () { busy = false; go.disabled = false; go.textContent = "Make my preview"; });
-      });
-      s.appendChild(form);
-      var more = el("div", "hy-card"); more.appendChild(el("strong", null, "What happens next"));
-      more.appendChild(el("p", "hy-muted", "Your preview opens right here in the app, with designs to choose from. It stays free for 3 days."));
-      more.appendChild(button("More about Online Menu + QR", "hy-link", function () { openWeb(p.more_url); }));
-      s.appendChild(more);
+      document.body.classList.remove("hy-studio");
+      var g = gen.kind ? genSpec(gen.kind) : null;
+      if (!g) { gen = { kind: null, step: "choose" }; chooser(s); return; }
+      if (gen.step === "studio" && gen.token) { studio(s, g); return; }
+      if (gen.step === "busy") { s.appendChild(header(g.title, gen.business || "")); s.appendChild(busyScreen(g.busy || ["Working…"], g.wait)); return; }
+      genForm(s, g); gen.error = "";
     },
     plans: function (s) {
       s.appendChild(header("Plans", "Every plan starts with your menu"));
@@ -292,22 +498,56 @@
       var plan = data.plans.filter(function (p) { return p.code === chosenPlan; })[0];
       if (plan) {
         var box = el("div", "hy-card hy-checkout");
-        box.appendChild(el("p", "hy-muted", "Checkout is Stripe's secure page, opened inside the app. " + (data.plans_note || "")));
+        box.appendChild(el("p", "hy-muted", "Checkout opens Menu-made's secure checkout inside the app. " + (data.plans_note || "")));
         box.appendChild(button("Checkout with " + plan.name, "hy-btn hy-btn-big", function () { openWeb(interval === "year" ? plan.checkout_year : plan.checkout_month); }));
         s.appendChild(box);
       }
     },
     account: function (s) {
+      function sub(title, text) {
+        var bar = el("div", "hy-bar");
+        var back = el("button", "hy-icon-btn"); back.type = "button"; back.setAttribute("aria-label", "Back to Account"); back.appendChild(icon("back"));
+        back.addEventListener("click", function () { account = null; show("account"); });
+        bar.appendChild(back); bar.appendChild(el("strong", null, title)); s.appendChild(bar);
+        if (text) s.appendChild(el("p", "hy-muted hy-pad", text));
+      }
+      if (account === "services" && (data.services || []).length) {
+        sub("All services", "Everything Menu-made does, with today's prices.");
+        data.services.forEach(function (v) {
+          var card = el("div", "hy-plan");
+          var top = el("span", "hy-plan-top"); top.appendChild(el("strong", null, v.name)); top.appendChild(el("strong", null, v.price)); card.appendChild(top);
+          if (v.text) card.appendChild(el("span", "hy-muted", v.text));
+          s.appendChild(card);
+        });
+        var go = el("div", "hy-card"); go.appendChild(el("p", "hy-muted", "Plans bundle these for less."));
+        go.appendChild(button("See the plans", "hy-btn hy-btn-big", function () { account = null; show("plans"); })); s.appendChild(go);
+        return;
+      }
+      if (account === "work" && (data.work || []).length) {
+        sub("Our work", "Sites and menus we've made.");
+        data.work.forEach(function (w) {
+          var card = el("div", "hy-card hy-work-card");
+          var img = el("img"); img.src = w.image; img.alt = w.title + ": " + w.text; img.loading = "lazy"; card.appendChild(img);
+          card.appendChild(el("strong", null, w.title)); card.appendChild(el("p", "hy-muted", w.text));
+          s.appendChild(card);
+        });
+        return;
+      }
+      account = null;
       s.appendChild(header("Account", "Your orders, plans and help"));
       var list = el("div", "hy-list");
       data.links.forEach(function (l) {
         var b = el("button", "hy-list-item"); b.type = "button";
         b.appendChild(el("strong", null, l.label)); b.appendChild(el("span", "hy-muted", l.text));
-        b.addEventListener("click", function () { openWeb(l.url); });
+        b.addEventListener("click", function () {
+          if (l.screen && (data[l.screen] || []).length) { account = l.screen; show("account"); }
+          else if (l.mailto) window.location.href = "mailto:" + l.mailto;
+          else openWeb(l.url);
+        });
         list.appendChild(b);
       });
       s.appendChild(list);
-      s.appendChild(pushCard("Notifications", "Hear when your preview is ready and when there's something new."));
+      s.appendChild(pushCard("Notifications", "Hear when there's something new."));
     }
   };
 

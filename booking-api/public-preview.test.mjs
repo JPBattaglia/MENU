@@ -57,11 +57,16 @@ test('an upload becomes a watermarked, unprintable phone preview with no QR, and
   const html = await page.text();
   assert.match(html, /Garlic Bread/);
   assert.match(html, /Make it live: \$144 for the first year/, 'the price keeps its dollar sign');
-  assert.match(html, /--primary: #a8322d/, "the menu's own colour, not black and white; the cream paper colour is skipped");
+  // "Your printed menu" (last of the designs since Nov 10, 2026) keeps the menu's own colours.
+  const yours = await (await f.get(`${new URL(out.url).pathname}/yours`)).text();
+  assert.match(yours, /--primary: #a8322d/, "the menu's own colour, not black and white; the cream paper colour is skipped");
+  assert.match(yours, /Design 9 of 9: Your printed menu/);
   assert.match(html, /PREVIEW%20%C2%B7%20NOT%20LIVE/);
   assert.match(html, /@media print/);
-  assert.match(html, /\/api\/menu-preview\/choose\/[a-f0-9]{36}\/yours/, '"Make it live" saves the design on screen first');
-  assert.match(html, /Design 1 of 9: Your printed menu/);
+  assert.match(html, /\/api\/menu-preview\/choose\/[a-f0-9]{36}\/classic/, '"Make it live" saves the design on screen first');
+  // Inside the Menu-made app the page sits in a frame and the app draws the buttons, so a framed page hides its bar.
+  assert.match(html, /mm-framed \.mm-preview/);
+  assert.match(html, /Design 1 of 9: Classic/);
   assert.doesNotMatch(html, /<svg[^>]*qr|data-qr|\/api\/menu\//i, 'no QR code and no hosted menu address');
   assert.equal(calls.claude, 1);
   assert.equal(calls.email, 1);
@@ -393,4 +398,30 @@ test('one reminder about 2 days in, only when no order came from the preview', a
   const hCreated = Date.parse(h.f.env.DB.raw.prepare(`SELECT created_at FROM menu_previews`).get().created_at);
   assert.deepEqual(await runPreviewReminders(h.f.env, { now: hCreated + 47 * 3600000, force: true }), []);
   assert.ok(h.f.env.DB.raw.prepare(`SELECT reminder_sent_at FROM menu_previews`).get().reminder_sent_at, 'marked so it is not checked again');
+});
+
+test('the app reads a preview\'s designs, buttons and Customize fields, and its Customize gets a JSON answer', async (t) => {
+  const f = setup();
+  stubClaude(t);
+  const requestId = await f.upload();
+  const out = await (await f.create({ request_id: requestId, email: 'owner@cafe.example', business: 'Sample Cafe', tracking: {} })).json();
+  const token = out.token;
+  const state = await (await f.get(`/api/menu-preview/state/${token}`)).json();
+  assert.equal(state.ok, true);
+  assert.equal(state.designs.length, 9);
+  assert.deepEqual([state.designs[0].key, state.designs.at(-1).key, state.design], ['classic', 'yours', 'classic'], 'Classic leads; Your printed menu is last');
+  assert.match(state.designs[0].url, new RegExp(`/api/menu-preview/view/${token}/classic$`));
+  assert.equal(state.next_label, 'Generate menu');
+  assert.match(state.choose_label, /^Make it live: \$144/);
+  assert.deepEqual(state.customize.fields.map((x) => x.name), ['logo', 'logo_bg', 'business_name', 'hide_name', 'brand', 'use_brand', 'subtitle']);
+  const form = new FormData();
+  form.set('design', 'diner'); form.set('subtitle', 'Dinner Menu'); form.set('business_name', 'Sample Cafe');
+  const res = await worker.fetch(new Request(`https://menu-made.com/api/menu-preview/customize/${token}`, { method: 'POST', body: form, headers: { Accept: 'application/json' } }), f.env, {});
+  assert.equal(res.status, 200);
+  assert.deepEqual(await res.json(), { ok: true, design: 'diner' });
+  assert.equal(res.headers.get('Access-Control-Allow-Origin'), '*');
+  const after = await (await f.get(`/api/menu-preview/state/${token}`)).json();
+  assert.equal(after.customize.fields.find((x) => x.name === 'subtitle').value, 'Dinner Menu');
+  assert.equal(after.customize.left, state.customize.left - 1);
+  assert.equal((await f.get('/api/menu-preview/state/' + 'a'.repeat(36))).status, 410);
 });

@@ -10,7 +10,6 @@
 // The buyer's Customize colour changes only the highlights (accent); headers and headings keep the design's colours.
 
 const MENU_DESIGNS = [
-  { key: "yours", label: "Your printed menu", blurb: "The colours and type of the menu you sent" },
   { key: "classic", label: "Classic", blurb: "Burgundy band, ruled cream paper, framed page",
     style: { paper: "#fbf6ec", text: "#2a2420", heading: "#7a1f2b", accent: "#b8902b", item: "#2a2420", price: "#7a1f2b", title_font: "classic-serif", heading_font: "classic-serif", body_font: "classic-serif", heading_case: "upper", item_case: "as-printed", heading_align: "center", divider: "line", item_layout: "stacked", header: "band", nav: "pills", section: "short", texture: "lines", frame: "line" } },
   { key: "bistro", label: "Bistro Noir", blurb: "Black and gold, framed title, big prices",
@@ -26,14 +25,16 @@ const MENU_DESIGNS = [
   { key: "fine", label: "Fine Dining", blurb: "Spaced capitals, centred dishes, quiet ivory",
     style: { paper: "#faf7f1", text: "#1b1b1b", heading: "#1b1b1b", accent: "#9a7b45", item: "#1b1b1b", price: "#5a4a2e", title_font: "elegant-serif", heading_font: "elegant-serif", body_font: "elegant-serif", heading_case: "upper", item_case: "upper", heading_align: "center", divider: "ornament", item_layout: "centered", header: "minimal", nav: "links", section: "rule", frame: "line" } },
   { key: "night", label: "Night Market", blurb: "Neon glow on navy, pill headings, grid cards",
-    style: { paper: "#11162b", text: "#e9ecf5", heading: "#ffb000", accent: "#ff4f9a", item: "#ffffff", price: "#ffb000", title_font: "condensed-sans", heading_font: "condensed-sans", body_font: "modern-sans", heading_case: "upper", item_case: "upper", heading_align: "left", divider: "none", item_layout: "grid", header: "hero", nav: "tabs", section: "fill", texture: "grid" } }
+    style: { paper: "#11162b", text: "#e9ecf5", heading: "#ffb000", accent: "#ff4f9a", item: "#ffffff", price: "#ffb000", title_font: "condensed-sans", heading_font: "condensed-sans", body_font: "modern-sans", heading_case: "upper", item_case: "upper", heading_align: "left", divider: "none", item_layout: "grid", header: "hero", nav: "tabs", section: "fill", texture: "grid" } },
+  // Last since Nov 10, 2026 (owner: "the first menu template needs to be the Classic not the plain Your printed menu").
+  { key: "yours", label: "Your printed menu", blurb: "The colours and type of the menu you sent" }
 ];
 const MENU_DESIGN_KEYS = MENU_DESIGNS.map((d) => d.key);
 const menuDesignFor = (key) => MENU_DESIGNS.find((d) => d.key === key) || null;
 
 // The raw style for a design. "yours" is the reader's own (null when it saw none: the standard page).
 function designStyle(key, menu) {
-  const design = menuDesignFor(key) || MENU_DESIGNS[0];
+  const design = menuDesignFor(key) || MENU_DESIGNS[0];   // an unknown key gets the first design (Classic)
   return design.style ? { ...design.style } : menu?.style || null;
 }
 

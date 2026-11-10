@@ -1,10 +1,10 @@
 import { handleAdminQueue } from "./admin/queue.js";
-import { handlePreviewCreate, handlePreviewView, handlePreviewHandoff, handlePreviewCustomize, handlePreviewChoose, handleRepLink, runPreviewReminders } from "./marketing/public-preview.js";
+import { handlePreviewCreate, handlePreviewView, handlePreviewState, handlePreviewHandoff, handlePreviewCustomize, handlePreviewChoose, handleRepLink, runPreviewReminders } from "./marketing/public-preview.js";
 import { handleSiteForm } from "./producers/site-files/site-form.js";
 import { handleDomainLookup } from "./producers/website/registrar.js";
 import { runDomainPurchases } from "./producers/website/domain-purchase.js";
 import { handleDomainRenewDone, handleDomainRenewPay, runDomainRenewals } from "./producers/website/domain-renewal.js";
-import { handleWebsitePreviewCreate, handleWebsitePreviewView, handleWebsitePreviewHandoff, handleWebsitePreviewCustomize, handleWebsitePreviewImage, handleProspectSiteDemo, runWebsitePreviewReminders, rebuildProspectSites } from "./marketing/website-preview.js";
+import { handleWebsitePreviewCreate, handleWebsitePreviewView, handleWebsitePreviewState, handleWebsitePreviewHandoff, handleWebsitePreviewCustomize, handleWebsitePreviewImage, handleProspectSiteDemo, runWebsitePreviewReminders, rebuildProspectSites } from "./marketing/website-preview.js";
 import { handleOrderCancel } from "./account/cancel.js";
 import { handleBuyerRevision } from "./approvals/buyer-revision.js";
 import { handleApprovalRequest, handleBatchApprovalRequest } from "./approvals/approvals.js";
@@ -161,7 +161,12 @@ var worker_default = {
     if (url.pathname === "/api/domains" && request.method === "GET") return handleDomainLookup(request, env);
     if (url.pathname === "/api/website-preview/create" && (request.method === "POST" || request.method === "OPTIONS")) return handleWebsitePreviewCreate(request, env);
     const ownSite = url.pathname.match(/^\/api\/website-preview\/customize\/([a-f0-9]{36})$/);
-    if (ownSite && request.method === "POST") return handleWebsitePreviewCustomize(request, env, ownSite[1]);
+    if (ownSite && (request.method === "POST" || request.method === "OPTIONS")) return handleWebsitePreviewCustomize(request, env, ownSite[1]);
+    // The Menu-made app's generator screens read what to draw from these (marketing/framed.js).
+    const siteState = url.pathname.match(/^\/api\/website-preview\/state\/([a-f0-9]{36})$/);
+    if (siteState && (request.method === "GET" || request.method === "OPTIONS")) return handleWebsitePreviewState(request, env, siteState[1]);
+    const menuState = url.pathname.match(/^\/api\/menu-preview\/state\/([a-f0-9]{36})$/);
+    if (menuState && (request.method === "GET" || request.method === "OPTIONS")) return handlePreviewState(request, env, menuState[1]);
     const ownImage = url.pathname.match(/^\/api\/website-preview\/view\/([a-f0-9]{36})\/d\/[a-z]+\/img\/([a-z0-9-]+\.[a-z]+)$/);
     if (ownImage && (request.method === "GET" || request.method === "HEAD")) return handleWebsitePreviewImage(env, ownImage[1], ownImage[2]);
     const sitePreview = url.pathname.match(/^\/api\/website-preview\/(view|handoff)\/([a-f0-9]{36})(?:\/((?:d\/[a-z]+\/|d\/)?[a-z]+\.html))?$/);
@@ -177,7 +182,7 @@ var worker_default = {
     }
     // Menu generator (Nov 7, 2026): Customize rebuilds every design; "Make it live" saves the design, then checkout.
     const menuCustomize = url.pathname.match(/^\/api\/menu-preview\/customize\/([a-f0-9]{36})$/);
-    if (menuCustomize && request.method === "POST") return handlePreviewCustomize(request, env, menuCustomize[1]);
+    if (menuCustomize && (request.method === "POST" || request.method === "OPTIONS")) return handlePreviewCustomize(request, env, menuCustomize[1]);
     const menuChoose = url.pathname.match(/^\/api\/menu-preview\/choose\/([a-f0-9]{36})\/([a-z]{2,20})$/);
     if (menuChoose && request.method === "GET") return handlePreviewChoose(env, menuChoose[1], menuChoose[2]);
     const previewMatch = url.pathname.match(/^\/api\/menu-preview\/([a-f0-9]{36})$/);
