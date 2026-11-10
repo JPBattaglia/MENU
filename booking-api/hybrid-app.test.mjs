@@ -167,7 +167,7 @@ test('new-design pushes: one notification for the designs entering early access,
 
 test('the MΞNU icon has its own darker background; an app without one keeps its brand colour', async () => {
   const { storeIconSvg } = await import('./src/producers/guest-app/build.js');
-  assert.equal(hybrid.hybridLookForBundle('com.menumade.menumade').icon_bg, '#00161b');
+  assert.equal(hybrid.hybridLookForBundle('com.menumade.menumade').icon_bg, '#012a30');
   const app = { app_name: 'MENU-MADE', brand_color: '#013f45' };
   assert.match(storeIconSvg(app, { hasLogo: true, background: '#00161b' }), /<rect width="512" height="512" fill="#00161b"\/>/);
   assert.match(storeIconSvg(app, { hasLogo: true }), /fill="#013f45"/);

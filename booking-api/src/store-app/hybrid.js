@@ -307,10 +307,10 @@ const hybridUrl = (key) => (HYBRID_KEYS.has(key) ? `${MM}/api/app-hybrid/${key}`
 // and Google Play listing names stay Nino Battaglia and MENU-MADE (app_name).
 const HYBRID_LOOK = {
   // icon_bg: the icon's own background (owner, Nov 10, 2026: "needs a darker background so the logo contrasts better";
-  // the brand teal #013f45 was too close to the gear's cyan).
+  // the brand teal #013f45 was too close to the gear's cyan). Of five shown he picked the second, #012a30 ("B").
   // icon_file: the gear brightened for the icon only (owner, Nov 10, 2026, after the darker background: "the logo
   // needs to be brighter"); made from MENU=.png (brightness 1.6, contrast 1.05, colour 1.15). In the app the gear is unchanged.
-  menumade: { logo_url: `${MM}/MENU%3D.png`, label: "M\u039eNU", icon_bg: "#00161b", icon_file: "assets/own-apps/menumade-icon-logo.png" },
+  menumade: { logo_url: `${MM}/MENU%3D.png`, label: "M\u039eNU", icon_bg: "#012a30", icon_file: "assets/own-apps/menumade-icon-logo.png" },
   // Owner, Nov 8: the logo animation plays once as the app opens (clip #4, NinoLogoAnimation, no sound); the ring of
   // fire N (clip #6, NinoGif1, background removed) shows whenever something is loading.
   nino: { label: "Nino", logo_url: `${MM}/assets/own-apps/nino-app-logo.png`, icon_file: "assets/own-apps/nino-app-logo.png",
