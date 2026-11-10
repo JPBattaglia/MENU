@@ -127,6 +127,14 @@
     }
     else bar.appendChild(el("strong", "hy-word", data.name));
     h.appendChild(bar);
+    // Menu-made (owner, Nov 10, 2026): the gear and MENU logo stay exactly as on Home on every page, with the page's
+    // title on the right of the same bar; the line under it is its own section below the header.
+    if (title && data.theme === "menumade") {
+      bar.appendChild(el("h1", "hy-side-title" + (String(title).length > 12 ? " is-long" : ""), title));
+      if (!sub) return h;
+      var both = document.createDocumentFragment(); both.appendChild(h); both.appendChild(el("p", "hy-subline", sub));
+      return both;
+    }
     if (title) {
       var box = el("div", "hy-titlebox"); box.appendChild(el("h1", null, title)); if (sub) box.appendChild(el("p", null, sub));
       h.appendChild(box);
@@ -303,40 +311,49 @@
     s.appendChild(form);
   }
 
-  // The designs: the generated page in a frame on this screen, and the generator's three buttons under it.
+  // The designs: the generated page fills the whole screen and the generator's three buttons sit in a bar at the
+  // bottom, as the preview did on the website (owner, Nov 10, 2026: "I liked it better when the template examples
+  // took up the whole screen with the buttons at the bottom rather than a window"). The app's tabs step aside.
   function studio(s, g) {
-    var bar = el("div", "hy-bar");
-    var back = el("button", "hy-icon-btn"); back.type = "button"; back.setAttribute("aria-label", "Back to the generators"); back.appendChild(icon("back"));
-    back.addEventListener("click", function () { gen = { kind: null, step: "choose" }; show("preview"); });
-    var title = el("strong", null, g.title); bar.appendChild(back); bar.appendChild(title); s.appendChild(bar);
-    var stage = el("div", "hy-stage"); s.appendChild(stage);
+    var stage = el("div", "hy-full"); s.appendChild(stage);
     document.body.classList.add("hy-studio");
-    function load() {
+    function leave() { gen = { kind: null, step: "choose" }; show("preview"); }
+    // The bottom bar: back, what is on screen, then the three buttons (none while there is nothing to act on).
+    function toolbar(text, more) {
+      var tools = el("div", "hy-tools");
+      var top = el("div", "hy-tools-top");
+      var back = el("button", "hy-icon-btn"); back.type = "button"; back.setAttribute("aria-label", "Back to the generators"); back.appendChild(icon("back"));
+      back.addEventListener("click", leave);
+      top.appendChild(back); top.appendChild(text); tools.appendChild(top);
+      if (more) more(tools);
+      return tools;
+    }
+    function message(node) {
       while (stage.firstChild) stage.removeChild(stage.firstChild);
-      stage.appendChild(busyScreen(["Opening your designs…"]));
+      var mid = el("div", "hy-full-mid"); mid.appendChild(node); stage.appendChild(mid);
+      stage.appendChild(toolbar(el("strong", null, g.title)));
+    }
+    function load() {
+      message(busyScreen(["Opening your designs…"]));
       fetch(g.state_url + gen.token, { cache: "no-store" }).then(function (r) { return r.json().catch(function () { return {}; }); }).then(function (st) {
         if (!document.body.contains(stage)) return;
         if (!st.ok || !Array.isArray(st.designs) || !st.designs.length) {
           if (st.ended) remember(g.key, null);
-          while (stage.firstChild) stage.removeChild(stage.firstChild);
           var gone = el("div", "hy-card"); gone.appendChild(el("p", null, st.error || "Your preview couldn't be opened."));
           gone.appendChild(button(st.ended ? "Make a new preview" : "Try again", "hy-btn hy-btn-big", function () { if (st.ended) { gen.step = "form"; show("preview"); } else load(); }));
-          stage.appendChild(gone); return;
+          message(gone); return;
         }
         gen.state = st;
         if (!gen.picked) { var at = st.designs.map(function (d) { return d.key; }).indexOf(st.design); gen.index = at < 0 ? 0 : at; gen.picked = true; }
         draw();
       }).catch(function () {
         if (!document.body.contains(stage)) return;
-        while (stage.firstChild) stage.removeChild(stage.firstChild);
-        var off = el("div", "hy-card"); off.appendChild(el("p", null, "You need a connection to see your designs.")); off.appendChild(button("Try again", "hy-btn hy-btn-big", load)); stage.appendChild(off);
+        var off = el("div", "hy-card"); off.appendChild(el("p", null, "You need a connection to see your designs.")); off.appendChild(button("Try again", "hy-btn hy-btn-big", load)); message(off);
       });
     }
     function draw() {
       var st = gen.state, d = st.designs[gen.index % st.designs.length];
       while (stage.firstChild) stage.removeChild(stage.firstChild);
-      title.textContent = g.title;
-      var label = el("p", "hy-design"); label.appendChild(el("strong", null, "Design " + (gen.index % st.designs.length + 1) + " of " + st.designs.length + ": " + d.label)); label.appendChild(el("span", "hy-muted", " · " + d.blurb)); stage.appendChild(label);
       var wrap = el("div", "hy-frame");
       var wait = busyScreen(["Drawing " + d.label + "…"]); wait.classList.add("hy-frame-wait"); wrap.appendChild(wait);
       var frame = el("iframe"); frame.title = d.label + " design of your " + (g.key === "menu" ? "menu" : "website");
@@ -344,14 +361,14 @@
       frame.addEventListener("load", function () { if (wait.parentNode) wait.parentNode.removeChild(wait); });
       frame.src = d.url + (d.url.indexOf("?") < 0 ? "?" : "&") + "v=" + (gen.rev || 0);
       wrap.appendChild(frame); stage.appendChild(wrap);
-      var tools = el("div", "hy-tools");
-      var two = el("div", "hy-tools-row");
-      two.appendChild(button(st.next_label || "Next design", "hy-btn hy-btn-ghost", function () { gen.index = (gen.index + 1) % st.designs.length; draw(); }));
-      two.appendChild(button("Customize", "hy-btn hy-btn-ghost", function () { customize(); }));
-      tools.appendChild(two);
-      tools.appendChild(button(st.choose_label || "Choose this design", "hy-btn hy-btn-big", function () { openWeb(d.choose_url); }));
-      if (st.note) tools.appendChild(el("p", "hy-muted hy-tools-note", st.note + " Checkout opens Menu-made's secure checkout inside the app."));
-      stage.appendChild(tools);
+      var label = el("p", "hy-design"); label.appendChild(el("strong", null, "Design " + (gen.index % st.designs.length + 1) + " of " + st.designs.length + ": " + d.label)); label.appendChild(el("span", "hy-muted", " · " + d.blurb));
+      stage.appendChild(toolbar(label, function (tools) {
+        var two = el("div", "hy-tools-row");
+        two.appendChild(button(st.next_label || "Next design", "hy-btn hy-btn-ghost", function () { gen.index = (gen.index + 1) % st.designs.length; draw(); }));
+        two.appendChild(button("Customize", "hy-btn hy-btn-ghost", function () { customize(); }));
+        tools.appendChild(two);
+        tools.appendChild(button(st.choose_label || "Choose this design", "hy-btn hy-btn-big", function () { openWeb(d.choose_url); }));
+      }));
     }
     // Customize: the app's own form, drawn from what the generator says it holds now; every design is rebuilt.
     function customize() {
