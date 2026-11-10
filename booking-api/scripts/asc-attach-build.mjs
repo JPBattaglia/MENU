@@ -29,6 +29,14 @@ export function internalGroups(groups) {
   return (groups || []).filter((g) => g?.attributes?.isInternalGroup);
 }
 
+// What to log after adding a build to a group. Apple's error code and title say why (no account data in them).
+export function groupAddResult(add) {
+  if (add?.ok || add?.status === 409) return "build added";
+  const err = add?.body?.errors?.[0];
+  const why = [err?.code, err?.title].filter(Boolean).join(": ");
+  return `answer ${add?.status}${why ? ` (${why})` : ""}`;
+}
+
 async function main([keyPath, keyId, issuerId, bundleId, version, build]) {
   if (!keyPath || !keyId || !issuerId || !bundleId || !version || !/^\d+$/.test(build || "")) {
     throw new Error("Usage: asc-attach-build.mjs <AuthKey.p8> <key id> <issuer id> <bundle id> <version> <build>");
@@ -66,8 +74,10 @@ async function main([keyPath, keyId, issuerId, bundleId, version, build]) {
   // 2. Internal TestFlight groups.
   const groups = internalGroups((await call(`/apps/${appId}/betaGroups?limit=50`)).body?.data);
   for (const g of groups) {
+    // A group with automatic distribution already gets every build; Apple answers 422 if one is added by hand.
+    if (g?.attributes?.hasAccessToAllBuilds) { console.log("TestFlight internal group: gets every build automatically"); continue; }
     const add = await call(`/betaGroups/${g.id}/relationships/builds`, { method: "POST", body: JSON.stringify({ data: [{ type: "builds", id: buildRow.id }] }) });
-    console.log(`TestFlight internal group: ${add.ok || add.status === 409 ? "build added" : `answer ${add.status}`}`);
+    console.log(`TestFlight internal group: ${groupAddResult(add)}`);
   }
   if (!groups.length) console.log("No internal TestFlight group on this app");
 
