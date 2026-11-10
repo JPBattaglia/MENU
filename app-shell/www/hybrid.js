@@ -446,9 +446,11 @@
         var grid = el("div", "hy-duo");
         gens.forEach(function (g) {
           var b = el("button", "hy-duo-card"); b.type = "button";
-          b.appendChild(icon(g.key === "menu" ? "preview" : "work", 28));
+          // Each card ends in a filled button so it reads as something to tap (owner, Nov 10, 2026: "needs to be more
+          // intuitive that those are buttons"). The whole card is the button; no arrows (his rule for both sites).
+          var top = el("span", "hy-duo-top"); top.appendChild(icon(g.key === "menu" ? "preview" : "work", 28)); top.appendChild(el("span", "hy-pill", g.count + " designs")); b.appendChild(top);
           b.appendChild(el("strong", null, g.title)); b.appendChild(el("span", "hy-muted", g.text));
-          b.appendChild(el("span", "hy-pill", g.count + " designs"));
+          b.appendChild(el("span", "hy-duo-go", saved(g.key) ? "Open my preview" : "Try it free"));
           b.addEventListener("click", function () { openGenerator(g.key); });
           grid.appendChild(b);
         });
