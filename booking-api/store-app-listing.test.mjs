@@ -29,9 +29,14 @@ async function p8() {
 }
 
 // A fake App Store Connect and Google Play that remember what they were sent.
-function fakeStores({ appleFail = null, playDraft = false, appleState = 'WAITING_FOR_REVIEW', playLive = false, liveVersion = null, buildVersion = '1.0.0' } = {}) {
-  const seen = { apple: [], play: [], uploads: 0 };
-  const state = { appleState, playLive, opened: !liveVersion };
+// v1State = the open version's state in the versions list; waitingBuild = the build a waiting version holds;
+// withdrawChecks = how many status checks Apple needs before a cancelled review leaves its version editable;
+// sentBack = a submission Apple returned (Unresolved Issues); resubmitFails = Apple refuses to resubmit it by API;
+// playSent = Google Play's production track already has a release that was sent for review.
+function fakeStores({ appleFail = null, playDraft = false, appleState = 'WAITING_FOR_REVIEW', playLive = false, liveVersion = null, buildVersion = '1.0.0',
+  v1State = 'PREPARE_FOR_SUBMISSION', waitingBuild = 'B1', withdrawChecks = 1, sentBack = false, resubmitFails = false, playSent = false } = {}) {
+  const seen = { apple: [], play: [], uploads: 0, canceled: [] };
+  const state = { appleState, playLive, opened: !liveVersion, v1State, withdrawChecks };
   const fetchImpl = async (url, init = {}) => {
     const u = String(url); const m = init.method || 'GET';
     if (u.startsWith('https://oauth2.googleapis.com/token')) return Response.json({ access_token: 'ya29', expires_in: 3600 });
@@ -45,7 +50,19 @@ function fakeStores({ appleFail = null, playDraft = false, appleState = 'WAITING
       if (path.startsWith('/apps?')) return Response.json({ data: [{ id: 'APP1' }] });
       if (path.startsWith('/apps/APP1/appStoreVersions')) return Response.json({ data: [
         ...(liveVersion ? [{ id: 'V0', attributes: { appStoreState: 'READY_FOR_SALE', versionString: liveVersion } }] : []),
-        ...(state.opened ? [{ id: 'V1', attributes: { appStoreState: 'PREPARE_FOR_SUBMISSION' } }] : [])] });
+        ...(state.opened ? [{ id: 'V1', attributes: { appStoreState: state.v1State } }] : [])] });
+      if (path === '/appStoreVersions/V1/build') return Response.json({ data: { id: waitingBuild } });
+      if (path.startsWith('/reviewSubmissions?') && path.includes('filter[state]=WAITING_FOR_REVIEW')) return Response.json({ data: state.v1State === 'WAITING_FOR_REVIEW' ? [{ id: 'RSW', attributes: { state: 'WAITING_FOR_REVIEW' } }] : [] });
+      if (path === '/reviewSubmissions/RSW' && m === 'PATCH') { seen.canceled.push(body.data.attributes); state.canceled = true; return Response.json({ data: {} }); }
+      if (path === '/appStoreVersions/V1' && m === 'GET' && state.canceled && state.v1State === 'WAITING_FOR_REVIEW') {
+        if (--state.withdrawChecks <= 0) state.v1State = 'DEVELOPER_REJECTED';
+        return Response.json({ data: { id: 'V1', attributes: { appStoreState: state.v1State } } });
+      }
+      if (path.startsWith('/reviewSubmissions?') && sentBack) return Response.json({ data: [{ id: 'RSU', attributes: { state: 'UNRESOLVED_ISSUES' } }] });
+      if (path === '/reviewSubmissions/RSU' && m === 'PATCH') {
+        seen.resubmit = body.data.attributes;
+        return resubmitFails ? Response.json({ errors: [{ detail: 'The review submission is not in a state that allows this.' }] }, { status: 409 }) : Response.json({ data: {} });
+      }
       if (path === '/appStoreVersions' && m === 'POST') { seen.newVersion = body.data.attributes; state.opened = true; return Response.json({ data: { id: 'V1' } }); }
       if (path.startsWith('/builds?')) return Response.json({ data: [{ id: 'B9' }], included: [{ type: 'preReleaseVersions', attributes: { version: buildVersion } }] });
       if (path === '/appStoreVersions/V1' && m === 'PATCH') { seen.versionPatch = body; return Response.json({ data: { id: 'V1' } }); }
@@ -83,6 +100,8 @@ function fakeStores({ appleFail = null, playDraft = false, appleState = 'WAITING
       if (/\/listings\/en-US$/.test(path)) { seen.playListing = JSON.parse(init.body); return Response.json({}); }
       if (/\/listings\/en-US\/\w+$/.test(path.split('?')[0])) return m === 'DELETE' ? new Response(null, { status: 204 }) : Response.json({ image: {} });
       if (/\/tracks\/internal$/.test(path)) return Response.json({ releases: [{ versionCodes: ['12', '14'] }] });
+      if (/\/tracks\/production$/.test(path) && m === 'GET') return Response.json({ track: 'production', releases: playSent ? [{ versionCodes: ['12'], status: 'completed' }] : [{ versionCodes: ['12'], status: 'draft' }] });
+      if (/^\/edits\/E\d+$/.test(path) && m === 'DELETE') return new Response(null, { status: 204 });
       if (/\/tracks\/production$/.test(path)) { const b = JSON.parse(init.body); seen.release = b.releases[0]; return Response.json(b); }
       if (/:commit$/.test(path)) return playDraft && seen.release.status !== 'draft' ? Response.json({ error: { message: 'Only releases with status draft may be created on draft app.' } }, { status: 400 }) : Response.json({ id: 'done' });
       throw new Error(`Unexpected Play call ${m} ${path}`);
@@ -401,4 +420,135 @@ test("the Nino app's listing carries Nino's own support and privacy pages; other
   assert.equal(nino.name, 'x');
   assert.deepEqual(listing.withOwnUrls({ own_app: 1, bundle_id: 'com.menumade.menumade' }, base), base);
   assert.deepEqual(listing.withOwnUrls({ own_app: 0, bundle_id: 'com.menumade.ninobattaglia' }, base), base, 'a customer app is never touched');
+});
+
+// ---------- A newer build approved while an earlier one is at the stores (owner's own apps, Nov 10, 2026) ----------
+
+// The app was sent once already: Apple has build B1 waiting, Google has its first release in review.
+async function sentOnce(f, google = { ok: true, versionCode: '12', draft: true }) {
+  await pictures(f);
+  f.sql(`UPDATE store_app_listings SET approved_at = '2026-11-09T18:00:00.000Z', submitted_at = '2026-11-09T18:05:00.000Z', preview_sent_at = '2026-11-09T17:00:00.000Z',
+    apple_json = ?, google_json = ? WHERE store_app_id = ?`, JSON.stringify({ ok: true, appId: 'APP1', versionId: 'V1', state: 'WAITING_FOR_REVIEW' }), JSON.stringify(google), ID);
+  f.sql(`UPDATE store_apps SET status = 'WAITING_SUBMIT_APPROVAL', updated_at = ?`, new Date().toISOString());
+}
+async function quiet(fn) {
+  const { setPauseForTests } = await import('./src/store-app/store-submit.js');
+  setPauseForTests(async () => {});
+  try { return await fn(); } finally { setPauseForTests((ms) => new Promise((r) => setTimeout(r, ms))); }
+}
+
+test("a newer build approved while the earlier one waits at Apple: the waiting review is pulled, the new build goes in, and Google's first review is left alone", () => quiet(async () => {
+  const f = await setup();
+  const stores = fakeStores({ v1State: 'WAITING_FOR_REVIEW', playSent: true });
+  await sentOnce(f);
+  await tick(f, stores);
+  await approve(f, previewUrl(f.emails.at(-1)));
+  await tick(f, stores);
+  const s = stores.seen;
+  assert.deepEqual(s.canceled, [{ canceled: true }], 'the waiting submission is taken out of review');
+  assert.equal(s.versionPatch.data.relationships.build.data.id, 'B9', 'the newest build replaces it');
+  assert.equal(s.description.whatsNew, undefined, "still a first release: no What's New");
+  assert.equal(s.submitted, true, 'and it is sent for review again');
+  assert.equal(s.release, undefined, 'nothing is released on Google Play');
+  assert.ok(!s.play.some((c) => c.startsWith('PUT') || c.endsWith(':commit')), 'and nothing is changed there');
+  const row = f.row(`SELECT status, note FROM store_apps`);
+  assert.equal(row.status, 'IN_REVIEW');
+  assert.match(row.note, /first review left undisturbed/);
+  assert.ok(!f.emails.some((e) => /One click in Play Console/.test(e.subject)), 'no second "send for review" email');
+  assert.equal(JSON.parse(f.row(`SELECT google_json FROM store_app_listings`).google_json).held, true);
+
+  // Google finishes its first review: the held build goes up as an update, then both live -> LIVE.
+  stores.state.playLive = true;
+  await tick(f, stores, Date.now() + 2 * 3600000);
+  assert.deepEqual(stores.seen.release, { versionCodes: ['14'], status: 'completed' }, 'the newest Android build follows once the app is public');
+  assert.equal(JSON.parse(f.row(`SELECT google_json FROM store_app_listings`).google_json).held, undefined);
+  stores.state.appleState = 'READY_FOR_SALE';
+  await tick(f, stores, Date.now() + 4 * 3600000);
+  assert.equal(f.row(`SELECT status FROM store_apps`).status, 'LIVE');
+}));
+
+test('Apple slow to release the waiting build: tried again by itself with no email, then sent', () => quiet(async () => {
+  const f = await setup();
+  const stores = fakeStores({ v1State: 'WAITING_FOR_REVIEW', playSent: true, withdrawChecks: 14 });
+  await sentOnce(f);
+  await tick(f, stores);
+  await approve(f, previewUrl(f.emails.at(-1)));
+  const mails = f.emails.length;
+  await tick(f, stores);
+  assert.equal(f.row(`SELECT status FROM store_apps`).status, 'WAITING_SUBMIT_APPROVAL');
+  assert.equal(f.emails.length, mails, 'the owner is not emailed about a wait');
+  assert.equal(stores.seen.play.length, 0, 'Google is not touched until Apple is ready');
+  await tick(f, stores);
+  assert.equal(f.row(`SELECT status FROM store_apps`).status, 'IN_REVIEW', 'the next tick finishes it');
+  assert.equal(stores.seen.submitted, true);
+  assert.equal(JSON.parse(f.row(`SELECT apple_json FROM store_app_listings`).apple_json).withdraw_tries, undefined);
+}));
+
+test('approving again when the newest build is already waiting at Apple changes nothing there', () => quiet(async () => {
+  const f = await setup();
+  const stores = fakeStores({ v1State: 'WAITING_FOR_REVIEW', waitingBuild: 'B9', playSent: true });
+  await sentOnce(f);
+  await tick(f, stores);
+  await approve(f, previewUrl(f.emails.at(-1)));
+  await tick(f, stores);
+  assert.deepEqual(stores.seen.canceled, [], 'not pulled out of the queue');
+  assert.equal(stores.seen.versionPatch, undefined);
+  assert.equal(f.row(`SELECT status FROM store_apps`).status, 'IN_REVIEW');
+}));
+
+test('a review Apple sent back is resubmitted on the same submission (the App Review conversation is kept)', () => quiet(async () => {
+  const f = await setup();
+  const stores = fakeStores({ sentBack: true, playSent: true });
+  await sentOnce(f);
+  await tick(f, stores);
+  await approve(f, previewUrl(f.emails.at(-1)));
+  await tick(f, stores);
+  assert.deepEqual(stores.seen.resubmit, { submitted: true });
+  assert.ok(!stores.seen.apple.includes('POST /reviewSubmissions'), 'no second submission is opened');
+  assert.equal(stores.seen.versionPatch.data.relationships.build.data.id, 'B9');
+  assert.ok(stores.seen.review.notes, "the reviewer's notes were refreshed first");
+  assert.equal(f.row(`SELECT status FROM store_apps`).status, 'IN_REVIEW');
+  assert.ok(!f.emails.some((e) => /One click in App Store Connect/.test(e.subject)));
+}));
+
+test("when Apple only takes that resubmission on its website, the owner gets the one click and isn't told the app was rejected again", () => quiet(async () => {
+  const f = await setup();
+  const stores = fakeStores({ sentBack: true, resubmitFails: true, playSent: true, appleState: 'REJECTED' });
+  await sentOnce(f);
+  await tick(f, stores);
+  await approve(f, previewUrl(f.emails.at(-1)));
+  await tick(f, stores);
+  const row = f.row(`SELECT status, note FROM store_apps`);
+  assert.equal(row.status, 'IN_REVIEW');
+  assert.match(row.note, /Resubmit to App Review/);
+  const mail = f.emails.at(-1);
+  assert.match(mail.subject, /One click in App Store Connect/);
+  assert.match(mail.html, /Unresolved Issues/);
+  assert.doesNotMatch(mail.html, /→|&rarr;/, 'no arrows');
+  await tick(f, stores, Date.now() + 2 * 3600000);
+  assert.equal(f.row(`SELECT status FROM store_apps`).status, 'IN_REVIEW', 'the old answer is not reported as a new rejection');
+  stores.state.appleState = 'WAITING_FOR_REVIEW';
+  await tick(f, stores, Date.now() + 4 * 3600000);
+  assert.equal(JSON.parse(f.row(`SELECT apple_json FROM store_app_listings`).apple_json).resubmit_by_hand, undefined, 'pressed: back in the queue');
+  stores.state.appleState = 'REJECTED';
+  await tick(f, stores, Date.now() + 6 * 3600000);
+  assert.equal(f.row(`SELECT status FROM store_apps`).status, 'REJECTED', 'a later rejection is reported as before');
+}));
+
+test("the owner's own apps get listing words that say what each app does, within every store limit; customer apps keep theirs", () => {
+  const limits = { name: 30, subtitle: 30, keywords: 100, promo: 170, description: 4000, play_title: 30, play_short: 80, play_full: 4000 };
+  const base = { name: 'x', subtitle: 'Services and news', description: 'old', play_full: 'old' };
+  for (const bundle of ['com.menumade.menumade', 'com.menumade.ninobattaglia']) {
+    const text = listing.withOwnText({ own_app: 1, bundle_id: bundle }, base);
+    for (const [k, max] of Object.entries(limits)) if (text[k] != null) assert.ok(String(text[k]).length <= max, `${bundle} ${k}`);
+    assert.equal(text.name, 'x', 'the name is kept');
+    assert.doesNotMatch(JSON.stringify(text), /→|restaurant/i);
+  }
+  const menu = listing.withOwnText({ own_app: 1, bundle_id: 'com.menumade.menumade' }, base);
+  assert.match(menu.description, /MENU GENERATOR/);
+  assert.match(menu.description, /WEBSITE GENERATOR/);
+  assert.match(menu.description, /checkout/);
+  assert.doesNotMatch(menu.description, /\bpay\b/i);
+  assert.match(listing.withOwnText({ own_app: 1, bundle_id: 'com.menumade.ninobattaglia' }, base).description, /24 hours before the website/);
+  assert.deepEqual(listing.withOwnText({ own_app: 0, bundle_id: 'com.menumade.menumade' }, base), base);
 });

@@ -20,6 +20,11 @@ const PLAY_UPLOAD = "https://androidpublisher.googleapis.com/upload/androidpubli
 const EDITABLE = new Set(["PREPARE_FOR_SUBMISSION", "DEVELOPER_REJECTED", "REJECTED", "METADATA_REJECTED", "INVALID_BINARY"]);
 const LIVE_STATES = new Set(["READY_FOR_SALE", "READY_FOR_DISTRIBUTION", "PENDING_DEVELOPER_RELEASE", "PROCESSING_FOR_DISTRIBUTION"]);
 const REJECTED_STATES = new Set(["REJECTED", "METADATA_REJECTED", "INVALID_BINARY"]);
+// A version Apple has not started reviewing yet: approving a newer build takes it back out of the queue first.
+const WAITING_STATES = new Set(["WAITING_FOR_REVIEW"]);
+const BEING_REVIEWED = new Set(["IN_REVIEW", "PENDING_APPLE_RELEASE"]);
+const WITHDRAW_CHECKS = 10;
+const WITHDRAW_PAUSE_MS = 6000;
 const WHATS_NEW = "Updated for the latest iPhone software, with performance and reliability improvements.";
 
 // Apple rejects an empty string in a URL field (409 "must be a valid RFC 3986 URI"); a link we don't have is left out.
@@ -119,8 +124,29 @@ async function submitApple({ creds, bundleId, listing, images, contact, reviewNo
     if (!build) throw new StepError("build", "Apple has no processed build for this app yet (it takes 5-30 minutes after an upload).");
     const buildVersion = (builds.included || []).find((i) => i.type === "preReleaseVersions")?.attributes?.version;
     // An update (an earlier version is or was in the store) needs "What's New" text; a first release must not have it.
-    const update = versions.some((v) => !EDITABLE.has(stateOf(v)));
     let version = versions.find((v) => EDITABLE.has(stateOf(v)));
+    // A newer build was approved while an earlier one waits in Apple's queue (owner, Nov 10, 2026: the Menu-made app
+    // was rebuilt while build 36 waited): the waiting submission is taken out of review, which makes its version
+    // editable again, and the newest build goes in its place. A version already waiting with this very build is left
+    // alone, and one a reviewer has opened is never pulled.
+    const waiting = !version && versions.find((v) => WAITING_STATES.has(stateOf(v)));
+    if (waiting) {
+      const waitingBuild = (await asc("GET", `/appStoreVersions/${waiting.id}/build`, null, "version").catch(() => ({}))).data;
+      if (waitingBuild?.id === build.id) return { ok: true, appId: app.id, versionId: waiting.id, build: buildVersion || null, unchanged: true };
+      const queued = (await asc("GET", `/reviewSubmissions?filter[app]=${app.id}&filter[platform]=IOS&filter[state]=WAITING_FOR_REVIEW&limit=10`, null, "withdraw")).data || [];
+      for (const q of queued) await asc("PATCH", `/reviewSubmissions/${q.id}`, { data: { type: "reviewSubmissions", id: q.id, attributes: { canceled: true } } }, "withdraw");
+      for (let i = 0; i < WITHDRAW_CHECKS && !version; i++) {
+        await pauseImpl(WITHDRAW_PAUSE_MS);
+        const again = (await asc("GET", `/appStoreVersions/${waiting.id}`, null, "withdraw")).data;
+        if (again && EDITABLE.has(stateOf(again))) version = again;
+      }
+      // Apple takes a minute or more some days; the listing tick tries again by itself (retry), no email.
+      if (!version) return { ok: false, retry: true, step: "withdraw", message: "Apple is still taking the earlier build out of its review queue; trying again in a few minutes." };
+    }
+    if (!version && versions.some((v) => BEING_REVIEWED.has(stateOf(v)))) {
+      throw new StepError("version", "An Apple reviewer has the earlier build open right now, so it can't be swapped. Approve again after Apple answers (usually within a day).");
+    }
+    const update = versions.some((v) => v.id !== version?.id && !EDITABLE.has(stateOf(v)));
     if (!version) {
       // The app is live and nothing is open: a rebuild (yearly SDK update or a fix) opens the next version, whose
       // string is the build's (the build config asks for one above the live version).
@@ -200,7 +226,21 @@ async function submitApple({ creds, bundleId, listing, images, contact, reviewNo
     if (existing?.id) await asc("PATCH", `/appStoreReviewDetails/${existing.id}`, { data: { type: "appStoreReviewDetails", id: existing.id, attributes: detail } }, "review contact");
     else await asc("POST", "/appStoreReviewDetails", { data: { type: "appStoreReviewDetails", attributes: detail, relationships: { appStoreVersion: { data: { type: "appStoreVersions", id: version.id } } } } }, "review contact");
 
-    const open = (await asc("GET", `/reviewSubmissions?filter[app]=${app.id}&filter[state]=READY_FOR_REVIEW&limit=1`, null, "submit")).data?.[0];
+    const subs = (await asc("GET", `/reviewSubmissions?filter[app]=${app.id}&filter[platform]=IOS&filter[state]=READY_FOR_REVIEW,UNRESOLVED_ISSUES&limit=10`, null, "submit")).data || [];
+    // A submission Apple sent back (Unresolved Issues, e.g. guideline 2.1 "Information Needed") is the one to send
+    // again: it keeps the App Review conversation, and Apple takes no new submission while it is open. Apple's API
+    // does not always allow that resubmission; then everything above is already in place and only the
+    // "Resubmit to App Review" button on Apple's website is left (resubmit_by_hand; the owner gets the one click).
+    const sentBack = subs.find((r) => r.attributes?.state === "UNRESOLVED_ISSUES");
+    if (sentBack) {
+      try {
+        await asc("PATCH", `/reviewSubmissions/${sentBack.id}`, { data: { type: "reviewSubmissions", id: sentBack.id, attributes: { submitted: true } } }, "resubmit");
+        return { ok: true, appId: app.id, versionId: version.id, build: buildVersion || null, resubmitted: true };
+      } catch (error) {
+        return { ok: true, appId: app.id, versionId: version.id, build: buildVersion || null, resubmit_by_hand: true, apple_said: String(error.message || error).slice(0, 300) };
+      }
+    }
+    const open = subs.find((r) => r.attributes?.state === "READY_FOR_REVIEW") || null;
     const submission = open || (await asc("POST", "/reviewSubmissions", { data: { type: "reviewSubmissions", attributes: { platform: "IOS" }, relationships: { app: { data: { type: "apps", id: app.id } } } } }, "submit")).data;
     // Add the version to the submission unless it's already in it. Apple's refusal here names what's missing in App
     // Store Connect (age rating, App Privacy, pricing...), so it is reported, not swallowed (Nov 9, 2026: swallowing
@@ -221,7 +261,7 @@ async function appleStatus({ creds, versionId }, { fetchImpl = fetch } = {}) {
   try {
     const v = (await appleClient(creds, fetchImpl)("GET", `/appStoreVersions/${versionId}`, null, "status")).data;
     const state = v?.attributes?.appStoreState || v?.attributes?.appVersionState || "UNKNOWN";
-    return { ok: true, state, live: LIVE_STATES.has(state), rejected: REJECTED_STATES.has(state) };
+    return { ok: true, state, live: LIVE_STATES.has(state), rejected: REJECTED_STATES.has(state), queued: WAITING_STATES.has(state) || BEING_REVIEWED.has(state) };
   } catch (error) { return { ok: false, message: String(error.message || error) }; }
 }
 
@@ -237,12 +277,23 @@ async function play(token, method, url, body, step, fetchImpl, contentType = "ap
   return data;
 }
 
-async function submitGoogle({ sa, packageName, listing, images }, { fetchImpl = fetch } = {}) {
+async function submitGoogle({ sa, packageName, listing, images, firstReviewSent = false }, { fetchImpl = fetch } = {}) {
   try {
     const token = await accessToken(sa, PLAY_SCOPE, { fetchImpl });
     const base = `${PLAY}/${packageName}/edits`;
     const edit = await play(token, "POST", base, {}, "open", fetchImpl);
     const e = `${base}/${edit.id}`;
+    // Google is still on this app's first review (a release was sent, the store page is not public yet): a second
+    // send would put the app back at the start of that wait (owner, Nov 10, 2026: never restart Google's wait).
+    // Nothing is changed; the newest build goes up by itself once the app is public (store-listing.js).
+    if (firstReviewSent) {
+      const production = await play(token, "GET", `${e}/tracks/production`, null, "release", fetchImpl).catch(() => ({}));
+      const sent = (production.releases || []).some((r) => r.status && r.status !== "draft");
+      if (sent && !(await googleLive(packageName, { fetchImpl }))) {
+        await play(token, "DELETE", e, null, "open", fetchImpl).catch(() => null);
+        return { ok: true, held: true };
+      }
+    }
     await play(token, "PUT", `${e}/listings/en-US`, { language: "en-US", title: listing.play_title, shortDescription: listing.play_short, fullDescription: listing.play_full }, "listing", fetchImpl);
     const put = async (type, names) => {
       await play(token, "DELETE", `${e}/listings/en-US/${type}`, null, "images", fetchImpl).catch(() => null);
