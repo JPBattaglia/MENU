@@ -142,6 +142,30 @@ function ninoContent(catalog, releases = null, nowSeconds = Math.floor(Date.now(
     collections,
     products,
     shop_note: "Every design is printed to order. Free 3-inch sticker of the design with every order.",
+    // The Work tab's portfolio, the same pieces and order as ninobattaglia.com/art.html (owner, Nov 9, 2026: the tab was
+    // only two links). image = the grid picture, full = the larger one shown when a piece is tapped.
+    work: [
+      {"title": "Garamond", "category": "Typography", "image": `${NINO}/assets/design-typography-640.webp`, "full": `${NINO}/assets/design-typography.webp`},
+      {"title": "Bird / letter P", "category": "Branding", "image": `${NINO}/assets/design-lettermark.webp`, "full": `${NINO}/assets/design-lettermark.webp`},
+      {"title": "Face Landscape", "category": "Illustration", "image": `${NINO}/assets/art-face-landscape-640.webp`, "full": `${NINO}/assets/art-face-landscape.webp`},
+      {"title": "Identity explorations", "category": "Branding", "image": `${NINO}/assets/design-logo-collection.webp`, "full": `${NINO}/assets/design-logo-collection.webp`},
+      {"title": "Skull Wave", "category": "Illustration", "image": `${NINO}/assets/art-skull-wave-640.webp`, "full": `${NINO}/assets/art-skull-wave.webp`},
+      {"title": "Letterform studies", "category": "Typography", "image": `${NINO}/assets/design-type-studies-640.webp`, "full": `${NINO}/assets/design-type-studies.webp`},
+      {"title": "Self identity", "category": "Branding", "image": `${NINO}/assets/design-identity-card-640.webp`, "full": `${NINO}/assets/design-identity-card.webp`},
+      {"title": "Airobic Fitness", "category": "Print & layout", "image": `${NINO}/assets/design-editorial-layout-640.webp`, "full": `${NINO}/assets/design-editorial-layout.webp`},
+      {"title": "Menu presentation", "category": "Print & layout", "image": `${NINO}/assets/design-menu-layout.webp`, "full": `${NINO}/assets/design-menu-layout.webp`},
+      {"title": "Photo animation study", "category": "Motion", "image": `${NINO}/assets/design-motion-preview.webp`, "full": `${NINO}/assets/design-motion-preview.webp`},
+      {"title": "Oroboros", "category": "Illustration", "image": `${NINO}/assets/art-oroboros.webp`, "full": `${NINO}/assets/art-oroboros.webp`},
+      {"title": "Body Face", "category": "Illustration", "image": `${NINO}/assets/art-face-lines-640.webp`, "full": `${NINO}/assets/art-face-lines.webp`},
+      {"title": "Bison Samurai", "category": "Illustration", "image": `${NINO}/assets/art-bison-samurai.webp`, "full": `${NINO}/assets/art-bison-samurai.webp`},
+      {"title": "Motopsycho", "category": "Illustration", "image": `${NINO}/assets/art-motopsycho.webp`, "full": `${NINO}/assets/art-motopsycho.webp`},
+      {"title": "Owls", "category": "Illustration", "image": `${NINO}/assets/art-owls-640.webp`, "full": `${NINO}/assets/art-owls.webp`},
+      {"title": "Graphite Bird", "category": "Drawing", "image": `${NINO}/assets/art-graphite-bird.webp`, "full": `${NINO}/assets/art-graphite-bird.webp`},
+      {"title": "Landscape", "category": "Drawing", "image": `${NINO}/assets/art-landscape-640.webp`, "full": `${NINO}/assets/art-landscape.webp`},
+      {"title": "Artificial Intelligence", "category": "Illustration", "image": `${NINO}/assets/art-artificial-intelligence-640.webp`, "full": `${NINO}/assets/art-artificial-intelligence.webp`},
+      {"title": "Halloween Harmony", "category": "Illustration", "image": `${NINO}/assets/art-halloween-harmony-640.webp`, "full": `${NINO}/assets/art-halloween-harmony.webp`},
+      {"title": "Grumpy Frog", "category": "Illustration", "image": `${NINO}/assets/art-grumpy-frog-640.webp`, "full": `${NINO}/assets/art-grumpy-frog.webp`}
+    ],
     links: { work: `${NINO}/art.html`, cart: `${NINO}/cart.html`, services: `${NINO}/services.html`, help: `${NINO}/support.html` },
     rewards: {
       enabled: true,

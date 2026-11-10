@@ -219,3 +219,6 @@ body.hy-theme-menumade .hy-loader { background: linear-gradient(#013f45, #012f34
 .hy-inline-loader-img { width: 72px; height: auto; animation: hy-spin 1.6s linear infinite; }
 .hy-inline-loader-img.is-animated { width: 88px; animation: none; }
 @media (prefers-reduced-motion: reduce) { .hy-inline-loader-img:not(.is-animated) { animation: hy-pulse 1.6s ease-in-out infinite; } }
+
+/* Work tab: a tapped portfolio piece shown whole, not cropped. */
+.hy-work-full { object-fit: contain; aspect-ratio: auto; height: auto; max-height: 70vh; background: #000; }
