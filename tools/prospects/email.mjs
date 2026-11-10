@@ -1,24 +1,31 @@
 // The Menu-made prospect email: one gap, one offer, the same branding as the customer emails. Used by drafts.mjs.
 // build(prospect) -> { subject, html, text }. The logo is attached inline as cid:logo@menu-made.
+//
+// Nov 10, 2026 (owner): every example in these emails is the current generator, never the old one-design rendering.
+// A prospect's own preview is the menu generator (all MENU_DESIGNS) or the site generator (all website DESIGNS); with
+// no preview of their own, the second button opens the same free generator on the site to try with their menu.
+// The emails don't mention a missing call button.
+import { MENU_DESIGNS } from "../../booking-api/src/producers/menu-qr/menu-designs.js";
+import { DESIGNS as SITE_DESIGNS } from "../../booking-api/src/producers/website/templates/designs.js";
 
-const SERVICES = "https://menu-made.com/services.html";
-const SAMPLES = "https://menu-made.com/api/samples";
+const MENU_COUNT = MENU_DESIGNS.length;
+const SITE_COUNT = SITE_DESIGNS.length;
 // Marketing plan v4 (Nov 3, 2026): Online Menu + QR has its own page; links from these emails are tagged so a sale
 // that follows is counted against the outreach (funnel.js keeps the labels through checkout).
-const WEBSITE = "https://menu-made.com/website-design?utm_source=outreach&utm_medium=email&utm_campaign=demo-website#try-free";
+const WEBSITE = "https://menu-made.com/website-design?utm_source=outreach&utm_medium=email&utm_campaign=demo-website";
 const ONLINE_MENU = "https://menu-made.com/online-menu?utm_source=outreach&utm_medium=email&utm_campaign=demo-menu";
-// Dark mode (Nov 1, 2026): Apple Mail recoloured the header light while the logo kept a baked-in navy box. The logo
-// is now transparent and the email asks mail apps to keep its light design.
+// Dark mode: the logo is transparent and the email declares a dark colour scheme, so mail apps keep its colours.
 // Copy revised Nov 1, 2026 (owner): plain wording, accurate to each offer as services.html describes it.
 const OFFERS = {
   // Price corrected Nov 3, 2026: $129 setup + $15 first-year hosting = $144 (checkout/quote.js), up to 3 pages.
-  ONLINE_MENU_QR: { name: "Online Menu + QR", url: ONLINE_MENU, sample: ["See a real example", `${SAMPLES}/menu`],
+  ONLINE_MENU_QR: { name: "Online Menu + QR", url: ONLINE_MENU, sample: [`Try it free with your menu`, `${ONLINE_MENU}#try-free`],
     offer: "Menu-made can turn the menu you already have into a clean, mobile-friendly menu page that Google can read, along with a printable QR code for your tables and front window. It's $144 for the first year, which covers up to 3 menu pages, hosting and two rounds of changes.",
-    how: "All we need is your current menu as a PDF or photos. We build the page, check it, and email you the link and QR code." },
-  // Nov 6, 2026 (owner): Conversion Fix is folded into the Website Package; links go to the website page's free preview.
-  WEBSITE_PACKAGE: { name: "Website Package", url: WEBSITE, sample: ["See a real example", `${SAMPLES}/website/`],
-    offer: "Menu-made builds simple, mobile-friendly websites for food and drink businesses: up to five pages with your menu, hours, map, photos and contact details, on your own domain. It's $499 one time, and the first three months of updates are included.",
-    how: "You can see your business as a website before paying anything: the button below builds a private preview in a few seconds. If you like it, one short form after checkout and we take it from there." }
+    how: `Upload your current menu as a PDF or photos and you'll see it as a phone menu in ${MENU_COUNT} designs, free, before you decide. Pick the one you like and we build it, check it, and email you the link and QR code.` },
+  // Nov 6, 2026 (owner): Conversion Fix is folded into the Website Package, which is the site generator ($299 for the
+  // whole site, Website Care $49 a month to host it). Links go to the website page's free generator.
+  WEBSITE_PACKAGE: { name: "Your Website", url: WEBSITE, sample: [`Try it free with your menu`, `${WEBSITE}#try-free`],
+    offer: `Menu-made makes phone-friendly websites for food and drink businesses, with your menu, hours, map, photos and contact details, in ${SITE_COUNT} designs to choose from. It's $299 one time for the whole site, or add Website Care at $49 a month and we host it on your own domain and look after it.`,
+    how: `You can see your business as a website before checking out: upload your menu and you'll see it in all ${SITE_COUNT} designs in a few seconds, then customize the one you like with your logo, photos and colours.` }
 };
 OFFERS.CONVERSION_FIX = OFFERS.WEBSITE_PACKAGE; // prospects stored before Nov 6 still say CONVERSION_FIX
 const FOOTER = "You're receiving this one-time note because your business is listed publicly online. Reply \"no thanks\" and we won't contact you again. Menu-made, 706 Kearny St, San Francisco, CA 94108.";
@@ -52,33 +59,36 @@ function findingOnly(p) {
     `I tried to visit ${site} and it didn't load. Anyone tapping your website link on Google or Yelp right now lands on an error page.`];
   if (gaps.includes("no_phone_layout")) return [`${name}'s website on phone screens`,
     `I opened ${site} on my phone and it shows the full desktop page, shrunk down. Most of your visitors are on phones, and small text and tiny buttons send many of them back to their search results.`];
-  return [`${name}'s website has no call button`,
-    `I came across ${site} and noticed there's no tap-to-call button on phone screens. A guest who wants to call ahead or place an order has to copy your number by hand, and some won't bother.`];
+  return [`A fresh website for ${name}`,
+    `I came across ${site} and wanted to show you what ${name} could look like as a modern, phone-friendly website.`];
 }
 
 // demoUrl (marketing plan v4): the prospect's own menu as a private phone page, or (Nov 5, 2026) their business as a
 // private website preview (demoKind "website"), built by the worker. With it, the email leads with the preview.
-const WEBSITE_PRICE = "$499";
+const WEBSITE_PRICE = "$299";
 const builtFrom = (p) => (p.website ? "what's on your current site" : "your public listing");
+
+const MENU_DEMO_LINE = `So you can see the difference, I went ahead and turned the menu on your site into a phone menu, in ${MENU_COUNT} different designs. Tap Generate menu to flip through them and Customize to add your logo and colours. It's private: only you have the link, and it stays up for three weeks.`;
+const MENU_BUTTON = `See your menu in ${MENU_COUNT} designs`;
 
 export function build(p, demoUrl = null, demoKind = "menu") {
   if (demoUrl && demoKind === "website") {
     const offer = OFFERS.WEBSITE_PACKAGE;
     const [subject, observed] = finding(p);
     const paras = ["Hi there,", observed,
-      `So you can see the difference, I went ahead and built ${p.name} a phone-friendly website from ${builtFrom(p)}. It's private: only you have the link, and it stays up for three weeks.`,
-      offer.offer, "If you'd like it live, the button below shows what's included. If not, no problem at all."];
-    return render(p, subject, paras, [["See your website preview", demoUrl, true], [`See ${offer.name}`, offer.url, false]]);
+      `So you can see the difference, I went ahead and built ${p.name} a phone-friendly website from ${builtFrom(p)}, in ${SITE_COUNT} different designs. Tap Generate site to flip through them and Customize to add your logo, photos and colours. It's private: only you have the link, and it stays up for three weeks.`,
+      offer.offer, "If you'd like it live, tap Choose this site on the design you like. If not, no problem at all."];
+    return render(p, subject, paras, [[`See your website in ${SITE_COUNT} designs`, demoUrl, true], [`See ${offer.name}`, offer.url, false]]);
   }
   const offer = OFFERS[p.offer_code];
   if (!offer) return null;
   const [subject, observed] = finding(p);
   const demo = demoUrl && p.offer_code === "ONLINE_MENU_QR";
   const paras = demo
-    ? ["Hi there,", observed, "So you can see the difference, I went ahead and turned the menu on your site into a phone page. It's private: only you have the link, and it stays up for three weeks.", offer.offer, "If you'd like it live, the button below shows what's included. If not, no problem at all."]
-    : ["Hi there,", observed, offer.offer, offer.how, "If it would help, the details and a real example are below. If not, no problem at all."];
+    ? ["Hi there,", observed, MENU_DEMO_LINE, offer.offer, "If you'd like it live, tap Make it live on the design you like. If not, no problem at all."]
+    : ["Hi there,", observed, offer.offer, offer.how, "If it would help, the details and the free preview are below. If not, no problem at all."];
   const buttons = demo
-    ? [["See your menu as a phone page", demoUrl, true], [`See ${offer.name}`, offer.url, false]]
+    ? [[MENU_BUTTON, demoUrl, true], [`See ${offer.name}`, offer.url, false]]
     : [[`See ${offer.name}`, offer.url, true], [offer.sample[0], offer.sample[1], false]];
   return render(p, subject, paras, buttons);
 }
@@ -88,17 +98,17 @@ export function buildFollowup(p, price = "$144") {
   if (p.demo_kind === "website") {
     const offer = OFFERS.WEBSITE_PACKAGE;
     const paras = ["Hi there,",
-      `Following up on the website preview I built for ${p.name} last week. If you'd like it live on your own web address, with your photos and colours, it's ${WEBSITE_PRICE} one time, with three months of updates included.`,
-      "After checkout there's one short form, already filled in from the preview, and we take it from there. Happy to answer anything first, just reply here.",
+      `Following up on the website preview I built for ${p.name} last week, in ${SITE_COUNT} designs. If you'd like one of them live, it's ${WEBSITE_PRICE} one time for the whole site, or add Website Care at $49 a month and we host it on your own web address.`,
+      "Tap Choose this site on the design you like; after checkout there's one short form, already filled in from the preview, and we take it from there. Happy to answer anything first, just reply here.",
       "Your preview is still at the link below for a little while longer."];
-    return render(p, `Your ${p.name} website preview`, paras, [["See your website preview", p.url, true], [`See ${offer.name}`, offer.url, false]]);
+    return render(p, `Your ${p.name} website preview`, paras, [[`See your website in ${SITE_COUNT} designs`, p.url, true], [`See ${offer.name}`, offer.url, false]]);
   }
   const subject = `Your ${p.name} phone menu`;
   const paras = ["Hi there,",
-    `Following up on the phone version of your menu I sent over last week. If you'd like it live, with a printable QR code for your tables and front window, it's ${price} for the first year, hosting included.`,
-    "You'd upload the same menu at checkout and we'd take it from there. Happy to answer anything first, just reply here.",
+    `Following up on the phone version of your menu I sent over last week, in ${MENU_COUNT} designs. If you'd like one of them live, with a printable QR code for your tables and front window, it's ${price} for the first year, hosting included.`,
+    "Tap Make it live on the design you like and we'll take it from there. Happy to answer anything first, just reply here.",
     "Your preview is still at the link below for a little while longer."];
-  const buttons = [["See your menu as a phone page", p.url, true], ["See Online Menu + QR", ONLINE_MENU, false]];
+  const buttons = [[MENU_BUTTON, p.url, true], ["See Online Menu + QR", ONLINE_MENU, false]];
   return render(p, subject, paras, buttons);
 }
 
@@ -108,18 +118,18 @@ export function buildFirstFollowup(p, demoUrl = null, price = "$144", demoKind =
   if (demoUrl && demoKind === "website") {
     const offer = OFFERS.WEBSITE_PACKAGE;
     const paras = ["Hi there,",
-      `Following up on my note from earlier this week. Rather than describe it, I went ahead and built a phone-friendly website for ${p.name} from ${builtFrom(p)}, so you can see the difference. It's private: only you have the link, and it stays up for three weeks.`,
+      `Following up on my note from earlier this week. Rather than describe it, I went ahead and built a phone-friendly website for ${p.name} from ${builtFrom(p)}, in ${SITE_COUNT} different designs, so you can see the difference. Tap Generate site to flip through them. It's private: only you have the link, and it stays up for three weeks.`,
       offer.offer, "Happy to answer anything first, just reply here."];
-    return render(p, `A website preview for ${p.name}`, paras, [["See your website preview", demoUrl, true], [`See ${offer.name}`, offer.url, false]]);
+    return render(p, `A website preview for ${p.name}`, paras, [[`See your website in ${SITE_COUNT} designs`, demoUrl, true], [`See ${offer.name}`, offer.url, false]]);
   }
   const offer = OFFERS[p.offer_code];
   if (!offer) return null;
   if (demoUrl && p.offer_code === "ONLINE_MENU_QR") {
     const paras = ["Hi there,",
-      "Following up on my note from earlier this week about your menu. Rather than describe it, I went ahead and turned the menu on your site into a phone page so you can see the difference. It's private: only you have the link, and it stays up for three weeks.",
-      `If you'd like it live, with a printable QR code for your tables and front window, it's ${price} for the first year, hosting included. You'd upload the same menu at checkout and we'd take it from there.`,
+      `Following up on my note from earlier this week about your menu. Rather than describe it, I went ahead and turned the menu on your site into a phone menu, in ${MENU_COUNT} different designs, so you can see the difference. Tap Generate menu to flip through them. It's private: only you have the link, and it stays up for three weeks.`,
+      `If you'd like one live, with a printable QR code for your tables and front window, it's ${price} for the first year, hosting included. Tap Make it live on the design you like and we'll take it from there.`,
       "Happy to answer anything first, just reply here."];
-    return render(p, `Your ${p.name} menu as a phone page`, paras, [["See your menu as a phone page", demoUrl, true], ["See Online Menu + QR", ONLINE_MENU, false]]);
+    return render(p, `Your ${p.name} menu as a phone page`, paras, [[MENU_BUTTON, demoUrl, true], ["See Online Menu + QR", ONLINE_MENU, false]]);
   }
   const [subject] = finding(p);
   const paras = ["Hi there,",
@@ -129,22 +139,28 @@ export function buildFirstFollowup(p, demoUrl = null, price = "$144", demoKind =
   return render(p, `Re: ${subject}`, paras, [[`See ${offer.name}`, offer.url, true], [offer.sample[0], offer.sample[1], false]]);
 }
 
+// Owner (Nov 9, 2026): no white in Menu-made emails. Same colours as the customer emails (booking-api lib/email.js
+// MAIL): dark blue #003344 card, #00222d header, footer and page, white text, cyan highlights.
+const MAIL = { page: "#00222d", card: "#003344", bar: "#00222d", line: "#0a6f80", text: "#ffffff", soft: "#d9f3f6", cyan: "#00d6e6", link: "#5ff2ff", ink: "#012f34" };
+
 function render(p, subject, paras, buttons) {
-  const pHtml = paras.map((x) => `<p style="margin:0 0 16px;font-size:16px;line-height:1.6;color:#26434f;">${esc(x)}</p>`).join("");
-  const bHtml = buttons.map(([l, u, prim]) => `<tr><td style="padding:0 0 12px;"><a href="${esc(u)}" style="display:inline-block;background-color:${prim ? "#00a7b5" : "#071f2c"};color:#ffffff;text-decoration:none;font-size:15px;font-weight:bold;padding:13px 22px;border-radius:6px;">${esc(l)}</a></td></tr>`).join("");
-  const html = `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="color-scheme" content="light only"><meta name="supported-color-schemes" content="light only"><style>:root{color-scheme:light only;supported-color-schemes:light only}</style><title>${esc(subject)}</title></head>
-<body style="margin:0;padding:0;background-color:#edf3f5;font-family:Arial,Helvetica,sans-serif;">
-<table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="background-color:#edf3f5;"><tr><td align="center" style="padding:28px 12px;">
-<table role="presentation" width="600" cellspacing="0" cellpadding="0" border="0" style="width:100%;max-width:600px;background-color:#ffffff;border:1px solid #dce8ec;">
-<tr><td bgcolor="#071f2c" style="background-color:#071f2c;padding:28px 32px;border-bottom:4px solid #00d6e6;"><a href="https://menu-made.com" style="text-decoration:none;"><img src="cid:logo@menu-made" width="220" alt="MENU-MADE" style="display:block;width:220px;max-width:100%;height:auto;border:0;"></a></td></tr>
-<tr><td style="padding:32px;">
-<p style="margin:0 0 12px;font-size:12px;font-weight:bold;letter-spacing:1px;color:#08747b;">FOR ${esc(p.name.toUpperCase())}</p>
+  const pHtml = paras.map((x) => `<p style="margin:0 0 16px;font-size:16px;line-height:1.6;color:${MAIL.text};">${esc(x)}</p>`).join("");
+  const bHtml = buttons.map(([l, u, prim]) => `<tr><td style="padding:0 0 12px;"><a href="${esc(u)}" style="display:inline-block;${prim
+    ? `background-color:${MAIL.cyan};color:${MAIL.ink};padding:13px 22px;`
+    : `background-color:${MAIL.bar};color:${MAIL.text};padding:12px 21px;border:1px solid ${MAIL.cyan};`}text-decoration:none;font-size:15px;font-weight:bold;border-radius:6px;">${esc(l)}</a></td></tr>`).join("");
+  const html = `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="color-scheme" content="dark"><meta name="supported-color-schemes" content="dark"><style>a{color:${MAIL.link};}</style><title>${esc(subject)}</title></head>
+<body style="margin:0;padding:0;background-color:${MAIL.page};font-family:Arial,Helvetica,sans-serif;">
+<table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="background-color:${MAIL.page};"><tr><td align="center" style="padding:28px 12px;">
+<table role="presentation" width="600" cellspacing="0" cellpadding="0" border="0" style="width:100%;max-width:600px;background-color:${MAIL.card};border:1px solid ${MAIL.line};">
+<tr><td bgcolor="${MAIL.bar}" style="background-color:${MAIL.bar};padding:28px 32px;border-bottom:4px solid ${MAIL.cyan};"><a href="https://menu-made.com" style="text-decoration:none;"><img src="cid:logo@menu-made" width="220" alt="MENU-MADE" style="display:block;width:220px;max-width:100%;height:auto;border:0;"></a></td></tr>
+<tr><td bgcolor="${MAIL.card}" style="padding:32px;background-color:${MAIL.card};">
+<p style="margin:0 0 12px;font-size:12px;font-weight:bold;letter-spacing:1px;color:${MAIL.link};">FOR ${esc(p.name.toUpperCase())}</p>
 ${pHtml}
 <table role="presentation" cellspacing="0" cellpadding="0" border="0">${bHtml}</table>
-<p style="margin:16px 0 0;font-size:16px;line-height:1.6;color:#26434f;">JP Battaglia<br>Menu-made, San Francisco</p>
+<p style="margin:16px 0 0;font-size:16px;line-height:1.6;color:${MAIL.text};">JP Battaglia<br>Menu-made, San Francisco</p>
 </td></tr>
-<tr><td bgcolor="#071f2c" style="padding:24px 32px;background-color:#071f2c;"><p style="margin:0 0 10px;font-size:14px;line-height:1.6;color:#e8f6f7;"><a href="https://menu-made.com" style="color:#5ff2ff;">menu-made.com</a> &nbsp;&middot;&nbsp; <a href="mailto:info@menu-made.com" style="color:#5ff2ff;">info@menu-made.com</a></p>
-<p style="margin:0;font-size:12px;line-height:1.5;color:#9fb8c1;">${esc(FOOTER)}</p></td></tr>
+<tr><td bgcolor="${MAIL.bar}" style="padding:24px 32px;background-color:${MAIL.bar};"><p style="margin:0 0 10px;font-size:14px;line-height:1.6;color:${MAIL.soft};"><a href="https://menu-made.com" style="color:${MAIL.link};">menu-made.com</a> &nbsp;&middot;&nbsp; <a href="mailto:info@menu-made.com" style="color:${MAIL.link};">info@menu-made.com</a></p>
+<p style="margin:0;font-size:12px;line-height:1.5;color:${MAIL.soft};">${esc(FOOTER)}</p></td></tr>
 </table></td></tr></table></body></html>`;
   const text = `${paras.join("\n\n")}\n\n${buttons.map(([l, u]) => `${l}: ${u}`).join("\n")}\n\nJP Battaglia\nMenu-made, San Francisco\nhttps://menu-made.com\n\n${FOOTER}`;
   return { subject, html, text };

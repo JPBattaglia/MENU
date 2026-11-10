@@ -754,11 +754,13 @@ render(false);
 const previewToken = params.get('preview');
 if (previewToken && /^[a-f0-9]{36}$/.test(previewToken)) {
   fetch((Catalog?.API || '') + '/api/menu-preview/handoff/' + previewToken).then(r => r.json()).then(data => {
-    if (!data?.ok || !/^[0-9a-f-]{36}$/.test(data.request_id || '')) return;
-    previewDocumentId = data.request_id;
+    if (!data?.ok) return;
     if (!els.business.value) els.business.value = data.business || '';
     if (!els.email.value) els.email.value = data.email || '';
     if (!els.name.value) els.name.focus();
+    // A preview from a prospect email whose menu was a web page has no file to attach: the buyer adds it here.
+    if (!/^[0-9a-f-]{36}$/.test(data.request_id || '')) return;
+    previewDocumentId = data.request_id;
     $('lead_document_status').textContent = 'The menu from your preview is attached. Add a different file only if you want to replace it.';
   }).catch(() => {});
 }

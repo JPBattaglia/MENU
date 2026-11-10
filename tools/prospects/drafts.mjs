@@ -149,7 +149,9 @@ if (REFRESH) {
   const { prospects: rows } = await api("batch", { ids: [...new Set(old.map((o) => o.id))] });
   let rebuilt = 0;
   for (const p of rows) {
-    const email = build(p);
+    // Keep each draft's own preview (reused when it's still running, rebuilt with today's generator otherwise).
+    const preview = await makePreview(api, p).catch(() => null);
+    const email = build({ ...p, offer_code: preview?.offer_code || p.offer_code }, preview?.url || null, preview?.kind);
     if (!email) continue;
     const message = await raw({ from: FROM, to: p.email, subject: email.subject, text: email.text, html: email.html,
       attachments: [{ filename: "menu-made.png", content: logo, cid: "logo@menu-made", contentDisposition: "inline" }],

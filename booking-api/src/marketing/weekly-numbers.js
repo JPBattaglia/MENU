@@ -115,10 +115,10 @@ async function freePreviews(env, sinceIso) {
   try {
     const one = async (sql, ...args) => Number((await env.DB.prepare(sql).bind(...args).first())?.n || 0);
     return {
-      made: await one(`SELECT COUNT(*) AS n FROM menu_previews WHERE status = 'READY' AND created_at >= ?`, sinceIso),
-      opened: await one(`SELECT COUNT(*) AS n FROM menu_previews WHERE status = 'READY' AND created_at >= ? AND open_count > 0`, sinceIso),
+      made: await one(`SELECT COUNT(*) AS n FROM menu_previews WHERE status = 'READY' AND created_at >= ? AND COALESCE(campaign, '') <> 'prospect'`, sinceIso),
+      opened: await one(`SELECT COUNT(*) AS n FROM menu_previews WHERE status = 'READY' AND created_at >= ? AND open_count > 0 AND COALESCE(campaign, '') <> 'prospect'`, sinceIso),
       ordered: await one(`SELECT COUNT(DISTINCT m.token) AS n FROM menu_previews m JOIN orders o ON o.notes LIKE '%Document ref: ' || m.request_id || '%'
-        WHERE m.status = 'READY' AND o.payment_status = 'PAID' AND o.created_at >= ?`, sinceIso)
+        WHERE m.status = 'READY' AND COALESCE(m.campaign, '') <> 'prospect' AND o.payment_status = 'PAID' AND o.created_at >= ?`, sinceIso)
     };
   } catch { return { made: 0, opened: 0, ordered: 0 }; }
 }
