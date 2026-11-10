@@ -3,7 +3,9 @@
 // finished product before paying, which is the whole pitch.
 //
 //   POST /api/system/prospects/demo       { id }   (prospect-drafts.yml OIDC) -> { ok, url, item_count } | { ok:false, skip }
-//   GET  /api/menu-preview/<token>                 the private preview page (noindex, unlisted, expires)
+//   GET  /api/menu-preview/view/<token>            the private preview: the menu generator (Nov 10, 2026, owner: prospect
+//                                                     previews use the same multi-design generator as the free preview)
+//   GET  /api/menu-preview/<token>                 previews made before Nov 10, 2026: one page (noindex, unlisted, expires)
 //   POST /api/system/prospects/followups  { }      -> sent prospects due a day-3 follow-up, no follow-up yet:
 //                                                     kind "opened": opened their preview 3+ days after the send;
 //                                                     kind "no_preview": emailed before previews existed (Nov 2 to 3
@@ -18,17 +20,16 @@ import { bytesToBase64 } from "../lib/util.js";
 import { escapeHtml } from "../lib/email.js";
 import { menuColors, readMenuWithClaude, structureMenuText } from "../producers/menu-qr/claude-reader.js";
 import { extractReadableText } from "../producers/menu-qr/inputs.js";
-import { buildDesignedMenuHtml } from "../producers/menu-qr/design.js";
 import { MENU_PACKAGE_PRICING } from "../checkout/quote.js";
 import { verifyRenderer } from "../producers/social-posts/render-jobs.js";
 import { DRAFTS_AUDIENCE, DRAFTS_WORKFLOW } from "./prospects.js";
+import { storeMenuDesigns, viewUrl as generatorUrl } from "./public-preview.js";
 
-const PREVIEW_DAYS = 21;
+const PREVIEW_DAYS = 21; // same as PROSPECT_DAYS in public-preview.js (that module imports this one indirectly)
 const FOLLOWUP_AFTER_DAYS = 3;
 const MAX_MENU_BYTES = 10 * 1024 * 1024;
 const MENU_GAPS = new Set(["menu_pdf", "menu_image"]);
 const SITE = "https://menu-made.com";
-const START_URL = `${SITE}/online-menu?utm_source=outreach&utm_medium=email&utm_campaign=demo-menu`;
 const SCANNER = /bot|crawl|spider|slurp|preview|scanner|proofpoint|mimecast|barracuda|safelinks|urldefense|headless|python|curl|wget|java\/|go-http|facebookexternalhit|slackbot|whatsapp|discord|skypeuripreview|outlook-ios-linkpreview/i;
 
 const json = (data, status = 200) => Response.json(data, { status, headers: { "Cache-Control": "no-store" } });
@@ -58,7 +59,8 @@ async function readProspectMenu(menuUrl, env, fetcher = fetch) {
     const block = type === "application/pdf"
       ? { type: "document", source: { type: "base64", media_type: type, data } }
       : { type: "image", source: { type: "base64", media_type: type, data } };
-    return readMenuWithClaude(block, env);
+    // The file itself comes back too: a prospect preview keeps it, so "Make it live" attaches it at checkout.
+    return { ...(await readMenuWithClaude(block, env)), file: { bytes, type } };
   }
   if (type === "text/html" || type === "text/plain") {
     const text = type === "text/html" ? extractReadableText(await response.text()) : (await response.text()).trim();
@@ -66,24 +68,6 @@ async function readProspectMenu(menuUrl, env, fetcher = fetch) {
     return structureMenuText(text, env);
   }
   throw new Error(`menu link is ${type || "an unknown type"}, not a menu file or page`);
-}
-
-// The paid product's own page design, plus a preview bar and noindex. Exported for the tests.
-function previewPage(menuHtml, name) {
-  const price = dollars(firstYearCents());
-  const bar = `<aside class="mm-preview" role="note" aria-label="About this preview">
-  <p><strong>Preview for ${escapeHtml(name)}</strong>, made by Menu-made from the menu on your website. Only people with this link can see it.</p>
-  <a href="${escapeHtml(START_URL)}">Make it live: ${price} for the first year</a>
-</aside>`;
-  const style = `<style>
-  body { padding-bottom: 132px; }
-  .mm-preview { position: fixed; left: 0; right: 0; bottom: 0; z-index: 5; display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 10px 18px; padding: 14px 18px calc(14px + env(safe-area-inset-bottom)); background: #071f2c; color: #e8f6f7; font: 14px/1.45 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; box-shadow: 0 -4px 18px rgba(0,0,0,.18); }
-  .mm-preview p { margin: 0; max-width: 520px; }
-  .mm-preview a { flex: none; padding: 11px 18px; border-radius: 6px; background: #00a7b5; color: #fff; font-weight: 700; text-decoration: none; }
-</style>`;
-  return menuHtml
-    .replace("</head>", () => `<meta name="robots" content="noindex,nofollow">\n${style}\n</head>`)
-    .replace(/<body>/, () => `<body>\n${bar}`);
 }
 
 function plainPage(status, title, body) {
@@ -99,25 +83,31 @@ async function handleProspectDemo(request, env, { fetcher = fetch, now = Date.no
   if (!env.DB || !env.ASSETS) return json({ ok: false, error: "Storage is not available" }, 503);
   const body = await request.json().catch(() => null);
   const id = typeof body?.id === "string" ? body.id : "";
-  const p = id ? await env.DB.prepare(`SELECT id, name, status, gaps_json, menu_url, offer_code FROM prospects WHERE id = ?`).bind(id).first() : null;
+  const p = id ? await env.DB.prepare(`SELECT id, name, email, status, gaps_json, menu_url, offer_code FROM prospects WHERE id = ?`).bind(id).first() : null;
   if (!p) return json({ ok: false, skip: "unknown prospect" }, 404);
   const gaps = JSON.parse(p.gaps_json || "[]");
   if (p.offer_code !== "ONLINE_MENU_QR" || !p.menu_url || !gaps.some((g) => MENU_GAPS.has(g)) || !["NEW", "DRAFTED", "SENT"].includes(p.status)) {
     return json({ ok: false, skip: "not an Online Menu + QR prospect with a menu file" });
   }
   const t = new Date(now).toISOString();
-  const existing = await env.DB.prepare(`SELECT token, item_count FROM prospect_demos WHERE prospect_id = ? AND status = 'READY' AND expires_at > ? ORDER BY created_at DESC LIMIT 1`).bind(id, daysFromNow(7, now)).first();
-  if (existing) return json({ ok: true, url: `${SITE}/api/menu-preview/${existing.token}`, item_count: existing.item_count, reused: true });
+  // Reuse a generator preview with a week or more left. Older one-page previews are replaced by a generator one.
+  const existing = await env.DB.prepare(`SELECT d.token, d.item_count FROM prospect_demos d JOIN menu_previews m ON m.token = d.token
+      WHERE d.prospect_id = ? AND d.kind = 'menu' AND d.status = 'READY' AND d.expires_at > ? ORDER BY d.created_at DESC LIMIT 1`).bind(id, daysFromNow(7, now)).first();
+  if (existing) return json({ ok: true, url: generatorUrl(existing.token), item_count: existing.item_count, reused: true });
   if (!env.ANTHROPIC_API_KEY) return json({ ok: false, error: "Menu reading is not configured" }, 503);
   const token = newToken();
   try {
     const read = await readProspectMenu(p.menu_url, env, fetcher);
-    const page = previewPage(buildDesignedMenuHtml({ businessName: p.name, brandColors: menuColors(read.menu), menu: read.menu, logoDataUri: null }), p.name);
-    await env.ASSETS.put(`prospect-demos/${token}.html`, page, { httpMetadata: { contentType: "text/html; charset=utf-8" } });
+    const requestId = await keepMenuFile(env, read.file, p, now);
+    const expires = daysFromNow(PREVIEW_DAYS, now);
+    // The free preview's generator (public-preview.js): every design, Generate menu, Customize, Make it live.
+    await storeMenuDesigns(env, token, { business: p.name, menu: read.menu, colors: menuColors(read.menu), custom: {}, customized: 0, prospect: true });
     const itemCount = read.extraction?.item_count ?? null;
-    await env.DB.prepare(`INSERT INTO prospect_demos (token, prospect_id, status, item_count, created_at, expires_at) VALUES (?, ?, 'READY', ?, ?, ?)`)
-      .bind(token, id, itemCount, t, daysFromNow(PREVIEW_DAYS, now)).run();
-    return json({ ok: true, url: `${SITE}/api/menu-preview/${token}`, item_count: itemCount });
+    await env.DB.prepare(`INSERT INTO menu_previews (token, request_id, email, business, ip_hash, campaign, status, item_count, created_at, expires_at) VALUES (?, ?, ?, ?, '', 'prospect', 'READY', ?, ?, ?)`)
+      .bind(token, requestId, String(p.email || "").toLowerCase(), p.name, itemCount, t, expires).run();
+    await env.DB.prepare(`INSERT INTO prospect_demos (token, prospect_id, status, kind, item_count, created_at, expires_at) VALUES (?, ?, 'READY', 'menu', ?, ?, ?)`)
+      .bind(token, id, itemCount, t, expires).run();
+    return json({ ok: true, url: generatorUrl(token), item_count: itemCount });
   } catch (error) {
     const reason = (error instanceof Error ? error.message : String(error)).slice(0, 300);
     await env.DB.prepare(`INSERT INTO prospect_demos (token, prospect_id, status, error, created_at, expires_at) VALUES (?, ?, 'FAILED', ?, ?, ?)`)
@@ -126,11 +116,60 @@ async function handleProspectDemo(request, env, { fetcher = fetch, now = Date.no
   }
 }
 
+// The prospect's menu file, stored the way a checkout upload is (mm_booking_requests, purpose "checkout", no emails),
+// so "Make it live" attaches it and the paid menu is built from it in the chosen design. A menu read from a web page
+// has no file: the id then points at nothing and checkout asks for the menu.
+async function keepMenuFile(env, file, p, now) {
+  const requestId = crypto.randomUUID();
+  if (!file?.bytes?.length) return requestId;
+  const checksum = [...new Uint8Array(await crypto.subtle.digest("SHA-256", file.bytes))].map((b) => b.toString(16).padStart(2, "0")).join("");
+  const ext = { "application/pdf": "pdf", "image/png": "png", "image/jpeg": "jpg", "image/webp": "webp" }[file.type] || "bin";
+  const document = { name: `${String(p.name || "menu").replace(/[^\w .-]+/g, "").trim().slice(0, 60) || "menu"} menu.${ext}`, contentType: file.type, size: file.bytes.length, checksum,
+    storageKey: `private/inquiries/${requestId}/${checksum}` };
+  await env.ASSETS.put(document.storageKey, file.bytes, { httpMetadata: { contentType: file.type }, customMetadata: { requestId, checksum, originalFilename: document.name } });
+  const payload = { type: "inquiry", purpose: "checkout", requestId, email: String(p.email || "").toLowerCase(), business: p.name, service: "Online Menu + QR", notes: "Prospect preview", document };
+  await env.DB.prepare(`INSERT INTO mm_booking_requests (id, payload, ip_hash, created_at, owner_sent, customer_sent) VALUES (?, ?, 'prospect', ?, 1, 1)`)
+    .bind(requestId, JSON.stringify(payload), Math.floor(now / 1000)).run();
+  return requestId;
+}
+
+// Previews already emailed before the generator (Nov 10, 2026, owner): each one-page prospect preview still running is
+// rebuilt as the menu generator under the same token, so the link in the email opens every design. A few per cron
+// tick (each is one menu fetch and one Claude read); one that can't be read keeps its page and isn't tried again.
+async function upgradeProspectMenus(env, { fetcher = fetch, now = Date.now(), limit = 2 } = {}) {
+  if (!env.DB || !env.ASSETS || !env.ANTHROPIC_API_KEY) return [];
+  const t = new Date(now).toISOString();
+  const { results = [] } = await env.DB.prepare(`
+      SELECT d.token, d.created_at, d.expires_at, p.id, p.name, p.email, p.menu_url FROM prospect_demos d JOIN prospects p ON p.id = d.prospect_id
+      WHERE d.kind = 'menu' AND d.status = 'READY' AND d.error IS NULL AND d.expires_at > ? AND p.menu_url IS NOT NULL
+        AND NOT EXISTS (SELECT 1 FROM menu_previews m WHERE m.token = d.token)
+      ORDER BY d.created_at LIMIT ?`).bind(t, limit).all();
+  const done = [];
+  for (const row of results) {
+    try {
+      const read = await readProspectMenu(row.menu_url, env, fetcher);
+      const requestId = await keepMenuFile(env, read.file, row, now);
+      await storeMenuDesigns(env, row.token, { business: row.name, menu: read.menu, colors: menuColors(read.menu), custom: {}, customized: 0, prospect: true });
+      await env.DB.prepare(`INSERT INTO menu_previews (token, request_id, email, business, ip_hash, campaign, status, item_count, created_at, expires_at) VALUES (?, ?, ?, ?, '', 'prospect', 'READY', ?, ?, ?)`)
+        .bind(row.token, requestId, String(row.email || "").toLowerCase(), row.name, read.extraction?.item_count ?? null, row.created_at, row.expires_at).run();
+      done.push({ token: row.token, ok: true });
+    } catch (error) {
+      const reason = (error instanceof Error ? error.message : String(error)).slice(0, 300);
+      await env.DB.prepare(`UPDATE prospect_demos SET error = ? WHERE token = ?`).bind(`upgrade: ${reason}`, row.token).run();
+      done.push({ token: row.token, ok: false, reason });
+    }
+  }
+  return done;
+}
+
 async function handleMenuPreview(request, env, token, { now = Date.now() } = {}) {
   const gone = () => plainPage(410, "This preview has ended", `It was a private preview made for one business. To get your own menu as a phone page with a QR code, see <a href="${escapeHtml(`${SITE}/online-menu`)}">Online Menu + QR</a>.`);
   if (!/^[a-f0-9]{36}$/.test(token) || !env.DB || !env.ASSETS) return gone();
   const row = await env.DB.prepare(`SELECT token, status, expires_at FROM prospect_demos WHERE token = ?`).bind(token).first();
   if (!row || row.status !== "READY" || row.expires_at <= new Date(now).toISOString()) return gone();
+  // Rebuilt as the generator (upgradeProspectMenus): the emailed link opens it.
+  const generator = await env.DB.prepare(`SELECT token FROM menu_previews WHERE token = ? AND status = 'READY'`).bind(token).first();
+  if (generator) return new Response(null, { status: 302, headers: { Location: generatorUrl(token), "Cache-Control": "no-store", "X-Robots-Tag": "noindex, nofollow" } });
   const object = await env.ASSETS.get(`prospect-demos/${token}.html`);
   if (!object) return gone();
   const agent = request.headers.get("User-Agent") || "";
@@ -159,8 +198,9 @@ async function handleProspectFollowups(request, env, { now = Date.now() } = {}) 
   const viaSql = body?.via === "getmenumade" ? "p.sent_via = 'getmenumade'" : "p.sent_via IS NULL";
   const range = [daysFromNow(-FOLLOWUP_AFTER_DAYS, now), daysFromNow(-21, now)];
   const opened = (await env.DB.prepare(`
-      SELECT p.id, p.name, p.city, p.email, p.website, p.sent_at, d.token, d.kind, d.open_count, d.expires_at
+      SELECT p.id, p.name, p.city, p.email, p.website, p.sent_at, d.token, d.kind, d.open_count, d.expires_at, m.token AS generator
       FROM prospects p JOIN prospect_demos d ON d.prospect_id = p.id AND d.status = 'READY'
+      LEFT JOIN menu_previews m ON m.token = d.token
       WHERE p.status = 'SENT' AND p.followup_drafted_at IS NULL AND p.email IS NOT NULL AND ${viaSql}
         AND p.sent_at <= ? AND p.sent_at >= ? AND d.open_count > 0 AND d.expires_at > ?
       ORDER BY p.sent_at LIMIT 50`).bind(...range, daysFromNow(2, now)).all()).results || [];
@@ -174,10 +214,10 @@ async function handleProspectFollowups(request, env, { now = Date.now() } = {}) 
   const seen = new Set();
   const prospects = [
     ...opened.filter((r) => !seen.has(r.id) && seen.add(r.id)).map((r) => ({ kind: "opened", demo_kind: r.kind || "menu", id: r.id, name: r.name, city: r.city, email: r.email, website: r.website,
-      url: r.kind === "website" ? `${SITE}/api/website-preview/view/${r.token}/d/bistro/index.html` : `${SITE}/api/menu-preview/${r.token}`, opens: r.open_count })),
+      url: r.kind === "website" ? `${SITE}/api/website-preview/view/${r.token}/d/bistro/index.html` : r.generator ? generatorUrl(r.token) : `${SITE}/api/menu-preview/${r.token}`, opens: r.open_count })),
     ...previewless.filter((r) => !seen.has(r.id) && seen.add(r.id)).map((r) => ({ kind: "no_preview", id: r.id, name: r.name, city: r.city, email: r.email, website: r.website, gaps_json: r.gaps_json, menu_url: r.menu_url, offer_code: r.offer_code }))
   ].slice(0, 50);
   return json({ ok: true, prospects, price: dollars(firstYearCents()) });
 }
 
-export { handleProspectDemo, handleMenuPreview, handleProspectFollowups, previewPage, readProspectMenu, PREVIEW_DAYS, START_URL };
+export { handleProspectDemo, handleMenuPreview, handleProspectFollowups, upgradeProspectMenus, readProspectMenu, PREVIEW_DAYS };

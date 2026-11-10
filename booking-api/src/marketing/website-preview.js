@@ -445,6 +445,14 @@ async function handleWebsitePreviewView(request, env, token, page, { now = Date.
   // Only a design's home page counts as an open (not its menu, about and contact pages); prospect and rep previews
   // (shown by the owner on visits) have no cap.
   const counted = request.method === "GET" && agent && !SCANNER.test(agent) && (page === "index.html" || /^d\/[a-z]+\/index\.html$/.test(page));
+  // A preview first built with one design (before Nov 6, 2026) and rebuilt since: its emailed link opens the generator.
+  if (row.source === "prospect" && !page.startsWith("d/")) {
+    const base = page.replace(/\.html$/, "");
+    const target = `d/${DESIGNS[0].key}/${["index", "menu", "about", "contact"].includes(base) ? base : "index"}.html`;
+    if (await env.ASSETS.head?.(`website-previews/${token}/${target}`) ?? await env.ASSETS.get(`website-previews/${token}/${target}`)) {
+      return new Response(null, { status: 302, headers: { Location: `${SITE}/api/website-preview/view/${token}/${target}`, "Cache-Control": "no-store", "X-Robots-Tag": "noindex, nofollow" } });
+    }
+  }
   const object = await env.ASSETS.get(`website-previews/${token}/${page}`);
   if (!object) return gone();
   if (counted) {
@@ -579,6 +587,38 @@ async function handleProspectSiteDemo(request, env, { fetcher = fetch, now = Dat
   }
 }
 
+// Previews already emailed to prospects (Nov 10, 2026, owner): pages are frozen when built, so ones made before the
+// generator (one design) or before later template changes are rebuilt in place, same token, with today's designs.
+// From the stored site and copy when there is one (no AI, keeps anything customized); otherwise from what the
+// preview was built from. A few per cron tick; rebuilt_at marks each one done.
+async function rebuildProspectSites(env, { now = Date.now(), limit = 4, deps = {} } = {}) {
+  if (!env.DB || !env.ASSETS) return [];
+  const { results = [] } = await env.DB.prepare(`
+      SELECT token, business, facts_json FROM website_previews
+      WHERE source = 'prospect' AND status = 'READY' AND rebuilt_at IS NULL AND expires_at > ?
+      ORDER BY created_at LIMIT ?`).bind(new Date(now).toISOString(), limit).all();
+  const done = [];
+  for (const row of results) {
+    try {
+      const data = parseJsonOrNull(await (await env.ASSETS.get(`website-previews/${row.token}/data.json`))?.text());
+      if (data?.site && data?.copy) {
+        const { site, copy, ...extra } = data;
+        await storeDesigns(env, row.token, site, copy, { prospect: true, extra });
+      } else {
+        const facts = parseJsonOrNull(row.facts_json) || {};
+        await buildAndStore(env, row.token, row.business, facts, { scope: { entityType: "WEBSITE_PREVIEW", entityId: row.token }, prospect: true, deps });
+      }
+      await env.DB.prepare(`UPDATE website_previews SET rebuilt_at = ? WHERE token = ?`).bind(new Date(now).toISOString(), row.token).run();
+      done.push({ token: row.token, ok: true });
+    } catch (error) {
+      const reason = (error instanceof Error ? error.message : String(error)).slice(0, 300);
+      await env.DB.prepare(`UPDATE website_previews SET rebuilt_at = ?, error = ? WHERE token = ?`).bind(new Date(now).toISOString(), `rebuild: ${reason}`, row.token).run();
+      done.push({ token: row.token, ok: false, reason });
+    }
+  }
+  return done;
+}
+
 // After a Website Package purchase: the intake form starts filled in from the buyer's latest preview (same email).
 async function prefillFromPreview(env, email) {
   if (!email || !env.DB) return {};
@@ -642,4 +682,4 @@ async function runWebsitePreviewReminders(env, { now = Date.now(), force = false
   return sent;
 }
 
-export { runWebsitePreviewReminders, detailFields, hideNameField, designUrl, chooseUrl, wrapDesign, storeDesigns, handleWebsitePreviewCreate, handleWebsitePreviewView, handleWebsitePreviewHandoff, handleWebsitePreviewCustomize, handleWebsitePreviewImage, applyOwnForm, MAX_PHOTOS, handleProspectSiteDemo, prefillFromPreview, offeringsFromMenu, wrapPage, fallbackCopy, PREVIEW_HOURS, PER_NETWORK_DAY };
+export { runWebsitePreviewReminders, rebuildProspectSites, detailFields, hideNameField, designUrl, chooseUrl, wrapDesign, storeDesigns, handleWebsitePreviewCreate, handleWebsitePreviewView, handleWebsitePreviewHandoff, handleWebsitePreviewCustomize, handleWebsitePreviewImage, applyOwnForm, MAX_PHOTOS, handleProspectSiteDemo, prefillFromPreview, offeringsFromMenu, wrapPage, fallbackCopy, PREVIEW_HOURS, PER_NETWORK_DAY };

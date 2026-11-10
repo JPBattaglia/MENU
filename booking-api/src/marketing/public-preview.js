@@ -44,6 +44,7 @@ import { ownerEmailAddress } from "../lib/config.js";
 import { simplePage } from "../lib/http.js";
 
 const PREVIEW_HOURS = 72;
+const PROSPECT_DAYS = 21;          // prospect-email previews (demo-menu.js), same as the website ones
 const PER_DAY = 30;
 const REP_PER_DAY = 40;
 const REP_KIND = "menu-rep";
@@ -83,7 +84,8 @@ function newToken() {
 
 // The paid product's own page design, plus the generator bar, a watermark on every screen, and no printing.
 // index: which of MENU_DESIGNS is on screen; custom: what Customize set (for the popup's "now using" line).
-function publicPreviewPage(menuHtml, token, { index = 0, custom = {}, business = "" } = {}) {
+// prospect: a private preview built for a prospect email (demo-menu.js), which lasts PROSPECT_DAYS, not PREVIEW_HOURS.
+function publicPreviewPage(menuHtml, token, { index = 0, custom = {}, business = "", prospect = false } = {}) {
   const price = dollars(firstYearCents());
   const d = MENU_DESIGNS[index] || MENU_DESIGNS[0];
   const next = MENU_DESIGNS[(MENU_DESIGNS.indexOf(d) + 1) % MENU_DESIGNS.length];
@@ -91,7 +93,7 @@ function publicPreviewPage(menuHtml, token, { index = 0, custom = {}, business =
   const brand = hexOk(custom.color) ? custom.color : "";
   const have = [custom.logo ? "your logo" : "", custom.name ? "your name" : "", custom.hide_name ? "the name hidden" : "", brand ? "your colour" : "", custom.subtitle ? "your line under the name" : ""].filter(Boolean);
   const bar = `<aside class="mm-preview" role="note" aria-label="Menu generator">
-  <p><strong>Design ${MENU_DESIGNS.indexOf(d) + 1} of ${MENU_DESIGNS.length}: ${escapeHtml(d.label)}</strong><span> · ${escapeHtml(d.blurb)}. Free preview: no QR code, ends in ${PREVIEW_HOURS / 24} days.</span></p>
+  <p><strong>Design ${MENU_DESIGNS.indexOf(d) + 1} of ${MENU_DESIGNS.length}: ${escapeHtml(d.label)}</strong><span> · ${escapeHtml(d.blurb)}. ${prospect ? `A private preview made for you by Menu-made: no QR code, ends in ${PROSPECT_DAYS} days.` : `Free preview: no QR code, ends in ${PREVIEW_HOURS / 24} days.`}</span></p>
   <a class="mm-gen-next" href="${escapeHtml(designUrl(token, next.key))}">Generate menu</a>
   <button type="button" class="mm-gen-own" onclick="var x = document.getElementById('mm-own'); x.showModal ? x.showModal() : x.setAttribute('open', '')">Customize</button>
   <a class="mm-gen-pick" href="${escapeHtml(chooseUrl(token, d.key))}">Make it live: ${price} for the first year</a>
@@ -197,7 +199,7 @@ async function loadPreviewLogo(env, token, custom) {
 async function storeMenuDesigns(env, token, data) {
   const logo = await loadPreviewLogo(env, token, data.custom);
   for (const [index, design] of MENU_DESIGNS.entries()) {
-    const page = publicPreviewPage(renderMenuDesign(data, design.key, logo), token, { index, custom: data.custom || {}, business: data.business });
+    const page = publicPreviewPage(renderMenuDesign(data, design.key, logo), token, { index, custom: data.custom || {}, business: data.business, prospect: data.prospect === true });
     await env.ASSETS.put(`menu-previews/${token}/${design.key}.html`, page, { httpMetadata: { contentType: "text/html; charset=utf-8" } });
   }
   await env.ASSETS.put(`menu-previews/${token}/data.json`, JSON.stringify(data), { httpMetadata: { contentType: "application/json" } });
@@ -268,7 +270,7 @@ async function handlePreviewCreate(request, env, { now = Date.now() } = {}) {
   if (await count(env, `SELECT COUNT(*) AS n FROM menu_previews WHERE ip_hash = ? AND created_at > ?`, upload.ip_hash || "", dayAgo) >= PER_NETWORK_DAY) {
     return json({ ok: false, error: "This connection has made its free previews for today. Please try again tomorrow." }, 429);
   }
-  if (await count(env, `SELECT COUNT(*) AS n FROM menu_previews WHERE created_at > ?`, dayAgo) >= PER_DAY) {
+  if (await count(env, `SELECT COUNT(*) AS n FROM menu_previews WHERE created_at > ? AND COALESCE(campaign, '') <> 'prospect'`, dayAgo) >= PER_DAY) {
     return json({ ok: false, error: "We've made all of today's free previews. Please try again tomorrow, or start your order now." }, 429);
   }
   }
@@ -335,6 +337,7 @@ async function runPreviewReminders(env, { now = Date.now(), force = false } = {}
   const { results = [] } = await env.DB.prepare(`
       SELECT token, request_id, email, business, expires_at FROM menu_previews
       WHERE status = 'READY' AND reminder_sent_at IS NULL AND created_at <= ? AND expires_at > ?
+        AND COALESCE(campaign, '') <> 'prospect'
       ORDER BY created_at ASC LIMIT 20
     `).bind(new Date(now - REMINDER_AFTER_HOURS * 3600000).toISOString(), new Date(now + REMINDER_MIN_LEFT_HOURS * 3600000).toISOString()).all();
   const owner = String(ownerEmailAddress(env) || "").toLowerCase();
@@ -396,7 +399,7 @@ async function handlePreviewView(request, env, token, { now = Date.now(), design
   const gone = () => plainPage(410, "This preview has ended", `Free previews last ${PREVIEW_HOURS / 24} days. To get your menu as a phone page with a QR code, see <a href="${escapeHtml(`${SITE}/online-menu`)}">Online Menu + QR</a>.`);
   if (!/^[a-f0-9]{36}$/.test(token) || !env.DB || !env.ASSETS) return gone();
   if (design && !menuDesignFor(design)) return gone();
-  const row = await env.DB.prepare(`SELECT token, status, expires_at, open_count, design FROM menu_previews WHERE token = ?`).bind(token).first();
+  const row = await env.DB.prepare(`SELECT token, status, expires_at, open_count, design, campaign FROM menu_previews WHERE token = ?`).bind(token).first();
   if (!row || row.status !== "READY" || row.expires_at <= new Date(now).toISOString()) return gone();
   const agent = request.headers.get("User-Agent") || "";
   const counted = request.method === "GET" && agent && !SCANNER.test(agent);
@@ -407,6 +410,8 @@ async function handlePreviewView(request, env, token, { now = Date.now(), design
   if (counted) {
     const t = new Date(now).toISOString();
     await env.DB.prepare(`UPDATE menu_previews SET open_count = open_count + 1, first_opened_at = COALESCE(first_opened_at, ?) WHERE token = ?`).bind(t, token).run();
+    // Prospect previews: the day-3 follow-up goes to owners who opened theirs.
+    if (row.campaign === "prospect") await env.DB.prepare(`UPDATE prospect_demos SET open_count = open_count + 1, first_opened_at = COALESCE(first_opened_at, ?), last_opened_at = ? WHERE token = ?`).bind(t, t, token).run();
   }
   return new Response(request.method === "HEAD" ? null : object.body, { status: 200, headers: { "Content-Type": "text/html; charset=utf-8", "Cache-Control": "no-store", "X-Robots-Tag": "noindex, nofollow", "Referrer-Policy": "no-referrer" } });
 }
@@ -455,12 +460,15 @@ async function handlePreviewCustomize(request, env, token, { now = Date.now() } 
   return new Response(null, { status: 303, headers: { Location: designUrl(token, design.key), "Cache-Control": "no-store" } });
 }
 
+// Public previews can go to checkout for HANDOFF_DAYS; prospect previews for as long as they last.
+const withinHandoff = (row, now) => Date.parse(row.created_at) >= now - (row.campaign === "prospect" ? PROSPECT_DAYS + 1 : HANDOFF_DAYS) * 86400000;
+
 // "Make it live" on a design: remember the design (the paid menu is built in it), then checkout.
 async function handlePreviewChoose(env, token, key, { now = Date.now() } = {}) {
   const design = menuDesignFor(key);
   if (!/^[a-f0-9]{36}$/.test(token) || !design || !env.DB) return plainPage(404, "Preview not found", `See <a href="${escapeHtml(`${SITE}/online-menu`)}">Online Menu + QR</a>.`);
-  const row = await env.DB.prepare(`SELECT status, created_at FROM menu_previews WHERE token = ?`).bind(token).first();
-  if (!row || row.status !== "READY" || Date.parse(row.created_at) < now - HANDOFF_DAYS * 86400000) return plainPage(410, "This preview has ended", `See <a href="${escapeHtml(`${SITE}/online-menu`)}">Online Menu + QR</a>.`);
+  const row = await env.DB.prepare(`SELECT status, created_at, campaign FROM menu_previews WHERE token = ?`).bind(token).first();
+  if (!row || row.status !== "READY" || !withinHandoff(row, now)) return plainPage(410, "This preview has ended", `See <a href="${escapeHtml(`${SITE}/online-menu`)}">Online Menu + QR</a>.`);
   await env.DB.prepare(`UPDATE menu_previews SET design = ? WHERE token = ?`).bind(design.key, token).run();
   return new Response(null, { status: 303, headers: { Location: startUrl(token), "Cache-Control": "no-store" } });
 }
@@ -483,10 +491,13 @@ async function menuPreviewChoice(env, orderId) {
 // Checkout prefill for "Make it live": the stored upload, so the buyer isn't asked for the file again.
 async function handlePreviewHandoff(env, token, { now = Date.now() } = {}) {
   if (!/^[a-f0-9]{36}$/.test(token) || !env.DB) return json({ ok: false }, 404);
-  const row = await env.DB.prepare(`SELECT request_id, email, business, status, created_at FROM menu_previews WHERE token = ?`).bind(token).first();
-  if (!row || row.status !== "READY" || Date.parse(row.created_at) < now - HANDOFF_DAYS * 86400000) return json({ ok: false }, 404);
-  return json({ ok: true, business: row.business, email: row.email, request_id: row.request_id });
+  const row = await env.DB.prepare(`SELECT request_id, email, business, status, created_at, campaign FROM menu_previews WHERE token = ?`).bind(token).first();
+  if (!row || row.status !== "READY" || !withinHandoff(row, now)) return json({ ok: false }, 404);
+  // A prospect preview read from a web page (not a file) has no stored file to attach: checkout asks for one.
+  const upload = await env.DB.prepare(`SELECT payload FROM mm_booking_requests WHERE id = ?`).bind(row.request_id).first().catch(() => null);
+  const file = !!parseJsonOrNull(upload?.payload)?.document?.storageKey;
+  return json({ ok: true, business: row.business, email: row.email, ...(file ? { request_id: row.request_id } : {}) });
 }
 
 export { handleRepLink, repUrl, REP_PER_DAY };
-export { runPreviewReminders, handlePreviewCreate, handlePreviewView, handlePreviewHandoff, handlePreviewCustomize, handlePreviewChoose, menuPreviewChoice, publicPreviewPage, renderMenuDesign, loadPreviewLogo, PREVIEW_HOURS, PER_DAY, PER_NETWORK_DAY, PER_EMAIL };
+export { runPreviewReminders, handlePreviewCreate, handlePreviewView, handlePreviewHandoff, handlePreviewCustomize, handlePreviewChoose, menuPreviewChoice, publicPreviewPage, renderMenuDesign, loadPreviewLogo, storeMenuDesigns, viewUrl, PREVIEW_HOURS, PROSPECT_DAYS, PER_DAY, PER_NETWORK_DAY, PER_EMAIL };

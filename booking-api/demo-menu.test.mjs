@@ -1,11 +1,12 @@
 // Marketing plan v4 (Nov 3, 2026): prospect emails link to a private preview of the owner's own menu as a phone page.
+// Since Nov 10, 2026 (owner) that preview is the menu generator: every design, Generate menu, Customize, Make it live.
 // Run: node --no-warnings --test booking-api/demo-menu.test.mjs
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { createD1, createR2 } from './test-support/d1.mjs';
 
 const { default: worker } = await import('./src/worker.js');
-const { previewPage } = await import('./src/marketing/demo-menu.js');
+const { MENU_DESIGNS } = await import('./src/producers/menu-qr/menu-designs.js');
 
 const MENU = { sections: [{ name: 'Starters', items: [{ name: 'Garlic Bread', description: 'House focaccia', price: '$9' }, { name: 'Soup of the Day', description: '', price: '$8' }] }], notes: '', unreadable: '' };
 
@@ -47,22 +48,56 @@ function stubFetch(t, { menuStatus = 200 } = {}) {
   return calls;
 }
 
-test('a menu-file prospect gets a private preview page built from its own menu, reused on a second call', async (t) => {
+test('a menu-file prospect gets the menu generator built from its own menu, reused on a second call', async (t) => {
   const f = await setup();
   const calls = stubFetch(t);
   let res = await f.post('/api/system/prospects/demo', { id: 'node/1' });
   const out = await res.json();
   assert.equal(out.ok, true);
-  assert.match(out.url, /^https:\/\/menu-made\.com\/api\/menu-preview\/[a-f0-9]{36}$/);
+  assert.match(out.url, /^https:\/\/menu-made\.com\/api\/menu-preview\/view\/[a-f0-9]{36}$/);
   assert.equal(out.item_count, 2);
+  const token = out.url.split('/').pop();
   const page = await f.get(new URL(out.url).pathname);
   assert.equal(page.status, 200);
   assert.equal(page.headers.get('X-Robots-Tag'), 'noindex, nofollow');
   const html = await page.text();
-  for (const words of ['Garlic Bread', '$9', 'Soup of the Day', 'Preview for Sample Cafe', 'noindex,nofollow', '$144 for the first year', 'utm_campaign=demo-menu']) assert.ok(html.includes(words), words);
+  for (const words of ['Garlic Bread', '$9', 'Soup of the Day', `Design 1 of ${MENU_DESIGNS.length}`, 'Generate menu', 'Customize', 'Make it live: $144 for the first year', 'A private preview made for you by Menu-made', 'ends in 21 days', 'noindex,nofollow']) assert.ok(html.includes(words), words);
+  // Every design is there, each pointing to the next.
+  for (const d of MENU_DESIGNS) assert.equal((await f.get(`/api/menu-preview/view/${token}/${d.key}`)).status, 200, d.key);
+  const row = f.env.DB.raw.prepare(`SELECT campaign, email, expires_at FROM menu_previews WHERE token = ?`).get(token);
+  assert.equal(row.campaign, 'prospect');
+  assert.equal(row.email, 'hi@samplecafe.example');
+  assert.ok(Date.parse(row.expires_at) > Date.now() + 20 * 86400000, 'lasts three weeks');
   res = await f.post('/api/system/prospects/demo', { id: 'node/1' });
   assert.equal((await res.json()).reused, true);
   assert.equal(calls.filter((u) => u.includes('anthropic')).length, 1, 'the menu is read once');
+});
+
+test('Make it live on a prospect preview opens checkout with the menu file from their site attached', async (t) => {
+  const f = await setup();
+  stubFetch(t);
+  const { url } = await (await f.post('/api/system/prospects/demo', { id: 'node/1' })).json();
+  const token = url.split('/').pop();
+  const choose = await f.get(`/api/menu-preview/choose/${token}/bistro`);
+  assert.equal(choose.status, 303);
+  assert.equal(choose.headers.get('Location'), `https://menu-made.com/contact.html?service=menu&preview=${token}`);
+  const handoff = await (await f.get(`/api/menu-preview/handoff/${token}`)).json();
+  assert.equal(handoff.ok, true);
+  assert.equal(handoff.business, 'Sample Cafe');
+  const upload = JSON.parse(f.env.DB.raw.prepare(`SELECT payload FROM mm_booking_requests WHERE id = ?`).get(handoff.request_id).payload);
+  assert.equal(upload.purpose, 'checkout');
+  assert.equal(upload.document.contentType, 'application/pdf');
+  assert.ok(await f.env.ASSETS.get(upload.document.storageKey), 'the menu file is stored for the paid build');
+  assert.equal(f.env.DB.raw.prepare(`SELECT design FROM menu_previews WHERE token = ?`).get(token).design, 'bistro');
+});
+
+test('prospect previews stay out of the public daily cap, the public reminder and the free-preview numbers', async (t) => {
+  const f = await setup();
+  stubFetch(t);
+  await f.post('/api/system/prospects/demo', { id: 'node/1' });
+  f.env.DB.raw.prepare(`UPDATE menu_previews SET created_at = ?`).run(new Date(Date.now() - 50 * 3600000).toISOString());
+  const { runPreviewReminders } = await import('./src/marketing/public-preview.js');
+  assert.deepEqual(await runPreviewReminders(f.env, { force: true }), []);
 });
 
 test('opens are counted for browsers only, and an expired or unknown preview shows a plain ended page', async (t) => {
@@ -76,7 +111,7 @@ test('opens are counted for browsers only, and an expired or unknown preview sho
   const row = f.env.DB.raw.prepare(`SELECT open_count, first_opened_at FROM prospect_demos`).get();
   assert.equal(row.open_count, 2);
   assert.ok(row.first_opened_at);
-  f.env.DB.raw.prepare(`UPDATE prospect_demos SET expires_at = '2000-01-01T00:00:00.000Z'`).run();
+  f.env.DB.raw.prepare(`UPDATE menu_previews SET expires_at = '2000-01-01T00:00:00.000Z'`).run();
   const ended = await f.get(path);
   assert.equal(ended.status, 410);
   assert.match(await ended.text(), /preview has ended/);
@@ -145,8 +180,51 @@ test('only the drafts workflow on master may build previews or read follow-ups',
   }
 });
 
-test('the preview bar escapes the business name', () => {
-  const html = previewPage('<html><head></head><body><h1>x</h1></body></html>', '<b>Bad & Co</b>');
-  assert.ok(html.includes('&lt;b&gt;Bad &amp; Co&lt;/b&gt;'));
-  assert.ok(!html.includes('<b>Bad'));
+test('a one-page preview made before the generator still opens until it ends', async () => {
+  const f = await setup();
+  const token = 'b'.repeat(36);
+  await f.env.ASSETS.put(`prospect-demos/${token}.html`, '<html><body>old page</body></html>');
+  f.env.DB.raw.prepare(`INSERT INTO prospect_demos (token, prospect_id, status, created_at, expires_at) VALUES (?, 'node/1', 'READY', ?, ?)`).run(token, new Date().toISOString(), new Date(Date.now() + 86400000).toISOString());
+  const res = await f.get(`/api/menu-preview/${token}`);
+  assert.equal(res.status, 200);
+  assert.match(await res.text(), /old page/);
+});
+
+test('a one-page preview already emailed is rebuilt as the generator under the same link', async (t) => {
+  const f = await setup();
+  stubFetch(t);
+  const token = 'c'.repeat(36);
+  const made = new Date(Date.now() - 2 * 86400000).toISOString();
+  await f.env.ASSETS.put(`prospect-demos/${token}.html`, '<html><body>old page</body></html>');
+  f.env.DB.raw.prepare(`INSERT INTO prospect_demos (token, prospect_id, status, created_at, expires_at) VALUES (?, 'node/1', 'READY', ?, ?)`).run(token, made, new Date(Date.now() + 19 * 86400000).toISOString());
+  const { upgradeProspectMenus } = await import('./src/marketing/demo-menu.js');
+  assert.deepEqual((await upgradeProspectMenus(f.env)).map((r) => r.ok), [true]);
+  assert.deepEqual(await upgradeProspectMenus(f.env), [], 'done once');
+  const old = await f.get(`/api/menu-preview/${token}`);
+  assert.equal(old.status, 302);
+  assert.equal(old.headers.get('Location'), `https://menu-made.com/api/menu-preview/view/${token}`);
+  const html = await (await f.get(`/api/menu-preview/view/${token}`)).text();
+  assert.ok(html.includes('Generate menu') && html.includes('Garlic Bread'));
+  assert.equal(f.env.DB.raw.prepare(`SELECT open_count FROM prospect_demos WHERE token = ?`).get(token).open_count, 1, 'opens still reach the follow-ups');
+  // A new demo for the same prospect reuses it.
+  assert.equal((await (await f.post('/api/system/prospects/demo', { id: 'node/1' })).json()).reused, true);
+});
+
+test('website previews already emailed are rebuilt with today\'s designs, and their old one-design link opens the generator', async () => {
+  const f = await setup();
+  const { rebuildProspectSites, fallbackCopy } = await import('./src/marketing/website-preview.js');
+  const { DESIGNS } = await import('./src/producers/website/templates/designs.js');
+  const token = 'd'.repeat(36);
+  const site = { name: 'Web Shop', kind: 'restaurant', about: 'Web Shop is a cafe.', offerings: 'Coffee $4', phone: '415 555 0100', address: '1 Main St', hours: '', email: '', style: 'modern', brand: '', facebook: '', instagram: '', photos: [], logo: null };
+  await f.env.ASSETS.put(`website-previews/${token}/data.json`, JSON.stringify({ site, copy: fallbackCopy(site, 'San Francisco') }));
+  await f.env.ASSETS.put(`website-previews/${token}/index.html`, '<html><body>one design</body></html>');
+  f.env.DB.raw.prepare(`INSERT INTO website_previews (token, source, prospect_id, business, status, created_at, expires_at) VALUES (?, 'prospect', 'node/2', 'Web Shop', 'READY', ?, ?)`).run(token, new Date().toISOString(), new Date(Date.now() + 10 * 86400000).toISOString());
+  assert.deepEqual((await rebuildProspectSites(f.env)).map((r) => r.ok), [true]);
+  assert.deepEqual(await rebuildProspectSites(f.env), [], 'done once');
+  for (const d of DESIGNS) assert.ok(await f.env.ASSETS.get(`website-previews/${token}/d/${d.key}/index.html`), d.key);
+  const old = await f.get(`/api/website-preview/view/${token}/index.html`);
+  assert.equal(old.status, 302);
+  assert.equal(old.headers.get('Location'), `https://menu-made.com/api/website-preview/view/${token}/d/${DESIGNS[0].key}/index.html`);
+  const html = await (await f.get(`/api/website-preview/view/${token}/d/${DESIGNS[0].key}/index.html`)).text();
+  assert.ok(html.includes('Generate site') && html.includes('A private preview made for you'));
 });

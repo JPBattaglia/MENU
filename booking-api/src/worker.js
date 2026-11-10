@@ -4,7 +4,7 @@ import { handleSiteForm } from "./producers/site-files/site-form.js";
 import { handleDomainLookup } from "./producers/website/registrar.js";
 import { runDomainPurchases } from "./producers/website/domain-purchase.js";
 import { handleDomainRenewDone, handleDomainRenewPay, runDomainRenewals } from "./producers/website/domain-renewal.js";
-import { handleWebsitePreviewCreate, handleWebsitePreviewView, handleWebsitePreviewHandoff, handleWebsitePreviewCustomize, handleWebsitePreviewImage, handleProspectSiteDemo, runWebsitePreviewReminders } from "./marketing/website-preview.js";
+import { handleWebsitePreviewCreate, handleWebsitePreviewView, handleWebsitePreviewHandoff, handleWebsitePreviewCustomize, handleWebsitePreviewImage, handleProspectSiteDemo, runWebsitePreviewReminders, rebuildProspectSites } from "./marketing/website-preview.js";
 import { handleOrderCancel } from "./account/cancel.js";
 import { handleBuyerRevision } from "./approvals/buyer-revision.js";
 import { handleApprovalRequest, handleBatchApprovalRequest } from "./approvals/approvals.js";
@@ -37,7 +37,7 @@ import { dailyCoverageReport, handleCoverage } from "./selftest/coverage.js";
 import { handleSiteCheckResult } from "./selftest/site-check.js";
 import { handleD1Usage } from "./selftest/d1-usage.js";
 import { handleProspects, handleProspectBatch, handleProspectStatus, handleProspectLookup, handleSendPlan } from "./marketing/prospects.js";
-import { handleProspectDemo, handleMenuPreview, handleProspectFollowups } from "./marketing/demo-menu.js";
+import { handleProspectDemo, handleMenuPreview, upgradeProspectMenus, handleProspectFollowups } from "./marketing/demo-menu.js";
 import { handleWeeklyNumbers } from "./marketing/weekly-numbers.js";
 import { kickProspectJobs } from "./marketing/prospect-kick.js";
 import { countingDb, saveTickCount } from "./lib/query-count.js";
@@ -473,6 +473,9 @@ const mmWorkerWithBooking = {
       if (new Date().getUTCMinutes() >= 15 && new Date().getUTCMinutes() < 20) await alertStaleHandLogos(env).catch((error) => console.error("Nino logo check failed:", error instanceof Error ? error.message : String(error)));
       // Owner "Latest outputs" link, when one is requested (self_tests kind OWNER_OUTPUTS_LINK).
       await runOwnerOutputsLink(env).catch((error) => console.error("Outputs link failed:", error instanceof Error ? error.message : String(error)));
+      // Previews already emailed to prospects: rebuilt in place with the current generator designs (Nov 10, 2026, owner).
+      await upgradeProspectMenus(env).catch((error) => console.error("Prospect menu upgrade failed:", error instanceof Error ? error.message : String(error)));
+      await rebuildProspectSites(env).catch((error) => console.error("Prospect site rebuild failed:", error instanceof Error ? error.message : String(error)));
       // Website previews: the same single reminder, on the half-hour tick.
       await runWebsitePreviewReminders(env).catch((error) => console.error("Website preview reminders failed:", error instanceof Error ? error.message : String(error)));
       await advanceSelfTests(env, app).catch((error) => console.error("Self-test failed:", error instanceof Error ? error.message : String(error)));

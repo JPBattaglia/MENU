@@ -631,3 +631,5 @@ ALTER TABLE prospects ADD COLUMN source TEXT;
 ALTER TABLE prospects ADD COLUMN opened_on TEXT;
 ALTER TABLE prospects ADD COLUMN looked_up_at TEXT;
 CREATE INDEX IF NOT EXISTS prospects_opened_on ON prospects (opened_on);
+-- 0052 (Nov 10, 2026)
+ALTER TABLE website_previews ADD COLUMN rebuilt_at TEXT;
