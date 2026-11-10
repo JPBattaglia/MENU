@@ -131,7 +131,33 @@ body.hybrid {
 .hy-pad { padding: 16px 20px; }
 .hy-price { white-space: nowrap; color: var(--hy-hot); }
 .hy-swatches { display: flex; flex-wrap: wrap; gap: 8px; }
-.hy-swatch { width: 30px; height: 30px; border-radius: 15px; border: 2px solid rgba(255,255,255,.55); }
+.hy-swatch { width: 40px; height: 40px; padding: 0; border-radius: 20px; border: 2px solid rgba(255,255,255,.55); -webkit-appearance: none; appearance: none; }
+.hy-swatch[aria-pressed=true] { border-color: #fff; box-shadow: 0 0 0 3px var(--hy-accent); }
+/* Buying inside the app (Nov 10, 2026): product, color, size and quantity pickers, the in-app cart and checkout. */
+.hy-pick .hy-label { margin-left: 0; margin-right: 0; margin-top: 20px; }
+.hy-label-value { color: var(--hy-ink); letter-spacing: 0; text-transform: none; }
+.hy-label-in { margin: 0 0 6px; }
+.hy-chips-wrap { flex-wrap: wrap; overflow: visible; padding: 0; }
+.hy-chip[disabled] { opacity: .35; text-decoration: line-through; }
+.hy-qty { display: inline-flex; align-items: center; gap: 4px; border: 1px solid var(--hy-card-line); border-radius: 999px; background: var(--hy-field); padding: 3px; }
+.hy-qty-btn { width: 40px; height: 40px; border-radius: 20px; border: 0; background: transparent; color: var(--hy-ink); font: inherit; font-size: 22px; font-weight: 700; line-height: 1; }
+.hy-qty-btn[disabled] { opacity: .3; }
+.hy-qty-n { min-width: 28px; text-align: center; font-weight: 700; }
+.hy-tabs button { position: relative; }
+.hy-tabcount { position: absolute; top: 2px; left: calc(50% + 6px); min-width: 20px; height: 20px; padding: 0 5px; border-radius: 10px; background: var(--hy-hot); color: #1a0703; font-size: 12px; font-weight: 800; line-height: 20px; text-align: center; }
+.hy-cart { margin: 14px 16px 0; display: flex; flex-direction: column; gap: 10px; }
+.hy-cart-line { display: flex; gap: 14px; padding: 12px; background: var(--hy-card); border: 1px solid var(--hy-card-line); border-radius: var(--hy-radius); }
+.hy-cart-line img { flex: none; width: 84px; height: 84px; object-fit: cover; border-radius: 10px; background: #2a2523; }
+.hy-cart-info { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.hy-cart-tools { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: 8px; }
+.hy-sum-row { display: flex; justify-content: space-between; gap: 16px; padding: 4px 0; }
+.hy-sum-total { border-top: 1px solid var(--hy-card-line); margin-top: 6px; padding-top: 10px; font-size: 18px; }
+.hy-form select { width: 100%; font: inherit; font-size: 16px; padding: 13px 14px; border: 1px solid var(--hy-card-line); border-radius: var(--hy-btn-radius); background: var(--hy-field); color: var(--hy-ink); -webkit-appearance: none; appearance: none; }
+.hy-form select option { color: #111; }
+#hy-address, #hy-rates { scroll-margin-top: 150px; }
+.hy-list-in { margin: 0; display: flex; flex-direction: column; gap: 8px; }
+.hy-rate { flex-direction: row; justify-content: space-between; align-items: center; gap: 12px; padding: 14px 16px; }
+.hy-rate[aria-checked=true] { border-color: var(--hy-accent); box-shadow: inset 0 0 0 1px var(--hy-accent); }
 .hy-display { font-family: var(--hy-display); text-transform: uppercase; font-size: clamp(30px, 11.5vw, 50px) !important; overflow-wrap: normal; word-break: normal; hyphens: none; line-height: .92 !important; letter-spacing: -.01em; }
 .hy-hot { color: var(--hy-hot); }
 .hy-hot-text { color: var(--hy-hot); font-weight: 700; }

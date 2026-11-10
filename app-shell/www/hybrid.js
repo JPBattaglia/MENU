@@ -165,6 +165,7 @@
       nav.appendChild(b);
     });
     root.appendChild(screen); root.appendChild(nav);
+    if (data.kind === "shop") cartBadge();
   }
 
   // ---- Menu-made (services) ----
@@ -322,6 +323,46 @@
     b.addEventListener("click", function () { show("shop", { product: p.slug }); });
     return b;
   }
+  // ---- Nino: buying inside the app (owner, Nov 10, 2026: "when you tap a color nothing happens ... the cart is only on
+  // the site so buyers have to go back and forth"). The product, color, size and quantity are picked on this screen,
+  // the cart lives in the app, delivery prices come from the shop, and only Stripe's payment page opens in the in-app
+  // browser. Prices shown here are the shop's; its checkout re-reads every one before charging.
+  var CART_KEY = "nino-cart", MAX_EACH = 10, MAX_UNITS = 50, MAX_LINES = 20;
+  var picks = {}, designs = {}, step = "cart", addr = null, quote = null, rateId = null, attempt = null, thanks = null, countries = null, cartNote = "";
+  function cartItems() {
+    var c = t.store.get(CART_KEY);
+    return (Array.isArray(c) ? c : []).filter(function (i) { return i && /^\d{1,20}$/.test(i.variant_id) && /^\d{1,20}$/.test(i.product_id) && i.quantity >= 1 && i.quantity <= MAX_EACH; });
+  }
+  function cartUnits(items) { return (items || cartItems()).reduce(function (n, i) { return n + i.quantity; }, 0); }
+  function cartTotal(items) { return items.reduce(function (n, i) { return n + i.price_cents * i.quantity; }, 0); }
+  function cartBadge() {
+    var tab = document.getElementById("hy-t-cart"); if (!tab) return;
+    var dot = tab.querySelector(".hy-tabcount"); var n = cartUnits();
+    if (!dot) { dot = el("span", "hy-tabcount"); tab.appendChild(dot); }
+    dot.textContent = n ? String(n) : ""; dot.hidden = !n;
+    tab.setAttribute("aria-label", n ? "Cart, " + n + (n === 1 ? " item" : " items") : "Cart");
+  }
+  // A changed cart needs new delivery prices (the shop ties a quote to the exact cart).
+  function saveCart(items) { t.store.set(CART_KEY, items); quote = null; rateId = null; attempt = null; if (step === "rates") step = "address"; cartBadge(); }
+  function cartPayload(items) { return items.map(function (i) { return { product_id: i.product_id, variant_id: i.variant_id, quantity: i.quantity }; }); }
+  function loadDesign(id) {
+    var hit = designs[id];
+    if (hit && Date.now() - hit.at < 300000) return Promise.resolve(hit.value);
+    return fetch(data.fans_api + "/api/app/design/" + encodeURIComponent(id)).then(function (r) { return r.json(); }).then(function (d) {
+      if (!d || !d.ok || !Array.isArray(d.options) || !d.options.length) throw new Error("design");
+      designs[id] = { at: Date.now(), value: d };
+      return d;
+    });
+  }
+  function stepper(value, max, onChange) {
+    var box = el("div", "hy-qty"); box.setAttribute("role", "group"); box.setAttribute("aria-label", "Quantity");
+    var less = button("−", "hy-qty-btn", function () { if (value > 1) { value--; draw(); onChange(value); } }); less.setAttribute("aria-label", "One fewer");
+    var out = el("span", "hy-qty-n"); out.setAttribute("aria-live", "polite");
+    var more = button("+", "hy-qty-btn", function () { if (value < max) { value++; draw(); onChange(value); } }); more.setAttribute("aria-label", "One more");
+    function draw() { out.textContent = String(value); less.disabled = value <= 1; more.disabled = value >= max; }
+    box.appendChild(less); box.appendChild(out); box.appendChild(more); draw();
+    return box;
+  }
   function productPage(s, p) {
     var bar = el("div", "hy-bar");
     var back = el("button", "hy-icon-btn"); back.type = "button"; back.setAttribute("aria-label", "Back to the shop"); back.appendChild(icon("back"));
@@ -330,20 +371,92 @@
     var img = el("img", "hy-hero-img"); img.src = p.image; img.alt = p.title + " shirt"; s.appendChild(img);
     var body = el("div", "hy-pad");
     if (p.early) body.appendChild(el("p", "hy-badge", "App first: on the website in 24 hours"));
-    var top = el("div", "hy-plan-top"); top.appendChild(el("h2", null, p.title)); top.appendChild(el("strong", "hy-price", "From " + money(p.price_cents)));
+    var top = el("div", "hy-plan-top"); top.appendChild(el("h2", null, p.title));
+    var price = el("strong", "hy-price", "From " + money(p.price_cents)); top.appendChild(price);
     body.appendChild(top);
     if (p.description) body.appendChild(el("p", null, p.description));
-    if (p.colors.length) {
-      body.appendChild(el("h3", "hy-label", p.colors.length + " colors"));
-      var sw = el("div", "hy-swatches");
-      p.colors.forEach(function (c) { var d = el("span", "hy-swatch"); d.style.background = c.hex; d.setAttribute("role", "img"); d.setAttribute("aria-label", c.name); d.title = c.name; sw.appendChild(d); });
-      body.appendChild(sw);
-    }
-    if (p.sizes.length) { body.appendChild(el("h3", "hy-label", "Sizes")); body.appendChild(el("p", null, p.sizes.join(", "))); }
-    body.appendChild(button("Choose size, color and product", "hy-btn hy-btn-big", function () { openWeb(p.buy_url); }));
-    body.appendChild(el("p", "hy-muted", "Opens Nino's shop inside the app: pick the product (shirt, mug, sticker and more), size and color, then checkout with Stripe. " + (data.shop_note || "")));
-    body.appendChild(button("See the design page", "hy-link", function () { openWeb(p.url); }));
+    var pick = el("div", "hy-pick"); body.appendChild(pick);
+    if (data.shop_note) body.appendChild(el("p", "hy-muted", data.shop_note));
     s.appendChild(body);
+    // If the shop can't be reached, the website's own picker still works inside the app.
+    function fallback() {
+      while (pick.firstChild) pick.removeChild(pick.firstChild);
+      pick.appendChild(el("p", "hy-muted", "The shop's choices couldn't load here. You can still pick on Nino's website, inside the app."));
+      pick.appendChild(button("Choose on the website", "hy-btn hy-btn-big", function () { openWeb(p.buy_url); }));
+    }
+    if (!p.id || !data.fans_api) { fallback(); return; }
+    pick.appendChild(inlineLoader());
+    loadDesign(p.id).then(function (d) { if (pick.parentNode && document.body.contains(pick)) drawPick(d); }).catch(function () { if (document.body.contains(pick)) fallback(); });
+
+    function drawPick(d) {
+      var st = picks[p.id] || (picks[p.id] = { type: d.options[0].type, color: null, size: null, qty: 1 });
+      var note = "";
+      function render() {
+        while (pick.firstChild) pick.removeChild(pick.firstChild);
+        var option = d.options.filter(function (o) { return o.type === st.type; })[0] || d.options[0];
+        st.type = option.type;
+        if (!option.colors.some(function (c) { return c.name === st.color; })) st.color = option.colors.length ? option.colors[0].name : "";
+        var inColor = option.variants.filter(function (v) { return !option.colors.length || v.color === st.color; });
+        var sizes = option.sizes.filter(function (z) { return inColor.some(function (v) { return v.size === z; }); });
+        if (sizes.indexOf(st.size) < 0) st.size = sizes.length === 1 ? sizes[0] : null;
+        var variant = inColor.filter(function (v) { return !sizes.length || v.size === st.size; })[0] || null;
+        if (sizes.length && !st.size) variant = null;
+        var shown = (variant && variant.image) || (option.colors.filter(function (c) { return c.name === st.color; })[0] || {}).image || option.image || p.image;
+        if (shown && img.getAttribute("src") !== shown) img.src = shown;
+        img.alt = p.title + " " + option.label.toLowerCase() + (st.color ? ", " + st.color : "");
+        price.textContent = variant ? money(variant.price_cents) : "From " + money(option.from_cents);
+
+        if (d.options.length > 1) {
+          pick.appendChild(el("h3", "hy-label", "Product"));
+          var types = el("div", "hy-chips hy-chips-wrap"); types.setAttribute("role", "group"); types.setAttribute("aria-label", "Choose a product");
+          d.options.forEach(function (o) {
+            var b = button(o.label, "hy-chip", function () { st.type = o.type; st.color = null; st.size = null; note = ""; render(); });
+            b.setAttribute("aria-pressed", String(o.type === option.type)); types.appendChild(b);
+          });
+          pick.appendChild(types);
+        }
+        // One color (a sticker's white backing) is not a choice, so it isn't asked.
+        if (option.colors.length > 1) {
+          var cl = el("h3", "hy-label", "Color: "); cl.appendChild(el("span", "hy-label-value", st.color)); pick.appendChild(cl);
+          var sw = el("div", "hy-swatches"); sw.setAttribute("role", "group"); sw.setAttribute("aria-label", "Choose a color");
+          option.colors.forEach(function (c) {
+            var b = el("button", /^#[0-9a-f]{6}$/i.test(c.hex || "") ? "hy-swatch" : "hy-chip"); b.type = "button";
+            if (b.className === "hy-swatch") b.style.background = c.hex; else b.textContent = c.name;
+            b.setAttribute("aria-label", c.name); b.setAttribute("aria-pressed", String(c.name === st.color)); b.title = c.name;
+            b.addEventListener("click", function () { st.color = c.name; note = ""; render(); });
+            sw.appendChild(b);
+          });
+          pick.appendChild(sw);
+        }
+        if (option.sizes.length > 1) {
+          pick.appendChild(el("h3", "hy-label", "Size"));
+          var sz = el("div", "hy-chips hy-chips-wrap"); sz.setAttribute("role", "group"); sz.setAttribute("aria-label", "Choose a size");
+          option.sizes.forEach(function (z) {
+            var b = button(z, "hy-chip", function () { st.size = z; note = ""; render(); });
+            b.setAttribute("aria-pressed", String(z === st.size)); b.disabled = sizes.indexOf(z) < 0; sz.appendChild(b);
+          });
+          pick.appendChild(sz);
+        }
+        pick.appendChild(el("h3", "hy-label", "Quantity"));
+        pick.appendChild(stepper(st.qty, MAX_EACH, function (n) { st.qty = n; }));
+        var msg = el("p", "hy-status", note); msg.setAttribute("role", "status"); msg.setAttribute("aria-live", "polite");
+        var add = button(d.available === false ? "Shop is updating" : "Add to cart", "hy-btn hy-btn-big", function () {
+          if (!variant) { msg.textContent = "Choose a size first."; msg.className = "hy-status is-error"; return; }
+          var items = cartItems();
+          var line = items.filter(function (i) { return i.variant_id === variant.id; })[0];
+          if (!line && items.length >= MAX_LINES) { msg.textContent = "Your cart is full. Check out, then add more."; msg.className = "hy-status is-error"; return; }
+          if (cartUnits(items) + st.qty > MAX_UNITS || (line && line.quantity + st.qty > MAX_EACH)) { msg.textContent = "That's more than one order can hold (" + MAX_EACH + " of one item, " + MAX_UNITS + " in all)."; msg.className = "hy-status is-error"; return; }
+          if (line) line.quantity += st.qty;
+          else items.push({ product_id: variant.product_id, variant_id: variant.id, quantity: st.qty, title: d.title, label: option.label, color: variant.color || "", size: variant.size || "", price_cents: variant.price_cents, image: shown || "", slug: p.slug });
+          saveCart(items); thanks = null;
+          note = "Added to your cart."; st.qty = 1; render();
+        });
+        add.disabled = d.available === false;
+        pick.appendChild(add); pick.appendChild(msg);
+        if (cartUnits()) pick.appendChild(button("View cart (" + cartUnits() + ")", "hy-btn hy-btn-ghost hy-btn-big", function () { show("cart"); }));
+      }
+      render();
+    }
   }
   var SHOP = {
     shop: function (s, opts) {
@@ -563,14 +676,173 @@
       loadIdeas();
     },
     cart: function (s) {
-      s.appendChild(header("Cart", "Checkout with Stripe, inside the app"));
-      var card = el("div", "hy-card");
-      card.appendChild(el("p", null, "Your cart keeps what you picked in the shop. Shipping for your address is shown before you pay."));
-      card.appendChild(button("Open my cart", "hy-btn hy-btn-big", function () { openWeb(data.links.cart); }));
-      card.appendChild(button("Sizing, delivery and order help", "hy-link", function () { openWeb(data.links.help); }));
-      s.appendChild(card);
+      var items = cartItems();
+      if (thanks) {
+        s.appendChild(header("Thank you", "Your order is in"));
+        var done = el("div", "hy-card");
+        done.appendChild(el("p", null, "Your payment went through. A confirmation email with your order details is on its way."));
+        if (data.shop_note) done.appendChild(el("p", "hy-muted", data.shop_note));
+        done.appendChild(button("Keep shopping", "hy-btn hy-btn-big", function () { thanks = null; show("shop"); }));
+        s.appendChild(done);
+        return;
+      }
+      s.appendChild(header("Cart", items.length ? cartUnits(items) + (cartUnits(items) === 1 ? " item" : " items") : "Nothing here yet"));
+      if (!items.length) {
+        var none = el("div", "hy-card");
+        none.appendChild(el("p", null, "Your cart is empty. Pick a design, then the product, color and size."));
+        none.appendChild(button("Browse the shop", "hy-btn hy-btn-big", function () { show("shop"); }));
+        none.appendChild(button("Sizing, delivery and order help", "hy-link", function () { openWeb(data.links.help); }));
+        s.appendChild(none);
+        return;
+      }
+      var list = el("div", "hy-cart");
+      items.forEach(function (i) {
+        var row = el("div", "hy-cart-line");
+        var pic = el("img"); pic.src = i.image || ""; pic.alt = ""; pic.loading = "lazy"; row.appendChild(pic);
+        var info = el("div", "hy-cart-info");
+        info.appendChild(el("strong", null, i.title));
+        info.appendChild(el("span", "hy-muted", [i.label, [i.color, i.size].filter(Boolean).join(" / ")].filter(Boolean).join(" · ")));
+        info.appendChild(el("span", "hy-price", money(i.price_cents) + " each"));
+        var tools = el("div", "hy-cart-tools");
+        tools.appendChild(stepper(i.quantity, Math.min(MAX_EACH, i.quantity + MAX_UNITS - cartUnits(items)), function (n) {
+          var all = cartItems(); all.forEach(function (x) { if (x.variant_id === i.variant_id) x.quantity = n; }); saveCart(all); show("cart", { keep: true });
+        }));
+        var rm = button("Remove", "hy-linkbtn", function () { saveCart(cartItems().filter(function (x) { return x.variant_id !== i.variant_id; })); show("cart", { keep: true }); });
+        rm.setAttribute("aria-label", "Remove " + i.title + " " + i.label);
+        tools.appendChild(rm); info.appendChild(tools);
+        row.appendChild(info); list.appendChild(row);
+      });
+      s.appendChild(list);
+
+      var sum = el("div", "hy-card hy-sum");
+      function line(label, value, cls) { var r = el("div", "hy-sum-row" + (cls ? " " + cls : "")); r.appendChild(el("span", null, label)); r.appendChild(el("strong", null, value)); sum.appendChild(r); }
+      var subtotal = cartTotal(items);
+      line("Items", money(subtotal));
+      var rate = quote && rateId ? quote.rates.filter(function (r) { return r.id === rateId; })[0] : null;
+      if (step === "rates" && rate) { line("Delivery", money(rate.amount)); line("Total before tax", money(subtotal + rate.amount), "hy-sum-total"); }
+      if (data.shop_note) sum.appendChild(el("p", "hy-muted", data.shop_note));
+      var msg = el("p", "hy-status" + (cartNote && /^!/.test(cartNote) ? " is-error" : ""), cartNote.replace(/^!/, "")); msg.setAttribute("role", "status"); msg.setAttribute("aria-live", "polite");
+      function say(text, bad) { cartNote = (bad ? "!" : "") + text; msg.textContent = text; msg.className = "hy-status" + (bad ? " is-error" : ""); }
+      s.appendChild(sum);
+
+      if (step === "cart") {
+        sum.appendChild(button("Checkout", "hy-btn hy-btn-big", function () { step = "address"; cartNote = ""; show("cart", { keep: true }); var f = document.getElementById("hy-address"); if (f && f.scrollIntoView) f.scrollIntoView({ block: "start" }); }));
+        sum.appendChild(msg);
+        sum.appendChild(button("Keep shopping", "hy-link", function () { show("shop"); }));
+        return;
+      }
+
+      // ---- delivery address, then the shop's delivery prices for it ----
+      if (!addr) addr = t.store.get("nino-address") || { name: "", address1: "", address2: "", city: "", state_code: "", zip: "", country_code: "US" };
+      var form = el("form", "hy-card hy-form"); form.id = "hy-address"; form.noValidate = true;
+      form.appendChild(el("h3", "hy-label hy-label-in", "Delivery address"));
+      function field(key, label, auto, extra) {
+        var l = el("label", null, label); l.setAttribute("for", "hy-a-" + key); form.appendChild(l);
+        var i = el("input"); i.id = "hy-a-" + key; i.type = "text"; i.maxLength = 150; i.value = addr[key] || ""; i.setAttribute("autocomplete", "shipping " + auto);
+        for (var k in extra || {}) i.setAttribute(k, extra[k]);
+        i.addEventListener("input", function () { addr[key] = i.value; if (quote) { quote = null; rateId = null; attempt = null; step = "address"; } });
+        form.appendChild(i); return i;
+      }
+      field("name", "Full name", "name");
+      field("address1", "Street address", "address-line1");
+      field("address2", "Apartment or suite (optional)", "address-line2");
+      field("city", "City", "address-level2");
+      field("state_code", "State or province", "address-level1", { autocapitalize: "characters", placeholder: "CA" });
+      field("zip", "ZIP or postal code", "postal-code");
+      var cl = el("label", null, "Country"); cl.setAttribute("for", "hy-a-country"); form.appendChild(cl);
+      var sel = el("select"); sel.id = "hy-a-country"; sel.setAttribute("autocomplete", "shipping country");
+      function fillCountries(codes) {
+        while (sel.firstChild) sel.removeChild(sel.firstChild);
+        var names = null; try { names = new Intl.DisplayNames(["en"], { type: "region" }); } catch (e) {}
+        codes.map(function (c) { var n = c; try { n = (names && names.of(c)) || c; } catch (e) {} return { code: c, name: n }; })
+          .sort(function (a, b) { return a.code === "US" ? -1 : b.code === "US" ? 1 : a.name.localeCompare(b.name); })
+          .forEach(function (c) { var o = el("option", null, c.name); o.value = c.code; sel.appendChild(o); });
+        sel.value = codes.indexOf(addr.country_code) >= 0 ? addr.country_code : codes[0]; addr.country_code = sel.value;
+      }
+      fillCountries(countries || ["US"]);
+      if (!countries) fetch(data.fans_api + "/api/commerce-config").then(function (r) { return r.json(); }).then(function (c) {
+        if (c && Array.isArray(c.shipping_countries) && c.shipping_countries.length) { countries = c.shipping_countries; if (document.body.contains(sel)) fillCountries(countries); }
+      }).catch(function () {});
+      sel.addEventListener("change", function () { addr.country_code = sel.value; if (quote) { quote = null; rateId = null; attempt = null; step = "address"; show("cart", { keep: true }); } });
+      form.appendChild(sel);
+      var get = button(step === "rates" ? "Update delivery prices" : "See delivery prices", step === "rates" ? "hy-btn hy-btn-ghost hy-btn-big" : "hy-btn hy-btn-big"); get.type = "submit";
+      form.appendChild(get);
+      if (step !== "rates") form.appendChild(msg);
+      form.addEventListener("submit", function (ev) {
+        ev.preventDefault();
+        var a = {}; ["name", "address1", "address2", "city", "state_code", "zip", "country_code"].forEach(function (k) { a[k] = String(addr[k] || "").trim(); });
+        a.state_code = a.state_code.toUpperCase();
+        if (!a.name || !a.address1 || !a.city || !a.zip) { say("Fill in your name, street address, city and ZIP or postal code.", true); return; }
+        if (a.country_code === "US" && !/^[A-Z]{2}$/.test(a.state_code)) { say("Use the two-letter state, like CA or NY.", true); return; }
+        if ((a.country_code === "CA" || a.country_code === "AU") && !a.state_code) { say("Add the state or province.", true); return; }
+        addr = a; t.store.set("nino-address", a);
+        get.disabled = true; say("Getting delivery prices…");
+        fans("/api/shipping-quotes", { items: cartPayload(cartItems()), recipient: a }).then(function (r) {
+          if (r._ok && r.quote_id && Array.isArray(r.rates) && r.rates.length) {
+            quote = r; rateId = r.rates.slice().sort(function (x, y) { return x.amount - y.amount; })[0].id; attempt = null; step = "rates"; cartNote = "";
+            show("cart", { keep: true });
+            var box = document.getElementById("hy-rates"); if (box && box.scrollIntoView) box.scrollIntoView({ block: "start" });
+          } else { get.disabled = false; say(r.message || "Delivery prices couldn't be worked out for that address. Check it and try again.", true); }
+        }).catch(function () { get.disabled = false; say("You need a connection to get delivery prices.", true); });
+      });
+      s.appendChild(form);
+      if (step !== "rates" || !quote) return;
+
+      var pay = el("div", "hy-card"); pay.id = "hy-rates";
+      pay.appendChild(el("h3", "hy-label hy-label-in", "Delivery"));
+      var opts = el("div", "hy-list hy-list-in"); opts.setAttribute("role", "radiogroup"); opts.setAttribute("aria-label", "Delivery");
+      quote.rates.forEach(function (r) {
+        var b = el("button", "hy-list-item hy-rate"); b.type = "button"; b.setAttribute("role", "radio"); b.setAttribute("aria-checked", String(r.id === rateId));
+        b.appendChild(el("strong", null, r.name)); b.appendChild(el("span", "hy-price", money(r.amount)));
+        b.addEventListener("click", function () { rateId = r.id; attempt = null; show("cart", { keep: true }); });
+        opts.appendChild(b);
+      });
+      pay.appendChild(opts);
+      pay.appendChild(el("p", "hy-muted", "Sales tax, where it applies, is added on the payment page. Payment is on Stripe's secure page, opened inside the app."));
+      var go = button("Continue to payment", "hy-btn hy-btn-big", function () {
+        var list = cartPayload(cartItems());
+        var sig = JSON.stringify([list, quote.quote_id, rateId]);
+        // The same cart, address and delivery choice reopen the same payment page instead of starting a second order.
+        if (!attempt || attempt.sig !== sig) attempt = { sig: sig, id: (window.crypto && crypto.randomUUID ? crypto.randomUUID() : String(Date.now()) + "-" + Math.random().toString(36).slice(2) + "-nino-app").replace(/[^A-Za-z0-9_-]/g, "") };
+        go.disabled = true; say("Opening the payment page…");
+        fans("/api/checkout", { items: list, request_id: attempt.id, shipping_quote_id: quote.quote_id, shipping_rate_id: rateId, app_member: t.memberKey() }).then(function (r) {
+          go.disabled = false;
+          if (r._ok && /^https:\/\/checkout\.stripe\.com\//.test(r.checkout_url || "")) {
+            t.store.set("nino-order", { id: r.order_id, token: r.receipt_token, at: Date.now() });
+            say("Finish on the payment page. Your cart stays here until the payment goes through.");
+            openWeb(r.checkout_url);
+          } else if (r.error === "shipping_quote_expired" || r.error === "checkout_expired") { quote = null; rateId = null; attempt = null; step = "address"; cartNote = "!Delivery prices are only held for 15 minutes. Tap See delivery prices again."; show("cart", { keep: true }); }
+          else say(r.message || "Payment couldn't be started. Please try again in a moment.", true);
+        }).catch(function () { go.disabled = false; say("You need a connection to check out.", true); });
+      });
+      pay.appendChild(go); pay.appendChild(msg);
+      s.appendChild(pay);
     }
   };
+
+  // After the payment page closes: ask the shop whether that order was paid. If so the cart empties and the Cart tab
+  // says thank you; if not, nothing changes and the buyer can go on.
+  var orderCheck = null;
+  function checkOrder(tries) {
+    var o = t.store.get("nino-order");
+    if (!o || !/^ord_[a-f0-9]{24}$/.test(o.id || "") || !o.token || Date.now() - (o.at || 0) > 2 * 3600000) { if (o) t.store.set("nino-order", null); return; }
+    clearTimeout(orderCheck);
+    fans("/api/orders/" + o.id + "?token=" + encodeURIComponent(o.token)).then(function (r) {
+      if (r._ok && r.payment_status === "paid") {
+        t.store.set("nino-order", null); t.store.set(CART_KEY, []);
+        quote = null; rateId = null; attempt = null; step = "cart"; cartNote = ""; thanks = { id: o.id };
+        cartBadge(); if (current === "cart") show("cart"); else if (current === "rewards") show("rewards", { keep: true });
+      } else if (tries > 0) orderCheck = setTimeout(function () { checkOrder(tries - 1); }, 2500);
+    }).catch(function () { if (tries > 0) orderCheck = setTimeout(function () { checkOrder(tries - 1); }, 2500); });
+  }
+  function watchPayment() {
+    if (!data || data.kind !== "shop") return;
+    var C = window.Capacitor;
+    var plugin = C && C.isNativePlatform && C.isNativePlatform() ? ((C.Plugins && C.Plugins.Browser) || (C.registerPlugin ? C.registerPlugin("Browser") : null)) : null;
+    if (plugin && plugin.addListener) { try { plugin.addListener("browserFinished", function () { checkOrder(6); }); } catch (e) {} }
+    document.addEventListener("visibilitychange", function () { if (!document.hidden) checkOrder(3); });
+    checkOrder(1);
+  }
 
   function load() {
     return fetch(cfg.hybrid_url, { cache: "no-store" }).then(function (r) { return r.json(); }).then(function (c) {
@@ -651,7 +923,7 @@
       var cached = t.store.get("hybrid");
       if (cached && cached.ok && Array.isArray(cached.tabs) && cached.tabs.length) { data = cached; build(); show(cached.tabs[0]); document.body.classList.add("hy-ready"); hideLoader(); }
       startPush();
-      load();
+      load().then(watchPayment);
       // Fresh content each time the app comes back to the front (the website may have changed).
       document.addEventListener("visibilitychange", function () { if (!document.hidden && current !== "preview") load(); });
     }

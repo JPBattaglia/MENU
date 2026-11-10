@@ -100,6 +100,9 @@ test('the app shell: configure.mjs writes hybrid_url (and drops site_url), refus
   assert.ok(html.indexOf('hybrid.js') > 0 && html.indexOf('hybrid.js') < html.indexOf('app.js'), 'hybrid.js loads before app.js');
   const js = readFileSync(join(shell, 'www/hybrid.js'), 'utf8');
   assert.doesNotMatch(js, /innerHTML/, 'text only through textContent');
+  // Nino's shop is bought inside the app (owner, Nov 10, 2026): no button that only sends the buyer to the website.
+  assert.doesNotMatch(js, /See the design page|Open my cart/);
+  assert.match(js, /Add to cart/); assert.match(js, /\/api\/shipping-quotes/); assert.match(js, /\/api\/checkout/);
 });
 
 test('nino: designs from the shop\'s new list join the catalog; the first 24 hours are early access and come first', () => {
