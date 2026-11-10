@@ -464,11 +464,40 @@
       s.appendChild(el("h3", "hy-label", "Fan favorites"));
       var list = el("div", "hy-list"); s.appendChild(list);
       var empty = el("p", "hy-muted hy-pad", "No ideas on the board yet. Be the first!"); s.appendChild(empty);
+      // App Store guideline 1.2 (user posts): every idea can be reported (it leaves the board at once and Nino decides)
+      // and a fan can hide one person's ideas on this device. Ideas are also held for Nino's OK before they show.
+      var HIDDEN_KEY = "nino-hidden-authors";
+      function hiddenAuthors() { try { return JSON.parse(localStorage.getItem(HIDDEN_KEY) || "[]"); } catch (e) { return []; } }
+      function hideAuthor(tag) { try { var h = hiddenAuthors(); if (h.indexOf(tag) < 0) h.push(tag); localStorage.setItem(HIDDEN_KEY, JSON.stringify(h.slice(-200))); } catch (e) {} }
+      var lastBoard = null;
       function drawIdeas(b) {
+        lastBoard = b;
         while (list.firstChild) list.removeChild(list.firstChild);
+        var hidden = hiddenAuthors();
+        b = { ideas: (b.ideas || []).filter(function (i) { return !i.author || hidden.indexOf(i.author) < 0; }), pending: b.pending };
         (b.ideas || []).forEach(function (idea) {
           var item = el("div", "hy-idea");
           var txt = el("div", "hy-idea-text"); txt.appendChild(el("p", null, idea.text)); if (idea.name) txt.appendChild(el("span", "hy-muted", idea.name));
+          var acts = el("div", "hy-idea-actions");
+          var rep = el("button", "hy-linkbtn", "Report"); rep.type = "button"; rep.setAttribute("aria-label", "Report this idea");
+          rep.addEventListener("click", function () {
+            if (!window.confirm("Report this idea? It comes off the board right away and Nino reviews it.")) return;
+            rep.disabled = true;
+            fans("/api/ideas/report", { member: t.memberKey(), id: idea.id }).then(function (r) {
+              if (r._ok) { msg.textContent = "Thanks. That idea is off the board while Nino reviews it."; msg.className = "hy-status"; loadIdeas(); }
+              else { rep.disabled = false; }
+            }).catch(function () { rep.disabled = false; });
+          });
+          acts.appendChild(rep);
+          if (idea.author) {
+            var hide = el("button", "hy-linkbtn", "Hide this person"); hide.type = "button"; hide.setAttribute("aria-label", "Hide ideas from this person");
+            hide.addEventListener("click", function () {
+              if (!window.confirm("Hide all ideas from this person on this phone?")) return;
+              hideAuthor(idea.author); if (lastBoard) drawIdeas(lastBoard);
+            });
+            acts.appendChild(hide);
+          }
+          txt.appendChild(acts);
           var v = el("button", "hy-vote"); v.type = "button"; v.setAttribute("aria-pressed", String(Boolean(idea.voted)));
           v.setAttribute("aria-label", "Vote for this idea, " + (idea.votes || 0) + " votes");
           v.appendChild(icon("up", 18)); var n = el("span", null, String(idea.votes || 0)); v.appendChild(n);
