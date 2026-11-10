@@ -264,6 +264,7 @@ async function emailBuyerLive(env, storeApp, context, links, test) {
 // ---------- The tick ----------
 
 // The owner's own apps (own-apps.js) have no phone in the app on purpose; App Review calls the owner (Nov 9, 2026).
+const WITHDRAW_TRIES = 12;
 const OWNER_REVIEW_PHONE = "+1 945 363 7155";
 
 // App Store category and content-rights answer (owner, Nov 9, 2026). Restaurant apps: Food & Drink, and they show
@@ -284,6 +285,44 @@ function withOwnUrls(storeApp, listing) {
   return urls && listing ? { ...listing, ...urls } : listing;
 }
 
+// Store listing words for the owner's own apps (Nov 10, 2026). The general listing text is written for a restaurant's
+// app ("services and news"); these two apps do more than that since their rebuilds, and a listing that doesn't say
+// what the app does invites a refusal. Only the preview starts from these: the owner edits and approves them there,
+// and what he approved is what is sent.
+const MENUMADE_ABOUT = [
+  "MENU-MADE turns a food and beverage business's printed menu into a phone menu page or a whole website, right in the app.",
+  "MENU GENERATOR\nTake or choose a photo of your printed menu, or pick a PDF. About a minute later it is a phone menu page, shown in nine designs.",
+  "WEBSITE GENERATOR\nThe same menu becomes a whole website with home, menu, about and contact pages, in nine designs.",
+  "THREE BUTTONS\nGenerate shows the next design. Customize adds your logo, colour and details to every design. The last button takes the design on screen to checkout.",
+  "Previews are free and stay up for 3 days. No sign-in is needed to make one.",
+  "ALSO IN THE APP\nPlans and prices, our other services, examples of our work and a way to reach us. Turn on notifications to hear what's new."
+].join("\n\n");
+const NINO_ABOUT = [
+  "The shop app of Nino Battaglia, a San Francisco artist who sells his own original designs on shirts and more.",
+  "SHOP IN THE APP\nPick a design, then the product, colour and size, and add it to your cart. The cart takes your address and shows delivery prices, and you finish on a secure card page.",
+  "NEW DESIGNS FIRST\nNew designs reach the app 24 hours before the website.",
+  "REWARDS\nYour 3rd shirt bought in the app earns a free 8x10 canvas and your 6th a free hoodie. Then it starts again.",
+  "IDEAS\nSuggest what Nino should draw next and vote on other people's ideas.",
+  "WORK\nSee Nino's graphic design and branding work and start a project like it.",
+  "Turn on notifications to hear about new designs first. No account is needed."
+].join("\n\n");
+const OWN_APP_TEXT = {
+  "com.menumade.menumade": {
+    subtitle: "Menu and website generator", keywords: "menu,qr,website,builder,generator,cafe,bar,bakery,food,online menu,business",
+    promo: "Turn a photo of your printed menu into a phone menu page or a whole website. Nine designs each, right in the app.",
+    description: MENUMADE_ABOUT, play_short: "Turn your printed menu into a phone menu page or a whole website.", play_full: MENUMADE_ABOUT
+  },
+  "com.menumade.ninobattaglia": {
+    subtitle: "Shirts, rewards and ideas", keywords: "shirts,tees,art,artist,designs,san francisco,hoodie,rewards,shop,gifts",
+    promo: "New designs land here 24 hours before the website. Buy in the app and earn a free canvas and hoodie.",
+    description: NINO_ABOUT, play_short: "Nino Battaglia's shirts and designs: shop, rewards and ideas.", play_full: NINO_ABOUT
+  }
+};
+function withOwnText(storeApp, listing) {
+  const text = Number(storeApp?.own_app) === 1 ? OWN_APP_TEXT[storeApp.bundle_id] : null;
+  return text && listing ? { ...listing, ...text } : listing;
+}
+
 // App Review notes for the owner's own apps (hybrid apps, hybrid.js). Written for guidelines 2.1 (how to reach every
 // feature, no sign-in needed), 4.2 (native screens, not a wrapped site) and 3.1.3(e) (payment for goods and services
 // used outside the app goes through the website's card checkout, not In-App Purchase).
@@ -292,13 +331,30 @@ const OWN_APP_NOTES = {
   "com.menumade.ninobattaglia": "PURPOSE AND AUDIENCE: the shop app of Nino Battaglia, a San Francisco artist who sells his own original shirt designs. It is for his fans and shoppers: browse new designs (they appear in the app 24 hours before the website), buy shirts, earn rewards and suggest what Nino should draw next. SETUP AND ACCESS: no account and no sign-in; open the app and every feature is available. Native tabs: Shop (designs and products), Ideas (suggest a design idea, vote on others), Rewards (an in-app card: the 3rd shirt bought through the app earns a free 8x10 canvas, the 6th a free hoodie), Cart and Work (Nino's portfolio). USER CONTENT (guideline 1.2): ideas are the only user posts. Every idea is held until Nino approves it from an email before anyone sees it; every idea on the board has Report (it leaves the board at once and Nino reviews it) and Hide this person (hides that author's ideas on the device); posts with links are refused and posting is rate limited; terms at https://ninobattaglia.com/terms.html, contact nino@menu-made.com. BUYING: the product (shirt, hoodie, mug and more), color, size and quantity are chosen on the design's screen in the app; the Cart tab holds the cart, takes the delivery address and shows delivery prices. PAYMENT: shirts are physical goods printed and shipped to the buyer, so only the card payment opens on Stripe's secure payment page in the in-app browser, per guideline 3.1.3(e); nothing digital is sold. EXTERNAL SERVICES: Stripe (the card payment page), Printful (printing and shipping), Cloudflare (hosting and the shop API), Apple Push Notification service via Firebase Cloud Messaging (optional new-design notifications; the app works fully without them), Resend (emails to the owner). REGIONS: the app works the same in every region; shipping options and costs at checkout depend on the address. REGULATION: not a regulated industry; every design is Nino Battaglia's own original artwork."
 };
 
-async function submitBoth(env, storeApp, listing, context, deps) {
-  const scope = storeScope(storeApp);
+async function listingImages(env, storeApp) {
   const images = {};
   for (const name of IMAGE_NAMES) {
     const obj = await env.ASSETS.get(imageKey(storeApp.id, name));
     if (obj) images[name] = new Uint8Array(await obj.arrayBuffer());
   }
+  return images;
+}
+
+// previousGoogle = what Google answered the last time this app was sent (store_app_listings.google_json).
+async function sendGoogle(env, storeApp, listing, images, deps, previousGoogle = {}) {
+  let play = null;
+  try { play = await loadCredential(env, storeScope(storeApp), "GOOGLE_PLAY_ACCOUNT"); } catch { play = null; }
+  const sa = play ? parseServiceAccount(play.p8) : null;
+  if (!sa) return { ok: false, step: "keys", message: "No Google Play access on file for this restaurant." };
+  // Sent before and not public yet = Google's first review may still be running; submitGoogle then checks and holds.
+  const firstReviewSent = Boolean(previousGoogle?.ok && !previousGoogle?.live);
+  const result = await submitGoogle({ sa, packageName: storeApp.bundle_id, listing, images, firstReviewSent }, deps);
+  return result.held ? { ...previousGoogle, ok: true, held: true } : result;
+}
+
+async function submitBoth(env, storeApp, listing, context, deps, previous = {}) {
+  const scope = storeScope(storeApp);
+  const images = await listingImages(env, storeApp);
   const { data } = await appData(env, storeApp);
   const out = { apple: null, google: null };
   let apiKey = null;
@@ -314,10 +370,9 @@ async function submitBoth(env, storeApp, listing, context, deps) {
       reviewNotes: Number(storeApp.own_app) === 1 ? OWN_APP_NOTES[storeApp.bundle_id] || "" : "",
       settings: (Number(storeApp.own_app) === 1 && OWN_APP_SETTINGS[storeApp.bundle_id]) || { category: "FOOD_AND_DRINK", contentRights: "DOES_NOT_USE_THIRD_PARTY_CONTENT" }
     }, deps);
-  let play = null;
-  try { play = await loadCredential(env, scope, "GOOGLE_PLAY_ACCOUNT"); } catch { play = null; }
-  const sa = play ? parseServiceAccount(play.p8) : null;
-  out.google = sa ? await submitGoogle({ sa, packageName: storeApp.bundle_id, listing, images }, deps) : { ok: false, step: "keys", message: "No Google Play access on file for this restaurant." };
+  // Apple is still taking an earlier build out of its queue: the tick comes back; Google is not sent twice meanwhile.
+  if (out.apple.retry) return out;
+  out.google = await sendGoogle(env, storeApp, listing, images, deps, previous.google);
   return out;
 }
 
@@ -342,7 +397,7 @@ async function advanceStoreListings(env, now = Date.now(), deps = {}) {
         const { data } = await appData(env, storeApp);
         let rewards = false;
         try { rewards = Boolean(engagementSettings(data).loyalty.enabled); } catch { rewards = false; }
-        const listing = withOwnUrls(storeApp, listingText(data, { businessName: context.business_name, baseUrl: publicBaseUrl(env), rewards }));
+        const listing = withOwnText(storeApp, withOwnUrls(storeApp, listingText(data, { businessName: context.business_name, baseUrl: publicBaseUrl(env), rewards })));
         await upsertListing(env, storeApp.id, { listing_json: JSON.stringify(listing), approved_at: null, submit_error: null });
         const { url } = await previewLink(env, storeApp.id);
         const sent = await emailOwner(env, storeApp, `${test ? "[TEST] " : ""}Approve the store listing for ${listing.name}`, "Store listing ready for your OK",
@@ -363,7 +418,18 @@ async function advanceStoreListings(env, now = Date.now(), deps = {}) {
         moved++;
         continue;
       }
-      const result = await submitBoth(env, storeApp, withOwnUrls(storeApp, listing), context, deps);
+      const before = { apple: parse(row.apple_json, {}), google: parse(row.google_json, {}) };
+      const result = await submitBoth(env, storeApp, withOwnUrls(storeApp, listing), context, deps, before);
+      if (result.apple.retry) {
+        // Up to an hour of 5-minute tries, then it is reported like any other refusal.
+        const tries = Number(before.apple.withdraw_tries || 0) + 1;
+        if (tries <= WITHDRAW_TRIES) {
+          await upsertListing(env, storeApp.id, { apple_json: JSON.stringify({ ...before.apple, withdraw_tries: tries }), submit_error: result.apple.message });
+          continue;
+        }
+        result.apple = { ok: false, step: result.apple.step, message: "Apple didn't take the earlier build out of its review queue within an hour. Remove it from review in App Store Connect (the app, App Review, the submission, Remove), then approve again." };
+        result.google = before.google.ok ? before.google : { ok: true, held: true };
+      }
       const errors = [["Apple", result.apple], ["Google", result.google]].filter(([, r]) => !r.ok).map(([who, r]) => `${who} (${r.step}): ${r.message}`);
       if (errors.length) {
         // Neither store is retried by itself: the owner fixes the cause and approves again (same link).
@@ -375,9 +441,18 @@ async function advanceStoreListings(env, now = Date.now(), deps = {}) {
         continue;
       }
       await upsertListing(env, storeApp.id, { submitted_at: t, submit_error: null, apple_json: JSON.stringify(result.apple), google_json: JSON.stringify(result.google), last_poll_at: t });
-      await env.DB.prepare(`UPDATE store_apps SET status = 'IN_REVIEW', note = ?, updated_at = ? WHERE id = ? AND status = 'WAITING_SUBMIT_APPROVAL'`)
-        .bind(result.google.draft ? "Submitted; Google Play draft waits for Send for review" : "Submitted to both stores", t, storeApp.id).run();
-      if (result.google.draft) {
+      const byHand = Boolean(result.apple.resubmit_by_hand);
+      const note = byHand ? "Apple: updated; waits for Resubmit to App Review in App Store Connect"
+        : result.google.held ? "Submitted to Apple; Google Play's first review left undisturbed, the newest build follows it"
+        : result.google.draft ? "Submitted; Google Play draft waits for Send for review" : "Submitted to both stores";
+      await env.DB.prepare(`UPDATE store_apps SET status = 'IN_REVIEW', note = ?, updated_at = ? WHERE id = ? AND status = 'WAITING_SUBMIT_APPROVAL'`).bind(note, t, storeApp.id).run();
+      if (byHand) {
+        await emailOwner(env, storeApp, `One click in App Store Connect: ${listing.name}`, "Press Resubmit to App Review",
+          ["The newest build, the pictures, the listing text and the notes for Apple's reviewer are all in place. Apple sent the last review back, and it only takes that resubmission from its own website.",
+            "Open App Store Connect, choose the app, then <strong>App Review</strong> in the left column. Open the submission marked <strong>Unresolved Issues</strong> and press <strong>Resubmit to App Review</strong> at the top right. Nothing else needs to be filled in."],
+          [{ label: "Open App Store Connect", url: `https://appstoreconnect.apple.com/apps/${encodeURIComponent(result.apple.appId || "")}/distribution/reviewsubmissions`, primary: true }], `resubmit/${t.slice(0, 13)}`);
+      }
+      if (result.google.draft && !result.google.held) {
         await emailOwner(env, storeApp, `One click in Play Console: ${listing.name}`, "Send the first Android release for review",
           ["Apple has the app for review. Google takes a new app's first production release as a draft: in Play Console, open the app, Publishing overview, and press <strong>Send changes for review</strong>. Later releases go by themselves."],
           [{ label: "Open Play Console", url: "https://play.google.com/console", primary: true }], "google-draft");
@@ -399,7 +474,10 @@ async function advanceStoreListings(env, now = Date.now(), deps = {}) {
       if (s.ok) {
         appleState = s.state;
         apple.state = s.state; apple.live = s.live;
-        if (s.rejected) {
+        // Back in Apple's queue (or live): the by-hand resubmission was pressed.
+        if (s.queued || s.live) delete apple.resubmit_by_hand;
+        // While that press is still owed, the version can read as rejected; that is the old answer, not a new one.
+        if (s.rejected && !apple.resubmit_by_hand) {
           await upsertListing(env, storeApp.id, { apple_json: JSON.stringify(apple), last_poll_at: t });
           await env.DB.prepare(`UPDATE store_apps SET status = 'REJECTED', note = ?, updated_at = ? WHERE id = ?`).bind(`Apple: ${s.state}`, t, storeApp.id).run();
           await emailOwner(env, storeApp, `Apple didn't approve ${storeApp.bundle_id}`, "Apple sent the app back",
@@ -411,6 +489,18 @@ async function advanceStoreListings(env, now = Date.now(), deps = {}) {
       }
     }
     if (!google.live && await googleLive(storeApp.bundle_id, deps)) google.live = true;
+    // Google's first review finished while a newer build was held back for it: that build goes up now, as an update.
+    if (google.live && google.held) {
+      const listing = withOwnUrls(storeApp, parse(row?.listing_json, null));
+      const sent = listing ? await sendGoogle(env, storeApp, listing, await listingImages(env, storeApp), deps, { ...google, live: true }) : { ok: false, message: "no listing" };
+      if (sent.ok) { delete google.held; google.versionCode = sent.versionCode || google.versionCode; google.draft = false; google.updated_at = t; }
+      else if (!google.update_alerted) {
+        google.update_alerted = true;
+        await emailOwner(env, storeApp, `Google Play update didn't go through: ${storeApp.bundle_id}`, "The newer Android build wasn't taken",
+          [`The app is public on Google Play with its first build. Sending the newer build answered: ${escapeHtml(String(sent.message || "no detail"))}`, "Claude can read this and send it again."],
+          [{ label: "Open Play Console", url: "https://play.google.com/console", primary: true }], `google-update/${t.slice(0, 10)}`);
+      }
+    }
     await upsertListing(env, storeApp.id, { apple_json: JSON.stringify(apple), google_json: JSON.stringify(google), last_poll_at: t });
     if (apple.live && google.live) {
       // The version that just went live is the one this build asked for (store-build.js nextVersion); the next
@@ -434,4 +524,4 @@ async function advanceStoreListings(env, now = Date.now(), deps = {}) {
   return { moved };
 }
 
-export { IMAGE_NAMES, LISTING_KIND, advanceStoreListings, storeListingImage, handleListingImage, handleListingImageView, handleListingPage, imageKey, listingText, withOwnUrls };
+export { IMAGE_NAMES, LISTING_KIND, advanceStoreListings, storeListingImage, handleListingImage, handleListingImageView, handleListingPage, imageKey, listingText, withOwnUrls, withOwnText };
