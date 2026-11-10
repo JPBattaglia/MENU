@@ -37,25 +37,53 @@ export function groupAddResult(add) {
   return `answer ${add?.status}${why ? ` (${why})` : ""}`;
 }
 
-// Makes this app an internal TestFlight group like the first one found on another app of the account: same name, same
-// testers, every build delivered automatically. Returns { group, message }; logs counts only, never names or emails.
-export async function copyInternalGroup(call, appId) {
+// Why Apple refused a call: its error code and title (no account data in them; the detail line can name people, so
+// it is never logged).
+export function refusal(res) {
+  const err = res?.body?.errors?.[0];
+  const why = [err?.code, err?.title].filter(Boolean).join(": ");
+  return `answer ${res?.status}${why ? ` (${why})` : ""}`;
+}
+
+// The first internal group with testers on another app of this Apple account.
+async function donorGroup(call, appId) {
   const all = await call(`/betaGroups?filter[isInternalGroup]=true&include=app&limit=50`);
   const donors = internalGroups(all.body?.data).filter((g) => g?.relationships?.app?.data?.id !== appId);
-  if (!donors.length) return { group: null, message: all.ok ? "none on this app and none on the account to copy" : `none on this app (could not list the account's groups: ${groupAddResult(all)})` };
-  let donor = null, testers = [];
   for (const g of donors) {
-    const list = (await call(`/betaGroups/${g.id}/betaTesters?limit=50`)).body?.data || [];
-    if (list.length) { donor = g; testers = list; break; }
+    const testers = (await call(`/betaGroups/${g.id}/betaTesters?limit=50`)).body?.data || [];
+    if (testers.length) return { group: g, testers };
   }
-  if (!donor) return { group: null, message: "none on this app; the account's groups have no testers to copy" };
+  return { group: null, testers: [], listed: all };
+}
+
+// Puts the donor group's testers in this app's group. Apple keeps a tester per app, so the other app's tester ids are
+// tried first and, where Apple refuses them, each person is added to this group by the address Apple has for them.
+// Returns a count sentence; never logs names or addresses.
+export async function copyTesters(call, group, testers) {
+  const byId = await call(`/betaGroups/${group.id}/relationships/betaTesters`, { method: "POST", body: JSON.stringify({ data: testers.map((t) => ({ type: "betaTesters", id: t.id })) }) });
+  if (byId.ok) return `${testers.length} tester${testers.length === 1 ? "" : "s"} added`;
+  let added = 0, last = byId;
+  for (const t of testers) {
+    const a = t.attributes || {};
+    if (!a.email) continue;
+    const made = await call(`/betaTesters`, { method: "POST", body: JSON.stringify({ data: { type: "betaTesters",
+      attributes: { email: a.email, ...(a.firstName ? { firstName: a.firstName } : {}), ...(a.lastName ? { lastName: a.lastName } : {}) },
+      relationships: { betaGroups: { data: [{ type: "betaGroups", id: group.id }] } } } }) });
+    if (made.ok) added++; else last = made;
+  }
+  return added ? `${added} of ${testers.length} tester${testers.length === 1 ? "" : "s"} added` : `its testers could not be added (${refusal(last)})`;
+}
+
+// Makes this app an internal TestFlight group like the one another app of the account has: same name, same testers,
+// every build delivered automatically. Returns { group, message }.
+export async function copyInternalGroup(call, appId) {
+  const donor = await donorGroup(call, appId);
+  if (!donor.group) return { group: null, message: donor.listed?.ok === false ? `none on this app (could not list the account's groups: ${refusal(donor.listed)})` : "none on this app and none with testers on the account to copy" };
   const created = await call(`/betaGroups`, { method: "POST", body: JSON.stringify({ data: { type: "betaGroups",
-    attributes: { name: donor.attributes?.name || "Internal testers", isInternalGroup: true, hasAccessToAllBuilds: true },
+    attributes: { name: donor.group.attributes?.name || "Internal testers", isInternalGroup: true, hasAccessToAllBuilds: true },
     relationships: { app: { data: { type: "apps", id: appId } } } } }) });
-  if (!created.ok || !created.body?.data?.id) return { group: null, message: `could not be made (${groupAddResult(created)})` };
-  const group = created.body.data;
-  const add = await call(`/betaGroups/${group.id}/relationships/betaTesters`, { method: "POST", body: JSON.stringify({ data: testers.map((t) => ({ type: "betaTesters", id: t.id })) }) });
-  return { group, message: add.ok ? `made for this app with ${testers.length} tester${testers.length === 1 ? "" : "s"} from the account's other app` : `made, but its testers could not be added (${groupAddResult(add)})` };
+  if (!created.ok || !created.body?.data?.id) return { group: null, message: `could not be made (${refusal(created)})` };
+  return { group: created.body.data, message: `made for this app; ${await copyTesters(call, created.body.data, donor.testers)}` };
 }
 
 async function main([keyPath, keyId, issuerId, bundleId, version, build]) {
@@ -102,6 +130,12 @@ async function main([keyPath, keyId, issuerId, bundleId, version, build]) {
     if (made.group) groups = [made.group];
   }
   for (const g of groups) {
+    // A group nobody is in shows the app to nobody: give it the testers of the account's other internal group.
+    const inGroup = await call(`/betaGroups/${g.id}/betaTesters?limit=1`);
+    if (inGroup.ok && !(inGroup.body?.data || []).length) {
+      const donor = await donorGroup(call, appId);
+      if (donor.group) console.log(`TestFlight internal group had no testers: ${await copyTesters(call, g, donor.testers)}`);
+    }
     // A group with automatic distribution already gets every build; Apple answers 422 if one is added by hand.
     if (g?.attributes?.hasAccessToAllBuilds) { console.log("TestFlight internal group: gets every build automatically"); continue; }
     const add = await call(`/betaGroups/${g.id}/relationships/builds`, { method: "POST", body: JSON.stringify({ data: [{ type: "builds", id: buildRow.id }] }) });
