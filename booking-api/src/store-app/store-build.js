@@ -106,6 +106,8 @@ async function buildConfigFor(env, storeApp, packageId = storeApp.bundle_id) {
       ...(siteUrlOf(data) ? { site_url: siteUrlOf(data), site_screens: siteScreensOf(data) } : {}),
       // A hybrid app (hybrid.js) shows real app screens from this live content; it takes the place of site_url.
       ...(hybridUrlForBundle(storeApp.bundle_id) ? { hybrid_url: hybridUrlForBundle(storeApp.bundle_id) } : {}),
+      // The name under the icon on the phone, when it differs from the store listing's name (hybrid.js HYBRID_LOOK).
+      ...(look?.label ? { app_label: look.label } : {}),
       ...(look?.logo_url ? { logo_url: look.logo_url } : {}),
       ...(look?.intro_url ? { intro_url: look.intro_url } : {}),
       ...(look?.loader_url ? { loader_url: look.loader_url } : {})

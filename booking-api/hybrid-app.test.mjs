@@ -103,6 +103,15 @@ test('the app shell: configure.mjs writes hybrid_url (and drops site_url), refus
     const dropped = JSON.parse(readFileSync(join(shell, 'www/config.json'), 'utf8'));
     assert.equal(dropped.intro_url, undefined, 'an intro from anywhere but menu-made.com is left out');
     assert.equal(dropped.loader_url, undefined, 'only webp, gif or png loaders');
+    // The name under the icon (owner, Nov 10, 2026): "Nino" and "MΞNU", while the listing names stay as they are.
+    run({ ...base, hybrid_url: 'https://menu-made.com/api/app-hybrid/nino', app_label: 'Nino' });
+    assert.equal(JSON.parse(readFileSync(join(shell, 'capacitor.config.json'), 'utf8')).appName, 'Nino');
+    assert.equal(JSON.parse(readFileSync(join(shell, 'www/config.json'), 'utf8')).app_name, 'Nino Battaglia');
+    run({ ...base, app_name: 'MENU-MADE', hybrid_url: 'https://menu-made.com/api/app-hybrid/menumade', app_label: 'M\u039eNU' });
+    assert.equal(JSON.parse(readFileSync(join(shell, 'capacitor.config.json'), 'utf8')).appName, 'MΞNU');
+    run({ ...base, hybrid_url: 'https://menu-made.com/api/app-hybrid/nino' });
+    assert.equal(JSON.parse(readFileSync(join(shell, 'capacitor.config.json'), 'utf8')).appName, 'Nino Battaglia', 'no label: the app name');
+    assert.throws(() => run({ ...base, app_label: 'x'.repeat(31) }));
     assert.throws(() => run({ ...base, hybrid_url: 'https://evil.example/api/app-hybrid/nino' }));
   } finally {
     files.forEach((f, i) => (before[i] === null ? rmSync(f, { force: true }) : writeFileSync(f, before[i])));
@@ -117,6 +126,11 @@ test('the app shell: configure.mjs writes hybrid_url (and drops site_url), refus
   assert.match(html, /frame-src https:\/\/menu-made\.com/);
   assert.match(js, /Start the /); assert.doesNotMatch(js, /More about Online Menu/);
   assert.match(js, /Add to cart/); assert.match(js, /\/api\/shipping-quotes/); assert.match(js, /\/api\/checkout/);
+});
+
+test('each own app carries its home-screen label', () => {
+  assert.equal(hybrid.hybridLookForBundle('com.menumade.ninobattaglia').label, 'Nino');
+  assert.equal(hybrid.hybridLookForBundle('com.menumade.menumade').label, 'MΞNU');
 });
 
 test('nino: designs from the shop\'s new list join the catalog; the first 24 hours are early access and come first', () => {
