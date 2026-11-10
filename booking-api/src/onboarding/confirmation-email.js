@@ -137,7 +137,7 @@ function buildConfirmationEmail(context) {
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width">
   <title>${subject}</title>
-<meta name="color-scheme" content="dark"><meta name="supported-color-schemes" content="dark"><style>a{color:#5ff2ff;}</style>
+<meta name="color-scheme" content="light dark"><meta name="supported-color-schemes" content="light dark"><style>:root{color-scheme:light dark;supported-color-schemes:light dark;}a{color:#5ff2ff;}</style>
 </head>
 
 <body style="
