@@ -392,3 +392,13 @@ test("Apple's associated errors (the real reasons a version can't be reviewed) r
   assert.match(err, /age rating/);
   assert.match(err, /App Privacy/);
 });
+
+test("the Nino app's listing carries Nino's own support and privacy pages; other apps keep theirs", () => {
+  const base = { name: 'x', support_url: 'https://menu-made.com/contact.html', privacy_url: 'https://menu-made.com/privacy.html' };
+  const nino = listing.withOwnUrls({ own_app: 1, bundle_id: 'com.menumade.ninobattaglia' }, base);
+  assert.equal(nino.privacy_url, 'https://ninobattaglia.com/support.html#privacy');
+  assert.equal(nino.support_url, 'https://ninobattaglia.com/support.html');
+  assert.equal(nino.name, 'x');
+  assert.deepEqual(listing.withOwnUrls({ own_app: 1, bundle_id: 'com.menumade.menumade' }, base), base);
+  assert.deepEqual(listing.withOwnUrls({ own_app: 0, bundle_id: 'com.menumade.ninobattaglia' }, base), base, 'a customer app is never touched');
+});

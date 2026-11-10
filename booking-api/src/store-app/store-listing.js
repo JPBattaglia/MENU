@@ -273,6 +273,17 @@ const OWN_APP_SETTINGS = {
   "com.menumade.ninobattaglia": { category: "SHOPPING", contentRights: "DOES_NOT_USE_THIRD_PARTY_CONTENT" }
 };
 
+// Support and privacy pages for the owner's own apps that are not about Menu-made (owner, Nov 10, 2026: the Nino app's
+// privacy policy pointed at menu-made.com/privacy.html). Applied when the preview is written and again at submission,
+// so a listing saved before this still goes out with the right addresses.
+const OWN_APP_URLS = {
+  "com.menumade.ninobattaglia": { support_url: "https://ninobattaglia.com/support.html", privacy_url: "https://ninobattaglia.com/support.html#privacy" }
+};
+function withOwnUrls(storeApp, listing) {
+  const urls = Number(storeApp?.own_app) === 1 ? OWN_APP_URLS[storeApp.bundle_id] : null;
+  return urls && listing ? { ...listing, ...urls } : listing;
+}
+
 // App Review notes for the owner's own apps (hybrid apps, hybrid.js). Written for guidelines 2.1 (how to reach every
 // feature, no sign-in needed), 4.2 (native screens, not a wrapped site) and 3.1.3(e) (payment for goods and services
 // used outside the app goes through the website's card checkout, not In-App Purchase).
@@ -331,7 +342,7 @@ async function advanceStoreListings(env, now = Date.now(), deps = {}) {
         const { data } = await appData(env, storeApp);
         let rewards = false;
         try { rewards = Boolean(engagementSettings(data).loyalty.enabled); } catch { rewards = false; }
-        const listing = listingText(data, { businessName: context.business_name, baseUrl: publicBaseUrl(env), rewards });
+        const listing = withOwnUrls(storeApp, listingText(data, { businessName: context.business_name, baseUrl: publicBaseUrl(env), rewards }));
         await upsertListing(env, storeApp.id, { listing_json: JSON.stringify(listing), approved_at: null, submit_error: null });
         const { url } = await previewLink(env, storeApp.id);
         const sent = await emailOwner(env, storeApp, `${test ? "[TEST] " : ""}Approve the store listing for ${listing.name}`, "Store listing ready for your OK",
@@ -352,7 +363,7 @@ async function advanceStoreListings(env, now = Date.now(), deps = {}) {
         moved++;
         continue;
       }
-      const result = await submitBoth(env, storeApp, listing, context, deps);
+      const result = await submitBoth(env, storeApp, withOwnUrls(storeApp, listing), context, deps);
       const errors = [["Apple", result.apple], ["Google", result.google]].filter(([, r]) => !r.ok).map(([who, r]) => `${who} (${r.step}): ${r.message}`);
       if (errors.length) {
         // Neither store is retried by itself: the owner fixes the cause and approves again (same link).
@@ -423,4 +434,4 @@ async function advanceStoreListings(env, now = Date.now(), deps = {}) {
   return { moved };
 }
 
-export { IMAGE_NAMES, LISTING_KIND, advanceStoreListings, storeListingImage, handleListingImage, handleListingImageView, handleListingPage, imageKey, listingText };
+export { IMAGE_NAMES, LISTING_KIND, advanceStoreListings, storeListingImage, handleListingImage, handleListingImageView, handleListingPage, imageKey, listingText, withOwnUrls };
