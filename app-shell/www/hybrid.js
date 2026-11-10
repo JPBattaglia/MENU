@@ -391,8 +391,32 @@
       q.addEventListener("input", function () { query = q.value; fill(); });
       fill(); s.appendChild(grid); s.appendChild(empty);
     },
-    work: function (s) {
+    work: function (s, opts) {
+      var pieces = data.work || [];
+      if (opts && opts.piece != null && pieces[opts.piece]) {
+        var w = pieces[opts.piece];
+        var bar = el("div", "hy-bar");
+        var back = el("button", "hy-icon-btn"); back.type = "button"; back.setAttribute("aria-label", "Back to Work"); back.appendChild(icon("back"));
+        back.addEventListener("click", function () { show("work"); });
+        bar.appendChild(back); bar.appendChild(el("strong", null, w.title)); s.appendChild(bar);
+        var big = el("img", "hy-hero-img hy-work-full"); big.src = w.full || w.image; big.alt = w.title; s.appendChild(big);
+        var about = el("div", "hy-pad"); about.appendChild(el("p", "hy-eyebrow", w.category || "")); about.appendChild(el("h2", null, w.title));
+        var ask = button("Start a project like this", "hy-btn"); ask.addEventListener("click", function () { openWeb(data.links.services); });
+        about.appendChild(ask); s.appendChild(about);
+        return;
+      }
       s.appendChild(header("Work", "Nino's design and branding"));
+      if (pieces.length) {
+        var grid = el("div", "hy-grid");
+        pieces.forEach(function (w, i) {
+          var b = el("button", "hy-tile"); b.type = "button"; b.setAttribute("aria-label", w.title + ", " + (w.category || ""));
+          var img = el("img"); img.src = w.image; img.alt = ""; img.loading = "lazy"; img.decoding = "async"; b.appendChild(img);
+          b.appendChild(el("strong", null, w.title)); b.appendChild(el("span", "hy-muted", w.category || ""));
+          b.addEventListener("click", function () { show("work", { piece: i }); });
+          grid.appendChild(b);
+        });
+        s.appendChild(grid);
+      }
       [["Selected work", "Logos, branding, illustration and menus Nino has made", data.links.work],
        ["Design services", "A logo, flyer, menu redesign or social graphics pack", data.links.services]].forEach(function (c) {
         var b = el("button", "hy-list-item"); b.type = "button";
