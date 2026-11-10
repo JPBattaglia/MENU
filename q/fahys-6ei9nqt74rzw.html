@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex, nofollow">
+  <meta name="referrer" content="no-referrer">
+  <title>Fahy's Fog &amp; Barrel: your 2027 renewal | MENU-MADE</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Philosopher:wght@400;700&family=Aldrich&display=swap" rel="stylesheet">
+  <link rel="icon" type="image/png" href="/MENU=.png">
+  <style>
+    :root { --navy: #003344; --navy-2: #0a4558; --line: rgba(255,255,255,.16); --cyan: #2fd3e6; --text: #fff; --muted: rgba(255,255,255,.72); }
+    * { box-sizing: border-box; }
+    html, body { margin: 0; background: var(--navy); color: var(--text); font-family: Aldrich, system-ui, sans-serif; line-height: 1.5; }
+    a { color: var(--cyan); }
+    .wrap { max-width: 760px; margin: 0 auto; padding: 28px 20px 140px; }
+    .brand { display: flex; align-items: center; gap: 10px; color: var(--muted); font-size: .9rem; text-decoration: none; }
+    .brand img { width: 34px; height: 34px; }
+    h1 { font-family: Philosopher, Georgia, serif; font-size: clamp(1.8rem, 5vw, 2.5rem); line-height: 1.15; margin: 22px 0 8px; }
+    h2 { font-family: Philosopher, Georgia, serif; font-size: 1.35rem; margin: 34px 0 10px; color: var(--cyan); }
+    .lead { color: var(--muted); margin: 0 0 6px; }
+    .quick { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 14px; }
+    .quick button { font: inherit; font-size: .9rem; color: var(--text); background: transparent; border: 1px solid var(--line); border-radius: 999px; padding: 7px 14px; cursor: pointer; }
+    .quick button:hover, .quick button:focus-visible { border-color: var(--cyan); color: var(--cyan); outline: none; }
+    fieldset { border: 0; margin: 0; padding: 0; }
+    .item { display: grid; grid-template-columns: 28px 1fr auto; gap: 12px; align-items: start; background: var(--navy-2); border: 1px solid var(--line); border-radius: 14px; padding: 16px; margin: 10px 0; cursor: pointer; transition: border-color .15s; }
+    .item:hover { border-color: rgba(47,211,230,.5); }
+    .item.on { border-color: var(--cyan); box-shadow: 0 0 0 1px var(--cyan) inset; }
+    .item input { width: 22px; height: 22px; margin: 2px 0 0; accent-color: var(--cyan); cursor: pointer; }
+    .item input:disabled { cursor: default; }
+    .name { font-weight: 700; display: block; }
+    .detail { color: var(--muted); font-size: .9rem; display: block; margin-top: 4px; }
+    .price { text-align: right; white-space: nowrap; font-weight: 700; }
+    .price s { display: block; font-weight: 400; color: var(--muted); font-size: .85rem; }
+    .tag { display: inline-block; font-size: .75rem; color: var(--navy); background: var(--cyan); border-radius: 999px; padding: 1px 9px; margin-left: 6px; vertical-align: 2px; }
+    .bar { position: fixed; left: 0; right: 0; bottom: 0; background: rgba(0,34,46,.97); border-top: 1px solid var(--line); backdrop-filter: blur(6px); }
+    .bar-inner { max-width: 760px; margin: 0 auto; padding: 14px 20px; display: flex; gap: 16px; align-items: center; justify-content: space-between; flex-wrap: wrap; }
+    .total { font-size: .9rem; color: var(--muted); }
+    .total strong { display: block; font-size: 1.6rem; color: var(--text); font-family: Philosopher, Georgia, serif; }
+    .go { font: inherit; font-weight: 700; font-size: 1rem; background: var(--cyan); color: var(--navy); border: 0; border-radius: 999px; padding: 13px 26px; cursor: pointer; }
+    .go:disabled { opacity: .6; cursor: wait; }
+    .note { color: var(--muted); font-size: .85rem; margin-top: 26px; }
+    .error { color: #ffb4b4; font-size: .9rem; width: 100%; margin: 0; }
+    .done { background: var(--navy-2); border: 1px solid var(--cyan); border-radius: 14px; padding: 22px; margin-top: 24px; }
+    .done h2 { margin-top: 0; }
+    [hidden] { display: none !important; }
+  </style>
+</head>
+<body>
+<main class="wrap" id="main" tabindex="-1">
+  <a class="brand" href="/"><img src="/MENU=.png" alt=""> MENU-MADE</a>
+
+  <section id="done" class="done" hidden>
+    <h2>Thank you, Jack!</h2>
+    <p>Fahy's is renewed for 2027. Your receipt is on its way by email, and JP will be in touch about your drink list refresh and anything else you chose.</p>
+  </section>
+
+  <div id="picker">
+    <h1>Fahy's Fog &amp; Barrel: your 2027 renewal</h1>
+    <p class="lead">Hi Jack. Tick what you'd like for 2027 and your total updates as you go. When it looks right, continue to Stripe's secure checkout. That total is exactly what you'll be charged.</p>
+    <p class="lead" id="period"></p>
+    <div class="quick" aria-label="Quick picks from the renewal letter">
+      <button type="button" data-pick="WEBSITE_CARE_2027">Keep It Running</button>
+      <button type="button" data-pick="WEBSITE_CARE_2027,GOOGLE_VISIBILITY">Website + Google</button>
+      <button type="button" data-pick="WEBSITE_CARE_2027,MENU_ONLINE_CARE">Website + Menu</button>
+    </div>
+
+    <fieldset><legend><h2>Your website for 2027</h2></legend><div id="g-renewal"></div></fieldset>
+    <fieldset><legend><h2>Add to it</h2></legend><div id="g-add"></div></fieldset>
+    <fieldset><legend><h2>Optional extras</h2></legend><div id="g-extra"></div></fieldset>
+
+    <p class="note">Every price is Menu-made's standard pricing. Staff merch (shirts, aprons, caps, mugs with your logo) is priced by the item: ask JP or see <a href="/staff-merch">staff merch</a>. Questions? Email <a href="mailto:info@menu-made.com">info@menu-made.com</a> or just tell JP. He's a few blocks away on Kearny St.</p>
+    <p class="note" id="loading">Loading your options…</p>
+  </div>
+</main>
+
+<div class="bar" id="bar" hidden>
+  <div class="bar-inner">
+    <div class="total" aria-live="polite">Your total for 2027<strong id="total">–</strong></div>
+    <button class="go" id="go" type="button">Continue to checkout</button>
+    <p class="error" id="error" role="alert" hidden></p>
+  </div>
+</div>
+
+<script>
+(() => {
+  'use strict';
+  const QUOTE = 'fahys-6ei9nqt74rzw';
+  const API = (/(^|\.)menu-made\.com$/.test(location.hostname) ? '' : 'https://menu-made.com') + '/api/client-quote/' + QUOTE;
+  const money = cents => '$' + (cents / 100).toLocaleString('en-US', { minimumFractionDigits: cents % 100 ? 2 : 0 });
+  const $ = id => document.getElementById(id);
+  let items = [];
+
+  if (new URLSearchParams(location.search).get('done') === '1') {
+    $('done').hidden = false; $('picker').hidden = true; return;
+  }
+
+  function row(item) {
+    const label = document.createElement('label');
+    label.className = 'item';
+    const box = document.createElement('input');
+    box.type = 'checkbox'; box.value = item.code;
+    if (item.required) { box.checked = true; box.disabled = true; }
+    const text = document.createElement('span');
+    const name = document.createElement('span'); name.className = 'name'; name.textContent = item.name;
+    if (item.required) { const tag = document.createElement('span'); tag.className = 'tag'; tag.textContent = 'Included'; name.append(tag); }
+    const detail = document.createElement('span'); detail.className = 'detail'; detail.textContent = item.detail;
+    text.append(name, detail);
+    const price = document.createElement('span'); price.className = 'price'; price.textContent = money(item.cents);
+    if (item.regular_cents > item.cents) { const s = document.createElement('s'); s.textContent = 'Regular ' + money(item.regular_cents); price.append(s); }
+    label.append(box, text, price);
+    box.addEventListener('change', update);
+    return label;
+  }
+
+  function chosen() { return [...document.querySelectorAll('.item input')].filter(b => b.checked).map(b => b.value); }
+
+  function update() {
+    document.querySelectorAll('.item').forEach(l => l.classList.toggle('on', l.querySelector('input').checked));
+    const codes = chosen();
+    $('total').textContent = money(items.filter(i => codes.includes(i.code)).reduce((sum, i) => sum + i.cents, 0));
+    $('error').hidden = true;
+  }
+
+  document.querySelectorAll('[data-pick]').forEach(button => button.addEventListener('click', () => {
+    const pick = button.dataset.pick.split(',');
+    document.querySelectorAll('.item input:not(:disabled)').forEach(b => { b.checked = pick.includes(b.value); });
+    update();
+  }));
+
+  $('go').addEventListener('click', async () => {
+    const go = $('go');
+    go.disabled = true; go.textContent = 'Opening checkout…';
+    try {
+      const response = await fetch(API + '/checkout', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ items: chosen() }) });
+      const body = await response.json().catch(() => ({}));
+      if (!response.ok || !body.url) throw new Error(body.error || 'Checkout couldn’t start. Please try again.');
+      location.href = body.url;
+    } catch (error) {
+      $('error').textContent = error.message; $('error').hidden = false;
+      go.disabled = false; go.textContent = 'Continue to checkout';
+    }
+  });
+
+  fetch(API, { headers: { Accept: 'application/json' } })
+    .then(r => r.ok ? r.json() : Promise.reject(new Error('quote ' + r.status)))
+    .then(body => {
+      items = body.quote.items;
+      for (const item of items) $('g-' + item.group).append(row(item));
+      $('period').textContent = 'Service year: ' + body.quote.period + '.';
+      $('loading').hidden = true; $('bar').hidden = false;
+      update();
+    })
+    .catch(() => { $('loading').textContent = 'Your options couldn’t load. Please refresh the page, or email info@menu-made.com.'; });
+})();
+</script>
+</body>
+</html>
