@@ -61,7 +61,7 @@ body.hybrid {
 /* The restaurant screens' rule for "header img" (a 56 px white tile) must not touch the brand pictures here. */
 .hy-head img { background: none; border-radius: 0; flex: none; }
 .hy-logo { height: 30px; width: auto; display: block; }
-.hy-gear { width: 42px; height: 42px; margin-left: auto; object-fit: contain; }
+.hy-gear { width: 38px; height: 38px; object-fit: contain; }
 .hy-head .hy-mark { width: 46px; height: 46px; object-fit: contain; }
 .hy-wordwrap { display: flex; flex-direction: column; }
 .hy-word { display: flex; flex-direction: column; line-height: .9; font-family: var(--hy-display); }
@@ -252,3 +252,54 @@ body.hy-theme-menumade .hy-loader { background: linear-gradient(#013f45, #012f34
 
 /* Work tab: a tapped portfolio piece shown whole, not cropped. */
 .hy-work-full { object-fit: contain; aspect-ratio: auto; height: auto; max-height: 70vh; background: #000; }
+
+/* Menu-made generators inside the app (Nov 10, 2026): chooser, the wait, the designs in a frame, Customize, new Home. */
+.hy-busy { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 14px; min-height: 52vh; padding: 28px 24px; text-align: center; }
+.hy-busy-img { width: 116px; height: 116px; object-fit: contain; animation: hy-spin 1.6s linear infinite; filter: drop-shadow(0 0 18px rgba(53,230,235,.35)); }
+.hy-busy-img.is-animated { width: 150px; height: auto; animation: none; filter: none; }
+.hy-busy-ring { width: 64px; height: 64px; border-radius: 50%; border: 6px solid rgba(255,255,255,.18); border-top-color: var(--hy-accent); animation: hy-spin .9s linear infinite; }
+.hy-busy-line { font-family: var(--hy-display); font-size: 20px; }
+@media (prefers-reduced-motion: reduce) { .hy-busy-img:not(.is-animated), .hy-busy-ring { animation: hy-pulse 1.6s ease-in-out infinite; } }
+.hy-gen h2 { font-family: var(--hy-display); font-size: 24px; margin: 0; }
+.hy-keys { list-style: none; margin: 0 0 6px; padding: 0; display: grid; gap: 10px; }
+.hy-keys li { display: grid; grid-template-columns: 1fr; gap: 4px; }
+.hy-key { justify-self: start; padding: 6px 12px; border-radius: var(--hy-btn-radius); border: 2px solid var(--hy-ghost-line, currentColor); font-weight: 700; font-size: 14px; color: var(--hy-ghost-ink, inherit); }
+.hy-keys li:last-child .hy-key { background: var(--hy-btn); color: var(--hy-btn-ink); border-color: var(--hy-btn-line); }
+.hy-design { margin: 10px 16px 8px; font-size: 15px; }
+.hy-frame { position: relative; margin: 0 16px; height: calc(100vh - 372px - env(safe-area-inset-top) - env(safe-area-inset-bottom)); height: calc(100dvh - 372px - env(safe-area-inset-top) - env(safe-area-inset-bottom)); min-height: 300px; border-radius: var(--hy-radius); overflow: hidden; border: 1px solid var(--hy-card-line); background: #fff; }
+.hy-frame iframe { width: 100%; height: 100%; border: 0; display: block; background: #fff; }
+.hy-frame-wait { position: absolute; inset: 0; min-height: 0; z-index: 1; background: var(--hy-bg, #012f34); }
+body.hy-theme-menumade .hy-frame-wait { background: linear-gradient(#013f45, #012f34); }
+.hy-tools { margin: 10px 16px 0; }
+.hy-tools-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.hy-tools .hy-btn-big { margin-top: 10px; }
+.hy-tools-note { margin: 8px 0 0; font-size: 13px; }
+body.hy-studio .hy-screen { padding-bottom: calc(78px + env(safe-area-inset-bottom)); }
+.hy-sheet { position: fixed; inset: 0; z-index: 40; display: flex; align-items: flex-end; justify-content: center; background: rgba(0,0,0,.55); }
+.hy-sheet-box { width: 100%; max-width: 640px; max-height: 88vh; overflow: auto; -webkit-overflow-scrolling: touch; padding: 18px 18px calc(22px + env(safe-area-inset-bottom)); border-radius: 18px 18px 0 0; background: var(--hy-bg, #012f34); border: 1px solid var(--hy-card-line); border-bottom: 0; }
+body.hy-theme-menumade .hy-sheet-box { background: linear-gradient(#064a52, #012f34); }
+.hy-sheet-box h2 { font-family: var(--hy-display); font-size: 22px; margin: 0; }
+.hy-sheet-box[hidden] { display: none; }
+.hy-sheet-group { margin-top: 22px; padding-top: 14px; border-top: 1px solid var(--hy-card-line); }
+body.hy-sheet-open { overflow: hidden; }
+.hy-check { display: flex !important; align-items: center; gap: 12px; font-weight: 600; }
+.hy-check input { width: 24px; height: 24px; flex: none; accent-color: var(--hy-accent); }
+.hy-hint { margin: 4px 0 0; font-size: 13px; color: var(--hy-muted); }
+.hy-color { width: 64px; height: 44px; padding: 0; border: 1px solid var(--hy-card-line); border-radius: 8px; background: none; }
+.hy-form input[type=file] { width: 100%; font: inherit; font-size: 15px; color: var(--hy-ink); }
+.hy-form input[type=tel], .hy-form input[type=email] { width: 100%; font: inherit; font-size: 16px; padding: 13px 14px; border: 1px solid var(--hy-card-line); border-radius: var(--hy-btn-radius); background: var(--hy-field); color: var(--hy-ink); }
+.hy-home-img { display: block; width: 100%; aspect-ratio: 16 / 10; object-fit: cover; border-radius: var(--hy-radius); border: 1px solid var(--hy-card-line); margin-bottom: 16px; }
+.hy-home h2 { margin-bottom: 10px; }
+body.hy-theme-menumade .hy-home h2 { font-size: 30px; }
+.hy-duo { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin: 0 16px; }
+.hy-duo-card { display: flex; flex-direction: column; align-items: flex-start; gap: 6px; text-align: left; font: inherit; padding: 16px 14px; background: var(--hy-card); border: 1px solid var(--hy-card-line); border-radius: var(--hy-radius); color: var(--hy-ink); }
+.hy-duo-card strong { font-family: var(--hy-display); font-size: 19px; }
+.hy-duo-card .hy-muted { font-size: 14px; flex: 1; }
+.hy-duo-card svg { color: var(--hy-accent); }
+div.hy-step { cursor: default; }
+.hy-strip { display: flex; gap: 12px; overflow-x: auto; padding: 0 16px 6px; scrollbar-width: none; scroll-snap-type: x proximity; }
+.hy-strip::-webkit-scrollbar { display: none; }
+.hy-strip-card { flex: none; width: 230px; display: flex; flex-direction: column; gap: 3px; text-align: left; font: inherit; padding: 8px 8px 12px; background: var(--hy-card); border: 1px solid var(--hy-card-line); border-radius: var(--hy-radius); color: var(--hy-ink); scroll-snap-align: start; }
+.hy-strip-card img { width: 100%; aspect-ratio: 16 / 10; object-fit: cover; object-position: top; border-radius: 10px; margin-bottom: 6px; background: #012f34; }
+.hy-work-card img { display: block; width: 100%; max-height: 360px; object-fit: cover; object-position: top; border-radius: 10px; margin-bottom: 10px; }
+div.hy-plan { cursor: default; }

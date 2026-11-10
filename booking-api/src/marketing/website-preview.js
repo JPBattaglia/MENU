@@ -12,6 +12,7 @@
 //   GET  /api/website-preview/handoff/<token>              -> { ok, business, email } for checkout
 //   POST /api/system/prospects/site-demo  { id }           (prospect-drafts.yml OIDC) -> { ok, url } | { ok:false, skip }
 import { logoBgSelect, logoMeasureScript } from "./logo-measure.js";
+import { frameAware, wantsJson, preflight } from "./framed.js";
 import { LOGO_MODES, parseLogoInfo } from "../producers/menu-qr/design.js";
 import { nowIso, parseJsonOrNull } from "../lib/http.js";
 import { bytesToBase64 } from "../lib/util.js";
@@ -460,7 +461,55 @@ async function handleWebsitePreviewView(request, env, token, page, { now = Date.
     await env.DB.prepare(`UPDATE website_previews SET open_count = open_count + 1, first_opened_at = COALESCE(first_opened_at, ?) WHERE token = ?`).bind(t, token).run();
     if (row.source === "prospect") await env.DB.prepare(`UPDATE prospect_demos SET open_count = open_count + 1, first_opened_at = COALESCE(first_opened_at, ?), last_opened_at = ? WHERE token = ?`).bind(t, t, token).run();
   }
-  return new Response(request.method === "HEAD" ? null : object.body, { status: 200, headers: { "Content-Type": "text/html; charset=utf-8", "Cache-Control": "no-store", "X-Robots-Tag": "noindex, nofollow", "Referrer-Policy": "no-referrer" } });
+  return new Response(request.method === "HEAD" ? null : frameAware(await object.text()), { status: 200, headers: { "Content-Type": "text/html; charset=utf-8", "Cache-Control": "no-store", "X-Robots-Tag": "noindex, nofollow", "Referrer-Policy": "no-referrer" } });
+}
+
+// The Menu-made app's site generator screen (app-shell/www/hybrid.js): the designs, the three buttons and what
+// Customize holds now, so the app draws its own controls and form. GET /api/website-preview/state/<token>.
+async function handleWebsitePreviewState(request, env, token, { now = Date.now() } = {}) {
+  if (request.method === "OPTIONS") return preflight();
+  const gone = () => json({ ok: false, ended: true, error: `This preview has ended. Free previews last ${PREVIEW_HOURS / 24} days.` }, 410);
+  if (!/^[a-f0-9]{36}$/.test(token) || !env.DB || !env.ASSETS) return gone();
+  const row = await env.DB.prepare(`SELECT status, expires_at FROM website_previews WHERE token = ?`).bind(token).first();
+  if (!row || row.status !== "READY" || row.expires_at <= new Date(now).toISOString()) return gone();
+  const data = parseJsonOrNull(await (await env.ASSETS.get(`website-previews/${token}/data.json`))?.text());
+  if (!data?.site || !data?.copy) return gone();
+  const site = data.site, copy = data.copy;
+  const brand = hexOk(site.brand) ? String(site.brand).toLowerCase() : "";
+  const photos = ownPhotoCount(site);
+  const text = (name, label, value, extra = {}) => ({ name, type: "text", label, value: value || "", ...extra });
+  return json({
+    ok: true, kind: "site", business: site.name || "", ends_at: row.expires_at, design: DESIGNS[0].key,
+    designs: DESIGNS.map((d) => ({ key: d.key, label: d.label, blurb: d.blurb, url: designUrl(token, d.key), choose_url: chooseUrl(token, d.key) })),
+    next_label: "Generate site", choose_label: `Choose this site: ${SITE_FILES_PRICE}`,
+    note: `Free preview: ends in ${PREVIEW_HOURS / 24} days.${hasSamplePhotos(site) ? " The photos are samples until you add yours." : ""}`,
+    customize: {
+      url: `${SITE}/api/website-preview/customize/${token}`, title: "Customize your site", submit: `Update all ${DESIGNS.length} designs`,
+      busy: `Updating all ${DESIGNS.length} designs. This can take up to a minute; keep the app open.`, left: Math.max(0, MAX_CUSTOMIZE - Number(data.customized || 0)),
+      fields: [
+        { group: "Logo and name" },
+        { name: "logo", type: "file", label: "Logo", hint: site.logo ? "A new logo replaces the one in use. PNG, JPG or WebP" : "PNG, JPG or WebP", accept: "image/png,image/jpeg,image/webp", measure: true },
+        { name: "logo_bg", type: "select", label: "Logo background", hint: "Automatic picks one per design so the logo stands out", value: site.logo_bg || "auto", options: LOGO_MODES.map((m) => [m, { auto: "Automatic", none: "None", light: "Light badge", dark: "Dark badge", accent: "Brand colour badge" }[m] || m]) },
+        { name: "hide_name", type: "checkbox", label: "Hide the business name (my logo shows it)", value: site.hide_name === true, off: "0" },
+        { group: "Photos and colour" },
+        { name: "photos", type: "file", label: "Photos", hint: `${photos ? `${photos} in use; new ones replace them. ` : ""}Up to ${MAX_PHOTOS}, 5 MB each`, accept: "image/png,image/jpeg,image/webp", multiple: true, max_files: MAX_PHOTOS },
+        { name: "brand", type: "color", label: "Brand colour", value: brand || "#00a7b5" },
+        { name: "use_brand", type: "checkbox", label: "Use this colour", value: Boolean(brand) },
+        { group: "Motto and About" },
+        text("motto", "Motto", site.motto || copy.tagline, { hint: "The line under your name", max: 80 }),
+        { name: "about", type: "textarea", label: "About your business", hint: "Blank line between paragraphs", max: 1500, value: aboutText(site, copy) },
+        { group: "Contact details" },
+        text("phone", "Phone", site.phone, { input: "tel", max: 30 }),
+        text("email", "Email", site.email, { input: "email", hint: "Shown on your Contact page", max: 150 }),
+        text("address", "Address", site.address, { max: 150 }),
+        { name: "hours", type: "textarea", label: "Hours", hint: "One line per day or group, like Mon-Fri: 8am-3pm", max: 400, value: site.hours || "" },
+        { group: "Social and order links" },
+        ...SOCIAL_FIELDS.map(([name, label]) => text(name, label, site[name], { input: "url", hint: name === "instagram" || name === "tiktok" ? "Link or @name" : "Link", max: 300 })),
+        text("order_url", "Order or booking link", site.order_url, { input: "url", hint: "DoorDash, Toast, OpenTable…", max: 300 }),
+        { name: "order_label", type: "select", label: "Button says", value: site.order_label || ORDER_LABELS[0], options: ORDER_LABELS.map((l) => [l, l]) }
+      ]
+    }
+  });
 }
 
 // The logo, photos and colour from a "Customize" form, stored beside the preview and set on `site` (in place).
@@ -505,8 +554,10 @@ async function applyOwnForm(env, token, site, form) {
 // preview, rebuilds all nine designs from the stored copy (no AI call) and returns to the design the buyer was on.
 // New photos replace the old set; no new files keeps what was there. The paid site is built from the same data.json.
 async function handleWebsitePreviewCustomize(request, env, token, { now = Date.now() } = {}) {
-  const gone = () => plainGone(410, "This preview has ended", `<a href="${escapeHtml(`${SITE}/website-design.html#try-free`)}">Start a new one</a>.`);
-  const oops = (text) => plainGone(400, "That didn't work", `${escapeHtml(text)} <a href="javascript:history.back()">Go back</a> and try again.`);
+  if (request.method === "OPTIONS") return preflight();
+  const app = wantsJson(request);   // the Menu-made app's own Customize form reads the answer; the web form follows the redirect
+  const gone = () => app ? json({ ok: false, ended: true, error: "This preview has ended." }, 410) : plainGone(410, "This preview has ended", `<a href="${escapeHtml(`${SITE}/website-design.html#try-free`)}">Start a new one</a>.`);
+  const oops = (text) => app ? json({ ok: false, error: text }, 400) : plainGone(400, "That didn't work", `${escapeHtml(text)} <a href="javascript:history.back()">Go back</a> and try again.`);
   if (!/^[a-f0-9]{36}$/.test(token) || !env.DB || !env.ASSETS) return gone();
   const row = await env.DB.prepare(`SELECT token, source, status, expires_at FROM website_previews WHERE token = ?`).bind(token).first();
   if (!row || row.status !== "READY" || row.expires_at <= new Date(now).toISOString()) return gone();
@@ -520,6 +571,7 @@ async function handleWebsitePreviewCustomize(request, env, token, { now = Date.n
   const applied = await applyOwnForm(env, token, site, form);
   if (applied.error) return oops(applied.error);
   await storeDesigns(env, token, site, data.copy, { prospect: row.source === "prospect", extra: { customized: Number(data.customized || 0) + 1 } });
+  if (app) return json({ ok: true, design: design.key });
   return new Response(null, { status: 303, headers: { Location: designUrl(token, design.key), "Cache-Control": "no-store" } });
 }
 
@@ -682,4 +734,4 @@ async function runWebsitePreviewReminders(env, { now = Date.now(), force = false
   return sent;
 }
 
-export { runWebsitePreviewReminders, rebuildProspectSites, detailFields, hideNameField, designUrl, chooseUrl, wrapDesign, storeDesigns, handleWebsitePreviewCreate, handleWebsitePreviewView, handleWebsitePreviewHandoff, handleWebsitePreviewCustomize, handleWebsitePreviewImage, applyOwnForm, MAX_PHOTOS, handleProspectSiteDemo, prefillFromPreview, offeringsFromMenu, wrapPage, fallbackCopy, PREVIEW_HOURS, PER_NETWORK_DAY };
+export { runWebsitePreviewReminders, rebuildProspectSites, detailFields, hideNameField, designUrl, chooseUrl, wrapDesign, storeDesigns, handleWebsitePreviewCreate, handleWebsitePreviewView, handleWebsitePreviewState, handleWebsitePreviewHandoff, handleWebsitePreviewCustomize, handleWebsitePreviewImage, applyOwnForm, MAX_PHOTOS, handleProspectSiteDemo, prefillFromPreview, offeringsFromMenu, wrapPage, fallbackCopy, PREVIEW_HOURS, PER_NETWORK_DAY };

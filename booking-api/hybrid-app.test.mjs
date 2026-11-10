@@ -52,6 +52,14 @@ test('menumade: the three plans with live prices, described by their included se
   assert.equal(c.plans[0].description, 'Includes Menu Care, Review Replies and Accessibility Monitoring');
   assert.equal(c.plans[0].checkout_year, 'https://menu-made.com/contact.html?plan=BUNDLE_STARTER&interval=year');
   assert.equal(c.preview.upload_url, 'https://menu-made.com/api/inquiry');
+  // Nov 10, 2026: the generators run inside the app, and the chooser says what each one's three buttons do.
+  assert.deepEqual(c.generators.map((g) => [g.key, g.buttons.map((b) => b.label)]), [['menu', ['Generate menu', 'Customize', 'Make it live']], ['site', ['Generate site', 'Customize', 'Choose this site']]]);
+  assert.equal(c.generators[0].state_url, 'https://menu-made.com/api/menu-preview/state/');
+  assert.equal(c.generators[1].create_url, 'https://menu-made.com/api/website-preview/create');
+  assert.match(c.generators[0].buttons[2].text, /\$\d+ for the first year/);
+  assert.deepEqual(c.services.map((v) => [v.name, v.price]), [['Menu Care', '$29/mo'], ['Review Replies', '$49/mo'], ['Accessibility Monitoring', '$39/mo']], 'services with prices; bundles are the plans');
+  assert.ok(c.work.length >= 4 && c.work.every((w) => /^https:\/\/menu-made\.com\/assets\/work\//.test(w.image)));
+  assert.match(c.hero.image, /^https:\/\/menu-made\.com\//);
 });
 
 test('the route answers public JSON with CORS, refuses unknown apps, and says unavailable when the source fails', async () => {
@@ -102,6 +110,9 @@ test('the app shell: configure.mjs writes hybrid_url (and drops site_url), refus
   assert.doesNotMatch(js, /innerHTML/, 'text only through textContent');
   // Nino's shop is bought inside the app (owner, Nov 10, 2026): no button that only sends the buyer to the website.
   assert.doesNotMatch(js, /See the design page|Open my cart/);
+  // Menu-made's generators show their designs in a frame on the app's own screen (the page allows only menu-made.com).
+  assert.match(html, /frame-src https:\/\/menu-made\.com/);
+  assert.match(js, /Start the /); assert.doesNotMatch(js, /More about Online Menu/);
   assert.match(js, /Add to cart/); assert.match(js, /\/api\/shipping-quotes/); assert.match(js, /\/api\/checkout/);
 });
 

@@ -328,3 +328,28 @@ test('website previews: one reminder about 2 days in, skipped once a paid order 
   assert.deepEqual(await runWebsitePreviewReminders(h.f.env, { now: h.created + 47 * 3600000, force: true }), []);
   assert.ok(h.f.env.DB.raw.prepare(`SELECT reminder_sent_at FROM website_previews WHERE token = ?`).get(h.token).reminder_sent_at);
 });
+
+test('the app reads a site preview\'s designs, buttons and Customize fields, and its Customize gets a JSON answer', async (t) => {
+  const f = setup();
+  stubApis(t);
+  const out = await (await f.create({ request_id: await f.upload(), email: 'owner@pizza.example', business: 'Sample Pizza', phone: '(415) 555-0100' })).json();
+  const state = await (await f.get(`/api/website-preview/state/${out.token}`)).json();
+  assert.equal(state.ok, true);
+  assert.equal(state.designs.length, 9);
+  assert.equal(state.designs[0].key, 'bistro');
+  assert.match(state.designs[0].choose_url, /service=sitefiles&wpreview=[a-f0-9]{36}&design=bistro$/);
+  assert.equal(state.next_label, 'Generate site');
+  assert.equal(state.choose_label, 'Choose this site: $299');
+  const names = state.customize.fields.filter((x) => x.name).map((x) => x.name);
+  for (const n of ['logo', 'photos', 'brand', 'motto', 'about', 'phone', 'hours', 'instagram', 'order_url', 'order_label']) assert.ok(names.includes(n), n);
+  assert.equal(state.customize.fields.find((x) => x.name === 'phone').value, '(415) 555-0100');
+  const form = new FormData();
+  form.set('design', 'night'); form.set('motto', 'Slices till late');
+  const res = await f.call(`/api/website-preview/customize/${out.token}`, { method: 'POST', body: form, headers: { Accept: 'application/json' } });
+  assert.deepEqual(await res.json(), { ok: true, design: 'night' });
+  const bad = new FormData(); bad.set('design', 'night'); bad.set('email', 'not an email');
+  const refused = await f.call(`/api/website-preview/customize/${out.token}`, { method: 'POST', body: bad, headers: { Accept: 'application/json' } });
+  assert.equal(refused.status, 400); assert.equal((await refused.json()).ok, false);
+  assert.match(await (await f.get(`/api/website-preview/view/${out.token}/d/night/index.html`)).text(), /mm-framed \.mm-preview, \.mm-framed \.mm-gen/);
+  assert.equal((await f.get(`/api/website-preview/state/${out.token}`).then((r) => r.json())).customize.fields.find((x) => x.name === 'motto').value, 'Slices till late');
+});
