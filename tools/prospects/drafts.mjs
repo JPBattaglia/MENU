@@ -141,7 +141,8 @@ if (REFRESH) {
   const lock = await client.getMailboxLock(draftsBox);
   const old = [];
   try {
-    for await (const m of client.fetch("1:*", { uid: true, headers: ["x-menu-made-prospect"] })) {
+    // An empty Drafts folder answers "1:*" with "Invalid message number" (Nov 10, 2026): nothing to rebuild.
+    if (client.mailbox?.exists) for await (const m of client.fetch("1:*", { uid: true, headers: ["x-menu-made-prospect"] })) {
       const id = /x-menu-made-prospect:\s*(\S+)/i.exec(m.headers?.toString() || "")?.[1];
       if (id) old.push({ uid: m.uid, id });
     }
