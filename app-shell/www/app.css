@@ -148,6 +148,9 @@ body.hybrid {
 .hy-cart { margin: 14px 16px 0; display: flex; flex-direction: column; gap: 10px; }
 .hy-cart-line { display: flex; gap: 14px; padding: 12px; background: var(--hy-card); border: 1px solid var(--hy-card-line); border-radius: var(--hy-radius); }
 .hy-cart-line img { flex: none; width: 84px; height: 84px; object-fit: cover; border-radius: 10px; background: #2a2523; }
+.hy-hero-img.is-whole, .hy-cart-line img.is-whole { object-fit: contain; }
+.hy-hero-img.is-sticker { padding: 9%; }
+.hy-cart-line img.is-sticker { padding: 8px; }
 .hy-cart-info { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
 .hy-cart-tools { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: 8px; }
 .hy-sum-row { display: flex; justify-content: space-between; gap: 16px; padding: 4px 0; }
