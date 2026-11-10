@@ -13,6 +13,7 @@
 // https://localhost and the store screenshots load it from a local page.
 import { getSiteCatalog } from "../checkout/catalog.js";
 import { MENU_PACKAGE_PRICING } from "../checkout/quote.js";
+import { SERVICES as SWITCHED, offSwitches } from "../lib/switches.js";
 import { queuePush } from "../producers/guest-app/engage.js";
 
 const TTL = 300;
@@ -39,7 +40,8 @@ function includesText(offer, byCode) {
   return `Includes ${list}`;
 }
 
-function menumadeContent(catalog) {
+// offCodes: offer codes the owner has switched off for sale (lib/switches.js); they leave the services list.
+function menumadeContent(catalog, { offCodes = [] } = {}) {
   const offers = Array.isArray(catalog?.offers) ? catalog.offers : [];
   const byCode = new Map(offers.map((o) => [o.code, o]));
   const plans = PLAN_ORDER.map((code) => byCode.get(code)).filter((o) => o && o.on_sale && o.prices?.month).map((o) => ({
@@ -55,10 +57,11 @@ function menumadeContent(catalog) {
   // Services (the Account tab's own list, so "All services" no longer opens the website): everything on sale that
   // isn't a bundle or one of Nino's design services, with its price from the same catalog.
   const dollars = (cents) => `$${(Number(cents) / 100).toLocaleString("en-US", { maximumFractionDigits: 2 })}`;
-  const services = offers.filter((o) => o && o.on_sale && o.kind !== "BUNDLE" && !PLAN_ORDER.includes(o.code) && !/^NINO_/.test(String(o.code || "")) && o.name)
-    .map((o) => ({ name: clean(o.name, 60), text: clean(o.short_description, 220), price: o.prices?.month ? `${dollars(o.prices.month)}/mo` : o.price_cents ? dollars(o.price_cents) : "" }))
-    .filter((x) => x.price).slice(0, 20);
   const menuPrice = dollars(MENU_PACKAGE_PRICING.setupCents + MENU_PACKAGE_PRICING.hostingFirstYearCents);
+  const services = offers.filter((o) => o && o.on_sale && o.kind !== "BUNDLE" && !PLAN_ORDER.includes(o.code) && !offCodes.includes(o.code) && !/^NINO_/.test(String(o.code || "")) && o.name)
+    // Online Menu + QR is sold as setup plus the first year's hosting, the price "Make it live" shows.
+    .map((o) => ({ name: clean(o.name, 60), text: clean(o.short_description, 220), price: o.code === "ONLINE_MENU_QR" ? `${menuPrice} first year` : o.prices?.month ? `${dollars(o.prices.month)}/mo` : o.price_cents ? dollars(o.price_cents) : "" }))
+    .filter((x) => x.price).slice(0, 20);
   return {
     ok: true,
     key: "menumade",
@@ -239,7 +242,8 @@ async function buildContent(env, key, fetchImpl) {
     const res = await getSiteCatalog(env);
     const catalog = await res.json();
     if (!catalog?.ok) throw new Error("catalog unavailable");
-    return menumadeContent(catalog);
+    const off = await offSwitches(env);
+    return menumadeContent(catalog, { offCodes: SWITCHED.filter((x) => off.has(`sell:${x.key}`) || off.has("sell:ALL")).flatMap((x) => x.offers) });
   }
   const [res, rel] = await Promise.all([
     fetchImpl(`${NINO}/catalog.json`, { headers: { Accept: "application/json", "User-Agent": "MenuMadeApp/1.0" }, cf: { cacheTtl: TTL } }),
