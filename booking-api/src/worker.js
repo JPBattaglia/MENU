@@ -18,6 +18,7 @@ import { advanceAbandonedCheckoutSelfTests } from "./selftest/abandoned-checkout
 import { advanceMenuHostingSelfTests } from "./selftest/menu-hosting-selftest.js";
 import { CheckoutValidationError, quoteMenuPackage } from "./checkout/quote.js";
 import { createCheckoutSession, createCheckoutSessionTest } from "./checkout/session.js";
+import { handleClientQuote } from "./checkout/client-quotes.js";
 import { handleStripeWebhook } from "./checkout/webhook.js";
 import { siteHostAction } from "./producers/website/hosts.js";
 import { handleSiteCareRequest } from "./producers/website-care/intake.js";
@@ -323,6 +324,9 @@ var worker_default = {
     // Hybrid Mobile Apps (src/store-app/hybrid.js): live content for the owner's two apps' native screens.
     const hybridMatch = url.pathname.match(/^\/api\/app-hybrid\/([a-z]{1,20})$/);
     if (hybridMatch) return handleHybridContent(request, env, hybridMatch[1]);
+    // Private client quote pages (menu-made.com/q/<id>): tick items, check out for exactly that total.
+    const clientQuoteMatch = url.pathname.match(/^\/api\/client-quote\/([a-z0-9-]{8,60})(?:\/(checkout))?$/);
+    if (clientQuoteMatch && request.method !== "OPTIONS") return handleClientQuote(request, env, clientQuoteMatch[1], clientQuoteMatch[2] || "");
     if (request.method === "GET" && url.pathname === "/api/catalog") {
       return getSiteCatalog(env);
     }
