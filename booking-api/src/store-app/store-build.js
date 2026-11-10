@@ -93,7 +93,7 @@ async function buildConfigFor(env, storeApp, packageId = storeApp.bundle_id) {
   // the placeholder (scripts/store-icons.mjs), so the icon never depends on an upload.
   const look = hybridLookForBundle(storeApp.bundle_id);
   const repoLogo = look?.icon_file || null;
-  const draw = (pad) => { const svg = storeIconSvg(data, { hasLogo: Boolean(logoUri || repoLogo), pad }); return repoLogo ? svg : logoUri ? svg.replace(LOGO_PLACEHOLDER, logoUri) : svg; };
+  const draw = (pad) => { const svg = storeIconSvg(data, { hasLogo: Boolean(logoUri || repoLogo), pad, background: look?.icon_bg || "" }); return repoLogo ? svg : logoUri ? svg.replace(LOGO_PLACEHOLDER, logoUri) : svg; };
   return { status: 200, body: {
     ok: true,
     config: {
@@ -113,6 +113,7 @@ async function buildConfigFor(env, storeApp, packageId = storeApp.bundle_id) {
       ...(look?.loader_url ? { loader_url: look.loader_url } : {})
     },
     ...(repoLogo ? { logo_file: repoLogo, logo_placeholder: LOGO_PLACEHOLDER } : {}),
+    ...(look?.icon_bg ? { icon_background: look.icon_bg } : {}),
     icon_svg: draw(0.14),
     android_foreground_svg: draw(0.24),
     feature_svg: repoLogo ? featureSvg(data, LOGO_PLACEHOLDER) : featureSvg(data, logoUri)

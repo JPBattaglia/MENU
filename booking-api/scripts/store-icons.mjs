@@ -49,5 +49,5 @@ for (const [name, scale] of Object.entries(DENSITIES)) {
 // Google Play listing pictures (store-listing.js): the 512 px icon and the 1024 x 500 feature graphic.
 await put("listing/play-icon.png", draw(answer.icon_svg, 512));
 if (answer.feature_svg) await put("listing/feature.png", draw(answer.feature_svg, 1024));
-await put("android/res/values/ic_launcher_background.xml", `<?xml version="1.0" encoding="utf-8"?>\n<resources>\n    <color name="ic_launcher_background">${answer.config.brand_color.toUpperCase()}</color>\n</resources>\n`);
+await put("android/res/values/ic_launcher_background.xml", `<?xml version="1.0" encoding="utf-8"?>\n<resources>\n    <color name="ic_launcher_background">${(/^#[0-9a-f]{6}$/i.test(answer.icon_background || "") ? answer.icon_background : answer.config.brand_color).toUpperCase()}</color>\n</resources>\n`);
 console.log("Store icons drawn: 1 App Store icon, 15 Android launcher files, Play icon and feature graphic");

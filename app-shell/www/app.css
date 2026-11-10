@@ -303,3 +303,19 @@ div.hy-step { cursor: default; }
 .hy-strip-card img { width: 100%; aspect-ratio: 16 / 10; object-fit: cover; object-position: top; border-radius: 10px; margin-bottom: 6px; background: #012f34; }
 .hy-work-card img { display: block; width: 100%; max-height: 360px; object-fit: cover; object-position: top; border-radius: 10px; margin-bottom: 10px; }
 div.hy-plan { cursor: default; }
+
+/* Menu-made, Nov 10 (later): page titles on the right of the brand bar; the designs fill the screen with the buttons at the bottom. */
+.hy-side-title { margin: 0 0 0 auto; padding-left: 8px; max-width: 46%; text-align: right; font-family: var(--hy-display); font-size: 21px; line-height: 1.1; font-weight: 700; }
+.hy-side-title.is-long { font-size: 16px; line-height: 1.15; }
+.hy-subline { margin: 12px 16px 0; color: var(--hy-muted); font-size: 15px; }
+body.hy-studio .hy-tabs { display: none; }
+.hy-full { position: fixed; inset: 0; z-index: 20; display: flex; flex-direction: column; padding-top: env(safe-area-inset-top); background: var(--hy-bg, #012f34); }
+body.hy-theme-menumade .hy-full { background: #013f45; }
+.hy-full .hy-frame { flex: 1 1 auto; height: auto; min-height: 0; margin: 0; border: 0; border-radius: 0; }
+.hy-full-mid { flex: 1 1 auto; display: flex; flex-direction: column; justify-content: center; min-height: 0; overflow: auto; }
+.hy-full .hy-tools { flex: none; margin: 0; padding: 8px 14px calc(10px + env(safe-area-inset-bottom)); background: #071f2c; border-top: 1px solid var(--hy-card-line); box-shadow: 0 -4px 18px rgba(0,0,0,.3); }
+.hy-tools-top { display: flex; align-items: center; gap: 4px; min-height: 44px; margin-bottom: 6px; }
+.hy-tools-top .hy-icon-btn { flex: none; margin-left: -8px; color: var(--hy-ink); }
+.hy-tools-top .hy-design { margin: 0; font-size: 14px; line-height: 1.3; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.hy-full .hy-tools .hy-btn { min-height: 44px; }
+.hy-full .hy-tools .hy-btn-big { min-height: 50px; margin-top: 8px; }
