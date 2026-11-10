@@ -115,8 +115,10 @@
     if (data.theme === "nino") {
       if (logo) { var m = el("img", "hy-mark"); m.src = logo; m.alt = ""; bar.appendChild(m); }
       var word = el("span", "hy-word"); word.appendChild(el("strong", null, "NINO")); word.appendChild(el("small", null, "BATTAGLIA"));
-      var wrap = el("span", "hy-wordwrap"); wrap.appendChild(word); wrap.appendChild(el("span", "hy-tagline", "Graphic Design & Branding"));
-      bar.appendChild(wrap);
+      var wrap = el("span", "hy-wordwrap"); wrap.appendChild(word); bar.appendChild(wrap);
+      // The tagline sits on the right of the bar (owner, Nov 9, 2026): the app has no menu button there.
+      var tag = el("span", "hy-tagline hy-tagline-side"); tag.appendChild(el("span", null, "Graphic Design")); tag.appendChild(el("span", null, "& Branding"));
+      bar.appendChild(tag);
     } else if (logo) {
       var l = el("img", "hy-logo"); l.src = logo; l.alt = data.name; bar.appendChild(l);
       if (data.assets.mark) { var g = el("img", "hy-gear"); g.src = data.assets.mark; g.alt = ""; bar.appendChild(g); }
