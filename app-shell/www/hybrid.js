@@ -415,7 +415,8 @@
           });
           pick.appendChild(types);
         }
-        if (option.colors.length) {
+        // One color (a sticker's white backing) is not a choice, so it isn't asked.
+        if (option.colors.length > 1) {
           var cl = el("h3", "hy-label", "Color: "); cl.appendChild(el("span", "hy-label-value", st.color)); pick.appendChild(cl);
           var sw = el("div", "hy-swatches"); sw.setAttribute("role", "group"); sw.setAttribute("aria-label", "Choose a color");
           option.colors.forEach(function (c) {
