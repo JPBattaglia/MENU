@@ -45,6 +45,8 @@
     .error { color: #ffb4b4; font-size: .9rem; width: 100%; margin: 0; }
     .done { background: var(--navy-2); border: 1px solid var(--cyan); border-radius: 14px; padding: 22px; margin-top: 24px; }
     .done h2 { margin-top: 0; }
+    .logo { display: block; width: min(200px, 52vw); height: auto; margin: 26px auto 4px; filter: drop-shadow(0 6px 18px rgba(0,0,0,.35)); }
+    .done .logo { margin-top: 0; }
     [hidden] { display: none !important; }
   </style>
 </head>
@@ -53,11 +55,13 @@
   <a class="brand" href="/"><img src="/MENU=.png" alt=""> MENU-MADE</a>
 
   <section id="done" class="done" hidden>
+    <img class="logo" src="/q/fahys-badge.webp" width="200" height="196" alt="Fahy's Fog &amp; Barrel, San Francisco pour house">
     <h2>Thank you, Jack!</h2>
     <p>Fahy's is renewed for 2027. Your receipt is on its way by email, and JP will be in touch about your drink list refresh and anything else you chose.</p>
   </section>
 
   <div id="picker">
+    <img class="logo" src="/q/fahys-badge.webp" width="200" height="196" alt="Fahy's Fog &amp; Barrel, San Francisco pour house">
     <h1>Fahy's Fog &amp; Barrel: your 2027 renewal</h1>
     <p class="lead">Hi Jack. Tick what you'd like for 2027 and your total updates as you go. When it looks right, continue to Stripe's secure checkout. That total is exactly what you'll be charged.</p>
     <p class="lead" id="period"></p>
