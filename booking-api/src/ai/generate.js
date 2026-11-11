@@ -105,15 +105,22 @@ async function generate(env, options, deps = {}) {
   if (used >= cap) throw new AiCapError(`Monthly AI token cap reached (${used} of ${cap})`, { used, cap });
 
   const model = options.model || env.AI_MODEL || DEFAULT_MODEL;
-  const body = JSON.stringify({
+  const serverTools = options.serverTools || [];
+  // Nov 11, 2026: the Google description self-test failed three times in a row with the answer cut off at its token
+  // limit (700 of 700 output tokens each time), so the tool input never got its "description". Without server tools
+  // the model is now made to call record_output straight away (no text first), and an answer cut off at the limit is
+  // retried with twice the room.
+  const buildBody = (maxTokens) => JSON.stringify({
     model,
-    max_tokens: options.maxTokens || 4000,
+    max_tokens: maxTokens,
     ...(system ? { system } : {}),
     // serverTools (Nov 8, 2026): Anthropic-run tools such as web_search, used before the result is recorded.
-    tools: [...(options.serverTools || []), { name: TOOL_NAME, description: "Record the result.", input_schema: schema }],
-    tool_choice: { type: "auto" },
+    tools: [...serverTools, { name: TOOL_NAME, description: "Record the result.", input_schema: schema }],
+    tool_choice: serverTools.length ? { type: "auto" } : { type: "tool", name: TOOL_NAME },
     messages: [{ role: "user", content: `${prompt}\n\nRespond only by calling the ${TOOL_NAME} tool once.` }]
   });
+  let maxTokens = options.maxTokens || 4000;
+  let body = buildBody(maxTokens);
 
   let lastError = null;
   const total = { input_tokens: 0, output_tokens: 0 };
@@ -143,6 +150,11 @@ async function generate(env, options, deps = {}) {
       checkAgainstSchema(output, schema);
     } catch (error) {
       lastError = error; // a malformed answer is retried; its tokens were still spent and are logged below
+      if (result?.stop_reason === "max_tokens") {
+        lastError = new AiOutputError(`${error.message} (the answer was cut off at the ${maxTokens}-token limit)`);
+        maxTokens *= 2;
+        body = buildBody(maxTokens);
+      }
       if (attempt < MAX_ATTEMPTS) continue;
       break;
     }
