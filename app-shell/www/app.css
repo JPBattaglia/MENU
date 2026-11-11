@@ -324,6 +324,8 @@ body.hy-theme-menumade .hy-full { background: #013f45; }
 /* Home's two generator cards read as buttons: accent border, lift, a filled call to action, a pressed state. */
 .hy-duo-card { border: 2px solid var(--hy-accent); box-shadow: 0 8px 20px rgba(0,0,0,.35); cursor: pointer; transition: transform .08s ease, box-shadow .08s ease; -webkit-tap-highlight-color: transparent; }
 .hy-duo-card:active { transform: scale(.97); box-shadow: 0 2px 8px rgba(0,0,0,.35); }
+.hy-duo.hy-solo { grid-template-columns: 1fr; margin-top: 16px; }
+.hy-toggle.hy-toggle-in { margin: 0 0 12px; }
 .hy-duo-top { display: flex; align-items: center; justify-content: space-between; gap: 8px; align-self: stretch; }
 .hy-duo-top .hy-pill { margin: 0; padding: 4px 10px; font-size: 12px; white-space: nowrap; }
 .hy-duo-go { align-self: stretch; margin-top: 8px; padding: 11px 8px; text-align: center; font-weight: 700; font-size: 15px; border-radius: var(--hy-btn-radius); background: var(--hy-btn); color: var(--hy-btn-ink); border: 2px solid var(--hy-btn-line); }

@@ -184,7 +184,12 @@
   // needs to be rebuilt with as much native as possible"). The form, the wait, the designs (in a frame on this
   // screen) and the three buttons are the app's own; only checkout opens the website. ----
   var gen = { kind: null, step: "choose", state: null, index: 0, error: "" }, account = null;
-  function genSpec(kind) { return (data.generators || []).filter(function (g) { return g.key === kind; })[0] || null; }
+  // Any generator in season first, then the two regular ones (data.seasonal: the Holiday menu generator, Nov 11, 2026). App
+  // builds from before that never read data.seasonal, so they keep showing the two they have words for.
+  function seasonal() { return Array.isArray(data.seasonal) ? data.seasonal : []; }
+  function allGens() { return seasonal().concat(data.generators || []); }
+  function genSpec(kind) { return allGens().filter(function (g) { return g.key === kind; })[0] || null; }
+  function noun(g) { return g.noun || (g.key === "menu" ? "menu" : "website"); }
   function saved(kind) {
     var all = t.store.get("previews") || {}; var p = all[kind];
     return p && /^[a-f0-9]{36}$/.test(p.token || "") && Date.now() - (p.at || 0) < 72 * 3600000 ? p : null;
@@ -230,7 +235,7 @@
   // makes sense the first time.
   function chooser(s) {
     s.appendChild(header("Free preview", "See it before you checkout"));
-    (data.generators || []).forEach(function (g) {
+    allGens().forEach(function (g) {
       var card = el("div", "hy-card hy-gen");
       var top = el("div", "hy-plan-top"); top.appendChild(el("h2", null, g.title)); top.appendChild(el("span", "hy-pill", g.count + " designs")); card.appendChild(top);
       card.appendChild(el("p", null, g.text));
@@ -239,7 +244,7 @@
       (g.buttons || []).forEach(function (b) { var li = el("li"); li.appendChild(el("span", "hy-key", b.label)); li.appendChild(el("span", "hy-muted", b.text)); list.appendChild(li); });
       card.appendChild(list);
       var have = saved(g.key);
-      card.appendChild(button(have ? "Open my " + (g.key === "menu" ? "menu" : "website") + " preview" : "Start the " + g.title.toLowerCase(), "hy-btn hy-btn-big", function () { openGenerator(g.key); }));
+      card.appendChild(button(have ? "Open my " + noun(g) + " preview" : "Start the " + g.title.toLowerCase(), "hy-btn hy-btn-big", function () { openGenerator(g.key); }));
       if (have) card.appendChild(button("Start again with another menu", "hy-link", function () { remember(g.key, null); openGenerator(g.key); }));
       s.appendChild(card);
     });
@@ -253,16 +258,28 @@
     bar.appendChild(back); bar.appendChild(el("strong", null, g.title)); s.appendChild(bar);
     var me = t.store.get("me") || {};
     var form = el("form", "hy-card hy-form"); form.noValidate = true;
-    form.appendChild(el("p", null, g.key === "menu" ? "Upload the menu you have now. You'll see it as a phone menu in " + g.count + " designs." : "Upload the menu you have now. You'll see a whole website built from it, in " + g.count + " designs."));
+    form.appendChild(el("p", null, g.form_text ? g.form_text : g.key === "menu" ? "Upload the menu you have now. You'll see it as a phone menu in " + g.count + " designs." : "Upload the menu you have now. You'll see a whole website built from it, in " + g.count + " designs."));
     function field(id, label, type, value, extra) {
       var l = el("label", null, label); l.setAttribute("for", id); form.appendChild(l);
       var i = el("input"); i.id = id; i.type = type; i.value = value || ""; for (var k in extra || {}) i.setAttribute(k, extra[k]); form.appendChild(i);
       return i;
     }
+    // A seasonal generator can ask which occasion the menu is for (Christmas or New Year's Eve).
+    var occasions = Array.isArray(g.occasions) ? g.occasions : [];
+    if (occasions.length && !occasions.some(function (o) { return o.key === gen.occasion; })) gen.occasion = occasions[0].key;
+    if (occasions.length > 1) {
+      form.appendChild(el("p", "hy-file-label", g.occasion_label || "Which one is this menu for?"));
+      var pickRow = el("div", "hy-toggle hy-toggle-in"); pickRow.setAttribute("role", "group"); pickRow.setAttribute("aria-label", g.occasion_label || "Occasion");
+      var pickButtons = occasions.map(function (o) {
+        var b = button(o.label, "hy-toggle-btn", function () { gen.occasion = o.key; pickButtons.forEach(function (x, i) { x.setAttribute("aria-pressed", String(occasions[i].key === gen.occasion)); }); });
+        b.setAttribute("aria-pressed", String(o.key === gen.occasion)); pickRow.appendChild(b); return b;
+      });
+      form.appendChild(pickRow);
+    } else if (occasions.length === 1) form.appendChild(el("p", "hy-muted", "For " + occasions[0].label + "."));
     var biz = field("hy-biz", "Business name", "text", me.business, { autocomplete: "organization", maxlength: "120" });
     var email = field("hy-email", "Email (we send you the link too)", "email", me.email, { autocomplete: "email", inputmode: "email", maxlength: "150" });
     var city = g.city ? field("hy-city", "City (optional: we look up your phone, address and hours)", "text", me.city, { autocomplete: "address-level2", maxlength: "80" }) : null;
-    form.appendChild(el("p", "hy-file-label", "Your menu: a PDF or a photo, up to 5 MB"));
+    form.appendChild(el("p", "hy-file-label", (g.file_label || "Your menu") + ": a PDF or a photo, up to 5 MB"));
     var pick = el("input"); pick.type = "file"; pick.accept = "application/pdf,image/png,image/jpeg,image/webp"; pick.hidden = true; pick.id = "hy-file";
     var cam = el("input"); cam.type = "file"; cam.accept = "image/*"; cam.setAttribute("capture", "environment"); cam.hidden = true;
     var chosen = null; var fileName = el("p", "hy-muted", "No file chosen yet.");
@@ -292,7 +309,7 @@
       var requestId = crypto.randomUUID ? crypto.randomUUID() : String(Date.now()) + Math.random().toString(16).slice(2);
       var name = chosen.name && /\.(pdf|png|jpe?g|webp)$/i.test(chosen.name) ? chosen.name : "menu." + ({ "application/pdf": "pdf", "image/png": "png", "image/webp": "webp" }[chosen.type] || "jpg");
       var body = new FormData();
-      body.append("payload", JSON.stringify({ type: "inquiry", purpose: "checkout", service: "Other project", name: b, business: b, email: e, notes: "Free " + (g.key === "menu" ? "menu" : "website") + " preview (Menu-made app)", website: "", requestId: requestId }));
+      body.append("payload", JSON.stringify({ type: "inquiry", purpose: "checkout", service: "Other project", name: b, business: b, email: e, notes: "Free " + noun(g) + " preview (Menu-made app)", website: "", requestId: requestId }));
       body.append("document", chosen, name);
       function fail(text) { gen.error = text; gen.step = "form"; if (current === "preview") show("preview"); }
       fetch(data.upload_url, { method: "POST", body: body }).then(function (r) {
@@ -300,7 +317,7 @@
           if (!r.ok || !j || j.ok !== true) throw new Error(r.status === 429 ? "Too many tries. Please wait an hour and try again." : "Your menu couldn't be sent. Please try again.");
         });
       }).then(function () {
-        return fetch(g.create_url, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ request_id: requestId, email: e, business: b, city: c, tracking: { campaign: "app" } }) })
+        return fetch(g.create_url, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ request_id: requestId, email: e, business: b, city: c, tracking: { campaign: "app" }, occasion: occasions.length ? gen.occasion : undefined }) })
           .then(function (r) { return r.json().catch(function () { return null; }).then(function (j) { return { r: r, j: j || {} }; }); });
       }).then(function (out) {
         var j = out.j, token = j.token || (/\/(?:view)\/([a-f0-9]{36})/.exec(j.url || j.start || "") || [])[1];
@@ -356,7 +373,7 @@
       while (stage.firstChild) stage.removeChild(stage.firstChild);
       var wrap = el("div", "hy-frame");
       var wait = busyScreen(["Drawing " + d.label + "…"]); wait.classList.add("hy-frame-wait"); wrap.appendChild(wait);
-      var frame = el("iframe"); frame.title = d.label + " design of your " + (g.key === "menu" ? "menu" : "website");
+      var frame = el("iframe"); frame.title = d.label + " design of your " + noun(g);
       frame.setAttribute("referrerpolicy", "no-referrer");
       frame.addEventListener("load", function () { if (wait.parentNode) wait.parentNode.removeChild(wait); });
       frame.src = d.url + (d.url.indexOf("?") < 0 ? "?" : "&") + "v=" + (gen.rev || 0);
@@ -441,6 +458,16 @@
       if (h.text) hero.appendChild(el("p", "hy-lead", h.text));
       s.appendChild(hero);
       var gens = data.generators || [];
+      // In season: the Holiday menu generator, in a card of its own above the two regular ones.
+      seasonal().forEach(function (g) {
+        var solo = el("div", "hy-duo hy-solo");
+        var b = el("button", "hy-duo-card"); b.type = "button";
+        var top = el("span", "hy-duo-top"); top.appendChild(icon("preview", 28)); top.appendChild(el("span", "hy-pill", g.badge || g.count + " designs")); b.appendChild(top);
+        b.appendChild(el("strong", null, g.card_title || g.title)); b.appendChild(el("span", "hy-muted", g.card_text || g.text));
+        b.appendChild(el("span", "hy-duo-go", saved(g.key) ? "Open my preview" : g.card_action || "Try it free"));
+        b.addEventListener("click", function () { openGenerator(g.key); });
+        solo.appendChild(b); s.appendChild(solo);
+      });
       if (gens.length) {
         s.appendChild(el("h3", "hy-label", "Start here, free"));
         var grid = el("div", "hy-duo");
