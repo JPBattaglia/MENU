@@ -107,16 +107,16 @@ async function generate(env, options, deps = {}) {
   const model = options.model || env.AI_MODEL || DEFAULT_MODEL;
   const serverTools = options.serverTools || [];
   // Nov 11, 2026: the Google description self-test failed three times in a row with the answer cut off at its token
-  // limit (700 of 700 output tokens each time), so the tool input never got its "description". Without server tools
-  // the model is now made to call record_output straight away (no text first), and an answer cut off at the limit is
-  // retried with twice the room.
+  // limit (700 of 700 output tokens each time), so the tool input never got its "description". An answer cut off at the
+  // limit is now retried with twice the room.
   const buildBody = (maxTokens) => JSON.stringify({
     model,
     max_tokens: maxTokens,
     ...(system ? { system } : {}),
     // serverTools (Nov 8, 2026): Anthropic-run tools such as web_search, used before the result is recorded.
     tools: [...serverTools, { name: TOOL_NAME, description: "Record the result.", input_schema: schema }],
-    tool_choice: serverTools.length ? { type: "auto" } : { type: "tool", name: TOOL_NAME },
+    // Forced tool_choice ("tool"/"any") is not supported by this model (Nov 11, 2026), so it stays auto.
+    tool_choice: { type: "auto" },
     messages: [{ role: "user", content: `${prompt}\n\nRespond only by calling the ${TOOL_NAME} tool once.` }]
   });
   let maxTokens = options.maxTokens || 4000;

@@ -158,13 +158,11 @@ test('qualityCheck combines length, facts and privacy', () => {
 });
 
 // Nov 11, 2026: the Google description self-test failed when every answer was cut off at max_tokens.
-test('makes the model call the record tool directly, unless server tools are in use', async () => {
+test('keeps tool_choice auto (forced tool choice is not supported by the model)', async () => {
   const env = setup();
-  const api = fakeApi([{ input: { reply: 'ok' } }, { input: { reply: 'ok' } }]);
+  const api = fakeApi([{ input: { reply: 'ok' } }]);
   await generate(env, options, deps(api));
-  assert.deepEqual(api.calls[0].body.tool_choice, { type: 'tool', name: 'record_output' });
-  await generate(env, { ...options, serverTools: [{ type: 'web_search_20250305', name: 'web_search' }] }, deps(api));
-  assert.deepEqual(api.calls[1].body.tool_choice, { type: 'auto' });
+  assert.deepEqual(api.calls[0].body.tool_choice, { type: 'auto' });
 });
 
 test('an answer cut off at the token limit is retried with twice the room', async () => {
