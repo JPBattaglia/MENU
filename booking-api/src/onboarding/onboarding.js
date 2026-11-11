@@ -27,7 +27,9 @@ async function verifyCheckoutAccess(orderId, sessionId, env) {
           status,
           payment_status,
           stripe_checkout_session_id,
-          stripe_payment_intent_id
+          stripe_payment_intent_id,
+          total_cents,
+          currency
         FROM orders
         WHERE id = ?
         LIMIT 1
@@ -315,7 +317,10 @@ async function getOnboarding(request, env) {
       order: {
         id: access.order.id,
         status: access.order.status,
-        payment_status: access.order.payment_status
+        payment_status: access.order.payment_status,
+        // For the Google Ads purchase conversion on checkoutsuccess.html (owner, Nov 10, 2026).
+        total_cents: Number(access.order.total_cents) || 0,
+        currency: access.order.currency || "usd"
       },
       project: {
         id: project.id,
