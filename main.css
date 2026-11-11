@@ -3174,3 +3174,7 @@ html.mm-lightbox-open { overflow: hidden; }
 .mm-lightbox-foot .btn.primary { padding: 10px 14px; font-size: 15px; }
 .mm-lightbox-nav { background: none; border: 1px solid #f0c75e; border-radius: 12px; color: #f6d983; font: 700 15px Philosopher, sans-serif; padding: 9px 12px; cursor: pointer; box-shadow: none; white-space: nowrap; }
 @media (max-width: 420px) { .mm-lightbox-nav span { display: none; } .mm-lightbox-nav { font-size: 20px; padding: 6px 14px; } }
+
+/* Holiday choice (Christmas / New Year's Eve): slim pills on one line (owner, Nov 11, 2026). */
+.mm-occasion label { padding: 6px 16px; white-space: nowrap; line-height: 1.2; }
+.mm-occasion input[type="radio"] { flex: none; width: 18px; height: 18px; min-height: 0; margin: 0; padding: 0; border: 0; box-shadow: none; }
