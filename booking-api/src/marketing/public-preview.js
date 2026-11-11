@@ -538,14 +538,26 @@ async function menuPreviewChoice(env, orderId) {
   if (!orderId || !env.DB || !env.ASSETS) return null;
   const order = await env.DB.prepare(`SELECT notes FROM orders WHERE id = ?`).bind(orderId).first();
   const reference = /Document ref: ([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})/i.exec(order?.notes || "")?.[1];
-  if (!reference) return null;
-  const row = await env.DB.prepare(`SELECT token, design, occasion FROM menu_previews WHERE request_id = ? AND status = 'READY' ORDER BY created_at DESC LIMIT 1`).bind(reference.toLowerCase()).first();
+  let row = reference ? await env.DB.prepare(`SELECT token, design, occasion FROM menu_previews WHERE request_id = ? AND status = 'READY' ORDER BY created_at DESC LIMIT 1`).bind(reference.toLowerCase()).first() : null;
+  // A Holiday Menu names the preview it was made from on its order item: a holiday prospect email's preview shows the
+  // business's regular menu in the holiday designs, and the buyer uploads the holiday menu itself at checkout.
+  let holiday = null;
+  if (!row) {
+    const item = await env.DB.prepare(`SELECT metadata_json FROM order_items WHERE order_id = ? AND json_extract(metadata_json, '$.holiday_menu.occasion') IS NOT NULL LIMIT 1`).bind(orderId).first().catch(() => null);
+    holiday = parseJsonOrNull(item?.metadata_json)?.holiday_menu || null;
+    if (/^[a-f0-9]{36}$/.test(String(holiday?.preview || ""))) row = await env.DB.prepare(`SELECT token, design, occasion FROM menu_previews WHERE token = ? AND status = 'READY'`).bind(holiday.preview).first();
+  }
+  if (!row && isOccasion(holiday?.occasion)) {
+    return { token: null, design: menuDesignFor(holiday.design)?.occasion ? holiday.design : designsFor(holiday.occasion)[0].key, occasion: holiday.occasion, custom: { subtitle: `${OCCASION_NAMES[holiday.occasion]} Menu` }, logoDataUri: null };
+  }
   if (!row) return null;
   const data = parseJsonOrNull(await (await env.ASSETS.get(`menu-previews/${row.token}/data.json`))?.text());
   if (!data) return null;
   const custom = data.custom || {};
+  // A holiday preview chosen without a design gets that holiday's first design, not a regular one.
+  const design = menuDesignFor(row.design) ? row.design : isOccasion(row.occasion) ? designsFor(row.occasion)[0].key : null;
   if (!custom.subtitle && isOccasion(row.occasion)) custom.subtitle = `${OCCASION_NAMES[row.occasion]} Menu`;
-  return { token: row.token, design: menuDesignFor(row.design) ? row.design : null, occasion: isOccasion(row.occasion) ? row.occasion : null, custom, logoDataUri: await loadPreviewLogo(env, row.token, custom).catch(() => null) };
+  return { token: row.token, design, occasion: isOccasion(row.occasion) ? row.occasion : null, custom, logoDataUri: await loadPreviewLogo(env, row.token, custom).catch(() => null) };
 }
 
 // Checkout prefill for "Make it live": the stored upload, so the buyer isn't asked for the file again.

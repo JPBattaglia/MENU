@@ -13,7 +13,7 @@ import { readFileSync } from "node:fs";
 import { resolveMx } from "node:dns/promises";
 import { ImapFlow } from "imapflow";
 import MailComposer from "nodemailer/lib/mail-composer/index.js";
-import { build, buildFollowup, buildFirstFollowup } from "./email.mjs";
+import { build, buildFollowup, buildFirstFollowup, buildHoliday } from "./email.mjs";
 import { verify } from "./verify.mjs";
 import { makePreview } from "./preview.mjs";
 import { chromium } from "playwright";
@@ -142,9 +142,11 @@ if (REFRESH) {
   const old = [];
   try {
     // An empty Drafts folder answers "1:*" with "Invalid message number" (Nov 10, 2026): nothing to rebuild.
-    if (client.mailbox?.exists) for await (const m of client.fetch("1:*", { uid: true, headers: ["x-menu-made-prospect"] })) {
-      const id = /x-menu-made-prospect:\s*(\S+)/i.exec(m.headers?.toString() || "")?.[1];
-      if (id) old.push({ uid: m.uid, id });
+    if (client.mailbox?.exists) for await (const m of client.fetch("1:*", { uid: true, headers: ["x-menu-made-prospect", "x-menu-made-holiday"] })) {
+      const headers = m.headers?.toString() || "";
+      const id = /x-menu-made-prospect:\s*(\S+)/i.exec(headers)?.[1];
+      // Holiday drafts stay as they are (they aren't the regular first email).
+      if (id && !/x-menu-made-holiday:/i.test(headers)) old.push({ uid: m.uid, id });
     }
   } finally { lock.release(); }
   const { prospects: rows } = await api("batch", { ids: [...new Set(old.map((o) => o.id))] });
@@ -165,6 +167,32 @@ if (REFRESH) {
   }
   await client.logout();
   console.log(`Refreshed ${rebuilt} drafts still in Drafts (${old.length} found).`);
+  process.exit(0);
+}
+
+// Holiday Menu (owner, Nov 10, 2026): through the holiday season (Nov 1 to Dec 20) this run's drafts are holiday
+// emails, one per business ever: prospects already emailed first, then new ones. Each carries the menu from their site
+// in the holiday designs when it can be read (built by the worker, booking-api/src/marketing/holiday-outreach.js).
+const holiday = await api("holiday", { limit: LIMIT }).catch((e) => { console.log(`Holiday list unavailable: ${e.message}`); return null; });
+if (holiday?.season && !PREVIEW) {
+  const done = [];
+  let previews = 0, noMail = 0;
+  for (const p of holiday.prospects || []) {
+    const mx = await resolveMx(String(p.email).split("@")[1]).catch(() => []);
+    if (!mx.length) { noMail++; continue; }
+    const demo = await api("holiday", { id: p.id }).catch(() => null);
+    if (demo?.ok) previews++;
+    const email = buildHoliday(p, demo?.ok ? demo.url : null);
+    const message = await raw({ from: FROM, to: p.email, subject: email.subject, text: email.text, html: email.html,
+      attachments: [{ filename: "menu-made.png", content: logo, cid: "logo@menu-made", contentDisposition: "inline" }],
+      headers: { "X-Menu-Made-Prospect": p.id, "X-Menu-Made-Holiday": "1" } });
+    await client.append(draftsBox, message, ["\\Draft", "\\Seen"]);
+    done.push(p.id);
+  }
+  if (done.length) await api("holiday", { mark: done });
+  await addFollowups();
+  await client.logout();
+  console.log(`Holiday season: ${done.length} holiday drafts added (${previews} with their menu in the holiday designs); ${noMail} skipped for having no mail server. Regular first emails resume after Dec 20.`);
   process.exit(0);
 }
 

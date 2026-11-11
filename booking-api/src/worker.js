@@ -39,6 +39,7 @@ import { handleSiteCheckResult } from "./selftest/site-check.js";
 import { handleD1Usage } from "./selftest/d1-usage.js";
 import { handleProspects, handleProspectBatch, handleProspectStatus, handleProspectLookup, handleSendPlan } from "./marketing/prospects.js";
 import { handleProspectDemo, handleMenuPreview, upgradeProspectMenus, handleProspectFollowups } from "./marketing/demo-menu.js";
+import { handleHolidayOutreach } from "./marketing/holiday-outreach.js";
 import { handleWeeklyNumbers } from "./marketing/weekly-numbers.js";
 import { kickProspectJobs } from "./marketing/prospect-kick.js";
 import { countingDb, saveTickCount } from "./lib/query-count.js";
@@ -149,6 +150,7 @@ var worker_default = {
     // Marketing plan v4: private phone-menu previews for prospect emails, and the day-3 follow-up list.
     if (url.pathname === "/api/system/prospects/demo" && request.method === "POST") return handleProspectDemo(request, env);
     if (url.pathname === "/api/system/prospects/followups" && request.method === "POST") return handleProspectFollowups(request, env);
+    if (url.pathname === "/api/system/prospects/holiday" && request.method === "POST") return handleHolidayOutreach(request, env);
     if (url.pathname === "/api/system/weekly-numbers" && request.method === "POST") return handleWeeklyNumbers(request, env);
     const revisionMatch = url.pathname.match(/^\/api\/revision\/([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})$/i);
     if (revisionMatch && (request.method === "GET" || request.method === "POST")) return handleBuyerRevision(request, env, revisionMatch[1].toLowerCase());

@@ -143,6 +143,25 @@ function ninoStepLine(c) {
   return `${c.SITE_VISIT} visit${c.SITE_VISIT === 1 ? "" : "s"}, ${c.DESIGN_VIEW} looked at a design${pct(c.DESIGN_VIEW)}, ${c.ADD_TO_CART} added to cart${pct(c.ADD_TO_CART)}, ${c.CHECKOUT_CLICK} pressed checkout${pct(c.CHECKOUT_CLICK)}.`;
 }
 
+// Holiday Menu (owner, Nov 10, 2026): live paid holiday menus, holiday previews made, and holiday prospect drafts.
+async function holidayNumbers(env, weekIso) {
+  try {
+    const one = async (sql, ...args) => Number((await env.DB.prepare(sql).bind(...args).first())?.n || 0);
+    const paid = `FROM orders o JOIN order_items oi ON oi.order_id = o.id JOIN offers f ON f.id = oi.offer_id
+      WHERE f.code = 'HOLIDAY_MENU' AND o.payment_status = 'PAID' AND json_extract(oi.metadata_json, '$.environment') = 'live'`;
+    return {
+      week: await one(`SELECT COUNT(*) AS n ${paid} AND o.created_at >= ?`, weekIso),
+      // Sales an ad campaign or the regular prospect emails already count (their own lines) aren't added twice.
+      unattributed: await one(`SELECT COUNT(*) AS n ${paid} AND o.created_at >= ? AND NOT EXISTS (SELECT 1 FROM funnel_events fe WHERE fe.order_id = o.id
+        AND fe.event_type = 'CHECKOUT_STARTED' AND fe.campaign IN (${[...CAMPAIGNS.map((c) => c.key), OUTREACH].map(() => "?").join(",")}))`, weekIso, ...CAMPAIGNS.map((c) => c.key), OUTREACH),
+      cents: await one(`SELECT COALESCE(SUM(oi.line_total_cents), 0) AS n ${paid} AND o.created_at >= ?`, weekIso),
+      all: await one(`SELECT COUNT(*) AS n ${paid}`),
+      previews: await one(`SELECT COUNT(*) AS n FROM menu_previews WHERE occasion IS NOT NULL AND status = 'READY' AND created_at >= ? AND COALESCE(campaign, '') <> 'prospect'`, weekIso),
+      drafted: await one(`SELECT COUNT(*) AS n FROM prospects WHERE holiday_drafted_at >= ?`, weekIso)
+    };
+  } catch { return null; }
+}
+
 async function outreach(env, sinceIso) {
   const one = async (sql, ...args) => Number((await env.DB.prepare(sql).bind(...args).first())?.n || 0);
   return {
@@ -208,6 +227,11 @@ async function weeklyNumbers(env, now = Date.now()) {
     const steps = { visits: visits.get(c.key) || 0, checkouts: (c.store === "menu" ? checkouts.get(c.key) : shopOpened?.get(c.key)) || 0, sales: all.sales };
     const weak = weakStep(steps);
     rows.push([c.name, `${week.sales} sale${week.sales === 1 ? "" : "s"} this week (${money(week.cents)}). Since ${shortDate(c.start)}: ${steps.visits} visit${steps.visits === 1 ? "" : "s"}, ${steps.checkouts} checkout${steps.checkouts === 1 ? "" : "s"} started, ${all.sales} paid; at most ${money(spent)} spent, ${perSale === null ? "no sale yet" : `at most ${money(perSale)} per sale`} (break-even ${money(c.keeps)}: ${verdict}).${weak ? ` Weak step: ${weak}.` : ""}`]);
+  }
+  const holiday = await holidayNumbers(env, weekIso);
+  if (holiday && (holiday.all || holiday.previews || holiday.drafted)) {
+    totalSales += holiday.unattributed;
+    rows.push(["Holiday Menu", `${holiday.week} sold this week (${money(holiday.cents)}), ${holiday.all} this season. ${holiday.previews} free holiday previews made this week; ${holiday.drafted} holiday prospect emails drafted.`]);
   }
   const previews = await freePreviews(env, weekIso);
   if (previews.made || previews.ordered) rows.push(["Free menu previews", `${previews.made} made this week, ${previews.opened} opened, ${previews.ordered} went on to a paid order.`]);
