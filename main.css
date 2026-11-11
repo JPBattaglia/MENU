@@ -3065,3 +3065,84 @@ body.about-page .team-profile a{white-space:nowrap;font-size:clamp(11px,calc((10
 .mm-holiday-strip p { margin: 0; color: #f4efe2; }
 .mm-holiday-strip strong { color: #e6c36a; }
 .mm-holiday-strip-wrap { padding: 18px 0 0; }
+
+/* Christmas look (owner, Nov 11, 2026): the Holiday Menu page, the seasonal strip, the Start page card and the
+   holiday popup in pine green, berry red and gold, with gentle falling snow (still when reduced motion is asked). */
+body.mm-xmas {
+  --bg: #0d3b2a; --bg-deep: #08261b; --nav: #0a2e21;
+  --brand: #d4242f; --brand-soft: #f0c75e; --cyan: #f0c75e; --link-color: #f6d983;
+  --panel: #14513a; --panel-strong: #1b6447; --muted: #f1ead8;
+  --button-border: #e8c97a;
+  background:
+    radial-gradient(900px 520px at 12% 8%, rgba(212,36,47,.22), transparent 62%),
+    radial-gradient(760px 520px at 88% 18%, rgba(240,199,94,.14), transparent 66%),
+    linear-gradient(180deg, var(--bg), var(--bg-deep));
+}
+body.mm-xmas::before, .mm-xmas-pop::before {
+  content: ""; position: fixed; inset: 0; pointer-events: none; z-index: 0;
+  background-image:
+    radial-gradient(2px 2px at 20px 30px, rgba(255,255,255,.9), transparent 60%),
+    radial-gradient(3px 3px at 120px 80px, rgba(255,255,255,.75), transparent 60%),
+    radial-gradient(2px 2px at 200px 150px, rgba(255,255,255,.85), transparent 60%),
+    radial-gradient(3px 3px at 60px 190px, rgba(255,255,255,.6), transparent 60%),
+    radial-gradient(2px 2px at 160px 230px, rgba(255,255,255,.8), transparent 60%);
+  background-size: 240px 260px;
+  animation: mm-snow 18s linear infinite;
+}
+body.mm-xmas > main, body.mm-xmas > footer { position: relative; z-index: 1; }
+body.mm-xmas .header { z-index: 20; background: rgba(10,46,33,.97); }
+@keyframes mm-snow { from { background-position: 0 0; } to { background-position: 60px 260px; } }
+@media (prefers-reduced-motion: reduce) { body.mm-xmas::before, .mm-xmas-pop::before { animation: none; } }
+/* Candy-cane trim under the header */
+body.mm-xmas .header { border-bottom: 0; box-shadow: none; }
+body.mm-xmas .site-skip { z-index: 30; }
+body.mm-xmas .header::after { content: ""; position: absolute; left: 0; right: 0; bottom: -6px; height: 6px; background: repeating-linear-gradient(-45deg, #d4242f 0 12px, #fff 12px 24px); }
+body.mm-xmas .btn.primary, body.mm-xmas input[type="file"]::file-selector-button, .mm-xmas-pop .btn.primary, .mm-holiday-strip .btn.primary {
+  background: linear-gradient(135deg, #e0313b, #a5141d); color: #fff; border-color: #f0c75e;
+}
+body.mm-xmas .btn.ghost { color: #f6d983; border-color: #f0c75e; }
+body.mm-xmas .nav-cta { background: linear-gradient(135deg, #e0313b, #a5141d); color: #fff; }
+body.mm-xmas .pill { background: #d4242f; color: #fff; font-weight: 700; letter-spacing: .02em; }
+body.mm-xmas .pill::before { content: "❄ "; }
+body.mm-xmas .hero h1 { color: #fff; text-shadow: 0 2px 0 rgba(0,0,0,.25), 0 0 26px rgba(240,199,94,.35); }
+body.mm-xmas .service-price strong { color: #f0c75e; }
+body.mm-xmas .service-profile-plan, body.mm-xmas .service-scope-note, body.mm-xmas .mm-try {
+  background: rgba(8,38,27,.72); border: 2px solid #f0c75e; border-radius: 22px; box-shadow: 0 0 0 6px rgba(212,36,47,.35), 0 18px 40px rgba(0,0,0,.35);
+}
+body.mm-xmas .service-profile-plan { padding: 28px; }
+body.mm-xmas .service-profile-plan li::marker, body.mm-xmas .service-preparation-list li::marker { color: #f0c75e; }
+body.mm-xmas .mm-holiday-designs img { border: 2px solid #f0c75e; }
+body.mm-xmas .mm-occasion label { border-color: #f0c75e; background: rgba(212,36,47,.25); }
+body.mm-xmas .mm-occasion input { accent-color: #d4242f; }
+body.mm-xmas input:not([type="radio"]):not([type="checkbox"]):not([type="file"]), body.mm-xmas select, body.mm-xmas textarea { border-color: #f0c75e; }
+body.mm-xmas .cta { background: linear-gradient(120deg, #a5141d, #0d3b2a); border: 2px solid #f0c75e; }
+body.mm-xmas .footer { background: #08261b; border-top: 6px solid transparent; border-image: repeating-linear-gradient(-45deg, #d4242f 0 12px, #fff 12px 24px) 6; }
+
+/* Seasonal strip on the home and Menus pages */
+.mm-holiday-strip { position: relative; overflow: hidden; border: 2px solid #f0c75e; background: linear-gradient(100deg, #a5141d 0%, #7c0f16 38%, #0d3b2a 100%); box-shadow: 0 0 0 4px rgba(240,199,94,.18), 0 14px 30px rgba(0,0,0,.3); padding-left: 64px; }
+.mm-holiday-strip::before { content: "🎄"; position: absolute; left: 18px; top: 50%; transform: translateY(-50%); font-size: 30px; }
+.mm-holiday-strip p { color: #fff; }
+.mm-holiday-strip strong { color: #f6d983; }
+
+/* Start page: the Holiday Menu card */
+.service-card[data-code="HOLIDAY_MENU"] { border: 2px solid #f0c75e; background: linear-gradient(150deg, rgba(165,20,29,.55), rgba(13,59,42,.85)); }
+.service-card[data-code="HOLIDAY_MENU"] h3::before { content: "🎄 "; }
+
+/* Holiday popup (holiday-popup.js) */
+.mm-xmas-pop { position: fixed; inset: 0; z-index: 1000; display: grid; place-items: center; padding: 20px; background: rgba(4,20,14,.72); }
+.mm-xmas-pop[hidden] { display: none; }
+.mm-xmas-card { position: relative; z-index: 1; width: min(460px, 100%); padding: 34px 28px 26px; text-align: center; color: #fff; border: 3px solid #f0c75e; border-radius: 24px;
+  background: radial-gradient(420px 260px at 50% 0%, rgba(240,199,94,.25), transparent 70%), linear-gradient(170deg, #b3161f 0%, #7c0f16 45%, #0d3b2a 100%);
+  box-shadow: 0 0 0 8px rgba(212,36,47,.35), 0 30px 70px rgba(0,0,0,.55); font-family: Philosopher, sans-serif; animation: mm-pop-in .35s ease-out; }
+.mm-xmas-card::before { content: ""; position: absolute; left: 0; right: 0; top: 0; height: 10px; border-radius: 21px 21px 0 0; background: repeating-linear-gradient(-45deg, #fff 0 10px, #d4242f 10px 20px); }
+@keyframes mm-pop-in { from { transform: translateY(16px) scale(.96); opacity: 0; } to { transform: none; opacity: 1; } }
+@media (prefers-reduced-motion: reduce) { .mm-xmas-card { animation: none; } }
+.mm-xmas-card .mm-xmas-icons { font-size: 34px; letter-spacing: 8px; margin: 4px 0 6px; }
+.mm-xmas-card .mm-xmas-kicker { margin: 0; color: #f6d983; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; font-size: 13px; }
+.mm-xmas-card h2 { margin: 8px 0 10px; font: 30px/1.15 Aldrich, sans-serif; text-shadow: 0 0 22px rgba(240,199,94,.45); }
+.mm-xmas-card p { margin: 0 0 8px; color: #f8f1e1; line-height: 1.5; font-size: 17px; }
+.mm-xmas-card .mm-xmas-price { margin: 14px 0 18px; font: 700 36px/1 Aldrich, sans-serif; color: #f6d983; }
+.mm-xmas-card .mm-xmas-price small { display: block; margin-top: 6px; font: 400 15px/1.4 Philosopher, sans-serif; color: #f8f1e1; }
+.mm-xmas-card .mm-xmas-actions { display: flex; flex-direction: column; gap: 10px; align-items: stretch; }
+.mm-xmas-card .mm-xmas-later { background: none; border: 0; box-shadow: none; border-radius: 8px; color: #f6d983; font: inherit; text-decoration: underline; text-underline-offset: 4px; cursor: pointer; padding: 8px; }
+.mm-xmas-card .mm-xmas-close { position: absolute; top: 16px; right: 12px; width: 36px; height: 36px; border-radius: 50%; border: 1px solid rgba(255,255,255,.5); background: rgba(0,0,0,.25); color: #fff; font-size: 22px; line-height: 1; cursor: pointer; }
