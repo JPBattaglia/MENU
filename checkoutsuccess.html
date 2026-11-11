@@ -223,6 +223,10 @@
       if (!res.ok || !data.ok) throw new Error(data.error || "Unable to load onboarding.");
 
       if (data.environment === "live") window.MenuMadeFunnel?.track("onboarding_opened");
+      // Google Ads purchase conversion (owner, Nov 10, 2026): live, paid orders only, once per order (transaction_id).
+      if (data.environment === "live" && /paid/i.test(data.order?.payment_status || "") && typeof window.gtag === "function") {
+        window.gtag("event", "conversion", { send_to: "AW-18554819883/GzWgCJOOhLYdEKuq0I9F", value: (Number(data.order.total_cents) || 0) / 100, currency: String(data.order.currency || "usd").toUpperCase(), transaction_id: String(data.order.id) });
+      }
       $("loadingState").hidden = true;
       $("errorState").hidden = true;
 
