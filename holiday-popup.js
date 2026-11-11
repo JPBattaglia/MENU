@@ -1,15 +1,12 @@
-// Holiday Menu popup (owner, Nov 11, 2026): a festive one-time invitation to the Holiday Menu on the main pages.
-// Shown once per browser for the season, a few seconds after the page opens; never after New Year's Eve.
+// Holiday Menu popup (owner, Nov 11, 2026): a festive invitation to the Holiday Menu on the main pages, a few seconds
+// after the page opens. Owner, Nov 11, 2026 (later): shown on every page load and refresh, not once per browser.
+// Never after New Year's Eve.
 (function () {
   'use strict';
-  var KEY = 'mm-holiday-popup-2026';
   // Pacific date as YYYY-MM-DD.
   var today = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Los_Angeles' }).format(new Date());
   if (today > '2026-12-31' || today < '2026-11-01') return;
-  try { if (localStorage.getItem(KEY)) return; } catch (e) { /* storage blocked: still show it once this visit */ }
   var christmas = today <= '2026-12-25';
-
-  function remember() { try { localStorage.setItem(KEY, today); } catch (e) {} }
 
   function build() {
     var wrap = document.createElement('div');
@@ -34,7 +31,6 @@
     var last = document.activeElement;
     var pop = build();
     document.body.appendChild(pop);
-    remember();
     var card = pop.querySelector('.mm-xmas-card');
     var cta = pop.querySelector('.btn.primary');
     function close() {
