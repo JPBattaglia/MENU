@@ -321,10 +321,11 @@ const HYBRID_LOOK = {
   // 5:34 pm after seeing the red and black NinoLogo2024OB icon on his phone: "App icon doesn't look right, try making
   // one with this". nino-icon-logo.png is that file enlarged to 1024 px, unaltered otherwise; icon_bg is a warm
   // near-black; icon_pad / icon_pad_android say how far in the disc sits (Android's stays inside the launcher's
-  // safe circle). The opening clip still shows the red and black logo. In the app the header logo and loader are
+  // safe circle; owner on the first build of it: "put a little more space between the logo and the edges", so the
+  // margin went from 5% to 10% a side). The opening clip still shows the red and black logo. In the app the header logo and loader are
   // unchanged (logo_url).
   nino: { label: "Nino", logo_url: `${MM}/assets/own-apps/nino-app-logo.png`, icon_file: "assets/own-apps/nino-icon-logo.png",
-    icon_bg: "#0d0303", icon_pad: 0.05, icon_pad_android: 0.2,
+    icon_bg: "#0d0303", icon_pad: 0.1, icon_pad_android: 0.22,
     intro_url: `${MM}/assets/own-apps/nino-intro-neon.mp4`, loader_url: `${MM}/assets/own-apps/nino-loader.webp` }
 };
 const hybridLookForBundle = (bundleId) => HYBRID_LOOK[HYBRID_BUNDLES.get(String(bundleId || ""))] || null;
