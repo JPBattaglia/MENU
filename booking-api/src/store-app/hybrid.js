@@ -316,7 +316,9 @@ const HYBRID_LOOK = {
   // Icon (owner, Nov 10, 2026: his NinoLogoOrange.png, "enhance this with the orange to match the site and make a new
   // icon"): his blue disc and green lines kept, the red mark and ring recoloured to the site's orange (#ff6a1f, up
   // to gold in the highlights). nino-icon-logo.png is that disc with its rim faded out, so on icon_bg (the disc's own
-  // edge navy) it fills the icon edge to edge; icon_pad / icon_pad_android say how far in it sits. In the app the
+  // edge navy) it fills the icon edge to edge. Same day, on seeing it: "too much glow green in the center", so the
+  // green swirl at the very middle is the mark's gold and the glow around it is dimmed; the outer green lines stay.
+  // icon_pad / icon_pad_android say how far in the picture sits. In the app the
   // header logo and loader are unchanged (logo_url).
   nino: { label: "Nino", logo_url: `${MM}/assets/own-apps/nino-app-logo.png`, icon_file: "assets/own-apps/nino-icon-logo.png",
     icon_bg: "#000043", icon_pad: 0.02, icon_pad_android: 0.17,
