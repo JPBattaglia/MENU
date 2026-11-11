@@ -3119,7 +3119,13 @@ body.mm-xmas .cta { background: linear-gradient(120deg, #a5141d, #0d3b2a); borde
 body.mm-xmas .footer { background: #08261b; border-top: 6px solid transparent; border-image: repeating-linear-gradient(-45deg, #d4242f 0 12px, #fff 12px 24px) 6; }
 
 /* Seasonal strip on the home and Menus pages */
-.mm-holiday-strip { position: relative; overflow: hidden; border: 2px solid #f0c75e; background: #0b2e20; box-shadow: 0 0 0 4px rgba(240,199,94,.18), 0 14px 30px rgba(0,0,0,.3); padding-left: 64px; }
+/* Owner, Nov 11, 2026: the popup's red-to-green gradient, inside a red and white candy-cane border (two backgrounds,
+   so the rounded corners stay). */
+.mm-holiday-strip { position: relative; overflow: hidden; border: 6px solid transparent;
+  background: radial-gradient(420px 160px at 30% 0%, rgba(240,199,94,.22), transparent 70%) padding-box,
+    linear-gradient(100deg, #b3161f 0%, #7c0f16 45%, #0d3b2a 100%) padding-box,
+    repeating-linear-gradient(-45deg, #d4242f 0 10px, #ffffff 10px 20px) border-box;
+  box-shadow: 0 14px 30px rgba(0,0,0,.3); padding-left: 64px; }
 .mm-holiday-strip::before { content: "🎄"; position: absolute; left: 18px; top: 50%; transform: translateY(-50%); font-size: 30px; }
 .mm-holiday-strip p { color: #fff; }
 .mm-holiday-strip strong { color: #f6d983; }
@@ -3146,3 +3152,5 @@ body.mm-xmas .footer { background: #08261b; border-top: 6px solid transparent; b
 .mm-xmas-card .mm-xmas-actions { display: flex; flex-direction: column; gap: 10px; align-items: stretch; }
 .mm-xmas-card .mm-xmas-later { background: none; border: 0; box-shadow: none; border-radius: 8px; color: #f6d983; font: inherit; text-decoration: underline; text-underline-offset: 4px; cursor: pointer; padding: 8px; }
 .mm-xmas-card .mm-xmas-close { position: absolute; top: 16px; right: 12px; width: 36px; height: 36px; border-radius: 50%; border: 1px solid rgba(255,255,255,.5); background: rgba(0,0,0,.25); color: #fff; font-size: 22px; line-height: 1; cursor: pointer; }
+/* On the red side of the strip the button is pine green, so it still stands out. */
+.mm-holiday-strip .btn.primary { background: linear-gradient(135deg, #1f7a52, #0d3b2a); color: #fff; border-color: #f0c75e; }
