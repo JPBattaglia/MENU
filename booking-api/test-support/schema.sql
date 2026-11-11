@@ -420,7 +420,10 @@ CREATE TABLE funnel_events (
             'OFFER_VIEW',
             'CTA_CLICK',
             'CHECKOUT_STARTED',
-            'PURCHASE_COMPLETED'
+            'PURCHASE_COMPLETED',
+            'DESIGN_VIEW',
+            'ADD_TO_CART',
+            'CHECKOUT_CLICK'
         )
     ),
     visitor_id TEXT,

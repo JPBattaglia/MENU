@@ -81,3 +81,35 @@ test('the weak step names where a campaign loses people, and stays quiet on too 
   assert.match(weakStep({ visits: 400, checkouts: 3, sales: 1 }), /under 2 in 100/);
   assert.equal(weakStep({ visits: 100, checkouts: 5, sales: 1 }), null);
 });
+
+test('Nino site steps show, per source, how many tabs looked at a design, added to cart and pressed checkout', async () => {
+  const env = { DB: createD1() };
+  const raw = env.DB.raw;
+  const t = '2026-11-25T18:00:00.000Z';
+  let i = 0;
+  const ev = (type, source, medium, campaign, meta = {}) => raw.prepare(`INSERT INTO funnel_events (id, created_at, event_type, source, medium, campaign, metadata_json) VALUES (?, ?, ?, ?, ?, ?, ?)`)
+    .run(`e${++i}`, t, type, source, medium, campaign, JSON.stringify({ site: 'ninobattaglia.com', ...meta }));
+  for (let n = 0; n < 4; n++) ev('SITE_VISIT', 'fb', 'paid', '120249950010250355');
+  ev('SITE_VISIT', 'ig', 'paid', '120249950010250355');
+  ev('DESIGN_VIEW', 'fb', 'paid', '120249950010250355', { design: '455597876', first: true });
+  ev('DESIGN_VIEW', 'fb', 'paid', '120249950010250355', { design: '111', first: false });
+  ev('ADD_TO_CART', 'fb', 'paid', '120249950010250355');
+  ev('SITE_VISIT', 'facebook.com', 'referral', null);
+  ev('SITE_VISIT', 'facebook.com', 'referral', null);
+  ev('DESIGN_VIEW', 'facebook.com', 'referral', null, { design: '455597876', first: true });
+  ev('SITE_VISIT', 'direct', 'none', null);
+  // A Menu-made visit is not a Nino step.
+  raw.prepare(`INSERT INTO funnel_events (id, created_at, event_type, source) VALUES ('m1', ?, 'SITE_VISIT', 'google')`).run(t);
+  const db = new DatabaseSync(':memory:');
+  db.exec(`CREATE TABLE catalog_products (generation TEXT, id TEXT, title TEXT); CREATE TABLE commerce_orders (id TEXT, snapshot_json TEXT, payment_status TEXT, live_mode INTEGER, paid_total_cents INTEGER, paid_at INTEGER, created_at INTEGER)`);
+  db.prepare(`INSERT INTO catalog_products VALUES ('g1', '455597876', 'Skull Wave')`).run();
+  const stmt = (sql, args = []) => ({ bind: (...v) => stmt(sql, v), async all() { return { results: db.prepare(sql).all(...args).map((r) => ({ ...r })) }; } });
+  env.NINO_DB = { prepare: (sql) => stmt(sql) };
+  const r = await weeklyNumbers(env, NOW);
+  const row = (name) => r.rows.find(([k]) => k === name)?.[1] || '';
+  assert.equal(row('Nino: Facebook/Instagram ads'), '5 visits, 1 looked at a design (20%), 1 added to cart (20%), 0 pressed checkout (0%).');
+  assert.equal(row('Nino: facebook.com'), '2 visits, 1 looked at a design (50%), 0 added to cart (0%), 0 pressed checkout (0%).');
+  assert.match(row('Nino: direct'), /^1 visit, 0 looked/);
+  assert.equal(r.rows.findIndex(([k]) => k === 'Nino: google'), -1);
+  assert.equal(row('Nino designs looked at most'), 'Skull Wave (2), design 111 (1).');
+});
