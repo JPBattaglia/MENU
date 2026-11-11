@@ -275,8 +275,8 @@ test("owner's own apps: made once by the tick at no charge, owner keys, no buyer
     assert.equal(cfg.body.logo_file, 'assets/own-apps/nino-icon-logo.png');
     assert.equal(cfg.body.icon_background, '#0d0303');
     assert.match(cfg.body.icon_svg, /<rect width="512" height="512" fill="#0d0303"\/>/);
-    assert.match(cfg.body.icon_svg, /x="25.6" y="25.6"/, 'the disc nearly fills the icon');
-    assert.match(cfg.body.android_foreground_svg, /x="102.4" y="102.4"/, "inside Android's safe zone");
+    assert.match(cfg.body.icon_svg, /x="51.2" y="51.2"/, 'a 10% margin around the disc (owner: a little more space)');
+    assert.match(cfg.body.android_foreground_svg, /x="112.64" y="112.64"/, "inside Android's safe zone");
     assert.equal(cfg.body.config.intro_url, 'https://menu-made.com/assets/own-apps/nino-intro-neon.mp4');
     assert.equal(cfg.body.config.loader_url, 'https://menu-made.com/assets/own-apps/nino-loader.webp');
     assert.ok(cfg.body.icon_svg.includes(cfg.body.logo_placeholder), 'the build swaps the file in for the placeholder');
