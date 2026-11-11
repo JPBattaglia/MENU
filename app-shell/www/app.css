@@ -324,7 +324,22 @@ body.hy-theme-menumade .hy-full { background: #013f45; }
 /* Home's two generator cards read as buttons: accent border, lift, a filled call to action, a pressed state. */
 .hy-duo-card { border: 2px solid var(--hy-accent); box-shadow: 0 8px 20px rgba(0,0,0,.35); cursor: pointer; transition: transform .08s ease, box-shadow .08s ease; -webkit-tap-highlight-color: transparent; }
 .hy-duo-card:active { transform: scale(.97); box-shadow: 0 2px 8px rgba(0,0,0,.35); }
-.hy-duo.hy-solo { grid-template-columns: 1fr; margin-top: 16px; }
+/* Holiday Menu in season (Nov 11, 2026): the banner on Home and the pop-up, in the website's pine green, berry red and gold. */
+.hy-holiday-strip { display: flex; flex-direction: column; align-items: stretch; gap: 10px; margin: 14px 16px 0; padding: 14px 16px; text-align: left; font: inherit; color: #f4efe2; border: 1px solid rgba(226,191,114,.7); border-radius: var(--hy-radius); background: linear-gradient(100deg, #12352a, #0d0d0f); box-shadow: 0 8px 20px rgba(0,0,0,.35); cursor: pointer; -webkit-tap-highlight-color: transparent; }
+.hy-holiday-line { font-size: 16px; line-height: 1.4; }
+.hy-holiday-line strong { color: #e6c36a; }
+.hy-holiday-go { padding: 10px 8px; text-align: center; font-weight: 700; font-size: 15px; border-radius: var(--hy-btn-radius); background: #d4242f; color: #fff; border: 2px solid #e8c97a; }
+.hy-pop { position: fixed; inset: 0; z-index: 60; display: flex; align-items: center; justify-content: center; padding: 20px; background: rgba(0,0,0,.6); }
+.hy-pop-card { position: relative; width: 100%; max-width: 420px; max-height: 88vh; overflow: auto; padding: 26px 20px 18px; text-align: center; color: #f4efe2; border: 2px solid #e8c97a; border-radius: 22px; background: radial-gradient(420px 260px at 15% 0%, rgba(212,36,47,.3), transparent 65%), linear-gradient(180deg, #14513a, #08261b); box-shadow: 0 24px 60px rgba(0,0,0,.6); }
+.hy-pop-card h2 { font-family: var(--hy-display); font-size: 26px; line-height: 1.15; margin: 4px 0 10px; color: #fff; }
+.hy-pop-card p { margin: 0 0 12px; font-size: 16px; line-height: 1.45; }
+.hy-pop-icons { font-size: 34px; letter-spacing: 6px; }
+.hy-pop-kicker { text-transform: uppercase; letter-spacing: .12em; font-weight: 800; font-size: 13px !important; color: #f0c75e; margin-top: 8px !important; }
+.hy-pop-price { font-family: var(--hy-display); font-size: 40px; font-weight: 800; color: #f0c75e; margin: 4px 0 16px; }
+.hy-pop-price small { display: block; font-family: inherit; font-size: 14px; font-weight: 600; color: #f1ead8; margin-top: 2px; }
+.hy-pop-card .hy-btn-big { width: 100%; margin: 0; background: #d4242f; color: #fff; border-color: #e8c97a; }
+.hy-pop-card .hy-link { margin-top: 12px; color: #f6d983; }
+.hy-pop-close { position: absolute; top: 6px; right: 8px; width: 44px; height: 44px; font-size: 28px; line-height: 1; border: 0; background: transparent; color: #f4efe2; }
 .hy-toggle.hy-toggle-in { margin: 0 0 12px; }
 .hy-duo-top { display: flex; align-items: center; justify-content: space-between; gap: 8px; align-self: stretch; }
 .hy-duo-top .hy-pill { margin: 0; padding: 4px 10px; font-size: 12px; white-space: nowrap; }
