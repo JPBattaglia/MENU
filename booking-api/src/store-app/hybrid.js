@@ -311,8 +311,11 @@ const HYBRID_LOOK = {
   // icon_file: the gear brightened for the icon only (owner, Nov 10, 2026, after the darker background: "the logo
   // needs to be brighter"); made from MENU=.png (brightness 1.6, contrast 1.05, colour 1.15). In the app the gear is unchanged.
   menumade: { logo_url: `${MM}/MENU%3D.png`, label: "M\u039eNU", icon_bg: "#012a30", icon_file: "assets/own-apps/menumade-icon-logo.png" },
-  // Owner, Nov 8: the logo animation plays once as the app opens (clip #4, NinoLogoAnimation, no sound); the ring of
-  // fire N (clip #6, NinoGif1, background removed) shows whenever something is loading.
+  // Owner, Nov 8: the logo animation plays once as the app opens (no sound); the ring of fire N (clip #6, NinoGif1,
+  // background removed) shows whenever something is loading. Nov 10, 2026: "Replace splash with this one", his
+  // Neon_Light_Rays_Intro_720p.mp4 (the red and black logo lighting up, 5 seconds, upright 720 x 1280), re-encoded
+  // without its sound track. It has a new file name so a phone never plays a remembered copy of the old clip in the
+  // new upright layout; nino-intro.mp4 holds the same new clip, so builds from before this play it too.
   // Icon (owner, Nov 10, 2026, after trying three other drawings that afternoon: NinoLogoOrange in the site's
   // orange, then NinoLogoRevision_3 gold on maroon, "too thin"): NinoLogo2024OB_1.png (red ring, black band, red
   // disc, black N) with "Make one with this", sent beside NinoCurrent_Logo.png, the same logo on a dark background.
@@ -321,7 +324,7 @@ const HYBRID_LOOK = {
   // In the app the header logo and loader are unchanged (logo_url).
   nino: { label: "Nino", logo_url: `${MM}/assets/own-apps/nino-app-logo.png`, icon_file: "assets/own-apps/nino-icon-logo.png",
     icon_bg: "#121718", icon_pad: 0.04, icon_pad_android: 0.2,
-    intro_url: `${MM}/assets/own-apps/nino-intro.mp4`, loader_url: `${MM}/assets/own-apps/nino-loader.webp` }
+    intro_url: `${MM}/assets/own-apps/nino-intro-neon.mp4`, loader_url: `${MM}/assets/own-apps/nino-loader.webp` }
 };
 const hybridLookForBundle = (bundleId) => HYBRID_LOOK[HYBRID_BUNDLES.get(String(bundleId || ""))] || null;
 const hybridUrlForBundle = (bundleId) => hybridUrl(HYBRID_BUNDLES.get(String(bundleId || "")) || "");

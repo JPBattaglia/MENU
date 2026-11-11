@@ -1144,7 +1144,7 @@
     return box;
   }
 
-  // The opening clip (owner, Nov 8: Nino's logo animation), once per app start, no sound, with Skip. If it can't start
+  // The opening clip (owner, Nov 8: Nino's logo animation; Nov 10: his upright neon one), once per app start, no sound, with Skip. If it can't start
   // within a few seconds (no connection, the phone refuses autoplay) the app just goes on.
   function playIntro(done) {
     if (!/^https:\/\//.test(cfg.intro_url || "")) { done(); return; }

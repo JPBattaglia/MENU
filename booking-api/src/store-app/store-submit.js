@@ -23,6 +23,7 @@ const REJECTED_STATES = new Set(["REJECTED", "METADATA_REJECTED", "INVALID_BINAR
 // A version Apple has not started reviewing yet: approving a newer build takes it back out of the queue first.
 const WAITING_STATES = new Set(["WAITING_FOR_REVIEW"]);
 const BEING_REVIEWED = new Set(["IN_REVIEW", "PENDING_APPLE_RELEASE"]);
+const STILL_WORKING = /being processed|try again later/i;
 const WITHDRAW_CHECKS = 10;
 const WITHDRAW_PAUSE_MS = 6000;
 const WHATS_NEW = "Updated for the latest iPhone software, with performance and reliability improvements.";
@@ -237,6 +238,9 @@ async function submitApple({ creds, bundleId, listing, images, contact, reviewNo
         await asc("PATCH", `/reviewSubmissions/${sentBack.id}`, { data: { type: "reviewSubmissions", id: sentBack.id, attributes: { submitted: true } } }, "resubmit");
         return { ok: true, appId: app.id, versionId: version.id, build: buildVersion || null, resubmitted: true };
       } catch (error) {
+        // "Asset is being processed" / "try again later" (Nov 10, 2026, minutes after new screenshots went up) is
+        // Apple still working, not Apple refusing: the tick comes back; by hand only if it never clears.
+        if (STILL_WORKING.test(String(error.message || ""))) return { ok: false, retry: true, step: "resubmit", appId: app.id, versionId: version.id, build: buildVersion || null, message: "Apple is still processing the new pictures; trying again in a few minutes." };
         return { ok: true, appId: app.id, versionId: version.id, build: buildVersion || null, resubmit_by_hand: true, apple_said: String(error.message || error).slice(0, 300) };
       }
     }
@@ -250,7 +254,12 @@ async function submitApple({ creds, bundleId, listing, images, contact, reviewNo
     if (!included) {
       await asc("POST", "/reviewSubmissionItems", { data: { type: "reviewSubmissionItems", relationships: { reviewSubmission: { data: { type: "reviewSubmissions", id: submission.id } }, appStoreVersion: { data: { type: "appStoreVersions", id: version.id } } } } }, "submit version");
     }
-    await asc("PATCH", `/reviewSubmissions/${submission.id}`, { data: { type: "reviewSubmissions", id: submission.id, attributes: { submitted: true } } }, "submit");
+    try {
+      await asc("PATCH", `/reviewSubmissions/${submission.id}`, { data: { type: "reviewSubmissions", id: submission.id, attributes: { submitted: true } } }, "submit");
+    } catch (error) {
+      if (STILL_WORKING.test(String(error.message || ""))) return { ok: false, retry: true, step: "submit", message: "Apple is still processing the new pictures; trying again in a few minutes." };
+      throw error;
+    }
     return { ok: true, appId: app.id, versionId: version.id, build: buildVersion || null };
   } catch (error) {
     return { ok: false, step: error.step || "apple", message: String(error.message || error).slice(0, 1000) };

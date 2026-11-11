@@ -427,7 +427,13 @@ async function advanceStoreListings(env, now = Date.now(), deps = {}) {
           await upsertListing(env, storeApp.id, { apple_json: JSON.stringify({ ...before.apple, withdraw_tries: tries }), submit_error: result.apple.message });
           continue;
         }
-        result.apple = { ok: false, step: result.apple.step, message: "Apple didn't take the earlier build out of its review queue within an hour. Remove it from review in App Store Connect (the app, App Review, the submission, Remove), then approve again." };
+        // Out of tries. A sent-back review that Apple never let the API resend goes to the owner's one click; the
+        // rest is reported in Apple's terms.
+        result.apple = result.apple.step === "resubmit"
+          ? { ok: true, appId: result.apple.appId, versionId: result.apple.versionId, build: result.apple.build, resubmit_by_hand: true, apple_said: result.apple.message }
+          : { ok: false, step: result.apple.step, message: result.apple.step === "withdraw"
+            ? "Apple didn't take the earlier build out of its review queue within an hour. Remove it from review in App Store Connect (the app, App Review, the submission, Remove), then approve again."
+            : "Apple kept answering that it is still processing the app's pictures for an hour. Open the version in App Store Connect to see whether a screenshot failed, then approve again." };
         result.google = before.google.ok ? before.google : { ok: true, held: true };
       }
       const errors = [["Apple", result.apple], ["Google", result.google]].filter(([, r]) => !r.ok).map(([who, r]) => `${who} (${r.step}): ${r.message}`);

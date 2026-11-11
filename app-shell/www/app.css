@@ -240,9 +240,10 @@ body.hy-theme-menumade .hy-loader { background: linear-gradient(#013f45, #012f34
 .hy-tile > .hy-badge { position: absolute; top: 14px; left: 14px; margin: 0; box-shadow: 0 2px 8px rgba(0,0,0,.35); }
 
 /* The opening clip (Nino: the logo animation) and the loading animation (Nino: the ring of fire). */
-.hy-intro { position: fixed; inset: 0; z-index: 60; display: flex; align-items: center; justify-content: center; background: #00000d; transition: opacity .45s; }
+/* The opening clip is upright (Nov 10, 2026) and fills the screen; a taller phone trims its sides, never the logo. */
+.hy-intro { position: fixed; inset: 0; z-index: 60; display: flex; align-items: center; justify-content: center; background: #120004; transition: opacity .45s; }
 .hy-intro.is-done { opacity: 0; pointer-events: none; }
-.hy-intro-video { width: 100%; height: 100%; object-fit: contain; background: #00000d; }
+.hy-intro-video { width: 100%; height: 100%; object-fit: cover; background: #120004; }
 .hy-intro-skip { position: absolute; right: 16px; bottom: calc(env(safe-area-inset-bottom) + 24px); min-height: 44px; padding: 8px 18px; border-radius: 999px; border: 1px solid rgba(255,255,255,.45); background: rgba(0,0,0,.45); color: #fff; font: inherit; font-weight: 700; }
 .hy-loader-img.is-animated { width: 168px; height: auto; animation: none; filter: none; }
 .hy-inline-loader { display: flex; justify-content: center; padding: 18px 0; }
