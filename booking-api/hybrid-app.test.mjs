@@ -93,11 +93,11 @@ test('the app shell: configure.mjs writes hybrid_url (and drops site_url), refus
   const files = [join(shell, 'capacitor.config.json'), join(shell, 'www/config.json')];
   const before = files.map((f) => (existsSync(f) ? readFileSync(f, 'utf8') : null));
   try {
-    run({ ...base, hybrid_url: 'https://menu-made.com/api/app-hybrid/nino', intro_url: 'https://menu-made.com/assets/own-apps/nino-intro-neon.mp4', loader_url: 'https://menu-made.com/assets/own-apps/nino-loader.webp' });
+    run({ ...base, hybrid_url: 'https://menu-made.com/api/app-hybrid/nino', intro_url: 'https://menu-made.com/assets/own-apps/nino-intro-gold.mp4', loader_url: 'https://menu-made.com/assets/own-apps/nino-loader.webp' });
     const www = JSON.parse(readFileSync(join(shell, 'www/config.json'), 'utf8'));
     assert.equal(www.hybrid_url, 'https://menu-made.com/api/app-hybrid/nino');
     assert.equal(www.site_url, undefined);
-    assert.equal(www.intro_url, 'https://menu-made.com/assets/own-apps/nino-intro-neon.mp4');
+    assert.equal(www.intro_url, 'https://menu-made.com/assets/own-apps/nino-intro-gold.mp4');
     assert.equal(www.loader_url, 'https://menu-made.com/assets/own-apps/nino-loader.webp');
     run({ ...base, hybrid_url: 'https://menu-made.com/api/app-hybrid/nino', intro_url: 'https://evil.example/x.mp4', loader_url: 'https://menu-made.com/x.svg' });
     const dropped = JSON.parse(readFileSync(join(shell, 'www/config.json'), 'utf8'));

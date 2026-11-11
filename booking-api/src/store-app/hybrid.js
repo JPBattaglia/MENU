@@ -315,7 +315,10 @@ const HYBRID_LOOK = {
   // background removed) shows whenever something is loading. Nov 10, 2026: "Replace splash with this one", his
   // Neon_Light_Rays_Intro_720p.mp4 (the red and black logo lighting up, 5 seconds, upright 720 x 1280), re-encoded
   // without its sound track. It has a new file name so a phone never plays a remembered copy of the old clip in the
-  // new upright layout; nino-intro.mp4 holds the same new clip, so builds from before this play it too.
+  // new upright layout. Same evening, once the icon became the orange and gold logo: "needs the new icon", so the
+  // clip was redrawn frame by frame with that logo in the red and black one's place, uncovered by the clip's own
+  // sweep of light (nino-intro-gold.mp4). nino-intro.mp4 and nino-intro-neon.mp4 hold the same clip, so builds made
+  // before this play it too.
   // Icon (owner, Nov 10, 2026; five drawings tried that afternoon and evening). Current: his second
   // NinoLogoRevision_3 file (orange and gold mark and ring on a deep red disc, transparent corners, 423 px), sent at
   // 5:34 pm after seeing the red and black NinoLogo2024OB icon on his phone: "App icon doesn't look right, try making
@@ -326,7 +329,7 @@ const HYBRID_LOOK = {
   // unchanged (logo_url).
   nino: { label: "Nino", logo_url: `${MM}/assets/own-apps/nino-app-logo.png`, icon_file: "assets/own-apps/nino-icon-logo.png",
     icon_bg: "#0d0303", icon_pad: 0.1, icon_pad_android: 0.22,
-    intro_url: `${MM}/assets/own-apps/nino-intro-neon.mp4`, loader_url: `${MM}/assets/own-apps/nino-loader.webp` }
+    intro_url: `${MM}/assets/own-apps/nino-intro-gold.mp4`, loader_url: `${MM}/assets/own-apps/nino-loader.webp` }
 };
 const hybridLookForBundle = (bundleId) => HYBRID_LOOK[HYBRID_BUNDLES.get(String(bundleId || ""))] || null;
 const hybridUrlForBundle = (bundleId) => hybridUrl(HYBRID_BUNDLES.get(String(bundleId || "")) || "");
