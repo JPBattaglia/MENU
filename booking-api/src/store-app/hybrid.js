@@ -313,16 +313,14 @@ const HYBRID_LOOK = {
   menumade: { logo_url: `${MM}/MENU%3D.png`, label: "M\u039eNU", icon_bg: "#012a30", icon_file: "assets/own-apps/menumade-icon-logo.png" },
   // Owner, Nov 8: the logo animation plays once as the app opens (clip #4, NinoLogoAnimation, no sound); the ring of
   // fire N (clip #6, NinoGif1, background removed) shows whenever something is loading.
-  // Icon (owner, Nov 10, 2026). First his NinoLogoOrange.png in the site's orange (blue disc, green lines), then, the
-  // same afternoon, a different drawing instead: NinoLogoRevision_3 (gold mark and ring on a maroon disc), with
-  // "remove the background and replace it with a dark background and cut it for icon". nino-icon-logo.png is that
-  // disc cut out of its white canvas and enlarged from the 792 px file he sent; icon_bg is the dark behind it, and
-  // icon_pad / icon_pad_android say how far in the disc sits. On seeing the first cut: "looks too thin" (its rim had
-  // been trimmed), so the cut now follows the drawing's real outline and the gold ring is drawn a little bolder
-  // (the inside at 95% of its size, the ring widened inward to meet it). In the app the header logo and loader are unchanged
-  // (logo_url).
+  // Icon (owner, Nov 10, 2026, after trying three other drawings that afternoon: NinoLogoOrange in the site's
+  // orange, then NinoLogoRevision_3 gold on maroon, "too thin"): NinoLogo2024OB_1.png (red ring, black band, red
+  // disc, black N) with "Make one with this", sent beside NinoCurrent_Logo.png, the same logo on a dark background.
+  // nino-icon-logo.png is his 2044 px file at 1024 px; icon_bg is the dark of that second picture (#121718);
+  // icon_pad / icon_pad_android say how far in the disc sits (Android's stays inside the launcher's safe circle).
+  // In the app the header logo and loader are unchanged (logo_url).
   nino: { label: "Nino", logo_url: `${MM}/assets/own-apps/nino-app-logo.png`, icon_file: "assets/own-apps/nino-icon-logo.png",
-    icon_bg: "#12060b", icon_pad: 0.03, icon_pad_android: 0.17,
+    icon_bg: "#121718", icon_pad: 0.04, icon_pad_android: 0.2,
     intro_url: `${MM}/assets/own-apps/nino-intro.mp4`, loader_url: `${MM}/assets/own-apps/nino-loader.webp` }
 };
 const hybridLookForBundle = (bundleId) => HYBRID_LOOK[HYBRID_BUNDLES.get(String(bundleId || ""))] || null;

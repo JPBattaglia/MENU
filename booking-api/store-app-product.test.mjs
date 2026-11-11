@@ -271,12 +271,12 @@ test("owner's own apps: made once by the tick at no charge, owner keys, no buyer
     assert.equal(cfg.body.config.hybrid_url, 'https://menu-made.com/api/app-hybrid/nino');
     // Nino's app icon comes from the repo file (the owner's blue N), and its loading screen spins the same picture.
     assert.equal(cfg.body.config.logo_url, 'https://menu-made.com/assets/own-apps/nino-app-logo.png');
-    // Nov 10, 2026: the icon is the owner's gold-on-maroon disc (NinoLogoRevision_3) on a dark background.
+    // Nov 10, 2026: the icon is the owner's red and black disc (NinoLogo2024OB) on the dark of his current logo.
     assert.equal(cfg.body.logo_file, 'assets/own-apps/nino-icon-logo.png');
-    assert.equal(cfg.body.icon_background, '#12060b');
-    assert.match(cfg.body.icon_svg, /<rect width="512" height="512" fill="#12060b"\/>/);
-    assert.match(cfg.body.icon_svg, /x="15.36" y="15.36"/, 'the disc nearly fills the icon');
-    assert.match(cfg.body.android_foreground_svg, /x="87.04" y="87.04"/, "inside Android's safe zone");
+    assert.equal(cfg.body.icon_background, '#121718');
+    assert.match(cfg.body.icon_svg, /<rect width="512" height="512" fill="#121718"\/>/);
+    assert.match(cfg.body.icon_svg, /x="20.48" y="20.48"/, 'the disc nearly fills the icon');
+    assert.match(cfg.body.android_foreground_svg, /x="102.4" y="102.4"/, "inside Android's safe zone");
     assert.equal(cfg.body.config.intro_url, 'https://menu-made.com/assets/own-apps/nino-intro.mp4');
     assert.equal(cfg.body.config.loader_url, 'https://menu-made.com/assets/own-apps/nino-loader.webp');
     assert.ok(cfg.body.icon_svg.includes(cfg.body.logo_placeholder), 'the build swaps the file in for the placeholder');
