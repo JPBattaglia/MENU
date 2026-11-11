@@ -97,6 +97,52 @@ async function shopSales(env, sinceIso) {
   return new Map(rows.map((r) => [r.campaign, { sales: Number(r.sales), cents: Number(r.cents) }]));
 }
 
+// Nino site steps by source (owner, Nov 10, 2026: "if ~200 people visited and none bought, is it the designs?").
+// ninobattaglia.com/visit-count.js sends each step once per browser tab, with no identifiers: SITE_VISIT, DESIGN_VIEW
+// (each design once; metadata.first marks the tab's first), ADD_TO_CART and CHECKOUT_CLICK, tagged with the ad label
+// or the linking site's name ("direct" when none). So counts here are browser tabs reaching each step.
+const NINO_STEPS = ["SITE_VISIT", "DESIGN_VIEW", "ADD_TO_CART", "CHECKOUT_CLICK"];
+function ninoSourceName(source, medium, campaign) {
+  const known = CAMPAIGNS.find((c) => c.key === campaign);
+  if (known) return known.name;
+  if (/^(fb|ig|facebook|instagram)$/i.test(source || "") && /paid|cpc|ad/i.test(medium || "")) return "Facebook/Instagram ads";
+  if (campaign) return `${source || "other"} (${campaign.length > 24 ? "campaign" : campaign})`;
+  return source || "direct";
+}
+async function ninoSteps(env, sinceIso) {
+  try {
+    const rows = (await env.DB.prepare(`
+        SELECT source, medium, campaign, event_type, COUNT(*) AS n FROM funnel_events
+        WHERE created_at >= ? AND json_extract(metadata_json, '$.site') = 'ninobattaglia.com'
+          AND event_type IN ('SITE_VISIT', 'ADD_TO_CART', 'CHECKOUT_CLICK', 'DESIGN_VIEW')
+          AND (event_type <> 'DESIGN_VIEW' OR json_extract(metadata_json, '$.first') = 1)
+        GROUP BY source, medium, campaign, event_type`).bind(sinceIso).all()).results || [];
+    const bySource = new Map();
+    for (const r of rows) {
+      const name = ninoSourceName(r.source, r.medium, r.campaign);
+      const counts = bySource.get(name) || Object.fromEntries(NINO_STEPS.map((k) => [k, 0]));
+      counts[r.event_type] += Number(r.n);
+      bySource.set(name, counts);
+    }
+    const designs = (await env.DB.prepare(`
+        SELECT json_extract(metadata_json, '$.design') AS design, COUNT(*) AS n FROM funnel_events
+        WHERE created_at >= ? AND event_type = 'DESIGN_VIEW' AND json_extract(metadata_json, '$.site') = 'ninobattaglia.com'
+        GROUP BY design ORDER BY n DESC LIMIT 5`).bind(sinceIso).all()).results || [];
+    return { bySource: [...bySource.entries()].sort((a, b) => b[1].SITE_VISIT - a[1].SITE_VISIT), designs };
+  } catch { return { bySource: [], designs: [] }; }
+}
+async function designTitles(env, ids) {
+  if (!env.NINO_DB || !ids.length) return new Map();
+  try {
+    const rows = (await env.NINO_DB.prepare(`SELECT id, title FROM catalog_products WHERE id IN (${ids.map(() => "?").join(",")}) GROUP BY id`).bind(...ids).all()).results || [];
+    return new Map(rows.map((r) => [String(r.id), r.title]));
+  } catch { return new Map(); }
+}
+function ninoStepLine(c) {
+  const pct = (n) => (c.SITE_VISIT ? ` (${Math.round((n / c.SITE_VISIT) * 100)}%)` : "");
+  return `${c.SITE_VISIT} visit${c.SITE_VISIT === 1 ? "" : "s"}, ${c.DESIGN_VIEW} looked at a design${pct(c.DESIGN_VIEW)}, ${c.ADD_TO_CART} added to cart${pct(c.ADD_TO_CART)}, ${c.CHECKOUT_CLICK} pressed checkout${pct(c.CHECKOUT_CLICK)}.`;
+}
+
 async function outreach(env, sinceIso) {
   const one = async (sql, ...args) => Number((await env.DB.prepare(sql).bind(...args).first())?.n || 0);
   return {
@@ -173,6 +219,15 @@ async function weeklyNumbers(env, now = Date.now()) {
   if (fresh.total) {
     rows.push(["New openings found", `${fresh.total} new San Francisco food & drink business${fresh.total === 1 ? "" : "es"} this week${fresh.total > fresh.rows.length ? ` (newest ${fresh.rows.length} below)` : ""}. Those with an email go into the prospect emails first.`]);
     for (const r of fresh.rows) rows.push([r.name, openingLine(r)]);
+  }
+  const steps = await ninoSteps(env, weekIso);
+  if (steps.bySource.length) {
+    rows.push(["Nino site, where shoppers stop", "This week, by where the visit came from. Each step counts once per browser tab."]);
+    for (const [name, c] of steps.bySource.slice(0, 8)) rows.push([`Nino: ${name}`, ninoStepLine(c)]);
+    if (steps.designs.length) {
+      const titles = await designTitles(env, steps.designs.map((d) => String(d.design)));
+      rows.push(["Nino designs looked at most", steps.designs.map((d) => `${titles.get(String(d.design)) || `design ${d.design}`} (${d.n})`).join(", ") + "."]);
+    }
   }
   if (shopWeek) {
     const other = [...shopWeek.entries()].filter(([k]) => !CAMPAIGNS.some((c) => c.key === k)).reduce((n, [, v]) => n + v.sales, 0);

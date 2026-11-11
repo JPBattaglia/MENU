@@ -26,6 +26,10 @@ async function recordFunnelEvent(request, env) {
     }
     const allowedEvents = /* @__PURE__ */ new Set([
       "SITE_VISIT",
+      // Nino site shopping steps (ninobattaglia.com/visit-count.js, Nov 10, 2026), read by the Friday numbers.
+      "DESIGN_VIEW",
+      "ADD_TO_CART",
+      "CHECKOUT_CLICK",
       "OFFER_VIEW",
       "CTA_CLICK",
       "CHECKOUT_STARTED",
