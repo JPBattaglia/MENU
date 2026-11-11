@@ -3122,8 +3122,8 @@ body.mm-xmas .footer { background: #08261b; border-top: 6px solid transparent; b
 /* Owner, Nov 11, 2026: the popup's red-to-green gradient, inside a red and white candy-cane border (two backgrounds,
    so the rounded corners stay). */
 .mm-holiday-strip { position: relative; overflow: hidden; border: 6px solid transparent;
-  background: radial-gradient(420px 160px at 30% 0%, rgba(240,199,94,.22), transparent 70%) padding-box,
-    linear-gradient(100deg, #b3161f 0%, #7c0f16 45%, #0d3b2a 100%) padding-box,
+  background: radial-gradient(520px 160px at 50% 0%, rgba(240,199,94,.22), transparent 70%) padding-box,
+    linear-gradient(90deg, #0d3b2a 0%, #7c0f16 30%, #b3161f 50%, #7c0f16 70%, #0d3b2a 100%) padding-box,
     repeating-linear-gradient(-45deg, #d4242f 0 10px, #ffffff 10px 20px) border-box;
   box-shadow: 0 14px 30px rgba(0,0,0,.3); padding-left: 64px; }
 .mm-holiday-strip::before { content: "🎄"; position: absolute; left: 18px; top: 50%; transform: translateY(-50%); font-size: 30px; }
