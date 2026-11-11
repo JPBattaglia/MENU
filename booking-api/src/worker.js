@@ -95,7 +95,7 @@ import { emailMerchTracking, handleMerchCheckout, handleMerchLogo, handleMerchLo
 import { advanceNinoDesignSelfTests } from "./selftest/nino-design-selftest.js";
 import { advanceStaffMerchSelfTests } from "./selftest/staff-merch-selftest.js";
 import { handleOwnerOutputs, runOwnerOutputsLink } from "./admin/outputs.js";
-import { announceNinoDrops, handleHybridContent } from "./store-app/hybrid.js";
+import { announceNinoDrops, handleHybridContent, handleAppStoreLinks } from "./store-app/hybrid.js";
 
 var worker_default = {
   async fetch(request, env, ctx) {
@@ -329,6 +329,8 @@ var worker_default = {
     // Hybrid Mobile Apps (src/store-app/hybrid.js): live content for the owner's two apps' native screens.
     const hybridMatch = url.pathname.match(/^\/api\/app-hybrid\/([a-z]{1,20})$/);
     if (hybridMatch) return handleHybridContent(request, env, hybridMatch[1]);
+    const appLinksMatch = url.pathname.match(/^\/api\/app-links\/([a-z]{1,20})$/);
+    if (appLinksMatch) return handleAppStoreLinks(request, env, appLinksMatch[1]);
     // Private client quote pages (menu-made.com/q/<id>): tick items, check out for exactly that total.
     const clientQuoteMatch = url.pathname.match(/^\/api\/client-quote\/([a-z0-9-]{8,60})(?:\/(checkout))?$/);
     if (clientQuoteMatch && request.method !== "OPTIONS") return handleClientQuote(request, env, clientQuoteMatch[1], clientQuoteMatch[2] || "");

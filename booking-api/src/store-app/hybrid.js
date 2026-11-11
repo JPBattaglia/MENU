@@ -336,3 +336,25 @@ const hybridLookForBundle = (bundleId) => HYBRID_LOOK[HYBRID_BUNDLES.get(String(
 const hybridUrlForBundle = (bundleId) => hybridUrl(HYBRID_BUNDLES.get(String(bundleId || "")) || "");
 
 export { announceNinoDrops, hybridLookForBundle, HYBRID_BUNDLES, HYBRID_KEYS, hybridUrlForBundle, TTL as HYBRID_TTL, handleHybridContent, hybridUrl, menumadeContent, ninoContent };
+
+// Store links for the owner's own apps, for the "Get the app" buttons on menu-made.com and ninobattaglia.com
+// (owner, Nov 10, 2026). A store's link is given only once that store has the app public (store_app_listings:
+// Apple's state live, Google's page public), so the buttons appear by themselves on launch day and never point
+// at a page that isn't there. Public data, cached 10 minutes, CORS "*".
+async function appStoreLinks(env, key) {
+  const bundle = [...HYBRID_BUNDLES].find(([, k]) => k === key)?.[0];
+  if (!bundle || !env.DB) return { ok: true, apple: null, google: null };
+  const row = await env.DB.prepare(`SELECT l.apple_json, l.google_json FROM store_apps a JOIN store_app_listings l ON l.store_app_id = a.id WHERE a.bundle_id = ? AND a.own_app = 1 LIMIT 1`).bind(bundle).first().catch(() => null);
+  const parse = (t) => { try { return JSON.parse(t || "{}") || {}; } catch { return {}; } };
+  const apple = parse(row?.apple_json), google = parse(row?.google_json);
+  return {
+    ok: true,
+    apple: apple.live && /^\d+$/.test(String(apple.appId || "")) ? `https://apps.apple.com/app/id${apple.appId}` : null,
+    google: google.live ? `https://play.google.com/store/apps/details?id=${bundle}` : null
+  };
+}
+export async function handleAppStoreLinks(request, env, key) {
+  const headers = { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*", "Cache-Control": "public, max-age=600" };
+  if (request.method === "OPTIONS") return new Response(null, { status: 204, headers: { ...headers, "Access-Control-Allow-Methods": "GET" } });
+  return new Response(JSON.stringify(await appStoreLinks(env, key)), { headers });
+}
