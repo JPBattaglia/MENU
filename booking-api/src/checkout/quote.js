@@ -1,5 +1,6 @@
 import { resolveActiveOffer } from "./catalog.js";
 import { productForCode, quoteMenuDesign } from "../producers/nino-design/products.js";
+import { HOLIDAY_PRICING, OCCASION_NAMES, holidayEndsOn, holidayOnSale, holidayPriceCents, isOccasion } from "./holiday.js";
 
 // Keep the quoted menu scope with its existing offer/order item, so prepaid
 // hosting and extra pages do not create unrelated fulfillment projects.
@@ -51,6 +52,7 @@ function appendCheckoutLineItem(params, item, index, environment, { autoTax = fa
       ? `${item.offerName} — ${item.menuPackage.menu_pages} menu pages + first-year hosting`
       : item.ninoDesign ? `Nino Battaglia design: ${item.offerName}${item.extraMetadata?.design_pages ? ` (${item.extraMetadata.design_pages} pages)` : ""}`
       : item.domain ? `${item.offerName} + ${item.domain.name} domain (first year)`
+      : item.holiday ? `${item.offerName}: ${OCCASION_NAMES[item.holiday.occasion]}`
       : item.offerName);
     if (item.taxCode) {
       params.append(`${prefix}[price_data][tax_behavior]`, "exclusive");
@@ -65,6 +67,9 @@ function appendCheckoutLineItem(params, item, index, environment, { autoTax = fa
     if (item.domain) {
       params.append(`${prefix}[price_data][product_data][description]`, `Includes ${item.domain.name} for one year (${(item.domain.price_cents / 100).toFixed(2)} USD), registered in your name and managed by Menu-made. We email you before it renews (${(item.domain.renewal_cents / 100).toFixed(2)} USD a year); nothing renews without your OK.`);
     }
+    if (item.holiday) {
+      params.append(`${prefix}[price_data][product_data][description]`, `Your ${OCCASION_NAMES[item.holiday.occasion]} menu online with its own link and QR code, a print-ready PDF and a table tent, live through ${item.holiday.ends_on}. Up to ${HOLIDAY_PRICING.includedPages} pages; $20 per extra page. You approve it before it goes live. No hosting fee; nothing renews.`);
+    }
     if (item.menuPackage) {
       params.append(`${prefix}[price_data][product_data][description]`, "$129 setup includes up to 3 pages and two revisions; $20 per additional page; $15 first-year hosting. After the first year, hosting continues with Menu Care; without it the menu goes offline 30 days later.");
     }
@@ -74,9 +79,22 @@ function appendCheckoutLineItem(params, item, index, environment, { autoTax = fa
   params.append(`${prefix}[quantity]`, String(item.quantity));
 }
 
-async function normalizeCheckoutItems(itemsInput, env, checkoutOptions = {}, { requirePublic = true } = {}) {
+// Holiday Menu: the holiday preview it was made from (its occasion and chosen design), on sale until the holiday,
+// $30 instead of $59 when the same email already bought one this season.
+async function holidayItem(env, checkoutOptions, now = Date.now()) {
+  const token = String(checkoutOptions.holiday_preview || "").toLowerCase();
+  if (!/^[a-f0-9]{36}$/.test(token) || !env.DB) throw new CheckoutValidationError("Make your holiday menu in the holiday menu generator first: menu-made.com/holiday-menu");
+  const row = await env.DB.prepare(`SELECT status, occasion, design FROM menu_previews WHERE token = ?`).bind(token).first();
+  if (row?.status !== "READY" || !isOccasion(row.occasion)) throw new CheckoutValidationError("That holiday menu preview wasn't found. Make a new one at menu-made.com/holiday-menu");
+  if (!holidayOnSale(row.occasion, now)) throw new CheckoutValidationError(`${OCCASION_NAMES[row.occasion]} menus are finished for this year.`, 410);
+  const email = checkoutOptions?.customer?.email || checkoutOptions?.email;
+  return { occasion: row.occasion, ends_on: holidayEndsOn(row.occasion, now), preview: token, design: row.design || null, pages: HOLIDAY_PRICING.includedPages, price_cents: await holidayPriceCents(env, email, now) };
+}
+
+async function normalizeCheckoutItems(itemsInput, env, checkoutOptions = {}, { requirePublic = true, now = Date.now() } = {}) {
   const normalizedItems = [];
   let menuSelected = false;
+  let holidaySelected = false;
   for (const item of itemsInput) {
     const identifier = item?.offer_id || item?.code || item?.slug || item?.key;
     if (!identifier) {
@@ -94,6 +112,14 @@ async function normalizeCheckoutItems(itemsInput, env, checkoutOptions = {}, { r
       Number(item.qty)
     ) : 1;
     const isMenu = String(catalogRow.offer_code).toUpperCase() === "ONLINE_MENU_QR";
+    let holiday = null;
+    if (String(catalogRow.offer_code).toUpperCase() === "HOLIDAY_MENU") {
+      if (holidaySelected || (item.qty !== undefined && item.qty !== 1)) throw new CheckoutValidationError("One holiday menu per order. Each holiday menu has its own checkout.");
+      holidaySelected = true;
+      if (Number(catalogRow.price_cents) !== HOLIDAY_PRICING.firstCents) throw new CheckoutValidationError("Holiday Menu pricing is being updated. Please try again later.", 503);
+      holiday = await holidayItem(env, checkoutOptions, now);
+      quantity = 1;
+    }
     let menuPackage;
     // Nino design services (stage 10) are charged with inline prices on the menu-made account (no Stripe price IDs).
     const ninoDesign = productForCode(catalogRow.offer_code);
@@ -131,7 +157,7 @@ async function normalizeCheckoutItems(itemsInput, env, checkoutOptions = {}, { r
       offerCode: catalogRow.offer_code,
       offerName: catalogRow.offer_name,
       offerVersionId: catalogRow.offer_version_id,
-      priceCents: menuPackage ? menuPackage.total_cents : ninoPrice ?? Number(
+      priceCents: menuPackage ? menuPackage.total_cents : holiday ? holiday.price_cents : ninoPrice ?? Number(
         catalogRow.price_cents
       ),
       currency: String(
@@ -140,8 +166,12 @@ async function normalizeCheckoutItems(itemsInput, env, checkoutOptions = {}, { r
       stripePriceId: catalogRow.stripe_price_id || null,
       stripeProductId: catalogRow.stripe_product_id || null,
       ...(menuPackage ? { menuPackage } : {}),
+      ...(holiday ? { inlinePrice: true, holiday, extraMetadata: { holiday_menu: holiday } } : {}),
       ...(ninoDesign ? { inlinePrice: true, ninoDesign: true, taxCode: ninoDesign.taxCode || null, extraMetadata: { nino_design: true, ...(ninoMetadata || {}) } } : {})
     });
+  }
+  if (holidaySelected && menuSelected) {
+    throw new CheckoutValidationError("Check out the Holiday Menu on its own: each menu needs its own file.");
   }
   if (!menuSelected && checkoutOptions.menu_pages !== undefined) {
     throw new CheckoutValidationError("A menu page count requires an Online Menu + QR package.");

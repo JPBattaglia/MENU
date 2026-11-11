@@ -83,3 +83,15 @@ test('the Menu + QR self-test waits for the webhook to attach the menu, and fail
   assert.equal(f.row(`SELECT status FROM projects WHERE id = 'proj'`).status, 'CANCELLED');
   assert.equal(f.row(`SELECT status FROM orders WHERE id = 'order'`).status, 'CANCELLED');
 });
+
+test('a paid Holiday Menu becomes a menu project with its holiday and its own address', async () => {
+  const f = setup();
+  f.sql(`UPDATE offers SET code = 'HOLIDAY_MENU', name = 'Holiday Menu' WHERE id = 'offer'`);
+  f.sql(`UPDATE order_items SET metadata_json = ? WHERE id = 'item'`, JSON.stringify({ offer_code: 'HOLIDAY_MENU', environment: 'live',
+    holiday_menu: { occasion: 'newyear', ends_on: '2027-01-01', preview: 'a'.repeat(36), design: 'midnight', pages: 3, price_cents: 5900 } }));
+  await withFetch(() => handleCheckoutCompleted(event, f.env));
+  const project = f.row(`SELECT id, metadata_json FROM projects WHERE order_id = 'order'`);
+  assert.deepEqual(JSON.parse(project.metadata_json).holiday_menu, { occasion: 'newyear', ends_on: '2027-01-01', pages: 3, preview: 'a'.repeat(36) });
+  assert.match(f.row(`SELECT value_text FROM project_inputs WHERE project_id = ? AND input_key = 'qr_destination'`, project.id).value_text, /\/api\/menu\/proof-cafe-new-years-eve-[0-9a-f]{8}$/);
+  assert.equal(f.row(`SELECT status FROM project_inputs WHERE project_id = ? AND input_key = 'menu_file'`, project.id).status, 'VALID', 'the preview file is attached');
+});

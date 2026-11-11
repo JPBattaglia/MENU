@@ -33,6 +33,7 @@ async function loadLiveMenu(env, businessId) {
       JOIN deliverables d ON d.project_id = p.id
       JOIN assets a ON a.id = d.asset_id
       WHERE p.business_id = ? AND d.deliverable_type = 'MENU_DRAFT' AND d.status = 'FINAL' AND d.customer_visible = 1
+        AND json_extract(COALESCE(p.metadata_json, '{}'), '$.holiday_menu') IS NULL   -- a Holiday Menu is not the regular menu
       ORDER BY d.delivered_at DESC, d.version DESC
       LIMIT 1
     `).bind(businessId).first();

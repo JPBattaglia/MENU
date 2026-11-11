@@ -1,13 +1,16 @@
 import { PUBLIC_BASE_URL } from "../lib/config.js";
 import { nowIso, parseJsonOrNull } from "../lib/http.js";
 
-function hostedMenuSlug(projectId, businessName) {
+// A Holiday Menu (occasion "christmas" or "newyear") gets its own address beside the regular one, e.g.
+// harbor-kitchen-christmas-1a2b3c4d.
+const OCCASION_SLUGS = { christmas: "christmas", newyear: "new-years-eve" };
+function hostedMenuSlug(projectId, businessName, occasion = null) {
   const base = String(businessName || "menu").toLowerCase().normalize("NFKD").replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 40) || "menu";
-  return `${base}-${String(projectId).replace(/-/g, "").slice(0, 8)}`;
+  return `${base}${OCCASION_SLUGS[occasion] ? `-${OCCASION_SLUGS[occasion]}` : ""}-${String(projectId).replace(/-/g, "").slice(0, 8)}`;
 }
 
-function hostedMenuUrl(projectId, businessName) {
-  return `${PUBLIC_BASE_URL}/api/menu/${hostedMenuSlug(projectId, businessName)}`;
+function hostedMenuUrl(projectId, businessName, occasion = null) {
+  return `${PUBLIC_BASE_URL}/api/menu/${hostedMenuSlug(projectId, businessName, occasion)}`;
 }
 
 async function attachCheckoutMenuDocument(projectId, orderId, env) {
@@ -51,7 +54,7 @@ async function attachCheckoutMenuDocument(projectId, orderId, env) {
   return Number(updated.meta?.changes || 0) > 0;
 }
 
-async function createMenuQrInputs(projectId, order, timestamp, env) {
+async function createMenuQrInputs(projectId, order, timestamp, env, { occasion = null } = {}) {
   const business = await env.DB.prepare(`
         SELECT name
         FROM businesses
@@ -110,7 +113,7 @@ async function createMenuQrInputs(projectId, order, timestamp, env) {
       key: "qr_destination",
       type: "URL",
       required: 1,
-      value: hostedMenuUrl(projectId, business?.name),
+      value: hostedMenuUrl(projectId, business?.name, occasion),
       status: "VALID"
     },
     {

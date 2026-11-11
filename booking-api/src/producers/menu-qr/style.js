@@ -21,14 +21,17 @@ const FONTS = {
   chalk: '"Chalkboard SE", Chalkduster, "Marker Felt", "Comic Sans MS", "Comic Neue", "Segoe Print", cursive'
 };
 const CASES = { upper: "uppercase", title: "capitalize", "as-printed": "none" };
-const DIVIDERS = ["line", "double", "dotted", "ornament", "none"];
+const DIVIDERS = ["line", "double", "dotted", "ornament", "star", "none"];
 const LAYOUTS = ["stacked", "inline", "cards", "grid", "centered", "board", "badge"];
 // Structure (menu generator designs, Nov 7, 2026: "all the menus look too similar"). CSS only, over the same page, so
 // every design keeps the markup Menu Care edits. The reader never sets these: a customer's own menu keeps the defaults.
 const HEADERS = ["plain", "band", "arch", "hero", "frame", "split", "ticket", "minimal"];
 const NAVS = ["pills", "tabs", "links", "chips", "bar"];
 const SECTIONS = ["rule", "banner", "label", "fill", "side", "numbered", "short"];
-const TEXTURES = ["none", "dots", "lines", "chalk", "grid"];
+const TEXTURES = ["none", "dots", "lines", "chalk", "grid", "snow", "stars", "bubbles", "confetti"];
+// Holiday decorations (Holiday Menu, owner, Nov 10, 2026): drawn in CSS and inline SVG data (the hosted menu's security
+// policy allows data: images, nothing from outside), in fixed holiday colours.
+const DECOS = ["none", "holly", "candycane", "baubles", "fireworks", "garland"];
 
 const hex = (value) => {
   const v = String(value || "").trim().toLowerCase();
@@ -91,6 +94,7 @@ function normalizeStyle(raw) {
     texture: pick(raw.texture, TEXTURES, "none"),
     // Page frame: "line" (a thin double rule) or "chalk" (a wooden chalkboard frame). true = "line" (pages from before).
     frame: raw.frame === true || raw.frame === "line" ? "line" : raw.frame === "chalk" ? "chalk" : "none",
+    deco: pick(raw.deco, DECOS, "none"),
     dark
   };
 }
@@ -102,10 +106,11 @@ function styleCss(s) {
     double: `border-bottom: 3px double var(--accent); padding-bottom: 10px;`,
     dotted: `border-bottom: 2px dotted var(--accent); padding-bottom: 10px;`,
     ornament: `border-bottom: 0; padding-bottom: 0;`,
+    star: `border-bottom: 0; padding-bottom: 0;`,
     none: `border-bottom: 0; padding-bottom: 0;`
   }[s.divider];
-  const ornament = s.divider === "ornament"
-    ? `h2::after { content: "\\2766"; display: block; margin-top: 6px; font-size: .8em; color: var(--accent); letter-spacing: 0; text-transform: none; }`
+  const ornament = s.divider === "ornament" || s.divider === "star"
+    ? `h2::after { content: "${s.divider === "star" ? "\\2726  \\2726  \\2726" : "\\2766"}"; display: block; margin-top: 6px; font-size: .8em; color: var(--accent); letter-spacing: 0; text-transform: none; white-space: pre; }`
     : "";
   return `
   /* The customer's own menu style (see style.js). */
@@ -177,12 +182,36 @@ function structureCss(s) {
     lines: `body { background-image: repeating-linear-gradient(0deg, transparent 0 31px, color-mix(in srgb, var(--accent) 13%, transparent) 31px 32px); }`,
     // Chalk: erased smudges and a fine dust over the slate (no rings: owner, Nov 7, 2026).
     chalk: `body { background-image: radial-gradient(60% 40% at 18% 12%, rgba(255,255,255,.10), transparent 70%), radial-gradient(50% 35% at 85% 45%, rgba(255,255,255,.08), transparent 70%), radial-gradient(55% 30% at 30% 85%, rgba(255,255,255,.07), transparent 70%), radial-gradient(rgba(255,255,255,.06) 1px, transparent 1.5px); background-size: auto, auto, auto, 5px 5px; background-attachment: fixed; }`,
-    grid: `body { background-image: linear-gradient(color-mix(in srgb, var(--accent) 9%, transparent) 1px, transparent 1px), linear-gradient(90deg, color-mix(in srgb, var(--accent) 9%, transparent) 1px, transparent 1px); background-size: 26px 26px; }`
+    grid: `body { background-image: linear-gradient(color-mix(in srgb, var(--accent) 9%, transparent) 1px, transparent 1px), linear-gradient(90deg, color-mix(in srgb, var(--accent) 9%, transparent) 1px, transparent 1px); background-size: 26px 26px; }`,
+    snow: `body { background-image: url("${svg('<svg xmlns="http://www.w3.org/2000/svg" width="140" height="140"><g fill="#fff"><circle cx="12" cy="18" r="2.2" opacity=".55"/><circle cx="70" cy="9" r="1.4" opacity=".45"/><circle cx="118" cy="30" r="2.6" opacity=".5"/><circle cx="40" cy="62" r="1.6" opacity=".4"/><circle cx="96" cy="78" r="2" opacity=".5"/><circle cx="22" cy="110" r="1.3" opacity=".4"/><circle cx="62" cy="126" r="2.4" opacity=".5"/><circle cx="130" cy="118" r="1.5" opacity=".45"/></g></svg>')}"); background-size: 140px 140px; background-attachment: fixed; }`,
+    stars: `body { background-image: url("${svg('<svg xmlns="http://www.w3.org/2000/svg" width="160" height="160"><g fill="#f3d58a"><path d="M20 14l1.6 4.4L26 20l-4.4 1.6L20 26l-1.6-4.4L14 20l4.4-1.6z" opacity=".55"/><path d="M110 40l1 2.8 2.8 1-2.8 1-1 2.8-1-2.8-2.8-1 2.8-1z" opacity=".5"/><path d="M60 96l1.3 3.5 3.5 1.3-3.5 1.3-1.3 3.5-1.3-3.5-3.5-1.3 3.5-1.3z" opacity=".45"/><circle cx="140" cy="120" r="1.3" opacity=".6"/><circle cx="84" cy="22" r="1" opacity=".6"/><circle cx="30" cy="140" r="1.2" opacity=".5"/><circle cx="132" cy="80" r=".9" opacity=".6"/></g></svg>')}"); background-size: 160px 160px; background-attachment: fixed; }`,
+    bubbles: `body { background-image: url("${svg('<svg xmlns="http://www.w3.org/2000/svg" width="150" height="190"><g fill="none" stroke="#c9a65a" stroke-width="1.2"><circle cx="20" cy="170" r="5" opacity=".35"/><circle cx="34" cy="130" r="3" opacity=".3"/><circle cx="26" cy="96" r="2" opacity=".28"/><circle cx="110" cy="60" r="6" opacity=".3"/><circle cx="122" cy="24" r="3.5" opacity=".28"/><circle cx="80" cy="150" r="2.5" opacity=".3"/></g></svg>')}"); background-size: 150px 190px; background-attachment: fixed; }`,
+    confetti: `body { background-image: url("${svg('<svg xmlns="http://www.w3.org/2000/svg" width="180" height="180"><rect x="14" y="20" width="9" height="4" rx="1" fill="#ffd166" transform="rotate(25 18 22)" opacity=".7"/><rect x="120" y="14" width="8" height="4" rx="1" fill="#ef476f" transform="rotate(-30 124 16)" opacity=".7"/><rect x="70" y="70" width="9" height="4" rx="1" fill="#06d6a0" transform="rotate(60 74 72)" opacity=".6"/><rect x="150" y="110" width="8" height="4" rx="1" fill="#ffd166" transform="rotate(-50 154 112)" opacity=".7"/><rect x="30" y="140" width="9" height="4" rx="1" fill="#118ab2" transform="rotate(15 34 142)" opacity=".7"/><circle cx="100" cy="150" r="2.5" fill="#ef476f" opacity=".6"/><circle cx="50" cy="96" r="2" fill="#ffd166" opacity=".6"/><circle cx="160" cy="60" r="2" fill="#06d6a0" opacity=".6"/></svg>')}"); background-size: 180px 180px; background-attachment: fixed; }`
   }[s.texture];
   const frame = s.frame === "chalk"
     ? `body { margin: 0; border: 16px ridge #74492a; min-height: 100vh; box-shadow: inset 0 0 0 3px #3a2414, inset 0 0 70px rgba(0,0,0,.55); } header { background: transparent; } body, h1, h2, .item, .price, .desc, .jump a { text-shadow: 0 0 1px rgba(255,255,255,.35), 0 0 6px rgba(255,255,255,.08); } h2 { border-bottom-style: dashed; } li { border-bottom-style: dashed; } .jump { background: color-mix(in srgb, var(--paper) 93%, transparent); border-bottom: 2px dashed var(--rule); } .jump a { background: transparent; color: var(--primary); border: 2px solid var(--accent); border-radius: 999px 820px 900px 760px / 760px 900px 820px 999px; } footer { color: var(--muted); }`
     : s.frame === "line" ? `main { margin: 22px max(14px, calc((100% - 720px) / 2)); padding: 10px 22px 40px; border: 1px solid var(--accent); outline: 1px solid var(--accent); outline-offset: 5px; background: var(--paper); }` : "";
-  return [header, nav, section, items, texture, frame].filter(Boolean).join("\n  ");
+  return [header, nav, section, items, texture, frame, decoCss(s.deco)].filter(Boolean).join("\n  ");
+}
+
+const svg = (markup) => `data:image/svg+xml,${encodeURIComponent(markup)}`;
+// Holiday decorations: a strip under the header (holly, garland), striped edges (candy cane), baubles hanging from the
+// top of the header, or bursts at its corners (fireworks).
+function decoCss(deco) {
+  const strip = (markup, h) => `header + .jump, header { position: relative; } main::before { content: ""; display: block; height: ${h}px; margin: 0 0 18px; background: url("${svg(markup)}") repeat-x center / auto ${h}px; }`;
+  return {
+    none: "",
+    holly: strip('<svg xmlns="http://www.w3.org/2000/svg" width="96" height="34"><g transform="translate(48 17)"><path d="M0 0C-8-12-26-12-36-4c8 0 10 6 6 10C-22 2-12 4 0 0z" fill="#1f6b3a"/><path d="M0 0C8-12 26-12 36-4c-8 0-10 6-6 10C22 2 12 4 0 0z" fill="#2a8048"/><circle cx="-4" cy="2" r="4.2" fill="#c8323b"/><circle cx="4" cy="3" r="4.2" fill="#b0252e"/><circle cx="0" cy="-4" r="4.2" fill="#d9434b"/></g></svg>', 34),
+    garland: strip('<svg xmlns="http://www.w3.org/2000/svg" width="80" height="30"><path d="M0 6Q40 30 80 6" fill="none" stroke="#2a6b3f" stroke-width="7" stroke-linecap="round"/><path d="M0 6Q40 30 80 6" fill="none" stroke="#3f8a55" stroke-width="2" stroke-dasharray="2 5"/><circle cx="40" cy="18" r="4.5" fill="#e2bf72"/><circle cx="18" cy="13" r="3" fill="#c8323b"/><circle cx="62" cy="13" r="3" fill="#c8323b"/></svg>', 30),
+    candycane: `header { border-top: 12px solid #c62828; border-bottom: 12px solid #c62828; border-image: repeating-linear-gradient(45deg, #c62828 0 10px, #ffffff 10px 20px, #1f6b3a 20px 30px, #ffffff 30px 40px) 12; }`,
+    baubles: `header { padding-top: 92px !important; background-image: url("${svg('<svg xmlns="http://www.w3.org/2000/svg" width="210" height="84"><g stroke="#d8c38f" stroke-width="1.2"><line x1="30" y1="0" x2="30" y2="40"/><line x1="105" y1="0" x2="105" y2="62"/><line x1="180" y1="0" x2="180" y2="30"/></g><circle cx="30" cy="50" r="11" fill="#c8323b"/><rect x="26" y="37" width="8" height="4" fill="#d8c38f"/><circle cx="105" cy="72" r="11" fill="#e2bf72"/><rect x="101" y="59" width="8" height="4" fill="#d8c38f"/><circle cx="180" cy="40" r="11" fill="#2e7d4f"/><rect x="176" y="27" width="8" height="4" fill="#d8c38f"/><circle cx="26" cy="46" r="3" fill="#fff" opacity=".45"/><circle cx="101" cy="68" r="3" fill="#fff" opacity=".45"/><circle cx="176" cy="36" r="3" fill="#fff" opacity=".45"/></svg>')}"); background-repeat: repeat-x; background-position: center top; background-size: auto 84px; }`,
+    fireworks: (() => {
+      const burst = (c) => `<g stroke="${c}" stroke-width="2.2" stroke-linecap="round">${Array.from({ length: 12 }, (_, i) => { const a = (i * Math.PI) / 6; return `<line x1="${(50 + 12 * Math.cos(a)).toFixed(1)}" y1="${(50 + 12 * Math.sin(a)).toFixed(1)}" x2="${(50 + 40 * Math.cos(a)).toFixed(1)}" y2="${(50 + 40 * Math.sin(a)).toFixed(1)}"/>`; }).join("")}</g><g fill="${c}">${Array.from({ length: 12 }, (_, i) => { const a = (i * Math.PI) / 6 + Math.PI / 12; return `<circle cx="${(50 + 30 * Math.cos(a)).toFixed(1)}" cy="${(50 + 30 * Math.sin(a)).toFixed(1)}" r="1.6"/>`; }).join("")}</g>`;
+      const left = svg(`<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100">${burst("#e2bf72")}</svg>`);
+      const right = svg(`<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100">${burst("#f2e3b8")}</svg>`);
+      return `header { padding-top: 104px !important; background-image: url("${left}"), url("${right}"); background-repeat: no-repeat; background-position: calc(50% - 64px) 10px, calc(50% + 70px) 34px; background-size: 84px, 60px; }`;
+    })()
+  }[deco] || "";
 }
 
 function styleMeta(s) {
@@ -198,7 +227,7 @@ function toStyle(value) {
     paper: value.paper, text: value.text, heading: value.heading, item: value.item, price: value.price, accent: value.accent,
     title_font: value.titleFont, heading_font: value.headingFont, body_font: value.bodyFont, heading_case: value.headingCase,
     item_case: value.itemCase, heading_align: value.align, divider: value.divider, item_layout: value.layout, header: value.header,
-    nav: value.nav, section: value.section, texture: value.texture, frame: value.frame
+    nav: value.nav, section: value.section, texture: value.texture, frame: value.frame, deco: value.deco
   });
 }
 

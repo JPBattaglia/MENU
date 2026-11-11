@@ -54,6 +54,7 @@ function cartLines(items) {
       return [item.offer_name, `${money(meta.recurring_amount_cents ?? item.unit_price_cents)}/${per}`];
     }
     if (meta.menu_package) return [item.offer_name, `${money(item.line_total_cents)} (${meta.menu_package.menu_pages} menu pages, first-year hosting)`];
+    if (meta.holiday_menu) return [`${item.offer_name} (${meta.holiday_menu.occasion === "christmas" ? "Christmas" : "New Year's Eve"})`, money(item.line_total_cents)];
     return [item.offer_name, money(item.line_total_cents)];
   });
 }
@@ -72,6 +73,7 @@ function cartInputFromItems(items) {
   let menuPages;
   let designPages;
   let returnTo;
+  let holidayPreview;
   for (const item of items) {
     const meta = parseJsonOrNull(item.metadata_json) || {};
     if (meta.billing === "RECURRING") {
@@ -83,9 +85,10 @@ function cartInputFromItems(items) {
     if (meta.menu_package) menuPages = Number(meta.menu_package.menu_pages);
     if (meta.design_pages) designPages = Number(meta.design_pages);
     if (meta.return_to === "nino") returnTo = "nino";
+    if (meta.holiday_menu?.preview) holidayPreview = meta.holiday_menu.preview;
     inputs.push({ key: item.offer_code, qty: Number(item.quantity || 1) });
   }
-  return { items: inputs, interval, ...(menuPages ? { menu_pages: menuPages } : {}), ...(designPages ? { design_pages: designPages } : {}), ...(returnTo ? { return_to: returnTo } : {}) };
+  return { items: inputs, interval, ...(menuPages ? { menu_pages: menuPages } : {}), ...(designPages ? { design_pages: designPages } : {}), ...(returnTo ? { return_to: returnTo } : {}), ...(holidayPreview ? { holiday_preview: holidayPreview } : {}) };
 }
 
 async function resumeLink(env, orderId) {
@@ -237,7 +240,8 @@ ${trial ? `<p>${escapeHtml(trial)}</p>` : ""}
     }
   }
   try {
-    const data = { ...cartInputFromItems(items), customer: { business: order.business_name || "" } };
+    // The email decides a Holiday Menu's price ($30 for a second one this season), as at the first checkout.
+    const data = { ...cartInputFromItems(items), customer: { business: order.business_name || "", email: order.email || "" } };
     const cart = await buildSubscriptionCart(data.items, data, env, environment);
     const normalizedItems = await normalizeCheckoutItems(cart.oneTimeInputs, env, data, { requirePublic: environment === "live" });
     cart.validateSetups(normalizedItems);

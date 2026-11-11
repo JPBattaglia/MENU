@@ -22,6 +22,7 @@ const OFFERS = [
   { code: 'GUEST_APP', name: 'Guest App', kind: 'PLAN', on_sale: true, prices: { month: 2900, year: 29000 }, includes: ['GUEST_APP'], requires_setup: 'GUEST_APP_SETUP' },
   { code: 'GUEST_APP_SETUP', name: 'Guest App Setup', kind: 'ONE_TIME', on_sale: true, price_cents: 29900 },
   { code: 'ONLINE_MENU_QR', name: 'Online Menu + QR', kind: 'ONE_TIME', on_sale: true, price_cents: 12900, menu_package: { setup_cents: 12900, hosting_first_year_cents: 1500, included_pages: 3, additional_page_cents: 2000, max_pages: 50 } },
+  { code: 'HOLIDAY_MENU', name: 'Holiday Menu', kind: 'ONE_TIME', on_sale: true, price_cents: 5900 },
   { code: 'WEBSITE_PACKAGE', name: 'Website Package', kind: 'ONE_TIME', on_sale: true, price_cents: 49900 },
   { code: 'SITE_FILES', name: 'Your Website', kind: 'ONE_TIME', on_sale: true, price_cents: 29900 },
   { code: 'GOOGLE_VISIBILITY', name: 'Google Visibility', kind: 'ONE_TIME', on_sale: true, price_cents: 14900 },

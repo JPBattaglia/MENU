@@ -28,6 +28,7 @@ async function hostedMenu(env, businessId) {
       SELECT pi.value_text FROM project_inputs pi
       JOIN projects p ON p.id = pi.project_id
       WHERE p.business_id = ? AND p.workflow_key = 'MENU_QR_V1' AND pi.input_key = 'qr_destination' AND pi.value_text LIKE ?
+        AND json_extract(COALESCE(p.metadata_json, '{}'), '$.holiday_menu') IS NULL
         AND EXISTS (SELECT 1 FROM deliverables d WHERE d.project_id = p.id AND d.deliverable_type = 'MENU_DRAFT' AND d.status = 'FINAL' AND d.customer_visible = 1)
       ORDER BY p.created_at DESC LIMIT 1
     `).bind(businessId, `${publicBaseUrl(env)}/api/menu/%`).first();

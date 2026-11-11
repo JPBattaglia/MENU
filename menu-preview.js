@@ -1,5 +1,7 @@
 // Free Online Menu + QR preview (Nov 4, 2026). Uploads the menu the same way checkout does (stored, no emails), then
 // asks the worker to build the preview. booking-api/src/marketing/public-preview.js holds the limits.
+// The Holiday Menu page (holiday-menu.html, Nov 10, 2026) uses the same form with a Christmas / New Year's Eve choice:
+// its preview shows the holiday designs and "Make it live" goes to the Holiday Menu checkout.
 (() => {
   'use strict';
   const form = document.getElementById('tryForm');
@@ -39,6 +41,7 @@
     const business = $('try_business').value.trim();
     const email = $('try_email').value.trim() || (rep ? 'info@menu-made.com' : '');
     const file = $('try_file').files[0];
+    const occasion = form.querySelector('input[name="occasion"]:checked')?.value || '';
     if (!business) { say('Add your business name.', true); $('try_business').focus(); return; }
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { say('Add an email address we can send the link to.', true); $('try_email').focus(); return; }
     if (!file) { say('Choose your menu file (a PDF or a photo).', true); $('try_file').focus(); return; }
@@ -47,11 +50,11 @@
     say('');
     try {
       window.MenuMadeDocuments.validate(file);
-      const key = [business, email.toLowerCase(), await window.MenuMadeDocuments.fingerprint(file)].join('|');
+      const key = [business, email.toLowerCase(), occasion, await window.MenuMadeDocuments.fingerprint(file)].join('|');
       if (!upload || upload.key !== key) {
         const requestId = crypto.randomUUID();
         await window.MenuMadeDocuments.send({ type: 'inquiry', purpose: 'checkout', service: 'Other project', name: business, business, email,
-          notes: 'Free menu preview', website: $('try_website').value, requestId }, file);
+          notes: occasion ? 'Free holiday menu preview' : 'Free menu preview', website: $('try_website').value, requestId }, file);
         upload = { key, requestId };
       }
       button.textContent = 'Reading your menu…';
@@ -59,7 +62,7 @@
       window.MenuMadeFunnel?.track?.('menu_preview_start');
       const response = await fetch(API + '/api/menu-preview/create', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ request_id: upload.requestId, email, business, tracking: window.MenuMadeFunnel?.tracking?.() || {}, ...(rep ? { rep } : {}) })
+        body: JSON.stringify({ request_id: upload.requestId, email, business, tracking: window.MenuMadeFunnel?.tracking?.() || {}, ...(rep ? { rep } : {}), ...(occasion ? { occasion } : {}) })
       });
       const result = await response.json().catch(() => null);
       if (response.ok && result?.ok && result.url) {

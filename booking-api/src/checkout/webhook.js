@@ -1,7 +1,7 @@
 import { insertFunnelEvent } from "./funnel.js";
 import { verifyStripeSignature } from "./stripe-signature.js";
 import { EXTRAS_WINDOW_MINUTES, addDaysIso } from "../lib/config.js";
-import { jsonResponse, nowIso } from "../lib/http.js";
+import { jsonResponse, nowIso, parseJsonOrNull } from "../lib/http.js";
 import { attachCheckoutMenuDocument, createMenuQrInputs } from "../onboarding/menu-inputs.js";
 import { startWebsiteIntake } from "../producers/website/intake.js";
 import { startGuestAppIntake } from "../producers/guest-app/intake.js";
@@ -417,6 +417,7 @@ async function handleCheckoutCompleted(event, env) {
     const orderItems = await env.DB.prepare(`
           SELECT
             oi.id AS order_item_id,
+            oi.metadata_json AS item_metadata,
             o.category,
             o.default_workflow_key
           FROM order_items oi
@@ -481,12 +482,20 @@ async function handleCheckoutCompleted(event, env) {
         timestamp
       ).run();
       if (item.default_workflow_key === "MENU_QR_V1") {
+        // A Holiday Menu (checkout/holiday.js) is made by the same workflow; the project carries its holiday, which
+        // keeps it apart from the business's regular menu and ends its page after the holiday.
+        const holiday = parseJsonOrNull(item.item_metadata)?.holiday_menu || null;
+        if (holiday?.occasion) {
+          await env.DB.prepare(`UPDATE projects SET metadata_json = json_set(COALESCE(metadata_json, '{}'), '$.holiday_menu', json(?)) WHERE id = ?`)
+            .bind(JSON.stringify({ occasion: holiday.occasion, ends_on: holiday.ends_on, pages: holiday.pages, preview: holiday.preview || null }), projectId).run();
+        }
         // INSERT OR IGNORE per input: creates only the rows a previous attempt did not.
         await createMenuQrInputs(
           projectId,
           order,
           timestamp,
-          env
+          env,
+          { occasion: holiday?.occasion || null }
         );
       }
     }

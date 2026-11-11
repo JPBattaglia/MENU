@@ -1,5 +1,7 @@
 import { publicBaseUrl } from "../lib/config.js";
-import { simplePage } from "../lib/http.js";
+import { parseJsonOrNull, simplePage } from "../lib/http.js";
+import { escapeHtml2 } from "../lib/util.js";
+import { OCCASION_NAMES, holidayEnded } from "../checkout/holiday.js";
 import { verifyLinkToken } from "../lib/links.js";
 import { menuHostingState } from "../producers/menu-qr/hosting-renewal.js";
 import { buildPrintMenuPdf, buildTableTentPdf, buildTriFoldPdf } from "../producers/menu-qr/print-pdf.js";
@@ -42,8 +44,19 @@ async function handleDeliveryDownload(request, env, deliverableId) {
 
 // Finds the live menu page for a hosted slug. Returns { object, row } when it can be shown, or { response } with the
 // page to show instead (offline, coming soon, not found).
-async function loadHostedMenu(env, slug) {
+async function loadHostedMenu(env, slug, { now = Date.now() } = {}) {
   const hostedUrl = `${publicBaseUrl(env)}/api/menu/${slug}`;
+  // The project this address belongs to. A Holiday Menu (checkout/holiday.js) shows only its own approved page and
+  // ends after its holiday; a regular menu shows the business's newest approved regular menu (Menu Care updates
+  // included) and never a holiday one.
+  const owner = await env.DB.prepare(`
+      SELECT p0.id, p0.business_id, p0.metadata_json, b.name AS business_name, b.website_url
+      FROM project_inputs pi JOIN projects p0 ON p0.id = pi.project_id LEFT JOIN businesses b ON b.id = p0.business_id
+      WHERE pi.input_key = 'qr_destination' AND pi.value_text = ?
+      ORDER BY p0.created_at DESC LIMIT 1
+    `).bind(hostedUrl).first();
+  const holiday = parseJsonOrNull(owner?.metadata_json)?.holiday_menu || null;
+  if (holiday && holidayEnded(holiday.ends_on, now)) return { response: await holidayEndedPage(env, owner, holiday) };
   const row = await env.DB.prepare(`
       SELECT a.storage_key, p0.business_id
       FROM project_inputs pi
@@ -53,12 +66,14 @@ async function loadHostedMenu(env, slug) {
       JOIN assets a ON a.id = d.asset_id
       WHERE pi.input_key = 'qr_destination' AND pi.value_text = ?
         AND d.deliverable_type = 'MENU_DRAFT' AND d.status = 'FINAL' AND d.customer_visible = 1
+        AND (p.id = p0.id OR (json_extract(COALESCE(p0.metadata_json, '{}'), '$.holiday_menu') IS NULL
+          AND json_extract(COALESCE(p.metadata_json, '{}'), '$.holiday_menu') IS NULL))
       ORDER BY d.delivered_at DESC, d.version DESC
       LIMIT 1
     `).bind(hostedUrl).first();
   // Without Menu Care the menu goes offline 30 days after its first year (owner decision Oct 28, 2026). Nothing is
-  // deleted: adding Menu Care brings it back at this same address.
-  if (row?.business_id) {
+  // deleted: adding Menu Care brings it back at this same address. Holiday Menus have no hosting year.
+  if (row?.business_id && !holiday) {
     const state = await menuHostingState(env, row.business_id).catch(() => ({ live: true }));
     if (!state.live) {
       return { response: simplePage(200, "This menu isn't available right now",
@@ -67,14 +82,31 @@ async function loadHostedMenu(env, slug) {
   }
   const object = row ? await env.ASSETS.get(row.storage_key) : null;
   if (!object) {
-    const known = await env.DB.prepare(`SELECT 1 AS found FROM project_inputs WHERE input_key = 'qr_destination' AND value_text = ? LIMIT 1`).bind(hostedUrl).first();
     return {
-      response: known
+      response: owner
         ? simplePage(200, "Menu coming soon", "<p>This menu is being prepared. Please check back shortly.</p>")
         : simplePage(404, "Menu not found", "<p>This menu link isn't active.</p>")
     };
   }
   return { object, row, hostedUrl };
+}
+
+// After its holiday a Holiday Menu's address (and QR code) says so, and points to the business's regular menu with
+// us if it has one, otherwise to its website.
+async function holidayEndedPage(env, owner, holiday) {
+  const regular = await env.DB.prepare(`
+      SELECT pi.value_text FROM project_inputs pi JOIN projects p ON p.id = pi.project_id
+      WHERE p.business_id = ? AND p.workflow_key = 'MENU_QR_V1' AND pi.input_key = 'qr_destination'
+        AND json_extract(COALESCE(p.metadata_json, '{}'), '$.holiday_menu') IS NULL
+        AND EXISTS (SELECT 1 FROM deliverables d WHERE d.project_id = p.id AND d.deliverable_type = 'MENU_DRAFT' AND d.status = 'FINAL' AND d.customer_visible = 1)
+      ORDER BY p.created_at DESC LIMIT 1
+    `).bind(owner.business_id).first().catch(() => null);
+  const website = /^https?:\/\//i.test(String(owner.website_url || "")) ? owner.website_url : null;
+  const link = regular?.value_text || website;
+  const name = escapeHtml2(owner.business_name || "This business");
+  const what = OCCASION_NAMES[holiday.occasion] || "holiday";
+  return simplePage(200, `The ${what} menu has ended`,
+    `<p>${name}'s ${escapeHtml2(what)} menu has ended. Thank you for celebrating with us.</p>${link ? `<p><a href="${escapeHtml2(link)}">${regular ? "See our menu" : "Visit our website"}</a></p>` : "<p>Please ask a member of staff for today's menu.</p>"}`);
 }
 
 // Public menu page that each QR code opens. Shows the approved menu only; before approval, a holding page.

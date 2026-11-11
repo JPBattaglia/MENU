@@ -35,7 +35,8 @@ import { bytesToBase64 } from "../lib/util.js";
 import { brandedEmailHtml, escapeHtml, sendTransactionalEmail } from "../lib/email.js";
 import { menuColors, readMenuWithClaude } from "../producers/menu-qr/claude-reader.js";
 import { LOGO_MODES, buildDesignedMenuHtml, parseLogoInfo } from "../producers/menu-qr/design.js";
-import { MENU_DESIGNS, designStyle, menuDesignFor } from "../producers/menu-qr/menu-designs.js";
+import { MENU_DESIGNS, designStyle, designsFor, menuDesignFor } from "../producers/menu-qr/menu-designs.js";
+import { HOLIDAY_PRICING, OCCASION_NAMES, holidayDollars, holidayOnSale, isOccasion } from "../checkout/holiday.js";
 import { frameAware, wantsJson, preflight } from "./framed.js";
 import { sniffImage } from "../producers/website/intake.js";
 import { MENU_PACKAGE_PRICING } from "../checkout/quote.js";
@@ -66,7 +67,11 @@ const hoursFromNow = (hours, now) => new Date(now + hours * 3600000).toISOString
 const firstYearCents = () => MENU_PACKAGE_PRICING.setupCents + MENU_PACKAGE_PRICING.hostingFirstYearCents;
 const dollars = (cents) => `$${(cents / 100).toLocaleString("en-US", { maximumFractionDigits: 2 })}`;
 const cleanText = (value, max) => String(value || "").replace(/[\r\n\x00]/g, " ").trim().slice(0, max);
-const startUrl = (token) => `${SITE}/contact.html?service=menu&preview=${token}`;
+// Holiday previews (occasion "christmas" or "newyear") go to the Holiday Menu checkout instead.
+const startUrl = (token, occasion = null) => isOccasion(occasion) ? `${SITE}/contact.html?service=holiday&preview=${token}` : `${SITE}/contact.html?service=menu&preview=${token}`;
+const holidayPrice = () => holidayDollars(HOLIDAY_PRICING.firstCents);
+const makeLiveLabel = (occasion) => isOccasion(occasion) ? `Make it live: ${holidayPrice()} for ${OCCASION_NAMES[occasion]}` : `Make it live: ${dollars(firstYearCents())} for the first year`;
+const homePage = (occasion) => isOccasion(occasion) ? `${SITE}/holiday-menu` : `${SITE}/online-menu`;
 const viewUrl = (token) => `${SITE}/api/menu-preview/view/${token}`;
 const designUrl = (token, key) => `${SITE}/api/menu-preview/view/${token}/${key}`;
 const chooseUrl = (token, key) => `${SITE}/api/menu-preview/choose/${token}/${key}`;
@@ -86,23 +91,23 @@ function newToken() {
 // The paid product's own page design, plus the generator bar, a watermark on every screen, and no printing.
 // index: which of MENU_DESIGNS is on screen; custom: what Customize set (for the popup's "now using" line).
 // prospect: a private preview built for a prospect email (demo-menu.js), which lasts PROSPECT_DAYS, not PREVIEW_HOURS.
-function publicPreviewPage(menuHtml, token, { index = 0, custom = {}, business = "", prospect = false } = {}) {
-  const price = dollars(firstYearCents());
-  const d = MENU_DESIGNS[index] || MENU_DESIGNS[0];
-  const next = MENU_DESIGNS[(MENU_DESIGNS.indexOf(d) + 1) % MENU_DESIGNS.length];
+function publicPreviewPage(menuHtml, token, { index = 0, custom = {}, business = "", prospect = false, occasion = null } = {}) {
+  const list = designsFor(occasion);
+  const d = list[index] || list[0];
+  const next = list[(list.indexOf(d) + 1) % list.length];
   const mark = encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" width="260" height="160"><text x="130" y="90" text-anchor="middle" transform="rotate(-24 130 80)" font-family="system-ui,sans-serif" font-size="22" font-weight="700" fill="#071f2c" fill-opacity=".13">PREVIEW · NOT LIVE</text></svg>`);
   const brand = hexOk(custom.color) ? custom.color : "";
   const have = [custom.logo ? "your logo" : "", custom.name ? "your name" : "", custom.hide_name ? "the name hidden" : "", brand ? "your colour" : "", custom.subtitle ? "your line under the name" : ""].filter(Boolean);
   const bar = `<aside class="mm-preview" role="note" aria-label="Menu generator">
-  <p><strong>Design ${MENU_DESIGNS.indexOf(d) + 1} of ${MENU_DESIGNS.length}: ${escapeHtml(d.label)}</strong><span> · ${escapeHtml(d.blurb)}. ${prospect ? `A private preview made for you by Menu-made: no QR code, ends in ${PROSPECT_DAYS} days.` : `Free preview: no QR code, ends in ${PREVIEW_HOURS / 24} days.`}</span></p>
+  <p><strong>Design ${list.indexOf(d) + 1} of ${list.length}: ${escapeHtml(d.label)}${d.occasion ? ` (${escapeHtml(OCCASION_NAMES[d.occasion])})` : ""}</strong><span> · ${escapeHtml(d.blurb)}. ${prospect ? `A private preview made for you by Menu-made: no QR code, ends in ${PROSPECT_DAYS} days.` : `Free preview: no QR code, ends in ${PREVIEW_HOURS / 24} days.`}</span></p>
   <a class="mm-gen-next" href="${escapeHtml(designUrl(token, next.key))}">Generate menu</a>
   <button type="button" class="mm-gen-own" onclick="var x = document.getElementById('mm-own'); x.showModal ? x.showModal() : x.setAttribute('open', '')">Customize</button>
-  <a class="mm-gen-pick" href="${escapeHtml(chooseUrl(token, d.key))}">Make it live: ${price} for the first year</a>
+  <a class="mm-gen-pick" href="${escapeHtml(chooseUrl(token, d.key))}">${escapeHtml(isOccasion(occasion) ? `Make it live: ${holidayPrice()}` : makeLiveLabel(null))}</a>
   <dialog class="mm-own" id="mm-own" aria-labelledby="mm-own-title" onclick="if (event.target === this) this.close()"><div class="mm-own-box">
   <div class="mm-own-head"><h2 id="mm-own-title">Customize your menu</h2><button type="button" class="mm-own-x" aria-label="Close" onclick="this.closest('dialog').close()">&times;</button></div>
   <form method="post" enctype="multipart/form-data" action="/api/menu-preview/customize/${token}" onsubmit="var b = this.parentNode; b.querySelector('.mm-own-busy').hidden = false; this.hidden = true;">
   <input type="hidden" name="design" value="${escapeHtml(d.key)}">
-  <p class="mm-own-now">${have.length ? `Using ${escapeHtml(have.join(", "))}. A new logo replaces the old one.` : `Add your logo and colour. All ${MENU_DESIGNS.length} designs update.`}</p>
+  <p class="mm-own-now">${have.length ? `Using ${escapeHtml(have.join(", "))}. A new logo replaces the old one.` : `Add your logo and colour. All ${list.length} designs update.`}</p>
   <label>Logo <small>(PNG, JPG or WebP, up to 1.5 MB)</small><input type="file" name="logo" accept="image/png,image/jpeg,image/webp"></label>
   <input type="hidden" name="logo_info" value="">
   <label>Logo background <small>(Automatic picks one per design so the logo stands out)</small><select name="logo_bg">${[["auto", "Automatic"], ["none", "None"], ["light", "Light badge"], ["dark", "Dark badge"], ["accent", "Highlight colour badge"]].map(([v, t]) => `<option value="${v}"${(custom.logo_bg || "auto") === v ? " selected" : ""}>${t}</option>`).join("")}</select></label>
@@ -110,8 +115,8 @@ function publicPreviewPage(menuHtml, token, { index = 0, custom = {}, business =
   <label class="mm-own-check"><input type="checkbox" name="hide_name" value="1"${custom.hide_name ? " checked" : ""}> Hide the name (my logo already shows it)</label>
   <label class="mm-own-colour">Highlight colour <input type="color" name="brand" value="${brand || "#00a7b5"}"></label>
   <label class="mm-own-check"><input type="checkbox" name="use_brand" value="1"${brand ? " checked" : ""}> Use it for lines, borders and accents</label>
-  <label>Line under your name <small>(e.g. Dinner Menu, Est. 1998)</small><input name="subtitle" maxlength="60" value="${escapeHtml(custom.subtitle || "Menu")}"></label>
-  <button type="submit">Update all ${MENU_DESIGNS.length} designs</button>
+  <label>Line under your name <small>(e.g. Dinner Menu, Est. 1998)</small><input name="subtitle" maxlength="60" value="${escapeHtml(custom.subtitle || (isOccasion(occasion) ? `${OCCASION_NAMES[occasion]} Menu` : "Menu"))}"></label>
+  <button type="submit">Update all ${list.length} designs</button>
   </form>
   <div class="mm-own-busy" role="status" aria-live="polite" hidden><span class="mm-spin" aria-hidden="true"></span><p><strong>Updating your menu…</strong></p><p>This takes a few seconds; the page reloads by itself.</p></div>
   </div></dialog>
@@ -184,7 +189,7 @@ function renderMenuDesign(data, key, logoDataUri = null) {
     menu: data.menu,
     logoDataUri,
     style: designStyle(design.key, data.menu),
-    subtitle: custom.subtitle,
+    subtitle: custom.subtitle || (isOccasion(data.occasion) ? `${OCCASION_NAMES[data.occasion]} Menu` : undefined),
     logo: { info: custom.logo_info || null, mode: custom.logo_bg || "auto" }
   });
 }
@@ -199,8 +204,9 @@ async function loadPreviewLogo(env, token, custom) {
 // Stores data.json and every design's page (already wrapped as a preview).
 async function storeMenuDesigns(env, token, data) {
   const logo = await loadPreviewLogo(env, token, data.custom);
-  for (const [index, design] of MENU_DESIGNS.entries()) {
-    const page = publicPreviewPage(renderMenuDesign(data, design.key, logo), token, { index, custom: data.custom || {}, business: data.business, prospect: data.prospect === true });
+  const occasion = isOccasion(data.occasion) ? data.occasion : null;
+  for (const [index, design] of designsFor(occasion).entries()) {
+    const page = publicPreviewPage(renderMenuDesign(data, design.key, logo), token, { index, custom: data.custom || {}, business: data.business, prospect: data.prospect === true, occasion });
     await env.ASSETS.put(`menu-previews/${token}/${design.key}.html`, page, { httpMetadata: { contentType: "text/html; charset=utf-8" } });
   }
   await env.ASSETS.put(`menu-previews/${token}/data.json`, JSON.stringify(data), { httpMetadata: { contentType: "application/json" } });
@@ -227,8 +233,10 @@ async function count(env, sql, ...args) {
 async function handlePreviewCreate(request, env, { now = Date.now() } = {}) {
   if (request.method === "OPTIONS") return new Response(null, { status: 204, headers: { "Access-Control-Allow-Origin": "*", "Access-Control-Allow-Methods": "POST", "Access-Control-Allow-Headers": "Content-Type" } });
   if (!env.DB || !env.ASSETS) return json({ ok: false, error: "Previews aren't available right now. Please try again later." }, 503);
-  if (await pausedForSale(env, ["ONLINE_MENU_QR"]).catch(() => null)) return json({ ok: false, error: "Online Menu + QR is paused right now, so previews are too." }, 409);
   const body = await request.json().catch(() => null);
+  const occasion = isOccasion(body?.occasion) ? body.occasion : null;
+  if (occasion && !holidayOnSale(occasion, now)) return json({ ok: false, error: `${OCCASION_NAMES[occasion]} menus are finished for this year.` }, 410);
+  if (await pausedForSale(env, [occasion ? "HOLIDAY_MENU" : "ONLINE_MENU_QR"]).catch(() => null)) return json({ ok: false, error: `${occasion ? "Holiday Menu" : "Online Menu + QR"} is paused right now, so previews are too.` }, 409);
   const requestId = String(body?.request_id || "").toLowerCase();
   const email = cleanText(body?.email, 150).toLowerCase();
   const business = cleanText(body?.business, 150);
@@ -252,20 +260,20 @@ async function handlePreviewCreate(request, env, { now = Date.now() } = {}) {
   }
   if (!rep) {
   const since = new Date(now - EMAIL_DAYS * 86400000).toISOString();
-  const existing = await env.DB.prepare(`SELECT token, request_id, business, status, expires_at FROM menu_previews WHERE email = ? AND created_at > ? ORDER BY created_at DESC LIMIT 1`)
+  const existing = await env.DB.prepare(`SELECT token, request_id, business, status, expires_at, occasion FROM menu_previews WHERE email = ? AND created_at > ? ORDER BY created_at DESC LIMIT 1`)
     .bind(email, since).first();
   if (existing) {
     if (existing.status === "BUILDING") return json({ ok: false, error: "Your preview is still being made. Give it a minute." }, 409);
     // The same file and name again gets the preview already made. A different menu file (or name) gets a new one,
     // up to PER_EMAIL a month (owner, Nov 5, 2026: re-uploading a different menu kept showing the first preview).
-    const same = existing.status === "READY" && existing.business === business && await sameMenuFile(env, existing.request_id, doc);
-    if (same && existing.expires_at > t) return json({ ok: true, url: viewUrl(existing.token), token: existing.token, reused: true });
+    const same = existing.status === "READY" && existing.business === business && (existing.occasion || null) === occasion && await sameMenuFile(env, existing.request_id, doc);
+    if (same && existing.expires_at > t && (existing.occasion || null) === occasion) return json({ ok: true, url: viewUrl(existing.token), token: existing.token, reused: true });
     const made = await count(env, `SELECT COUNT(*) AS n FROM menu_previews WHERE email = ? AND status = 'READY' AND created_at > ?`, email, since);
     if (same || made >= PER_EMAIL) {
       const latest = await env.DB.prepare(`SELECT token FROM menu_previews WHERE email = ? AND status = 'READY' AND created_at > ? ORDER BY created_at DESC LIMIT 1`).bind(email, since).first();
       return json({ ok: false, used: true, error: same
         ? "You've already had a free preview of this menu. Start your order and we'll build your menu from your file."
-        : `You've made ${made} free previews with this email this month. Start your order and we'll build your menu from your file.`, start: startUrl(latest?.token || existing.token) }, 409);
+        : `You've made ${made} free previews with this email this month. Start your order and we'll build your menu from your file.`, start: startUrl(latest?.token || existing.token, occasion) }, 409);
     }
   }
   if (await count(env, `SELECT COUNT(*) AS n FROM menu_previews WHERE ip_hash = ? AND created_at > ?`, upload.ip_hash || "", dayAgo) >= PER_NETWORK_DAY) {
@@ -282,8 +290,8 @@ async function handlePreviewCreate(request, env, { now = Date.now() } = {}) {
   const campaign = rep ? "rep" : cleanText(tracking.campaign, 100) || null;
   const started = Date.now();
   // Claim the slot first, so two quick submits can't both start a build.
-  await env.DB.prepare(`INSERT INTO menu_previews (token, request_id, email, business, ip_hash, campaign, status, created_at, expires_at) VALUES (?, ?, ?, ?, ?, ?, 'BUILDING', ?, ?)`)
-    .bind(token, requestId, email, business, upload.ip_hash || "", campaign, t, hoursFromNow(PREVIEW_HOURS, now)).run();
+  await env.DB.prepare(`INSERT INTO menu_previews (token, request_id, email, business, ip_hash, campaign, status, created_at, expires_at, occasion) VALUES (?, ?, ?, ?, ?, ?, 'BUILDING', ?, ?, ?)`)
+    .bind(token, requestId, email, business, upload.ip_hash || "", campaign, t, hoursFromNow(PREVIEW_HOURS, now), occasion).run();
   try {
     const object = await env.ASSETS.get(doc.storageKey);
     if (!object) throw new Error("menu file is not stored");
@@ -293,7 +301,7 @@ async function handlePreviewCreate(request, env, { now = Date.now() } = {}) {
       ? { type: "document", source: { type: "base64", media_type: mime, data: bytesToBase64(bytes) } }
       : { type: "image", source: { type: "base64", media_type: mime, data: bytesToBase64(bytes) } };
     const read = await readMenuWithClaude(block, env);
-    await storeMenuDesigns(env, token, { business, menu: read.menu, colors: menuColors(read.menu), custom: {}, customized: 0 });
+    await storeMenuDesigns(env, token, { business, menu: read.menu, colors: menuColors(read.menu), custom: {}, customized: 0, ...(occasion ? { occasion } : {}) });
     await env.DB.prepare(`UPDATE menu_previews SET status = 'READY', item_count = ? WHERE token = ?`).bind(read.extraction?.item_count ?? null, token).run();
   } catch (error) {
     const reason = (error instanceof Error ? error.message : String(error)).slice(0, 300);
@@ -304,21 +312,27 @@ async function handlePreviewCreate(request, env, { now = Date.now() } = {}) {
   const url = viewUrl(token);
   const seconds = Math.round((Date.now() - started) / 1000);
   console.log(`Menu preview ${rep ? "(rep) " : ""}made in ${seconds}s`);
+  const holiday = occasion ? OCCASION_NAMES[occasion] : null;
+  const designCount = designsFor(occasion).length;
   await sendTransactionalEmail(env, {
     to: email,
-    subject: "Your free menu preview",
+    subject: holiday ? `Your ${holiday} menu preview` : "Your free menu preview",
     html: brandedEmailHtml({
-      preheader: "See your menu as guests will on their phones.",
-      eyebrow: "ONLINE MENU + QR",
-      heading: `Here's ${business}'s menu on a phone`,
+      preheader: holiday ? `Your ${holiday} menu in ${designCount} holiday designs.` : "See your menu as guests will on their phones.",
+      eyebrow: holiday ? "HOLIDAY MENU" : "ONLINE MENU + QR",
+      heading: holiday ? `Here's ${business}'s ${holiday} menu on a phone` : `Here's ${business}'s menu on a phone`,
       paragraphs: [
         `Open it on your phone: <a href="${escapeHtml(url)}">see your menu preview</a>. It's only a preview, with no QR code, and it ends in ${PREVIEW_HOURS / 24} days.`,
-        `Tap <strong>Generate menu</strong> to see it in ${MENU_DESIGNS.length} designs, and <strong>Customize</strong> to add your logo and colour.`,
-        `Like it? <a href="${escapeHtml(startUrl(token))}">Make it live for ${dollars(firstYearCents())}</a> for the first year. Your menu file is already attached, so checkout takes a minute.`
+        `Tap <strong>Generate menu</strong> to see it in ${designCount} ${holiday ? "holiday " : ""}designs, and <strong>Customize</strong> to add your logo and colour.`,
+        holiday
+          ? `Like it? <a href="${escapeHtml(startUrl(token, occasion))}">Make it live for ${holidayPrice()}</a>: its own link and QR code, a print-ready PDF and a table tent, live through the holiday. Your menu file is already attached, so checkout takes a minute.`
+          : `Like it? <a href="${escapeHtml(startUrl(token))}">Make it live for ${dollars(firstYearCents())}</a> for the first year. Your menu file is already attached, so checkout takes a minute.`
       ]
     }),
-    text: `Your menu preview: ${url}\nIt ends in ${PREVIEW_HOURS / 24} days and has no QR code.\nMake it live (${dollars(firstYearCents())} first year): ${startUrl(token)}`,
-    idempotencyKey: `menu-preview/${token}`, purpose: "MENU_PREVIEW", templateKey: "menu_preview_v1"
+    text: holiday
+      ? `Your ${holiday} menu preview: ${url}\nIt ends in ${PREVIEW_HOURS / 24} days and has no QR code.\nMake it live (${holidayPrice()}): ${startUrl(token, occasion)}`
+      : `Your menu preview: ${url}\nIt ends in ${PREVIEW_HOURS / 24} days and has no QR code.\nMake it live (${dollars(firstYearCents())} first year): ${startUrl(token)}`,
+    idempotencyKey: `menu-preview/${token}`, purpose: "MENU_PREVIEW", templateKey: holiday ? "holiday_menu_preview_v1" : "menu_preview_v1"
   }).catch((error) => console.error("Preview email failed:", error instanceof Error ? error.message : String(error)));
   return json({ ok: true, url, token, seconds, ...(rep ? { start: startUrl(token) } : {}) });
 }
@@ -336,7 +350,7 @@ async function runPreviewReminders(env, { now = Date.now(), force = false } = {}
   if (!env.DB) return [];
   if (!force && (new Date(now).getUTCMinutes() >= 5 || pacificHour(now) < 9 || pacificHour(now) >= 19)) return [];
   const { results = [] } = await env.DB.prepare(`
-      SELECT token, request_id, email, business, expires_at FROM menu_previews
+      SELECT token, request_id, email, business, expires_at, occasion FROM menu_previews
       WHERE status = 'READY' AND reminder_sent_at IS NULL AND created_at <= ? AND expires_at > ?
         AND COALESCE(campaign, '') <> 'prospect'
       ORDER BY created_at ASC LIMIT 20
@@ -351,22 +365,24 @@ async function runPreviewReminders(env, { now = Date.now(), force = false } = {}
     if (!email || email === owner || ordered) { await mark(); continue; }
     const url = viewUrl(row.token);
     const ends = endsText(row.expires_at);
+    const n = designsFor(row.occasion).length;
+    const live = isOccasion(row.occasion) ? `${holidayPrice()}, live through ${OCCASION_NAMES[row.occasion]}` : `${dollars(firstYearCents())} for the first year`;
     const result = await sendTransactionalEmail(env, {
       to: email,
       subject: `Your menu preview ends ${ends}`,
       html: brandedEmailHtml({
-        preheader: `${MENU_DESIGNS.length} designs of your menu, free until ${ends}.`,
+        preheader: `${n} designs of your menu, free until ${ends}.`,
         eyebrow: "ONLINE MENU + QR",
         heading: `${row.business}'s menu preview ends soon`,
         paragraphs: [
           `Your free phone menu preview ends <strong>${escapeHtml(ends)}</strong> (Pacific time).`,
-          `Haven't picked a design yet? Tap <strong>Generate menu</strong> to see all ${MENU_DESIGNS.length}, and <strong>Customize</strong> to add your logo and colour.`,
-          `When one looks right, tap <strong>Make it live</strong> (${dollars(firstYearCents())} for the first year). It goes live with a QR code for your tables, and your menu file is already attached.`
+          `Haven't picked a design yet? Tap <strong>Generate menu</strong> to see all ${n}, and <strong>Customize</strong> to add your logo and colour.`,
+          `When one looks right, tap <strong>Make it live</strong> (${live}). It goes live with a QR code for your tables, and your menu file is already attached.`
         ],
         buttons: [{ label: "See my menu designs", url, primary: true }],
         footnote: "This is the only reminder we'll send about this preview."
       }),
-      text: `Your menu preview ends ${ends} (Pacific).\nSee all ${MENU_DESIGNS.length} designs: ${url}\nMake it live (${dollars(firstYearCents())} first year): ${startUrl(row.token)}\nThis is the only reminder about this preview.`,
+      text: `Your menu preview ends ${ends} (Pacific).\nSee all ${n} designs: ${url}\nMake it live (${live}): ${startUrl(row.token, row.occasion)}\nThis is the only reminder about this preview.`,
       idempotencyKey: `menu-preview-reminder/${row.token}`, purpose: "MENU_PREVIEW", templateKey: "menu_preview_reminder_v1"
     }).catch((error) => ({ ok: false, error }));
     if (result?.ok) { await mark(); sent.push(row.token); }
@@ -400,12 +416,12 @@ async function handlePreviewView(request, env, token, { now = Date.now(), design
   const gone = () => plainPage(410, "This preview has ended", `Free previews last ${PREVIEW_HOURS / 24} days. To get your menu as a phone page with a QR code, see <a href="${escapeHtml(`${SITE}/online-menu`)}">Online Menu + QR</a>.`);
   if (!/^[a-f0-9]{36}$/.test(token) || !env.DB || !env.ASSETS) return gone();
   if (design && !menuDesignFor(design)) return gone();
-  const row = await env.DB.prepare(`SELECT token, status, expires_at, open_count, design, campaign FROM menu_previews WHERE token = ?`).bind(token).first();
+  const row = await env.DB.prepare(`SELECT token, status, expires_at, open_count, design, campaign, occasion FROM menu_previews WHERE token = ?`).bind(token).first();
   if (!row || row.status !== "READY" || row.expires_at <= new Date(now).toISOString()) return gone();
   const agent = request.headers.get("User-Agent") || "";
   const counted = request.method === "GET" && agent && !SCANNER.test(agent);
   // The generator's pages; a preview made before the generator has its one page.
-  const key = design || (menuDesignFor(row.design) ? row.design : MENU_DESIGNS[0].key);
+  const key = design || (menuDesignFor(row.design) ? row.design : designsFor(row.occasion)[0].key);
   const object = await env.ASSETS.get(`menu-previews/${token}/${key}.html`) || (design ? null : await env.ASSETS.get(`menu-previews/${token}.html`));
   if (!object) return gone();
   if (counted) {
@@ -424,18 +440,20 @@ async function handlePreviewState(request, env, token, { now = Date.now() } = {}
   if (request.method === "OPTIONS") return preflight();
   const gone = () => json({ ok: false, ended: true, error: `This preview has ended. Free previews last ${PREVIEW_HOURS / 24} days.` }, 410);
   if (!/^[a-f0-9]{36}$/.test(token) || !env.DB || !env.ASSETS) return gone();
-  const row = await env.DB.prepare(`SELECT status, expires_at, design, campaign FROM menu_previews WHERE token = ?`).bind(token).first();
+  const row = await env.DB.prepare(`SELECT status, expires_at, design, campaign, occasion FROM menu_previews WHERE token = ?`).bind(token).first();
   if (!row || row.status !== "READY" || row.expires_at <= new Date(now).toISOString()) return gone();
   const data = parseJsonOrNull(await (await env.ASSETS.get(`menu-previews/${token}/data.json`))?.text());
   if (!data?.menu) return gone();
   const custom = data.custom || {};
   const brand = hexOk(custom.color) ? custom.color : "";
-  const n = MENU_DESIGNS.length;
+  const list = designsFor(row.occasion);
+  const n = list.length;
   return json({
     ok: true, kind: "menu", business: custom.name || data.business || "", ends_at: row.expires_at,
-    design: menuDesignFor(row.design) ? row.design : MENU_DESIGNS[0].key,
-    designs: MENU_DESIGNS.map((d) => ({ key: d.key, label: d.label, blurb: d.blurb, url: designUrl(token, d.key), choose_url: chooseUrl(token, d.key) })),
-    next_label: "Generate menu", choose_label: `Make it live: ${dollars(firstYearCents())} for the first year`,
+    design: menuDesignFor(row.design) ? row.design : list[0].key,
+    ...(isOccasion(row.occasion) ? { occasion: row.occasion } : {}),
+    designs: list.map((d) => ({ key: d.key, label: d.label, blurb: d.blurb, url: designUrl(token, d.key), choose_url: chooseUrl(token, d.key) })),
+    next_label: "Generate menu", choose_label: makeLiveLabel(row.occasion),
     note: `Free preview: no QR code, ends in ${PREVIEW_HOURS / 24} days.`,
     customize: {
       url: `${SITE}/api/menu-preview/customize/${token}`, title: "Customize your menu", submit: `Update all ${n} designs`,
@@ -447,7 +465,7 @@ async function handlePreviewState(request, env, token, { now = Date.now() } = {}
         { name: "hide_name", type: "checkbox", label: "Hide the name (my logo already shows it)", value: custom.hide_name === true },
         { name: "brand", type: "color", label: "Highlight colour", value: brand || "#00a7b5" },
         { name: "use_brand", type: "checkbox", label: "Use it for lines, borders and accents", value: Boolean(brand) },
-        { name: "subtitle", type: "text", label: "Line under your name", hint: "For example Dinner Menu, Est. 1998", max: 60, value: custom.subtitle || "Menu" }
+        { name: "subtitle", type: "text", label: "Line under your name", hint: "For example Dinner Menu, Est. 1998", max: 60, value: custom.subtitle || (isOccasion(row.occasion) ? `${OCCASION_NAMES[row.occasion]} Menu` : "Menu") }
       ]
     }
   });
@@ -465,10 +483,11 @@ async function handlePreviewCustomize(request, env, token, { now = Date.now() } 
   if (!row || row.status !== "READY" || row.expires_at <= new Date(now).toISOString()) return gone();
   const data = parseJsonOrNull(await (await env.ASSETS.get(`menu-previews/${token}/data.json`))?.text());
   if (!data?.menu) return gone();
+  const holidayLine = isOccasion(data.occasion) ? `${OCCASION_NAMES[data.occasion]} menu` : "";
   if (Number(data.customized || 0) >= MAX_CUSTOMIZE) return oops("This preview has been updated as many times as a free preview allows.");
   const form = await request.formData().catch(() => null);
   if (!form) return oops("We couldn't read the upload.");
-  const design = menuDesignFor(String(form.get("design") || "")) || MENU_DESIGNS[0];
+  const design = menuDesignFor(String(form.get("design") || "")) || designsFor(data.occasion)[0];
   const custom = { ...(data.custom || {}) };
   const file = form.get("logo");
   if (file && typeof file === "object" && typeof file.arrayBuffer === "function" && file.size > 0) {
@@ -493,7 +512,7 @@ async function handlePreviewCustomize(request, env, token, { now = Date.now() } 
   custom.color = form.get("use_brand") === "1" && hexOk(brand) ? brand : "";
   if (form.has("subtitle")) {
     const line = cleanText(form.get("subtitle"), 60);
-    custom.subtitle = line && line.toLowerCase() !== "menu" ? line : "";
+    custom.subtitle = line && line.toLowerCase() !== "menu" && line.toLowerCase() !== holidayLine.toLowerCase() ? line : "";
   }
   await storeMenuDesigns(env, token, { ...data, custom, customized: Number(data.customized || 0) + 1 });
   if (app) return json({ ok: true, design: design.key });
@@ -507,10 +526,10 @@ const withinHandoff = (row, now) => Date.parse(row.created_at) >= now - (row.cam
 async function handlePreviewChoose(env, token, key, { now = Date.now() } = {}) {
   const design = menuDesignFor(key);
   if (!/^[a-f0-9]{36}$/.test(token) || !design || !env.DB) return plainPage(404, "Preview not found", `See <a href="${escapeHtml(`${SITE}/online-menu`)}">Online Menu + QR</a>.`);
-  const row = await env.DB.prepare(`SELECT status, created_at, campaign FROM menu_previews WHERE token = ?`).bind(token).first();
-  if (!row || row.status !== "READY" || !withinHandoff(row, now)) return plainPage(410, "This preview has ended", `See <a href="${escapeHtml(`${SITE}/online-menu`)}">Online Menu + QR</a>.`);
+  const row = await env.DB.prepare(`SELECT status, created_at, campaign, occasion FROM menu_previews WHERE token = ?`).bind(token).first();
+  if (!row || row.status !== "READY" || !withinHandoff(row, now)) return plainPage(410, "This preview has ended", `See <a href="${escapeHtml(homePage(row?.occasion))}">${isOccasion(row?.occasion) ? "Holiday Menu" : "Online Menu + QR"}</a>.`);
   await env.DB.prepare(`UPDATE menu_previews SET design = ? WHERE token = ?`).bind(design.key, token).run();
-  return new Response(null, { status: 303, headers: { Location: startUrl(token), "Cache-Control": "no-store" } });
+  return new Response(null, { status: 303, headers: { Location: startUrl(token, row.occasion), "Cache-Control": "no-store" } });
 }
 
 // The paid menu's design and customizing: the preview made from the same menu file as the order (the order's
@@ -520,23 +539,25 @@ async function menuPreviewChoice(env, orderId) {
   const order = await env.DB.prepare(`SELECT notes FROM orders WHERE id = ?`).bind(orderId).first();
   const reference = /Document ref: ([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})/i.exec(order?.notes || "")?.[1];
   if (!reference) return null;
-  const row = await env.DB.prepare(`SELECT token, design FROM menu_previews WHERE request_id = ? AND status = 'READY' ORDER BY created_at DESC LIMIT 1`).bind(reference.toLowerCase()).first();
+  const row = await env.DB.prepare(`SELECT token, design, occasion FROM menu_previews WHERE request_id = ? AND status = 'READY' ORDER BY created_at DESC LIMIT 1`).bind(reference.toLowerCase()).first();
   if (!row) return null;
   const data = parseJsonOrNull(await (await env.ASSETS.get(`menu-previews/${row.token}/data.json`))?.text());
   if (!data) return null;
   const custom = data.custom || {};
-  return { token: row.token, design: menuDesignFor(row.design) ? row.design : null, custom, logoDataUri: await loadPreviewLogo(env, row.token, custom).catch(() => null) };
+  if (!custom.subtitle && isOccasion(row.occasion)) custom.subtitle = `${OCCASION_NAMES[row.occasion]} Menu`;
+  return { token: row.token, design: menuDesignFor(row.design) ? row.design : null, occasion: isOccasion(row.occasion) ? row.occasion : null, custom, logoDataUri: await loadPreviewLogo(env, row.token, custom).catch(() => null) };
 }
 
 // Checkout prefill for "Make it live": the stored upload, so the buyer isn't asked for the file again.
 async function handlePreviewHandoff(env, token, { now = Date.now() } = {}) {
   if (!/^[a-f0-9]{36}$/.test(token) || !env.DB) return json({ ok: false }, 404);
-  const row = await env.DB.prepare(`SELECT request_id, email, business, status, created_at, campaign FROM menu_previews WHERE token = ?`).bind(token).first();
+  const row = await env.DB.prepare(`SELECT request_id, email, business, status, created_at, campaign, occasion, design FROM menu_previews WHERE token = ?`).bind(token).first();
   if (!row || row.status !== "READY" || !withinHandoff(row, now)) return json({ ok: false }, 404);
   // A prospect preview read from a web page (not a file) has no stored file to attach: checkout asks for one.
   const upload = await env.DB.prepare(`SELECT payload FROM mm_booking_requests WHERE id = ?`).bind(row.request_id).first().catch(() => null);
   const file = !!parseJsonOrNull(upload?.payload)?.document?.storageKey;
-  return json({ ok: true, business: row.business, email: row.email, ...(file ? { request_id: row.request_id } : {}) });
+  const holiday = isOccasion(row.occasion) ? { occasion: row.occasion, occasion_name: OCCASION_NAMES[row.occasion], design: (menuDesignFor(row.design) || designsFor(row.occasion)[0]).label } : {};
+  return json({ ok: true, business: row.business, email: row.email, ...(file ? { request_id: row.request_id } : {}), ...holiday });
 }
 
 export { handleRepLink, repUrl, REP_PER_DAY };
