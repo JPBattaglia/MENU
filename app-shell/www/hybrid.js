@@ -911,6 +911,13 @@
           item.appendChild(txt); item.appendChild(v); list.appendChild(item);
         });
         empty.hidden = (b.ideas || []).length > 0;
+        // Undo for "Hide this person" (owner, Nov 10, 2026: he hid himself while recording and every idea after
+        // disappeared). Shown only while someone is hidden on this phone.
+        if (hidden.length) {
+          var undo = el("button", "hy-linkbtn hy-pad", "Show hidden people (" + hidden.length + ")"); undo.type = "button";
+          undo.addEventListener("click", function () { try { localStorage.removeItem(HIDDEN_KEY); } catch (e) {} if (lastBoard) drawIdeas(lastBoard); });
+          list.appendChild(undo);
+        }
         while (pending.firstChild) pending.removeChild(pending.firstChild);
         pending.hidden = !(b.pending || []).length;
         if (!pending.hidden) {
