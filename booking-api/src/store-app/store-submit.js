@@ -207,6 +207,26 @@ async function submitApple({ creds, bundleId, listing, images, contact, reviewNo
       }, "price");
     }
 
+    // Availability: an app with no countries selected is approved and then shows "Removed from App Store" (Menu-made's
+    // own app, Nov 11, 2026: the owner had to set it by hand). Set only when none is set: every country and region,
+    // and new ones as Apple adds them, the same as "All Countries or Regions" in App Store Connect.
+    const V2 = ASC.replace(/\/v1$/, "/v2");
+    const availability = await asc("GET", `/apps/${app.id}/appAvailabilityV2`, null, "availability").catch((e) => { if (/ 404:/.test(e.message)) return {}; throw e; });
+    const selected = availability?.data?.id
+      ? ((await asc("GET", `${V2}/appAvailabilities/${availability.data.id}/territoryAvailabilities?limit=1`, null, "availability").catch(() => ({}))).data || []).length > 0
+      : false;
+    if (!selected) {
+      const territories = ((await asc("GET", "/territories?limit=200", null, "availability")).data || []).map((t) => t.id).filter(Boolean);
+      if (!territories.length) throw new StepError("availability", "Apple didn't list any countries; set App Availability in App Store Connect (Pricing and Availability).");
+      await asc("POST", `${V2}/appAvailabilities`, {
+        data: { type: "appAvailabilities", attributes: { availableInNewTerritories: true }, relationships: {
+          app: { data: { type: "apps", id: app.id } },
+          territoryAvailabilities: { data: territories.map((id) => ({ type: "territoryAvailabilities", id: `\${${id}}` })) } } },
+        included: territories.map((id) => ({ type: "territoryAvailabilities", id: `\${${id}}`, attributes: { available: true },
+          relationships: { territory: { data: { type: "territories", id } } } }))
+      }, "availability");
+    }
+
     const sets = (await asc("GET", `/appStoreVersionLocalizations/${loc.id}/appScreenshotSets`, null, "screenshots")).data || [];
     let set = sets.find((s) => s.attributes?.screenshotDisplayType === "APP_IPHONE_67");
     if (!set) set = (await asc("POST", "/appScreenshotSets", { data: { type: "appScreenshotSets", attributes: { screenshotDisplayType: "APP_IPHONE_67" }, relationships: { appStoreVersionLocalization: { data: { type: "appStoreVersionLocalizations", id: loc.id } } } } }, "screenshots")).data;

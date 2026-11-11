@@ -42,6 +42,11 @@ function fakeStores({ appleFail = null, playDraft = false, appleState = 'WAITING
     if (u.startsWith('https://oauth2.googleapis.com/token')) return Response.json({ access_token: 'ya29', expires_in: 3600 });
     if (u.startsWith('https://play.google.com/store/apps/details')) return new Response('', { status: state.playLive ? 200 : 404 });
     if (u.startsWith('https://upload.appstore.example/')) { seen.uploads++; return new Response(null, { status: 200 }); }
+    if (u.startsWith('https://api.appstoreconnect.apple.com/v2/appAvailabilities')) {
+      seen.apple.push(`${m} /v2${u.split('/v2')[1].split('?')[0]}`);
+      if (m === 'POST') { seen.availability = JSON.parse(init.body); state.available = true; return Response.json({ data: { id: 'APP1' } }); }
+      return Response.json({ data: [{ id: 'TA1' }] });
+    }
     if (u.startsWith('https://api.appstoreconnect.apple.com/v1')) {
       const path = u.replace('https://api.appstoreconnect.apple.com/v1', '');
       seen.apple.push(`${m} ${path.split('?')[0]}`);
@@ -76,6 +81,8 @@ function fakeStores({ appleFail = null, playDraft = false, appleState = 'WAITING
       if (path === '/apps/APP1/appPriceSchedule') return Response.json({ errors: [{ detail: 'not found' }] }, { status: 404 });
       if (path.startsWith('/apps/APP1/appPricePoints')) return Response.json({ data: [{ id: 'PP9', attributes: { customerPrice: '0.99' } }, { id: 'PP0', attributes: { customerPrice: '0.0' } }] });
       if (path === '/appPriceSchedules' && m === 'POST') { seen.pricePoint = body.included[0].relationships.appPricePoint.data.id; return Response.json({ data: { id: 'PS1' } }); }
+      if (path === '/apps/APP1/appAvailabilityV2') return state.available ? Response.json({ data: { id: 'APP1' } }) : Response.json({ errors: [{ detail: 'not found' }] }, { status: 404 });
+      if (path.startsWith('/territories')) return Response.json({ data: [{ id: 'USA' }, { id: 'CAN' }] });
       if (path === '/apps/APP1/appInfos') return Response.json({ data: [{ id: 'I1', attributes: { appStoreState: 'PREPARE_FOR_SUBMISSION' } }] });
       if (path === '/appInfos/I1/appInfoLocalizations') return Response.json({ data: [{ id: 'IL1', attributes: { locale: 'en-US' } }] });
       if (path === '/appInfoLocalizations/IL1') { seen.info = body.data.attributes; return Response.json({ data: {} }); }
@@ -228,6 +235,9 @@ test("approved: submitted to Apple and Google with the restaurant's keys, then I
   assert.equal(s.category, 'FOOD_AND_DRINK', 'a restaurant app gets the Food & Drink category');
   assert.equal(s.contentRights, 'DOES_NOT_USE_THIRD_PARTY_CONTENT');
   assert.equal(s.pricePoint, 'PP0', 'the app is set to free');
+  assert.equal(s.availability.data.attributes.availableInNewTerritories, true, 'every country, and new ones as Apple adds them');
+  assert.deepEqual(s.availability.included.map((t) => [t.id, t.attributes.available, t.relationships.territory.data.id]), [['${USA}', true, 'USA'], ['${CAN}', true, 'CAN']]);
+  assert.deepEqual(s.availability.data.relationships.territoryAvailabilities.data.map((t) => t.id), ['${USA}', '${CAN}']);
   assert.equal(s.playListing.title, "Joe's Pizza");
   assert.equal(s.play.filter((c) => /phoneScreenshots$/.test(c) && c.startsWith('POST')).length, 3);
   assert.deepEqual(s.release, { versionCodes: ['14'], status: 'completed' }, 'the newest internal build goes to production');
