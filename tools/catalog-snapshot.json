@@ -99,6 +99,14 @@
       "prices": null
     },
     {
+      "code": "HOLIDAY_MENU",
+      "kind": "ONE_TIME",
+      "menu_package": null,
+      "on_sale": true,
+      "price_cents": 5900,
+      "prices": null
+    },
+    {
       "code": "MENU_CARE",
       "kind": "PLAN",
       "menu_package": null,

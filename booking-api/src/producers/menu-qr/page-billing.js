@@ -148,7 +148,8 @@ async function countMenuPages(inputs, env) {
 async function paidMenuPages(orderItemId, env) {
   if (!orderItemId) return null;
   const row = await env.DB.prepare(`SELECT metadata_json FROM order_items WHERE id = ? LIMIT 1`).bind(orderItemId).first();
-  const pages = parseJsonOrNull(row?.metadata_json)?.menu_package?.menu_pages;
+  const meta = parseJsonOrNull(row?.metadata_json);
+  const pages = meta?.menu_package?.menu_pages ?? meta?.holiday_menu?.pages;
   return Number.isInteger(pages) && pages > 0 ? pages : null;
 }
 

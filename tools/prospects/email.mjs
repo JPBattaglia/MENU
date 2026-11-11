@@ -7,6 +7,7 @@
 // The emails don't mention a missing call button.
 import { MENU_DESIGNS } from "../../booking-api/src/producers/menu-qr/menu-designs.js";
 import { DESIGNS as SITE_DESIGNS } from "../../booking-api/src/producers/website/templates/designs.js";
+import { HOLIDAY_PRICING } from "../../booking-api/src/checkout/holiday.js";
 
 const MENU_COUNT = MENU_DESIGNS.length;
 const SITE_COUNT = SITE_DESIGNS.length;
@@ -143,7 +144,32 @@ export function buildFirstFollowup(p, demoUrl = null, price = "$144", demoKind =
 // MAIL): dark blue #003344 card, #00222d header, footer and page, white text, cyan highlights.
 const MAIL = { page: "#00222d", card: "#003344", bar: "#00222d", line: "#0a6f80", text: "#ffffff", soft: "#d9f3f6", cyan: "#00d6e6", link: "#5ff2ff", ink: "#012f34" };
 
-function render(p, subject, paras, buttons) {
+// Holiday Menu (owner, Nov 10, 2026): one holiday email per business through the season, to new prospects and to
+// those already emailed (never to anyone who replied, opted out or bounced). demoUrl: their regular menu shown in the
+// holiday designs (holiday-outreach.js); without one, the buttons open the Holiday Menu page.
+const HOLIDAY = "https://menu-made.com/holiday-menu?utm_source=outreach&utm_medium=email&utm_campaign=holiday-menu";
+const usd = (cents) => `$${(cents / 100).toLocaleString("en-US", { maximumFractionDigits: 2 })}`;
+const HOLIDAY_FOOTER = "You're receiving this because your business is listed publicly online. Reply \"no thanks\" and we won't contact you again. Menu-made, 706 Kearny St, San Francisco, CA 94108.";
+
+export function buildHoliday(p, demoUrl = null) {
+  const one = usd(HOLIDAY_PRICING.firstCents);
+  const both = usd(HOLIDAY_PRICING.firstCents + HOLIDAY_PRICING.secondCents);
+  const subject = p.contacted ? `A holiday menu for ${p.name}` : `${p.name}'s holiday menu, online`;
+  const paras = ["Hi there,",
+    p.contacted
+      ? "I wrote to you a little while ago about your menu. With the holidays close, one more idea and then I'll leave you be."
+      : `${opening(p)}I'm JP with Menu-made, a small San Francisco studio that puts food and drink menus online.`,
+    "If you're doing a Christmas or New Year's Eve menu this year, we can put it online as its own phone menu, with a QR code for the tables, a print-ready PDF and a table tent. It sits beside the menu you already have, and after the holiday the link points guests back to your regular menu.",
+    ...(demoUrl ? ["To show you the look, I put the menu from your site into our holiday designs. Tap Generate menu to flip through them. It's private: only you have the link."] : []),
+    `It's ${one} per holiday, or ${both} for both. Upload your holiday menu and you'll see it in all six holiday designs, free, before you decide.`,
+    "If it's not for you this year, no problem at all."];
+  const buttons = demoUrl
+    ? [["See your menu in the holiday designs", demoUrl, true], ["Make my holiday menu", `${HOLIDAY}#try-free`, false]]
+    : [["See holiday menus", HOLIDAY, true], ["Try it free with your holiday menu", `${HOLIDAY}#try-free`, false]];
+  return render(p, subject, paras, buttons, HOLIDAY_FOOTER);
+}
+
+function render(p, subject, paras, buttons, footer = FOOTER) {
   const pHtml = paras.map((x) => `<p style="margin:0 0 16px;font-size:16px;line-height:1.6;color:${MAIL.text};">${esc(x)}</p>`).join("");
   const bHtml = buttons.map(([l, u, prim]) => `<tr><td style="padding:0 0 12px;"><a href="${esc(u)}" style="display:inline-block;${prim
     ? `background-color:${MAIL.cyan};color:${MAIL.ink};padding:13px 22px;`
@@ -160,8 +186,8 @@ ${pHtml}
 <p style="margin:16px 0 0;font-size:16px;line-height:1.6;color:${MAIL.text};">JP Battaglia<br>Menu-made, San Francisco</p>
 </td></tr>
 <tr><td bgcolor="${MAIL.bar}" style="padding:24px 32px;background-color:${MAIL.bar};"><p style="margin:0 0 10px;font-size:14px;line-height:1.6;color:${MAIL.soft};"><a href="https://menu-made.com" style="color:${MAIL.link};">menu-made.com</a> &nbsp;&middot;&nbsp; <a href="mailto:info@menu-made.com" style="color:${MAIL.link};">info@menu-made.com</a></p>
-<p style="margin:0;font-size:12px;line-height:1.5;color:${MAIL.soft};">${esc(FOOTER)}</p></td></tr>
+<p style="margin:0;font-size:12px;line-height:1.5;color:${MAIL.soft};">${esc(footer)}</p></td></tr>
 </table></td></tr></table></body></html>`;
-  const text = `${paras.join("\n\n")}\n\n${buttons.map(([l, u]) => `${l}: ${u}`).join("\n")}\n\nJP Battaglia\nMenu-made, San Francisco\nhttps://menu-made.com\n\n${FOOTER}`;
+  const text = `${paras.join("\n\n")}\n\n${buttons.map(([l, u]) => `${l}: ${u}`).join("\n")}\n\nJP Battaglia\nMenu-made, San Francisco\nhttps://menu-made.com\n\n${footer}`;
   return { subject, html, text };
 }

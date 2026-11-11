@@ -29,8 +29,32 @@ const MENU_DESIGNS = [
   // Last since Nov 10, 2026 (owner: "the first menu template needs to be the Classic not the plain Your printed menu").
   { key: "yours", label: "Your printed menu", blurb: "The colours and type of the menu you sent" }
 ];
+// Holiday Menu (owner, Nov 10, 2026): a short-run menu for Christmas or New Year's Eve, on top of whatever menu the
+// business already has. The holiday generator shows only these, three per holiday, Christmas first in a Christmas
+// preview and New Year's first in a New Year's one. Decorations (deco, snow, stars, bubbles, confetti) are in style.js.
+const HOLIDAY_DESIGNS = [
+  { key: "evergreen", occasion: "christmas", label: "Evergreen", blurb: "Pine green and gold, holly under the name, falling snow",
+    style: { paper: "#12352a", text: "#f4efe2", heading: "#e6c36a", accent: "#e6c36a", item: "#fbf6ec", price: "#e6c36a", title_font: "elegant-serif", heading_font: "elegant-serif", body_font: "classic-serif", heading_case: "upper", item_case: "as-printed", heading_align: "center", divider: "star", item_layout: "stacked", header: "plain", nav: "links", section: "rule", texture: "snow", deco: "holly" } },
+  { key: "candycane", occasion: "christmas", label: "Candy Cane", blurb: "Red and white stripes, red banners, price tags",
+    style: { paper: "#fffaf5", text: "#2a1d1d", heading: "#b3202a", accent: "#1f6b3a", item: "#2a1d1d", price: "#b3202a", title_font: "slab", heading_font: "slab", body_font: "rounded-sans", heading_case: "upper", item_case: "as-printed", heading_align: "center", divider: "none", item_layout: "badge", header: "plain", nav: "chips", section: "banner", deco: "candycane" } },
+  { key: "silentnight", occasion: "christmas", label: "Silent Night", blurb: "Midnight blue, gold stars, baubles hanging over the name",
+    style: { paper: "#0f1e3d", text: "#eef1f8", heading: "#f0d48a", accent: "#f0d48a", item: "#ffffff", price: "#f0d48a", title_font: "script", heading_font: "elegant-serif", body_font: "elegant-serif", heading_case: "upper", item_case: "as-printed", heading_align: "center", divider: "ornament", item_layout: "centered", header: "plain", nav: "links", section: "rule", texture: "stars", deco: "baubles" } },
+  { key: "midnight", occasion: "newyear", label: "Midnight Gold", blurb: "Black and gold, fireworks over the name, big prices",
+    style: { paper: "#0d0d0f", text: "#efe8da", heading: "#e2bf72", accent: "#e2bf72", item: "#fbf6ec", price: "#e2bf72", title_font: "elegant-serif", heading_font: "elegant-serif", body_font: "classic-serif", heading_case: "upper", item_case: "upper", heading_align: "center", divider: "none", item_layout: "board", header: "frame", nav: "links", section: "label", texture: "stars", deco: "fireworks" } },
+  { key: "champagne", occasion: "newyear", label: "Champagne", blurb: "Ivory and champagne gold, rising bubbles, centred courses",
+    style: { paper: "#faf6ee", text: "#2b2418", heading: "#8a6a2c", accent: "#b88a3a", item: "#2b2418", price: "#8a6a2c", title_font: "elegant-serif", heading_font: "elegant-serif", body_font: "elegant-serif", heading_case: "upper", item_case: "upper", heading_align: "center", divider: "star", item_layout: "centered", header: "minimal", nav: "links", section: "rule", texture: "bubbles", frame: "line" } },
+  { key: "confetti", occasion: "newyear", label: "Confetti", blurb: "Deep violet, bright confetti, bold headings and cards",
+    style: { paper: "#1a1240", text: "#f1eefc", heading: "#ffd166", accent: "#ef476f", item: "#ffffff", price: "#ffd166", title_font: "condensed-sans", heading_font: "condensed-sans", body_font: "modern-sans", heading_case: "upper", item_case: "as-printed", heading_align: "left", divider: "none", item_layout: "grid", header: "hero", nav: "tabs", section: "fill", texture: "confetti" } }
+];
+const OCCASIONS = { christmas: "Christmas", newyear: "New Year's Eve" };
+
 const MENU_DESIGN_KEYS = MENU_DESIGNS.map((d) => d.key);
-const menuDesignFor = (key) => MENU_DESIGNS.find((d) => d.key === key) || null;
+const menuDesignFor = (key) => MENU_DESIGNS.find((d) => d.key === key) || HOLIDAY_DESIGNS.find((d) => d.key === key) || null;
+// The generator's list: the regular designs, or for a holiday preview the holiday ones, that holiday's first.
+function designsFor(occasion) {
+  if (!OCCASIONS[occasion]) return MENU_DESIGNS;
+  return [...HOLIDAY_DESIGNS.filter((d) => d.occasion === occasion), ...HOLIDAY_DESIGNS.filter((d) => d.occasion !== occasion)];
+}
 
 // The raw style for a design. "yours" is the reader's own (null when it saw none: the standard page).
 function designStyle(key, menu) {
@@ -38,4 +62,4 @@ function designStyle(key, menu) {
   return design.style ? { ...design.style } : menu?.style || null;
 }
 
-export { MENU_DESIGNS, MENU_DESIGN_KEYS, menuDesignFor, designStyle };
+export { MENU_DESIGNS, HOLIDAY_DESIGNS, OCCASIONS, MENU_DESIGN_KEYS, menuDesignFor, designsFor, designStyle };

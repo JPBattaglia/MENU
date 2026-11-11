@@ -24,9 +24,12 @@ const Catalog = window.MenuMadeCatalog;
 const $ = id => document.getElementById(id);
 const MENU = 'ONLINE_MENU_QR';
 const WEBSITE = 'WEBSITE_PACKAGE';
+// Holiday Menu (Nov 10, 2026): made in the holiday menu generator (holiday-menu.html), checked out on its own.
+const HOLIDAY = 'HOLIDAY_MENU';
 // Short service names used by links from other pages and older emails.
 const ALIASES = {
   menu: MENU, online_menu_qr: MENU, 'online-menu-qr': MENU,
+  holiday: HOLIDAY, holiday_menu: HOLIDAY, 'holiday-menu': HOLIDAY,
   // Conversion Fix is folded into the Website Package (Nov 6, 2026): its old links open the Website Package.
   conversion: WEBSITE, conversion_fix: WEBSITE, CONVERSION_FIX: WEBSITE, google: 'GOOGLE_VISIBILITY',
   accessibility: 'ACCESSIBILITY_MONITORING', website: WEBSITE, app: 'GUEST_APP',
@@ -652,14 +655,14 @@ async function checkout() {
       if (!uploadedDocumentRequest.received) { await window.MenuMadeDocuments.send(uploadedDocumentRequest.payload, file, controller.signal); uploadedDocumentRequest.received = true; }
       customer.notes = composeNotes(brief, notes, 500, uploadedDocumentRequest.payload.requestId);
       $('lead_document_status').textContent = 'Menu received. Reference: ' + uploadedDocumentRequest.payload.requestId;
-    } else if (previewDocumentId && order.once.has(MENU)) {
+    } else if (previewDocumentId && (order.once.has(MENU) || order.once.has(HOLIDAY))) {
       customer.notes = composeNotes(brief, notes, 500, previewDocumentId);
     }
     els.checkoutBtn.textContent = 'Opening secure checkout…';
     window.MenuMadeFunnel?.track('checkout_attempt');
     const response = await fetch((Catalog?.API || '') + (TEST_CHECKOUT ? '/api/create-checkout-test' : '/api/create-checkout'), {
       method: 'POST', signal: controller.signal, headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ items, interval: interval(), ...(quote ? { menu_pages: quote.pages } : {}), ...(siteChoice && order.once.has('SITE_FILES') ? { site_choice: siteChoice } : {}), ...(domainPick && domainAllowed() ? { domain: domainPick.name } : {}), tracking: window.MenuMadeFunnel?.tracking(), customer })
+      body: JSON.stringify({ items, interval: interval(), ...(quote ? { menu_pages: quote.pages } : {}), ...(siteChoice && order.once.has('SITE_FILES') ? { site_choice: siteChoice } : {}), ...(holidayPreview && order.once.has(HOLIDAY) ? { holiday_preview: holidayPreview } : {}), ...(domainPick && domainAllowed() ? { domain: domainPick.name } : {}), tracking: window.MenuMadeFunnel?.tracking(), customer })
     });
     const result = await response.json();
     if (!response.ok) { window.MenuMadeFunnel?.track('checkout_error'); showStatus(result?.error?.message || result?.error || 'Checkout error. Please refresh and try again.'); return; }
@@ -676,6 +679,8 @@ async function checkout() {
 document.querySelectorAll('.js-add').forEach(button => button.addEventListener('click', () => {
   // Your Website needs a design picked in the generator first.
   if (button.closest('.service-card').dataset.code === 'SITE_FILES' && !siteChoice) { location.href = 'website-design.html#try-free'; return; }
+  // A holiday menu is made in the holiday menu generator first.
+  if (button.closest('.service-card').dataset.code === HOLIDAY && !holidayPreview) { location.href = 'holiday-menu.html#try-free'; return; }
   if (add(button.closest('.service-card').dataset.code)) showDetails();
 }));
 els.items.addEventListener('click', event => {
@@ -752,6 +757,8 @@ render(false);
 
 // "Make it live" from a free menu preview: prefill the details and attach the menu file it was made from.
 const previewToken = params.get('preview');
+// A holiday preview (contact.html?service=holiday&preview=<token>) is also the Holiday Menu's design choice.
+var holidayPreview = previewToken && /^[a-f0-9]{36}$/.test(previewToken) && /^(holiday|holiday_menu|holiday-menu|HOLIDAY_MENU)$/.test(params.get('service') || '') ? previewToken : '';
 if (previewToken && /^[a-f0-9]{36}$/.test(previewToken)) {
   fetch((Catalog?.API || '') + '/api/menu-preview/handoff/' + previewToken).then(r => r.json()).then(data => {
     if (!data?.ok) return;
@@ -761,7 +768,9 @@ if (previewToken && /^[a-f0-9]{36}$/.test(previewToken)) {
     // A preview from a prospect email whose menu was a web page has no file to attach: the buyer adds it here.
     if (!/^[0-9a-f-]{36}$/.test(data.request_id || '')) return;
     previewDocumentId = data.request_id;
-    $('lead_document_status').textContent = 'The menu from your preview is attached. Add a different file only if you want to replace it.';
+    $('lead_document_status').textContent = data.occasion
+      ? `Your ${data.occasion_name} menu from the preview is attached, in the ${data.design} design. Add a different file only if you want to replace it.`
+      : 'The menu from your preview is attached. Add a different file only if you want to replace it.';
   }).catch(() => {});
 }
 

@@ -50,6 +50,7 @@ async function menuHostingState(env, businessId, now = new Date()) {
   const qr = await env.DB.prepare(`
       SELECT p.id, MIN(d.delivered_at) AS first_delivered_at FROM projects p JOIN deliverables d ON d.project_id = p.id
       WHERE p.business_id = ? AND p.workflow_key = 'MENU_QR_V1' AND d.deliverable_type = 'MENU_DRAFT' AND d.status = 'FINAL' AND d.customer_visible = 1
+        AND json_extract(COALESCE(p.metadata_json, '{}'), '$.holiday_menu') IS NULL   -- Holiday Menus have no hosting year
       GROUP BY p.id ORDER BY first_delivered_at DESC LIMIT 1
     `).bind(businessId).first();
   const care = await env.DB.prepare(`
@@ -79,7 +80,7 @@ async function loadMenuProject(env, projectId) {
                 AND d.status = 'FINAL' AND d.customer_visible = 1) AS first_delivered_at,
              (SELECT i.metadata_json FROM order_items i WHERE i.order_id = p.order_id LIMIT 1) AS item_metadata
       FROM projects p JOIN businesses b ON b.id = p.business_id JOIN customers c ON c.id = p.customer_id
-      WHERE p.id = ? AND p.workflow_key = 'MENU_QR_V1'
+      WHERE p.id = ? AND p.workflow_key = 'MENU_QR_V1' AND json_extract(COALESCE(p.metadata_json, '{}'), '$.holiday_menu') IS NULL
     `).bind(projectId).first();
   if (!row) return null;
   return { ...row, environment: parseJsonOrNull(row.item_metadata)?.environment === "sandbox" ? "sandbox" : "live" };

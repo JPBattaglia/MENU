@@ -22,7 +22,7 @@ const LINK_TTL_DAYS = 7;
 
 // key: the switch id; offers: catalog offer codes it covers (selling); workflows: workflow keys (making).
 const SERVICES = [
-  { key: "ONLINE_MENU_QR", label: "Online Menu + QR", offers: ["ONLINE_MENU_QR"], workflows: ["MENU_QR_V1"] },
+  { key: "ONLINE_MENU_QR", label: "Online Menu + QR (and Holiday Menu)", offers: ["ONLINE_MENU_QR", "HOLIDAY_MENU"], workflows: ["MENU_QR_V1"] },
   { key: "MENU_CARE", label: "Menu Care", offers: ["MENU_CARE"], workflows: ["MENU_CARE_V1"] },
   { key: "REVIEW_REPLIES", label: "Review Replies", offers: ["REVIEW_REPLIES"], workflows: ["REVIEW_REPLIES_V1"] },
   { key: "GOOGLE_PROFILE_CARE", label: "Google Profile Care", offers: ["GOOGLE_PROFILE_CARE"], workflows: ["GOOGLE_PROFILE_CARE_V1"] },
