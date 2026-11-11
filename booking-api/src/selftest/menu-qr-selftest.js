@@ -27,7 +27,7 @@ const CHECK_ITEM = "Margherita Pizza";
 
 // ---------- Fixture: a real 5-page text PDF ----------
 
-function buildMenuPdf() {
+function buildMenuPdf(pages = MENU_PAGES, title = "Self-Test Cafe") {
   const escape = (text) => text.replace(/[\\()]/g, (c) => `\\${c}`);
   const objects = [];
   const add = (body) => { objects.push(body); return objects.length; };
@@ -35,12 +35,12 @@ function buildMenuPdf() {
   const pagesId = add("");
   const font = add("<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>");
   const pageIds = [];
-  MENU_PAGES.forEach(([section, items], index) => {
-    const lines = [`BT /F1 22 Tf 72 720 Td (${escape(`Self-Test Cafe - ${section}`)}) Tj ET`];
+  pages.forEach(([section, items], index) => {
+    const lines = [`BT /F1 22 Tf 72 720 Td (${escape(`${title} - ${section}`)}) Tj ET`];
     items.forEach(([name, price], row) => {
       lines.push(`BT /F1 14 Tf 72 ${670 - row * 30} Td (${escape(`${name} ........ ${price}`)}) Tj ET`);
     });
-    lines.push(`BT /F1 9 Tf 72 60 Td (Page ${index + 1} of ${MENU_PAGES.length}) Tj ET`);
+    lines.push(`BT /F1 9 Tf 72 60 Td (Page ${index + 1} of ${pages.length}) Tj ET`);
     const stream = lines.join("\n");
     const content = add(`<< /Length ${stream.length} >>\nstream\n${stream}\nendstream`);
     pageIds.push(add(`<< /Type /Page /Parent ${pagesId} 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 ${font} 0 R >> >> /Contents ${content} 0 R >>`));
@@ -363,6 +363,8 @@ async function advanceSelfTests(env, app) {
 }
 
 export {
+  cancelTestOrder,
+  diagnose,
   stripeTest,
   updateTest,
   buildMenuPdf,

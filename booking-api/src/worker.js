@@ -62,6 +62,7 @@ import { advanceMenuCareSelfTests } from "./selftest/menu-care-selftest.js";
 import { advanceConversionSelfTests } from "./selftest/conversion-selftest.js";
 import { advanceWebsiteCareSelfTests } from "./selftest/website-care-selftest.js";
 import { advanceSiteFilesSelfTests } from "./selftest/site-files-selftest.js";
+import { advanceHolidayMenuSelfTests } from "./selftest/holiday-menu-selftest.js";
 import { advanceWebsiteSelfTests } from "./selftest/website-selftest.js";
 import { advanceGuestAppSelfTests } from "./selftest/guest-app-selftest.js";
 import { advanceGoogleSelfTests } from "./selftest/google-selftest.js";
@@ -501,6 +502,7 @@ const mmWorkerWithBooking = {
       await advanceWebsiteSelfTests(env, app).catch((error) => console.error("Website Package self-test failed:", error instanceof Error ? error.message : String(error)));
       await advanceWebsiteCareSelfTests(env, app).catch((error) => console.error("Website Care self-test failed:", error instanceof Error ? error.message : String(error)));
       await advanceSiteFilesSelfTests(env, app).catch((error) => console.error("Your Website self-test failed:", error instanceof Error ? error.message : String(error)));
+      await advanceHolidayMenuSelfTests(env, app).catch((error) => console.error("Holiday Menu self-test failed:", error instanceof Error ? error.message : String(error)));
       await nudgeWaitingRenders(env).catch((error) => console.error("Renderer nudge failed:", error instanceof Error ? error.message : String(error)));
       await alertStaleRenders(env).catch((error) => console.error("Stale render check failed:", error instanceof Error ? error.message : String(error)));
       await advanceWebsiteTrialSelfTests(env, app).catch((error) => console.error("Website trial self-test failed:", error instanceof Error ? error.message : String(error)));

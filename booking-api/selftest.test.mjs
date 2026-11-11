@@ -5,6 +5,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { createHmac } from 'node:crypto';
+import { readFileSync } from 'node:fs';
 import { createD1, createR2 } from './test-support/d1.mjs';
 
 const api = {
@@ -14,7 +15,7 @@ const api = {
 };
 const WEBHOOK_SECRET = 'whsec_test_placeholder';
 
-function setup({ stripeConfirmFails = false } = {}) {
+function setup({ stripeConfirmFails = false, menu = null } = {}) {
   const DB = createD1();
   const ASSETS = createR2();
   const sql = (q, ...a) => DB.raw.prepare(q).run(...a);
@@ -78,7 +79,7 @@ function setup({ stripeConfirmFails = false } = {}) {
     if (target === 'https://api.anthropic.com/v1/messages') {
       const body = JSON.parse(init.body);
       assert.equal(body.messages[0].content[0].type, 'document');
-      return Response.json({ model: body.model, usage: { input_tokens: 10, output_tokens: 10 }, content: [{ type: 'tool_use', name: 'record_menu', input: {
+      return Response.json({ model: body.model, usage: { input_tokens: 10, output_tokens: 10 }, content: [{ type: 'tool_use', name: 'record_menu', input: menu || {
         sections: [{ name: 'Pizza', items: [{ name: 'Margherita Pizza', description: '', price: '$15' }, { name: 'Funghi Pizza', description: '', price: '$16' }] },
           { name: 'Desserts', items: [{ name: 'Tiramisu', description: '', price: '$9' }] }], notes: '', unreadable: '' } }] });
     }
@@ -116,7 +117,7 @@ function setup({ stripeConfirmFails = false } = {}) {
     await api.default.scheduled({ cron: '*/5 * * * *' }, env, ctx);
     while (pending.length) await pending.shift();
   }
-  const request = () => sql(`INSERT INTO self_tests (id, kind, status, requested_by, created_at, updated_at) VALUES ('st1', 'MENU_QR_EXTRA_PAGES', 'REQUESTED', 'test', ?, ?)`, t, t);
+  const request = (kind = 'MENU_QR_EXTRA_PAGES') => sql(`INSERT INTO self_tests (id, kind, status, requested_by, created_at, updated_at) VALUES ('st1', ?, 'REQUESTED', 'test', ?, ?)`, kind, new Date().toISOString(), new Date().toISOString());
   return { env, DB, ASSETS, emails, sessions, stripeLog, fetch, row, rows, sql, tick, deliverWebhooks, request };
 }
 
@@ -199,4 +200,104 @@ test('the deployed worker keeps the daily self-test schedule on (SELFTEST_SCHEDU
   const { dailyClock } = await import('./src/selftest/daily-clock.js');
   assert.equal(dailyClock({}), null);
   assert.ok(dailyClock({ SELFTEST_SCHEDULE: 'on' }) instanceof Date);
+});
+
+// ---------- Holiday Menu (HOLIDAY_MENU_RUN) ----------
+
+const HOLIDAY_READ = { sections: [{ name: 'Holiday Dinner', items: [{ name: 'Prime Rib', description: '', price: '$48' }, { name: 'Roast Turkey', description: '', price: '$36' }] },
+  { name: 'Holiday Desserts', items: [{ name: 'Gingerbread Cake', description: '', price: '$11' }] }], notes: '', unreadable: '' };
+
+function holidaySetup(t, now, options = {}) {
+  t.mock.timers.enable({ apis: ['Date'], now: Date.parse(now) });
+  const f = setup({ menu: HOLIDAY_READ, ...options });
+  const migration = readFileSync(new URL('./migrations/0054_holiday_menu.sql', import.meta.url), 'utf8');
+  for (const stmt of migration.split(/;\s*\n/)) if (/^\s*INSERT/m.test(stmt)) f.DB.raw.exec(stmt.replace(/^--.*$/gm, ''));
+  const run = async () => {
+    let result;
+    for (let i = 0; i < 8; i++) {
+      await f.tick();
+      await f.deliverWebhooks();
+      result = f.row(`SELECT * FROM self_tests WHERE id = 'st1'`);
+      if (['PASSED', 'FAILED'].includes(result.status)) break;
+    }
+    return result;
+  };
+  return { ...f, run };
+}
+
+test('holiday self-test: preview, chosen design, $59 checkout, approval, live at its own Christmas address; $30 the next day', async (t) => {
+  const f = holidaySetup(t, '2026-11-20T19:35:00.000Z');
+  await withFetch(f.fetch, async () => {
+    f.request('HOLIDAY_MENU_RUN');
+    const result = await f.run();
+    assert.equal(result.status, 'PASSED', `${result.stage}: ${result.error}\n${result.log_json}`);
+    const log = JSON.parse(result.log_json).map(l => l.note).filter(Boolean);
+    assert.match(log[0], /Christmas preview opened with 6 holiday designs; Silent Night chosen; order .* placed at \$59/);
+    assert.ok(log.some(l => /project carries the holiday \(ends 2026-12-26\)/.test(l)));
+    assert.match(log.at(-1), /live at \/api\/menu\/holiday-self-test-cafe-christmas-[0-9a-f]{8} in Silent Night through 2026-12-26; preview removed/);
+    assert.deepEqual([...f.sessions.values()].map(s => [s.amount_total, s.payment_status]), [[5900, 'paid']], 'one test payment, no extra pages');
+    for (const email of f.emails) assert.deepEqual(email.to, ['delivered@resend.dev'], email.subject);
+    assert.equal(f.row(`SELECT status FROM projects WHERE id = ?`, result.project_id).status, 'DELIVERED');
+    assert.equal(f.rows(`SELECT token FROM menu_previews`).length, 0, 'the test preview never counts as a real one');
+    assert.deepEqual([...f.ASSETS.objects.keys()].filter((k) => k.startsWith('menu-previews/')), []);
+
+    // The next day the test inbox already has a holiday menu this season: the second is $30.
+    f.sql(`DELETE FROM self_tests`);
+    t.mock.timers.setTime(Date.parse('2026-11-21T19:35:00.000Z'));
+    f.request('HOLIDAY_MENU_RUN');
+    const second = await f.run();
+    assert.equal(second.status, 'PASSED', `${second.stage}: ${second.error}`);
+    assert.equal([...f.sessions.values()].at(-1).amount_total, 3000);
+  });
+});
+
+test('holiday self-test: after Christmas it buys a New Year\'s Eve menu; after Dec 31 it passes once checkout refuses', async (t) => {
+  const f = holidaySetup(t, '2026-12-27T19:35:00.000Z');
+  await withFetch(f.fetch, async () => {
+    f.request('HOLIDAY_MENU_RUN');
+    const nye = await f.run();
+    assert.equal(nye.status, 'PASSED', `${nye.stage}: ${nye.error}\n${nye.log_json}`);
+    assert.match(JSON.parse(nye.log_json).at(-1).note, /holiday-self-test-cafe-new-years-eve-[0-9a-f]{8} in Confetti through 2027-01-01/);
+    f.sql(`DELETE FROM self_tests`);
+    t.mock.timers.setTime(Date.parse('2027-01-02T19:35:00.000Z'));
+    f.request('HOLIDAY_MENU_RUN');
+    await f.tick();
+    const off = f.row(`SELECT * FROM self_tests WHERE id = 'st1'`);
+    assert.equal(off.status, 'PASSED', off.error);
+    assert.match(JSON.parse(off.log_json)[0].note, /finished for this season; checkout refuses one/);
+    assert.equal(f.sessions.size, 1, 'no checkout opened out of season');
+  });
+});
+
+test('holiday self-test: a failure cancels the test order, removes the preview and alerts the owner once', async (t) => {
+  const f = holidaySetup(t, '2026-11-20T19:35:00.000Z', { stripeConfirmFails: true });
+  await withFetch(f.fetch, async () => {
+    f.request('HOLIDAY_MENU_RUN');
+    await f.tick();
+    await f.tick();
+    const result = f.row(`SELECT * FROM self_tests WHERE id = 'st1'`);
+    assert.equal(result.status, 'FAILED');
+    assert.match(result.error, /declined/);
+    assert.ok(result.order_id, 'the failed run remembers its order');
+    assert.equal(f.row(`SELECT status FROM orders WHERE id = ?`, result.order_id).status, 'CANCELLED');
+    assert.equal(f.rows(`SELECT token FROM menu_previews`).length, 0);
+    const alerts = f.emails.filter(e => e.subject === 'Holiday Menu self-test failed');
+    assert.equal(alerts.length, 1);
+    assert.deepEqual(alerts[0].to, ['info@menu-made.com']);
+  });
+});
+
+test('holiday self-test is scheduled daily at 11:30am Pacific, once', async () => {
+  const holiday = await import('./src/selftest/holiday-menu-selftest.js');
+  const f = setup();
+  const at = (h, m) => new Date(Date.UTC(2026, 10, 10, h, m));
+  await holiday.maybeScheduleDaily(f.env, at(19, 25));
+  await holiday.maybeScheduleDaily(f.env, at(19, 50));
+  assert.equal(f.rows(`SELECT id FROM self_tests`).length, 0);
+  await holiday.maybeScheduleDaily(f.env, at(19, 30));
+  await holiday.maybeScheduleDaily(f.env, at(19, 35));
+  assert.deepEqual(f.rows(`SELECT kind, requested_by FROM self_tests`), [{ kind: 'HOLIDAY_MENU_RUN', requested_by: 'daily' }]);
+  assert.equal(holiday.occasionOnSale(Date.parse('2026-12-25T20:00:00-08:00')), 'christmas');
+  assert.equal(holiday.occasionOnSale(Date.parse('2026-12-26T08:00:00-08:00')), 'newyear');
+  assert.equal(holiday.occasionOnSale(Date.parse('2027-01-01T08:00:00-08:00')), null);
 });
