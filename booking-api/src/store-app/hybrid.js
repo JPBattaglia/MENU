@@ -317,7 +317,9 @@ const HYBRID_LOOK = {
   // same afternoon, a different drawing instead: NinoLogoRevision_3 (gold mark and ring on a maroon disc), with
   // "remove the background and replace it with a dark background and cut it for icon". nino-icon-logo.png is that
   // disc cut out of its white canvas and enlarged from the 792 px file he sent; icon_bg is the dark behind it, and
-  // icon_pad / icon_pad_android say how far in the disc sits. In the app the header logo and loader are unchanged
+  // icon_pad / icon_pad_android say how far in the disc sits. On seeing the first cut: "looks too thin" (its rim had
+  // been trimmed), so the cut now follows the drawing's real outline and the gold ring is drawn a little bolder
+  // (the inside at 95% of its size, the ring widened inward to meet it). In the app the header logo and loader are unchanged
   // (logo_url).
   nino: { label: "Nino", logo_url: `${MM}/assets/own-apps/nino-app-logo.png`, icon_file: "assets/own-apps/nino-icon-logo.png",
     icon_bg: "#12060b", icon_pad: 0.03, icon_pad_android: 0.17,
