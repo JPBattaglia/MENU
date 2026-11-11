@@ -28,7 +28,7 @@ function fakeApi(queue) {
     if (next instanceof Error) throw next;
     const status = next.status || 200;
     const json = status === 200
-      ? { model: 'claude-sonnet-5-5', content: next.input === undefined ? [] : [{ type: 'tool_use', name: 'record_output', input: next.input }], usage: next.usage || { input_tokens: 100, output_tokens: 50 } }
+      ? { model: 'claude-sonnet-5-5', stop_reason: next.stop || 'tool_use', content: next.input === undefined ? [] : [{ type: 'tool_use', name: 'record_output', input: next.input }], usage: next.usage || { input_tokens: 100, output_tokens: 50 } }
       : { error: { message: `status ${status}` } };
     return { ok: status === 200, status, json: async () => json };
   };
@@ -155,4 +155,30 @@ test('qualityCheck combines length, facts and privacy', () => {
   const bad = qualityCheck('Free pizza for a year at www.freepizza.biz', { sourceText: SOURCE, min: 10, max: 300 });
   assert.equal(bad.ok, false);
   assert.equal(bad.problems[0].kind, 'url');
+});
+
+// Nov 11, 2026: the Google description self-test failed when every answer was cut off at max_tokens.
+test('makes the model call the record tool directly, unless server tools are in use', async () => {
+  const env = setup();
+  const api = fakeApi([{ input: { reply: 'ok' } }, { input: { reply: 'ok' } }]);
+  await generate(env, options, deps(api));
+  assert.deepEqual(api.calls[0].body.tool_choice, { type: 'tool', name: 'record_output' });
+  await generate(env, { ...options, serverTools: [{ type: 'web_search_20250305', name: 'web_search' }] }, deps(api));
+  assert.deepEqual(api.calls[1].body.tool_choice, { type: 'auto' });
+});
+
+test('an answer cut off at the token limit is retried with twice the room', async () => {
+  const env = setup();
+  const api = fakeApi([{ input: {}, stop: 'max_tokens' }, { input: { reply: 'ok' } }]);
+  const result = await generate(env, { ...options, maxTokens: 700 }, deps(api));
+  assert.deepEqual(result.output, { reply: 'ok' });
+  assert.equal(api.calls[0].body.max_tokens, 700);
+  assert.equal(api.calls[1].body.max_tokens, 1400);
+});
+
+test('three cut-off answers fail with a message that says so', async () => {
+  const env = setup();
+  const api = fakeApi([{ input: {}, stop: 'max_tokens' }, { input: {}, stop: 'max_tokens' }, { input: {}, stop: 'max_tokens' }]);
+  await assert.rejects(generate(env, { ...options, maxTokens: 500 }, deps(api)), /missing "reply" \(the answer was cut off at the 2000-token limit\)/);
+  assert.deepEqual(api.calls.map((c) => c.body.max_tokens), [500, 1000, 2000]);
 });
