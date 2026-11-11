@@ -1,4 +1,4 @@
-// Holiday Menu popup (owner, Nov 11, 2026): a festive invitation to the Holiday Menu on the main pages, a few seconds
+// Holiday Menu popup (owner, Nov 11, 2026): a festive invitation to the Holiday Menu on the Home and Menus pages only, a few seconds
 // after the page opens. Owner, Nov 11, 2026 (later): shown on every page load and refresh, not once per browser.
 // Never after New Year's Eve.
 (function () {
