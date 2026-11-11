@@ -277,7 +277,7 @@ test("owner's own apps: made once by the tick at no charge, owner keys, no buyer
     assert.match(cfg.body.icon_svg, /<rect width="512" height="512" fill="#121718"\/>/);
     assert.match(cfg.body.icon_svg, /x="20.48" y="20.48"/, 'the disc nearly fills the icon');
     assert.match(cfg.body.android_foreground_svg, /x="102.4" y="102.4"/, "inside Android's safe zone");
-    assert.equal(cfg.body.config.intro_url, 'https://menu-made.com/assets/own-apps/nino-intro.mp4');
+    assert.equal(cfg.body.config.intro_url, 'https://menu-made.com/assets/own-apps/nino-intro-neon.mp4');
     assert.equal(cfg.body.config.loader_url, 'https://menu-made.com/assets/own-apps/nino-loader.webp');
     assert.ok(cfg.body.icon_svg.includes(cfg.body.logo_placeholder), 'the build swaps the file in for the placeholder');
   } finally {

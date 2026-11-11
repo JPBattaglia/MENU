@@ -34,9 +34,9 @@ async function p8() {
 // sentBack = a submission Apple returned (Unresolved Issues); resubmitFails = Apple refuses to resubmit it by API;
 // playSent = Google Play's production track already has a release that was sent for review.
 function fakeStores({ appleFail = null, playDraft = false, appleState = 'WAITING_FOR_REVIEW', playLive = false, liveVersion = null, buildVersion = '1.0.0',
-  v1State = 'PREPARE_FOR_SUBMISSION', waitingBuild = 'B1', withdrawChecks = 1, sentBack = false, resubmitFails = false, playSent = false } = {}) {
+  v1State = 'PREPARE_FOR_SUBMISSION', waitingBuild = 'B1', withdrawChecks = 1, sentBack = false, resubmitFails = false, playSent = false, processingFor = 0 } = {}) {
   const seen = { apple: [], play: [], uploads: 0, canceled: [] };
-  const state = { appleState, playLive, opened: !liveVersion, v1State, withdrawChecks };
+  const state = { appleState, playLive, opened: !liveVersion, v1State, withdrawChecks, processingFor };
   const fetchImpl = async (url, init = {}) => {
     const u = String(url); const m = init.method || 'GET';
     if (u.startsWith('https://oauth2.googleapis.com/token')) return Response.json({ access_token: 'ya29', expires_in: 3600 });
@@ -61,6 +61,7 @@ function fakeStores({ appleFail = null, playDraft = false, appleState = 'WAITING
       if (path.startsWith('/reviewSubmissions?') && sentBack) return Response.json({ data: [{ id: 'RSU', attributes: { state: 'UNRESOLVED_ISSUES' } }] });
       if (path === '/reviewSubmissions/RSU' && m === 'PATCH') {
         seen.resubmit = body.data.attributes;
+        if (state.processingFor-- > 0) return Response.json({ errors: [{ detail: 'Version is not ready to be submitted yet, please try again later.' }, { detail: 'Asset is being processed.' }] }, { status: 409 });
         return resubmitFails ? Response.json({ errors: [{ detail: 'The review submission is not in a state that allows this.' }] }, { status: 409 }) : Response.json({ data: {} });
       }
       if (path === '/appStoreVersions' && m === 'POST') { seen.newVersion = body.data.attributes; state.opened = true; return Response.json({ data: { id: 'V1' } }); }
@@ -90,7 +91,10 @@ function fakeStores({ appleFail = null, playDraft = false, appleState = 'WAITING
       if (path === '/reviewSubmissions' && m === 'POST') return Response.json({ data: { id: 'RS1' } });
       if (path.startsWith('/reviewSubmissions/RS1/items')) return Response.json({ data: [] });
       if (path === '/reviewSubmissionItems') return Response.json({ data: { id: 'RSI1' } });
-      if (path === '/reviewSubmissions/RS1' && m === 'PATCH') { seen.submitted = body.data.attributes.submitted; return Response.json({ data: {} }); }
+      if (path === '/reviewSubmissions/RS1' && m === 'PATCH') {
+        if (state.processingFor-- > 0) return Response.json({ errors: [{ detail: 'Asset is being processed.' }] }, { status: 409 });
+        seen.submitted = body.data.attributes.submitted; return Response.json({ data: {} });
+      }
       throw new Error(`Unexpected Apple call ${m} ${path}`);
     }
     if (u.includes('androidpublisher.googleapis.com')) {
@@ -552,3 +556,35 @@ test("the owner's own apps get listing words that say what each app does, within
   assert.match(listing.withOwnText({ own_app: 1, bundle_id: 'com.menumade.ninobattaglia' }, base).description, /24 hours before the website/);
   assert.deepEqual(listing.withOwnText({ own_app: 0, bundle_id: 'com.menumade.menumade' }, base), base);
 });
+
+test("Apple still processing the new pictures (Nov 10: 'Asset is being processed') is waited out, not handed to the owner", () => quiet(async () => {
+  // A sent-back review: the resubmission is tried again on the next tick and then goes through by itself.
+  const f = await setup();
+  const stores = fakeStores({ sentBack: true, playSent: true, processingFor: 1 });
+  await sentOnce(f);
+  await tick(f, stores);
+  await approve(f, previewUrl(f.emails.at(-1)));
+  const mails = f.emails.length;
+  await tick(f, stores);
+  assert.equal(f.row(`SELECT status FROM store_apps`).status, 'WAITING_SUBMIT_APPROVAL');
+  assert.equal(f.emails.length, mails, 'no email while Apple is only busy');
+  await tick(f, stores);
+  assert.equal(f.row(`SELECT status, note FROM store_apps`).status, 'IN_REVIEW');
+  assert.ok(!f.emails.some((e) => /One click in App Store Connect/.test(e.subject)), 'the owner is not asked to press anything');
+  assert.equal(JSON.parse(f.row(`SELECT apple_json FROM store_app_listings`).apple_json).resubmitted, true);
+
+  // A first submission meets the same answer: also waited out, no "needs a look" email.
+  const g = await setup();
+  const first = fakeStores({ processingFor: 1 });
+  await pictures(g);
+  await tick(g, first);
+  await approve(g, previewUrl(g.emails[0]));
+  const before = g.emails.length;
+  await tick(g, first);
+  assert.equal(g.row(`SELECT status FROM store_apps`).status, 'WAITING_SUBMIT_APPROVAL');
+  assert.equal(g.emails.length, before);
+  assert.equal(first.seen.release, undefined, 'Google waits for Apple');
+  await tick(g, first);
+  assert.equal(g.row(`SELECT status FROM store_apps`).status, 'IN_REVIEW');
+  assert.equal(first.seen.submitted, true);
+}));
