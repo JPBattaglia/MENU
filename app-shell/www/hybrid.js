@@ -447,9 +447,46 @@
     if (gen.state) draw(); else load();
   }
 
+  // In season: the holiday pop-up, a few seconds after the app opens, once each time it is opened (as on the
+  // website's home page). Not over a generator's form, wait or designs.
+  var popShown = false, popTimer = null;
+  function holidayPop() {
+    if (popShown || popTimer || !data || data.kind !== "services") return;
+    popTimer = setTimeout(function () {
+      popTimer = null;
+      var g = seasonal().filter(function (x) { return x.popup; })[0];
+      if (popShown || !g || gen.kind || document.body.classList.contains("hy-sheet-open")) return;
+      popShown = true;
+      var p = g.popup, last = document.activeElement;
+      var pop = el("div", "hy-pop"); var card = el("div", "hy-pop-card");
+      card.setAttribute("role", "dialog"); card.setAttribute("aria-modal", "true"); card.setAttribute("aria-label", p.title);
+      function close() { if (pop.parentNode) pop.parentNode.removeChild(pop); document.body.classList.remove("hy-sheet-open"); if (last && last.focus) last.focus(); }
+      var x = button("\u00d7", "hy-pop-close", close); x.setAttribute("aria-label", "Close"); card.appendChild(x);
+      if (p.icons) { var ic = el("div", "hy-pop-icons", p.icons); ic.setAttribute("aria-hidden", "true"); card.appendChild(ic); }
+      card.appendChild(el("p", "hy-pop-kicker", p.kicker));
+      card.appendChild(el("h2", null, p.title));
+      card.appendChild(el("p", null, p.text));
+      var price = el("div", "hy-pop-price", p.price); price.appendChild(el("small", null, p.price_note)); card.appendChild(price);
+      var go = button(p.action, "hy-btn hy-btn-big", function () { close(); openGenerator(g.key); }); card.appendChild(go);
+      card.appendChild(button(p.later || "Not now", "hy-link", close));
+      pop.appendChild(card); pop.addEventListener("click", function (ev) { if (ev.target === pop) close(); });
+      document.body.appendChild(pop); document.body.classList.add("hy-sheet-open");
+      try { go.focus(); } catch (e) {}
+    }, 3000);
+  }
+
   var SERVICES = {
     home: function (s) {
       s.appendChild(header());
+      // In season: the holiday banner, first thing on Home (as the strip on the website's home page).
+      seasonal().forEach(function (g) {
+        if (!g.strip) return;
+        var strip = el("button", "hy-holiday-strip"); strip.type = "button";
+        var line = el("span", "hy-holiday-line"); line.appendChild(el("strong", null, g.strip.lead + " ")); line.appendChild(document.createTextNode(g.strip.text)); strip.appendChild(line);
+        strip.appendChild(el("span", "hy-holiday-go", saved(g.key) ? "Open my preview" : g.strip.action || "Try it free"));
+        strip.addEventListener("click", function () { openGenerator(g.key); });
+        s.appendChild(strip);
+      });
       var h = data.hero || {};
       var hero = el("div", "hy-hero hy-home");
       if (/^https:\/\//.test(h.image || "")) { var pic = el("img", "hy-home-img"); pic.src = h.image; pic.alt = ""; hero.appendChild(pic); }
@@ -458,16 +495,6 @@
       if (h.text) hero.appendChild(el("p", "hy-lead", h.text));
       s.appendChild(hero);
       var gens = data.generators || [];
-      // In season: the Holiday menu generator, in a card of its own above the two regular ones.
-      seasonal().forEach(function (g) {
-        var solo = el("div", "hy-duo hy-solo");
-        var b = el("button", "hy-duo-card"); b.type = "button";
-        var top = el("span", "hy-duo-top"); top.appendChild(icon("preview", 28)); top.appendChild(el("span", "hy-pill", g.badge || g.count + " designs")); b.appendChild(top);
-        b.appendChild(el("strong", null, g.card_title || g.title)); b.appendChild(el("span", "hy-muted", g.card_text || g.text));
-        b.appendChild(el("span", "hy-duo-go", saved(g.key) ? "Open my preview" : g.card_action || "Try it free"));
-        b.addEventListener("click", function () { openGenerator(g.key); });
-        solo.appendChild(b); s.appendChild(solo);
-      });
       if (gens.length) {
         s.appendChild(el("h3", "hy-label", "Start here, free"));
         var grid = el("div", "hy-duo");
@@ -1147,6 +1174,7 @@
       var first = !data; data = c;
       if (first) { build(); show(c.tabs[0]); } else if (current) show(current, { keep: true, product: currentOpts.product });
       t.status("");
+      holidayPop();
       document.body.classList.add("hy-ready");
       hideLoader();
     }).catch(function () {

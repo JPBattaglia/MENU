@@ -65,12 +65,23 @@ function menumadeContent(catalog, { offCodes = [], now = Date.now() } = {}) {
     .filter((x) => x.price).slice(0, 20);
   const occasions = offCodes.includes("HOLIDAY_MENU") || !byCode.get("HOLIDAY_MENU")?.on_sale ? [] : ["christmas", "newyear"].filter((o) => holidayOnSale(o, now)).map((o) => ({ key: o, label: OCCASION_NAMES[o] }));
   const holidayPrice = dollars(HOLIDAY_PRICING.firstCents);
+  const first = occasions[0]?.key;
   const which = occasions.map((o) => o.label).join(" or ");
   const holidayGenerators = occasions.length ? [{
     key: "holiday", noun: "holiday menu", title: "Holiday menu generator", count: 6, badge: `${holidayPrice} per holiday`,
     text: `A ${which} menu with its own link and QR code, apart from your regular menu.`,
     card_title: "Holiday Menu", card_text: `Your ${which} menu as a phone menu with its own QR code, in six holiday designs. Keep your regular menu as it is.`, card_action: "Try it free",
     occasions, occasion_label: "Which holiday is this menu for?", file_label: "Your holiday menu",
+    // The banner on Home and the pop-up a few seconds after the app opens (owner, Nov 11, 2026: "there's no holiday
+    // banner or pop up"), worded as on the website (index.html's holiday strip, holiday-popup.js).
+    strip: { lead: "Holiday special:", text: `your ${occasions.map((o) => o.label).join(" and ")} ${occasions.length > 1 ? "menus" : "menu"} online with a QR code, ${holidayPrice} per holiday.`, action: "See my holiday menu free" },
+    popup: {
+      icons: first === "christmas" ? "🎄🎁❄️" : "🥂✨🎉", kicker: "Holiday special",
+      title: `Get your ${OCCASION_NAMES[first]} menu online`,
+      text: "Your holiday menu as a phone page with its own QR code, a print PDF and a table tent. It sits beside the menu you already have.",
+      price: holidayPrice, price_note: occasions.length > 1 ? `per holiday, or ${dollars(HOLIDAY_PRICING.firstCents + HOLIDAY_PRICING.secondCents)} for Christmas and New Year's Eve` : "nothing renews",
+      action: "See my holiday menu free", later: "Not now"
+    },
     form_text: "Upload your holiday menu. You'll see it as a phone menu in six holiday designs.",
     create_url: `${MM}/api/menu-preview/create`, state_url: `${MM}/api/menu-preview/state/`, start: "Make my holiday menu preview",
     busy: ["Reading your holiday menu…", "Finding the courses, dishes and prices…", "Drawing your menu in six holiday designs…"], wait: "This takes about a minute. Keep the app open.",

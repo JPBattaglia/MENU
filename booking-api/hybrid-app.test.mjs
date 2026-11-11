@@ -185,9 +185,12 @@ test('menumade: the Holiday menu generator is sent in season, in a field older a
   assert.equal(g.create_url, 'https://menu-made.com/api/menu-preview/create');
   assert.equal(g.state_url, 'https://menu-made.com/api/menu-preview/state/');
   assert.match(g.buttons[2].text, /\$59 for one holiday.*second holiday menu this season is \$30/);
+  assert.equal(g.strip.text, "your Christmas and New Year's Eve menus online with a QR code, $59 per holiday.");
+  assert.deepEqual([g.popup.title, g.popup.price, g.popup.price_note, g.popup.action], ['Get your Christmas menu online', '$59', "per holiday, or $89 for Christmas and New Year's Eve", 'See my holiday menu free']);
   const dec = hybrid.menumadeContent({ ok: true, offers }, { now: Date.parse('2026-12-27T18:00:00Z') }).seasonal[0];
   assert.deepEqual(dec.occasions, [{ key: 'newyear', label: "New Year's Eve" }], 'after Christmas only New Year\'s Eve');
   assert.match(dec.card_text, /^Your New Year's Eve menu/);
+  assert.deepEqual([dec.popup.title, dec.popup.price_note, dec.strip.text], ["Get your New Year's Eve menu online", 'nothing renews', "your New Year's Eve menu online with a QR code, $59 per holiday."]);
   assert.deepEqual(hybrid.menumadeContent({ ok: true, offers }, { now: Date.parse('2027-01-02T18:00:00Z') }).seasonal, [], 'gone after the season');
   assert.deepEqual(hybrid.menumadeContent({ ok: true, offers }, { now: Date.parse('2026-11-20T18:00:00Z'), offCodes: ['HOLIDAY_MENU'] }).seasonal, [], 'gone when its Selling switch is off');
   assert.deepEqual(hybrid.menumadeContent({ ok: true, offers: [] }, { now: Date.parse('2026-11-20T18:00:00Z') }).seasonal, [], 'gone when it is not on sale');
