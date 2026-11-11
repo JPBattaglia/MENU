@@ -3111,7 +3111,7 @@ body.mm-xmas .pill::before { content: "❄ "; }
 body.mm-xmas .hero h1 { color: #fff; text-shadow: 0 2px 0 rgba(0,0,0,.25), 0 0 26px rgba(240,199,94,.35); }
 body.mm-xmas .service-price strong { color: #f0c75e; }
 body.mm-xmas .service-profile-plan, body.mm-xmas .service-scope-note, body.mm-xmas .mm-try {
-  background: #006332; border: 2px solid #f0c75e; border-radius: 22px; box-shadow: 0 0 0 6px rgba(212,36,47,.35), 0 18px 40px rgba(0,0,0,.35);
+  background: #005229; border: 2px solid #f0c75e; border-radius: 22px; box-shadow: 0 0 0 6px rgba(212,36,47,.35), 0 18px 40px rgba(0,0,0,.35);
 }
 body.mm-xmas .service-profile-plan { padding: 28px; }
 body.mm-xmas .service-profile-plan li::marker, body.mm-xmas .service-preparation-list li::marker { color: #f0c75e; }
