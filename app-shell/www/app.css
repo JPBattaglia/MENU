@@ -111,6 +111,8 @@ body.hybrid {
 .hy-plan-top { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; font-size: 19px; }
 .hy-plan-top strong:first-child, .hy-plan-top h2 { font-family: var(--hy-display); }
 .hy-plan-top h2 { margin: 0; font-size: 30px; }
+/* "6 designs" stays on one line beside a title that wraps (owner, Nov 11, 2026). */
+.hy-plan-top .hy-pill { white-space: nowrap; flex: 0 0 auto; }
 .hy-list { display: grid; gap: 12px; margin-top: 18px; }
 .hy-list-item { display: flex; flex-direction: column; align-items: flex-start; gap: 2px; width: 100%; text-align: left; font: inherit; padding: 18px; background: var(--hy-card); border: 1px solid var(--hy-card-line); border-radius: var(--hy-radius); color: var(--hy-ink); }
 .hy-list-item strong { font-family: var(--hy-display); font-size: 19px; }
