@@ -3182,3 +3182,13 @@ html.mm-lightbox-open { overflow: hidden; }
 /* Holiday choice (Christmas / New Year's Eve): slim pills on one line (owner, Nov 11, 2026). */
 .mm-occasion label { padding: 6px 16px; white-space: nowrap; line-height: 1.2; }
 .mm-occasion input[type="radio"] { flex: none; width: 18px; height: 18px; min-height: 0; margin: 0; padding: 0; border: 0; box-shadow: none; }
+
+/* Holiday strip, thinner (owner, Nov 11, 2026): text and button on one line, less padding, a smaller button. */
+.mm-holiday-strip { flex-wrap: nowrap; padding: 6px 12px 6px 54px; gap: 16px; }
+.mm-holiday-strip::before { left: 14px; font-size: 24px; }
+.mm-holiday-strip p { flex: 1 1 auto; min-width: 0; font-size: 15px; line-height: 1.35; }
+.mm-holiday-strip .btn { flex: none; white-space: nowrap; padding: 7px 14px; font-size: 14px; }
+.mm-holiday-strip-wrap { padding-top: 12px; }
+@media (max-width: 640px) { .mm-holiday-strip { flex-wrap: wrap; padding: 8px 12px 10px 48px; gap: 8px; } .mm-holiday-strip::before { left: 12px; font-size: 22px; } .mm-holiday-strip p { font-size: 14px; } }
+@media (max-width: 700px) { .mm-holiday-strip p { font-size: 15px !important; line-height: 1.35 !important; } }
+@media (max-width: 640px) { .mm-strip-more { display: none; } .mm-holiday-strip .btn { padding: 6px 12px; font-size: 13px; } }
