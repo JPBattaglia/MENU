@@ -186,7 +186,9 @@
   var gen = { kind: null, step: "choose", state: null, index: 0, error: "" }, account = null;
   // Any generator in season first, then the two regular ones (data.seasonal: the Holiday menu generator, Nov 11, 2026). App
   // builds from before that never read data.seasonal, so they keep showing the two they have words for.
-  function seasonal() { return Array.isArray(data.seasonal) ? data.seasonal : []; }
+  // Store listing pictures (scripts/store-screenshots.mjs sets MM_STORE_SHOTS) show the app as it is all year: nothing
+  // seasonal, and no pop-up over the screens being photographed (build 86 failed on it, Nov 11, 2026).
+  function seasonal() { return !window.MM_STORE_SHOTS && Array.isArray(data.seasonal) ? data.seasonal : []; }
   function allGens() { return seasonal().concat(data.generators || []); }
   function genSpec(kind) { return allGens().filter(function (g) { return g.key === kind; })[0] || null; }
   function noun(g) { return g.noun || (g.key === "menu" ? "menu" : "website"); }

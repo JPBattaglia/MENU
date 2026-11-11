@@ -19,6 +19,8 @@ if (cfg.hybrid_url) {
   let shots = 0;
   for (const [prefix, viewport] of [["ios", { width: 430, height: 932 }], ["android", { width: 360, height: 640 }]]) {
     const context = await browser.newContext({ viewport, deviceScaleFactor: 3, isMobile: true, hasTouch: true });
+    // The app leaves out anything seasonal (the holiday banner, pop-up and generator) for its store pictures.
+    await context.addInitScript(() => { window.MM_STORE_SHOTS = true; });
     const page = await context.newPage();
     await page.goto(base, { waitUntil: "load" });
     await page.waitForSelector("body.hy-ready .hy-tabs", { timeout: 60000 });
