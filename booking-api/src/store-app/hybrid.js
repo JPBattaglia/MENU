@@ -315,21 +315,22 @@ const HYBRID_LOOK = {
   // background removed) shows whenever something is loading. Nov 10, 2026: "Replace splash with this one", his
   // Neon_Light_Rays_Intro_720p.mp4 (the red and black logo lighting up, 5 seconds, upright 720 x 1280), re-encoded
   // without its sound track. It has a new file name so a phone never plays a remembered copy of the old clip in the
-  // new upright layout. Same evening, once the icon became the orange and gold logo: "needs the new icon", so the
-  // clip was redrawn frame by frame with that logo in the red and black one's place, uncovered by the clip's own
-  // sweep of light (nino-intro-gold.mp4). nino-intro.mp4 and nino-intro-neon.mp4 hold the same clip, so builds made
-  // before this play it too.
+  // new upright layout. For twenty minutes that evening the clip was redrawn with the orange and gold logo (Claude
+  // misread "needs the new icon"); the owner: "That's not going to work, put it back the way it was". So the clip is
+  // his file again, red and black logo and all, and it stays that way while the icon is orange and gold. All three
+  // file names (nino-intro.mp4, nino-intro-neon.mp4, nino-intro-gold.mp4) hold his clip, because builds 72 to 78
+  // each ask for one of them.
   // Icon (owner, Nov 10, 2026; five drawings tried that afternoon and evening). Current: his second
   // NinoLogoRevision_3 file (orange and gold mark and ring on a deep red disc, transparent corners, 423 px), sent at
   // 5:34 pm after seeing the red and black NinoLogo2024OB icon on his phone: "App icon doesn't look right, try making
   // one with this". nino-icon-logo.png is that file enlarged to 1024 px, unaltered otherwise; icon_bg is a warm
   // near-black; icon_pad / icon_pad_android say how far in the disc sits (Android's stays inside the launcher's
   // safe circle; owner on the first build of it: "put a little more space between the logo and the edges", so the
-  // margin went from 5% to 10% a side). The opening clip still shows the red and black logo. In the app the header logo and loader are
+  // margin went from 5% to 10% a side, and that is the one he then named as the icon to use). The opening clip shows the red and black logo, on purpose. In the app the header logo and loader are
   // unchanged (logo_url).
   nino: { label: "Nino", logo_url: `${MM}/assets/own-apps/nino-app-logo.png`, icon_file: "assets/own-apps/nino-icon-logo.png",
     icon_bg: "#0d0303", icon_pad: 0.1, icon_pad_android: 0.22,
-    intro_url: `${MM}/assets/own-apps/nino-intro-gold.mp4`, loader_url: `${MM}/assets/own-apps/nino-loader.webp` }
+    intro_url: `${MM}/assets/own-apps/nino-intro-neon.mp4`, loader_url: `${MM}/assets/own-apps/nino-loader.webp` }
 };
 const hybridLookForBundle = (bundleId) => HYBRID_LOOK[HYBRID_BUNDLES.get(String(bundleId || ""))] || null;
 const hybridUrlForBundle = (bundleId) => hybridUrl(HYBRID_BUNDLES.get(String(bundleId || "")) || "");
