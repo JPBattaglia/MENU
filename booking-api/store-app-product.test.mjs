@@ -271,7 +271,12 @@ test("owner's own apps: made once by the tick at no charge, owner keys, no buyer
     assert.equal(cfg.body.config.hybrid_url, 'https://menu-made.com/api/app-hybrid/nino');
     // Nino's app icon comes from the repo file (the owner's blue N), and its loading screen spins the same picture.
     assert.equal(cfg.body.config.logo_url, 'https://menu-made.com/assets/own-apps/nino-app-logo.png');
-    assert.equal(cfg.body.logo_file, 'assets/own-apps/nino-app-logo.png');
+    // Nov 10, 2026: the icon is the owner's disc logo in the site's orange, edge to edge on its own navy.
+    assert.equal(cfg.body.logo_file, 'assets/own-apps/nino-icon-logo.png');
+    assert.equal(cfg.body.icon_background, '#000043');
+    assert.match(cfg.body.icon_svg, /<rect width="512" height="512" fill="#000043"\/>/);
+    assert.match(cfg.body.icon_svg, /x="10.24" y="10.24"/, 'the disc fills the icon');
+    assert.match(cfg.body.android_foreground_svg, /x="87.04" y="87.04"/, "inside Android's safe zone");
     assert.equal(cfg.body.config.intro_url, 'https://menu-made.com/assets/own-apps/nino-intro.mp4');
     assert.equal(cfg.body.config.loader_url, 'https://menu-made.com/assets/own-apps/nino-loader.webp');
     assert.ok(cfg.body.icon_svg.includes(cfg.body.logo_placeholder), 'the build swaps the file in for the placeholder');
