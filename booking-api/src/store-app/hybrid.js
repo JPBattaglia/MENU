@@ -313,7 +313,13 @@ const HYBRID_LOOK = {
   menumade: { logo_url: `${MM}/MENU%3D.png`, label: "M\u039eNU", icon_bg: "#012a30", icon_file: "assets/own-apps/menumade-icon-logo.png" },
   // Owner, Nov 8: the logo animation plays once as the app opens (clip #4, NinoLogoAnimation, no sound); the ring of
   // fire N (clip #6, NinoGif1, background removed) shows whenever something is loading.
-  nino: { label: "Nino", logo_url: `${MM}/assets/own-apps/nino-app-logo.png`, icon_file: "assets/own-apps/nino-app-logo.png",
+  // Icon (owner, Nov 10, 2026: his NinoLogoOrange.png, "enhance this with the orange to match the site and make a new
+  // icon"): his blue disc and green lines kept, the red mark and ring recoloured to the site's orange (#ff6a1f, up
+  // to gold in the highlights). nino-icon-logo.png is that disc with its rim faded out, so on icon_bg (the disc's own
+  // edge navy) it fills the icon edge to edge; icon_pad / icon_pad_android say how far in it sits. In the app the
+  // header logo and loader are unchanged (logo_url).
+  nino: { label: "Nino", logo_url: `${MM}/assets/own-apps/nino-app-logo.png`, icon_file: "assets/own-apps/nino-icon-logo.png",
+    icon_bg: "#000043", icon_pad: 0.02, icon_pad_android: 0.17,
     intro_url: `${MM}/assets/own-apps/nino-intro.mp4`, loader_url: `${MM}/assets/own-apps/nino-loader.webp` }
 };
 const hybridLookForBundle = (bundleId) => HYBRID_LOOK[HYBRID_BUNDLES.get(String(bundleId || ""))] || null;

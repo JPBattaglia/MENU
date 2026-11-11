@@ -114,8 +114,9 @@ async function buildConfigFor(env, storeApp, packageId = storeApp.bundle_id) {
     },
     ...(repoLogo ? { logo_file: repoLogo, logo_placeholder: LOGO_PLACEHOLDER } : {}),
     ...(look?.icon_bg ? { icon_background: look.icon_bg } : {}),
-    icon_svg: draw(0.14),
-    android_foreground_svg: draw(0.24),
+    // The picture's margin inside the icon; a look whose picture is made to fill the icon sets its own (hybrid.js).
+    icon_svg: draw(Number.isFinite(look?.icon_pad) ? look.icon_pad : 0.14),
+    android_foreground_svg: draw(Number.isFinite(look?.icon_pad_android) ? look.icon_pad_android : 0.24),
     feature_svg: repoLogo ? featureSvg(data, LOGO_PLACEHOLDER) : featureSvg(data, logoUri)
   } };
 }
