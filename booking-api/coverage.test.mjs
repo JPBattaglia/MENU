@@ -44,7 +44,7 @@ test('every public offer in the live catalog has at least one self-test listed',
   // The offers on sale on Oct 30, 2026 (plus the two Store App offers waiting to launch).
   const live = ['ACCESSIBILITY_MONITORING', 'BUNDLE_GROWTH', 'BUNDLE_PRO', 'BUNDLE_STARTER', 'CONVERSION_FIX', 'GOOGLE_PROFILE_CARE', 'GOOGLE_VISIBILITY', 'GUEST_APP',
     'GUEST_APP_SETUP', 'MENU_CARE', 'NINO_FLYER', 'NINO_LOGO', 'NINO_MENU_DESIGN', 'NINO_SOCIAL_PACK', 'ONLINE_MENU_QR', 'REVIEW_REPLIES', 'SOCIAL_POSTS', 'STAFF_MERCH',
-    'WEBSITE_CARE', 'WEBSITE_PACKAGE', 'STORE_APP_SETUP', 'STORE_APP_CARE'];
+    'WEBSITE_CARE', 'WEBSITE_PACKAGE', 'STORE_APP_SETUP', 'STORE_APP_CARE', 'SITE_FILES', 'HOLIDAY_MENU'];
   for (const code of live) assert.ok(cov.OFFER_TESTS[code]?.length, `${code} has no self-test listed`);
 });
 

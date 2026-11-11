@@ -31,6 +31,7 @@ const REPORT_HOUR_UTC = 22;
 // Offer code -> the self-test kinds that prove it (each: what it covers for that offer).
 const OFFER_TESTS = {
   ONLINE_MENU_QR: [["MENU_QR_EXTRA_PAGES", "checkout with PDF upload, extra pages, approval, hosted menu"], ["MENU_HOSTING_RENEWAL", "year-one reminder and the 30-day grace"]],
+  HOLIDAY_MENU: [["HOLIDAY_MENU_RUN", "holiday preview and its six designs, checkout at the holiday price, approval, live at its own holiday address in the chosen design"]],
   MENU_CARE: [["MENU_CARE_EDIT", "change request, AI edit, approval, hosted menu updated"]],
   REVIEW_REPLIES: [["REVIEW_REPLIES_RUN", "Google reviews read, replies drafted, routed and sent to Google"]],
   GOOGLE_PROFILE_CARE: [["GOOGLE_PROFILE_CARE_RUN", "weekly post, photo, monthly report"]],
