@@ -3119,7 +3119,7 @@ body.mm-xmas .cta { background: linear-gradient(120deg, #a5141d, #0d3b2a); borde
 body.mm-xmas .footer { background: #08261b; border-top: 6px solid transparent; border-image: repeating-linear-gradient(-45deg, #d4242f 0 12px, #fff 12px 24px) 6; }
 
 /* Seasonal strip on the home and Menus pages */
-.mm-holiday-strip { position: relative; overflow: hidden; border: 2px solid #f0c75e; background: linear-gradient(100deg, #a5141d 0%, #7c0f16 38%, #0d3b2a 100%); box-shadow: 0 0 0 4px rgba(240,199,94,.18), 0 14px 30px rgba(0,0,0,.3); padding-left: 64px; }
+.mm-holiday-strip { position: relative; overflow: hidden; border: 2px solid #f0c75e; background: #0b2e20; box-shadow: 0 0 0 4px rgba(240,199,94,.18), 0 14px 30px rgba(0,0,0,.3); padding-left: 64px; }
 .mm-holiday-strip::before { content: "🎄"; position: absolute; left: 18px; top: 50%; transform: translateY(-50%); font-size: 30px; }
 .mm-holiday-strip p { color: #fff; }
 .mm-holiday-strip strong { color: #f6d983; }
