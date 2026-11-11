@@ -173,3 +173,25 @@ test('the MΞNU icon has its own darker background; an app without one keeps its
   assert.match(storeIconSvg(app, { hasLogo: true }), /fill="#013f45"/);
   assert.match(storeIconSvg(app, { hasLogo: true, background: 'nope' }), /fill="#013f45"/);
 });
+
+test('menumade: the Holiday menu generator is sent in season, in a field older app builds ignore', () => {
+  const offers = [{ code: 'HOLIDAY_MENU', name: 'Holiday Menu', kind: 'ONE_TIME', on_sale: true, price_cents: 5900 }];
+  const nov = hybrid.menumadeContent({ ok: true, offers }, { now: Date.parse('2026-11-20T18:00:00Z') });
+  assert.deepEqual(nov.generators.map((g) => g.key), ['menu', 'site'], 'the two regular generators are unchanged');
+  assert.equal(nov.seasonal.length, 1);
+  const g = nov.seasonal[0];
+  assert.deepEqual([g.key, g.noun, g.count, g.badge], ['holiday', 'holiday menu', 6, '$59 per holiday']);
+  assert.deepEqual(g.occasions, [{ key: 'christmas', label: 'Christmas' }, { key: 'newyear', label: "New Year's Eve" }]);
+  assert.equal(g.create_url, 'https://menu-made.com/api/menu-preview/create');
+  assert.equal(g.state_url, 'https://menu-made.com/api/menu-preview/state/');
+  assert.match(g.buttons[2].text, /\$59 for one holiday.*second holiday menu this season is \$30/);
+  const dec = hybrid.menumadeContent({ ok: true, offers }, { now: Date.parse('2026-12-27T18:00:00Z') }).seasonal[0];
+  assert.deepEqual(dec.occasions, [{ key: 'newyear', label: "New Year's Eve" }], 'after Christmas only New Year\'s Eve');
+  assert.match(dec.card_text, /^Your New Year's Eve menu/);
+  assert.deepEqual(hybrid.menumadeContent({ ok: true, offers }, { now: Date.parse('2027-01-02T18:00:00Z') }).seasonal, [], 'gone after the season');
+  assert.deepEqual(hybrid.menumadeContent({ ok: true, offers }, { now: Date.parse('2026-11-20T18:00:00Z'), offCodes: ['HOLIDAY_MENU'] }).seasonal, [], 'gone when its Selling switch is off');
+  assert.deepEqual(hybrid.menumadeContent({ ok: true, offers: [] }, { now: Date.parse('2026-11-20T18:00:00Z') }).seasonal, [], 'gone when it is not on sale');
+  const js = readFileSync(new URL('../app-shell/www/hybrid.js', import.meta.url), 'utf8');
+  assert.match(js, /occasion: occasions\.length \? gen\.occasion : undefined/, 'the app sends the chosen holiday with the preview');
+  assert.match(js, /function allGens\(\) \{ return seasonal\(\)\.concat\(data\.generators/);
+});

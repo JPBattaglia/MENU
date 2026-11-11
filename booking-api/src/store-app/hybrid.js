@@ -13,6 +13,7 @@
 // https://localhost and the store screenshots load it from a local page.
 import { getSiteCatalog } from "../checkout/catalog.js";
 import { MENU_PACKAGE_PRICING } from "../checkout/quote.js";
+import { HOLIDAY_PRICING, OCCASION_NAMES, holidayOnSale } from "../checkout/holiday.js";
 import { SERVICES as SWITCHED, offSwitches } from "../lib/switches.js";
 import { queuePush } from "../producers/guest-app/engage.js";
 
@@ -41,7 +42,7 @@ function includesText(offer, byCode) {
 }
 
 // offCodes: offer codes the owner has switched off for sale (lib/switches.js); they leave the services list.
-function menumadeContent(catalog, { offCodes = [] } = {}) {
+function menumadeContent(catalog, { offCodes = [], now = Date.now() } = {}) {
   const offers = Array.isArray(catalog?.offers) ? catalog.offers : [];
   const byCode = new Map(offers.map((o) => [o.code, o]));
   const plans = PLAN_ORDER.map((code) => byCode.get(code)).filter((o) => o && o.on_sale && o.prices?.month).map((o) => ({
@@ -62,6 +63,23 @@ function menumadeContent(catalog, { offCodes = [] } = {}) {
     // Online Menu + QR is sold as setup plus the first year's hosting, the price "Make it live" shows.
     .map((o) => ({ name: clean(o.name, 60), text: clean(o.short_description, 220), price: o.code === "ONLINE_MENU_QR" ? `${menuPrice} first year` : o.prices?.month ? `${dollars(o.prices.month)}/mo` : o.price_cents ? dollars(o.price_cents) : "" }))
     .filter((x) => x.price).slice(0, 20);
+  const occasions = offCodes.includes("HOLIDAY_MENU") || !byCode.get("HOLIDAY_MENU")?.on_sale ? [] : ["christmas", "newyear"].filter((o) => holidayOnSale(o, now)).map((o) => ({ key: o, label: OCCASION_NAMES[o] }));
+  const holidayPrice = dollars(HOLIDAY_PRICING.firstCents);
+  const which = occasions.map((o) => o.label).join(" or ");
+  const holidayGenerators = occasions.length ? [{
+    key: "holiday", noun: "holiday menu", title: "Holiday menu generator", count: 6, badge: `${holidayPrice} per holiday`,
+    text: `A ${which} menu with its own link and QR code, apart from your regular menu.`,
+    card_title: "Holiday Menu", card_text: `Your ${which} menu as a phone menu with its own QR code, in six holiday designs. Keep your regular menu as it is.`, card_action: "Try it free",
+    occasions, occasion_label: "Which holiday is this menu for?", file_label: "Your holiday menu",
+    form_text: "Upload your holiday menu. You'll see it as a phone menu in six holiday designs.",
+    create_url: `${MM}/api/menu-preview/create`, state_url: `${MM}/api/menu-preview/state/`, start: "Make my holiday menu preview",
+    busy: ["Reading your holiday menu…", "Finding the courses, dishes and prices…", "Drawing your menu in six holiday designs…"], wait: "This takes about a minute. Keep the app open.",
+    buttons: [
+      { label: "Generate menu", text: "Shows your menu in the next of six holiday designs. Tap it as often as you like." },
+      { label: "Customize", text: "Adds your logo, your colour and the line under your name, on every design." },
+      { label: "Make it live", text: `Orders the design on screen: ${holidayPrice} for one holiday, live through the day after it. A second holiday menu this season is ${dollars(HOLIDAY_PRICING.secondCents)}. Nothing renews.` }
+    ]
+  }] : [];
   return {
     ok: true,
     key: "menumade",
@@ -105,6 +123,10 @@ function menumadeContent(catalog, { offCodes = [] } = {}) {
           { label: "Choose this site", text: "Orders the design on screen: $299 for the whole site as files you own. Hosting is optional." }
         ] }
     ],
+    // In season (owner, Nov 11, 2026: "add holiday addition to the menu app"): the Holiday menu generator, for the
+    // holidays still on sale (checkout/holiday.js). A field of its own, because app builds from before this have no
+    // words for a third generator; they don't read it and keep their two.
+    seasonal: holidayGenerators,
     // Kept for app builds from before Nov 10, 2026 (their Preview tab reads these).
     preview: { create_url: `${MM}/api/menu-preview/create`, upload_url: `${MM}/api/inquiry`, more_url: `${MM}/online-menu.html` },
     plans,

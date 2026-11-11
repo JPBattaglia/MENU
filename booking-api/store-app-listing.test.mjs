@@ -247,6 +247,7 @@ test("approved: submitted to Apple and Google with the restaurant's keys, then I
   stores.state.appleState = 'READY_FOR_SALE';
   await tick(f, stores, Date.now() + 2 * 3600000);
   assert.equal(f.row(`SELECT status FROM store_apps`).status, 'IN_REVIEW', 'Apple live, Google not yet');
+  assert.deepEqual(f.row(`SELECT live_version, live_at FROM store_app_listings`), { live_version: '1.0.0', live_at: null }, "Apple's live version is known now, so a rebuild asks for 1.0.1");
   stores.state.playLive = true;
   await tick(f, stores, Date.now() + 4 * 3600000);
   assert.equal(f.row(`SELECT status FROM store_apps`).status, 'LIVE');

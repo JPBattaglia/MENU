@@ -508,13 +508,17 @@ async function advanceStoreListings(env, now = Date.now(), deps = {}) {
       }
     }
     await upsertListing(env, storeApp.id, { apple_json: JSON.stringify(apple), google_json: JSON.stringify(google), last_poll_at: t });
+    // Live at Apple while Google is still reviewing (a new Play account's first review can take much longer; Menu-made's
+    // own app, Nov 11, 2026): Apple's live version is recorded now, so a rebuild asks for the next version (Apple
+    // refuses another build of a version that is live). live_at and the buyer's email still wait for both stores.
+    if (apple.live && !google.live && apple.build && !row?.live_at && row?.live_version !== apple.build) await upsertListing(env, storeApp.id, { live_version: apple.build });
     if (apple.live && google.live) {
       // The version that just went live is the one this build asked for (store-build.js nextVersion); the next
       // rebuild asks for one above it. An update of an app already live doesn't email the buyer again.
       await upsertListing(env, storeApp.id, { live_at: t, live_version: apple.build || nextVersion(row.live_version) });
       await env.DB.prepare(`UPDATE store_apps SET status = 'LIVE', note = ?, updated_at = ? WHERE id = ? AND status = 'IN_REVIEW'`)
-        .bind(row.live_version ? "Update live in both stores" : "Live in both stores", t, storeApp.id).run();
-      if (!row.live_version) await emailBuyerLive(env, storeApp, context, {
+        .bind(row.live_at ? "Update live in both stores" : "Live in both stores", t, storeApp.id).run();
+      if (!row.live_at) await emailBuyerLive(env, storeApp, context, {
         apple: `https://apps.apple.com/app/id${encodeURIComponent(apple.appId || "")}`,
         google: `https://play.google.com/store/apps/details?id=${encodeURIComponent(storeApp.bundle_id)}`
       }, false);
