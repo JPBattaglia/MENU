@@ -416,3 +416,28 @@ body.hy-xmas .hy-full .hy-tools::before { content: ""; position: absolute; left:
 .hy-gen-holiday .hy-keys li:last-child .hy-key { background: linear-gradient(135deg, #e0313b, #a5141d); color: #fff; border-color: #f0c75e; }
 .hy-gen-holiday .hy-muted, .hy-gen-holiday .hy-label { color: #f1ead8; }
 .hy-gen-holiday .hy-link { color: #f6d983; }
+/* The designs to look through before uploading (hybrid.js designGallery): the website's "Six holiday designs" section
+   and its full-size viewer (main.css .mm-holiday-designs, .mm-design-zoom, .mm-lightbox), owner Nov 11, 2026. */
+.hy-designs h2 { font-family: var(--hy-display); font-size: 24px; margin: 0 0 6px; }
+.hy-designs h3 { font-family: var(--hy-display); font-size: 19px; margin: 22px 0 0; color: var(--hy-ink); opacity: 1; text-transform: none; letter-spacing: 0; }
+.hy-design-grid { display: grid; gap: 18px; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); margin-top: 14px; }
+.hy-design-grid figure { margin: 0; }
+.hy-design-grid img { display: block; width: 100%; height: auto; border-radius: 14px; border: 1px solid var(--hy-card-line); box-shadow: 0 10px 26px rgba(0,0,0,.35); }
+body.hy-xmas .hy-design-grid img { border: 2px solid #f0c75e; }
+.hy-design-grid figcaption { margin-top: 8px; font-weight: 700; font-size: 14px; }
+.hy-design-grid figcaption span { display: block; font-weight: 400; color: var(--hy-muted); font-size: 13px; }
+.hy-design-zoom { display: block; width: 100%; padding: 0; margin: 0; border: 0; background: none; position: relative; border-radius: 14px; -webkit-tap-highlight-color: transparent; }
+.hy-design-zoom::after { content: "\2922  Full size"; position: absolute; right: 8px; bottom: 8px; padding: 4px 9px; border-radius: 999px; background: rgba(0,0,0,.65); color: #fff; font: 700 12px/1.2 var(--hy-body); }
+.hy-design-zoom:active img { transform: scale(.98); }
+.hy-lightbox { position: fixed; inset: 0; z-index: 70; display: grid; place-items: center; padding: calc(env(safe-area-inset-top) + 16px) 16px calc(env(safe-area-inset-bottom) + 16px); background: rgba(4,20,14,.85); }
+.hy-lightbox-panel { display: flex; flex-direction: column; width: min(480px, 100%); max-height: 100%; background: #0b2e20; border: 2px solid #f0c75e; border-radius: 22px; overflow: hidden; box-shadow: 0 30px 70px rgba(0,0,0,.55); color: #fff; }
+.hy-lightbox-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; padding: 14px 16px 10px; }
+.hy-lightbox-head h2 { margin: 0; font: 22px/1.2 var(--hy-display); color: #f6d983; }
+.hy-lightbox-head p { margin: 4px 0 0; color: #f1ead8; font-size: 15px; }
+.hy-lightbox-close { flex: none; width: 38px; height: 38px; border-radius: 50%; border: 1px solid rgba(255,255,255,.5); background: rgba(0,0,0,.3); color: #fff; font-size: 24px; line-height: 1; }
+.hy-lightbox-scroll { flex: 1 1 auto; min-height: 0; overflow-y: auto; -webkit-overflow-scrolling: touch; background: #000; }
+.hy-lightbox-scroll img { display: block; width: 100%; height: auto; }
+.hy-lightbox-foot { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 12px 14px; border-top: 1px solid rgba(240,199,94,.4); }
+.hy-lightbox-foot .hy-btn { min-height: 0; padding: 10px 14px; font-size: 15px; background: linear-gradient(135deg, #e0313b, #a5141d); color: #fff; border-color: #f0c75e; box-shadow: none; }
+.hy-lightbox-nav { background: none; border: 1px solid #f0c75e; border-radius: 12px; color: #f6d983; font: 700 15px var(--hy-body); padding: 9px 12px; white-space: nowrap; }
+@media (max-width: 420px) { .hy-lightbox-nav span { display: none; } .hy-lightbox-nav { font-size: 20px; padding: 6px 14px; } }

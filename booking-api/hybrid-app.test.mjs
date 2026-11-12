@@ -186,6 +186,13 @@ test('menumade: the Holiday menu generator is sent in season, in a field older a
   assert.equal(g.state_url, 'https://menu-made.com/api/menu-preview/state/');
   assert.match(g.buttons[2].text, /\$59 for one holiday.*second holiday menu this season is \$30/);
   assert.equal(g.strip.text, "your Christmas and New Year's Eve menus online with a QR code, $59 per holiday.");
+  // The six designs to look through first, as the website's Holiday Menu page shows them.
+  assert.deepEqual(g.designs.groups.map((x) => [x.title, x.items.map((i) => i.name).join(', ')]), [['Christmas', 'Evergreen, Candy Cane, Silent Night'], ["New Year's Eve", 'Midnight Gold, Champagne, Confetti']]);
+  for (const item of g.designs.groups.flatMap((x) => x.items)) {
+    const file = item.image.replace('https://menu-made.com/', '');
+    assert.ok(existsSync(new URL('../' + file, import.meta.url)) && existsSync(new URL('../' + item.large.replace('https://menu-made.com/', ''), import.meta.url)), `${item.name} has its pictures on the site`);
+    assert.ok(readFileSync(new URL('../holiday-menu.html', import.meta.url), 'utf8').includes(`data-large="${item.large.replace('https://menu-made.com/', '')}" alt="${item.alt}"`), `${item.name} is worded as on the site`);
+  }
   assert.deepEqual([g.popup.title, g.popup.price, g.popup.price_note, g.popup.action], ['Get your Christmas menu online', '$59', "per holiday, or $89 for Christmas and New Year's Eve", 'See my holiday menu free']);
   const dec = hybrid.menumadeContent({ ok: true, offers }, { now: Date.parse('2026-12-27T18:00:00Z') }).seasonal[0];
   assert.deepEqual(dec.occasions, [{ key: 'newyear', label: "New Year's Eve" }], 'after Christmas only New Year\'s Eve');

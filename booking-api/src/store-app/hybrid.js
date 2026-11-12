@@ -82,6 +82,25 @@ function menumadeContent(catalog, { offCodes = [], now = Date.now() } = {}) {
       price: holidayPrice, price_note: occasions.length > 1 ? `per holiday, or ${dollars(HOLIDAY_PRICING.firstCents + HOLIDAY_PRICING.secondCents)} for Christmas and New Year's Eve` : "nothing renews",
       action: "See my holiday menu free", later: "Not now"
     },
+    // The six designs to look through before uploading (owner, Nov 11, 2026: "include the 6 templates available to
+    // review first like the site offers"): the Holiday Menu page's "Six holiday designs" section, same words and
+    // pictures (holiday-menu.html #designs, assets/holiday), each opening full size.
+    designs: {
+      title: "Six holiday designs",
+      text: "Three for Christmas and three for New Year's Eve. Your menu is shown in all of them, so you can pick the one that fits. Tap a design to see it full size.",
+      action: "See my menu in it free",
+      groups: [
+        { title: "Christmas", items: [
+          ["evergreen", "Evergreen", "Pine green and gold, holly, falling snow", "pine green and gold with holly and falling snow"],
+          ["candycane", "Candy Cane", "Red and white stripes, price tags", "red and white stripes with red section banners"],
+          ["silentnight", "Silent Night", "Midnight blue, gold stars, baubles", "midnight blue with gold stars and hanging baubles"]] },
+        { title: "New Year's Eve", items: [
+          ["midnight", "Midnight Gold", "Black and gold, fireworks", "black and gold with fireworks over the name"],
+          ["champagne", "Champagne", "Ivory and gold, rising bubbles", "ivory and champagne gold with rising bubbles"],
+          ["confetti", "Confetti", "Deep violet, bright confetti", "deep violet with bright confetti and bold cards"]] }
+      ].map((group) => ({ title: group.title, items: group.items.map(([file, name, note, alt]) => ({
+        name, note, alt: `${name} design: ${alt}`, image: `${MM}/assets/holiday/${file}.webp`, large: `${MM}/assets/holiday/${file}-large.webp` })) }))
+    },
     form_text: "Upload your holiday menu. You'll see it as a phone menu in six holiday designs.",
     create_url: `${MM}/api/menu-preview/create`, state_url: `${MM}/api/menu-preview/state/`, start: "Make my holiday menu preview",
     busy: ["Reading your holiday menu…", "Finding the courses, dishes and prices…", "Drawing your menu in six holiday designs…"], wait: "This takes about a minute. Keep the app open.",

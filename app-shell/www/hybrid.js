@@ -254,6 +254,65 @@
     });
   }
 
+  // A generator's designs to look through before uploading (the Holiday menu generator: the six holiday designs, as
+  // the website's Holiday Menu page shows them above its form). Tap one to see it full size, scroll down the whole
+  // menu, and step through them all with the arrows or a swipe, as holiday-designs.js does on the site.
+  function designGallery(d, toForm) {
+    var card = el("div", "hy-card hy-designs");
+    card.appendChild(el("h2", null, d.title || "The designs"));
+    if (d.text) card.appendChild(el("p", null, d.text));
+    var all = [];
+    (Array.isArray(d.groups) ? d.groups : []).forEach(function (group) {
+      var items = (Array.isArray(group.items) ? group.items : []).filter(function (x) { return x && x.name && /^https:\/\//.test(x.image || "") && /^https:\/\//.test(x.large || ""); });
+      if (!items.length) return;
+      if (group.title) card.appendChild(el("h3", null, group.title));
+      var grid = el("div", "hy-design-grid");
+      items.forEach(function (x) {
+        var at = all.length; all.push(x);
+        var fig = el("figure");
+        var zoom = el("button", "hy-design-zoom"); zoom.type = "button"; zoom.setAttribute("aria-label", "See the " + x.name + " design full size");
+        var img = el("img"); img.src = x.image; img.alt = x.alt || x.name + " design"; img.width = 420; img.height = 700; img.loading = "lazy"; zoom.appendChild(img);
+        zoom.addEventListener("click", function () { open(at); });
+        var cap = el("figcaption", null, x.name); if (x.note) cap.appendChild(el("span", null, x.note));
+        fig.appendChild(zoom); fig.appendChild(cap); grid.appendChild(fig);
+      });
+      card.appendChild(grid);
+    });
+    function open(at) {
+      var last = document.activeElement, index = at;
+      var box = el("div", "hy-lightbox"), panel = el("div", "hy-lightbox-panel");
+      panel.setAttribute("role", "dialog"); panel.setAttribute("aria-modal", "true");
+      var head = el("div", "hy-lightbox-head"), words = el("div"), title = el("h2"), note = el("p");
+      words.appendChild(title); words.appendChild(note); head.appendChild(words);
+      var x = button("\u00d7", "hy-lightbox-close", close); x.setAttribute("aria-label", "Close"); head.appendChild(x);
+      var scroll = el("div", "hy-lightbox-scroll"), pic = el("img"); scroll.appendChild(pic);
+      var foot = el("div", "hy-lightbox-foot");
+      function nav(step, label, text) {
+        var b = el("button", "hy-lightbox-nav"); b.type = "button"; b.setAttribute("aria-label", label);
+        if (step < 0) { b.appendChild(document.createTextNode("\u2039")); b.appendChild(el("span", null, " " + text)); }
+        else { b.appendChild(el("span", null, text + " ")); b.appendChild(document.createTextNode("\u203a")); }
+        b.addEventListener("click", function () { show(index + step); }); return b;
+      }
+      foot.appendChild(nav(-1, "Previous design", "Previous"));
+      foot.appendChild(button(d.action || "See my menu in it free", "hy-btn", function () { close(); if (toForm) toForm(); }));
+      foot.appendChild(nav(1, "Next design", "Next"));
+      panel.appendChild(head); panel.appendChild(scroll); panel.appendChild(foot); box.appendChild(panel);
+      function show(i) {
+        index = (i + all.length) % all.length; var it = all[index];
+        pic.src = it.large; pic.alt = it.alt || it.name + " design"; title.textContent = it.name; note.textContent = it.note || "";
+        panel.setAttribute("aria-label", it.name + " design"); scroll.scrollTop = 0;
+      }
+      function close() { if (box.parentNode) box.parentNode.removeChild(box); document.body.classList.remove("hy-sheet-open"); if (last && last.focus) last.focus(); }
+      box.addEventListener("click", function (ev) { if (ev.target === box) close(); });
+      var x0 = null;
+      pic.addEventListener("touchstart", function (ev) { x0 = ev.touches[0].clientX; }, { passive: true });
+      pic.addEventListener("touchend", function (ev) { if (x0 === null) return; var dx = ev.changedTouches[0].clientX - x0; x0 = null; if (Math.abs(dx) > 60) show(index + (dx < 0 ? 1 : -1)); });
+      show(at); document.body.appendChild(box); document.body.classList.add("hy-sheet-open");
+      try { x.focus(); } catch (e) {}
+    }
+    return all.length ? card : null;
+  }
+
   // The generator's form: business, email and the menu file; then the wait; then the designs.
   function genForm(s, g) {
     var bar = el("div", "hy-bar");
@@ -329,6 +388,9 @@
         fail(j.error || "Something went wrong making your preview. Please try again.");
       }).catch(function (err) { fail(err && err.message && !/fetch|network|load failed/i.test(err.message) ? err.message : "You need a connection to make a preview."); });
     });
+    // The designs come first, then the form, in the order the website's page has them.
+    var gallery = g.designs ? designGallery(g.designs, function () { try { form.scrollIntoView({ behavior: "smooth", block: "start" }); biz.focus({ preventScroll: true }); } catch (e) {} }) : null;
+    if (gallery) s.appendChild(gallery);
     s.appendChild(form);
   }
 
