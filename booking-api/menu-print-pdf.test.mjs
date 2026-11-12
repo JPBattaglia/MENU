@@ -74,7 +74,7 @@ test('the hosted menu has a print PDF at /print.pdf, drawn once per menu version
   assert.match(res.headers.get('content-disposition'), /proof-cafe-22222222-menu\.pdf/);
   const first = new Uint8Array(await res.arrayBuffer());
   assert.equal(await pagesOf(first), 1);
-  assert.ok(h.ASSETS.objects.has('k/menu-v1.html.print-v4.pdf'), 'kept next to the page it was drawn from');
+  assert.ok(h.ASSETS.objects.has('k/menu-v1.html.print-v5.pdf'), 'kept next to the page it was drawn from');
 
   // A Menu Care update is a new menu version: the PDF follows it.
   h.sql(`INSERT INTO assets (id, business_id, customer_id, project_id, asset_type, storage_key, original_filename, mime_type, size_bytes, status, uploaded_at) VALUES ('a2', 'biz', 'cust', ?, 'DELIVERABLE', 'k/menu-v2.html', 'menu.html', 'text/html', 1, 'VALID', ?)`, PROJECT, h.t);
@@ -82,7 +82,7 @@ test('the hosted menu has a print PDF at /print.pdf, drawn once per menu version
   await h.ASSETS.put('k/menu-v2.html', designed({ sections: Array.from({ length: 12 }, (_, i) => section(`Section ${i + 1}`, 14)), notes: '' }));
   const updated = new Uint8Array(await (await h.call('/api/menu/proof-cafe-22222222/print.pdf')).arrayBuffer());
   assert.ok(await pagesOf(updated) > 1, 'the new, longer menu');
-  assert.ok(h.ASSETS.objects.has('k/menu-v2.html.print-v4.pdf'));
+  assert.ok(h.ASSETS.objects.has('k/menu-v2.html.print-v5.pdf'));
 });
 
 test('print PDF: unknown menus are not found, and a page that is not in the designed format gets a friendly note', async () => {
@@ -222,7 +222,7 @@ test('routes: the browser-made PDF is served and kept; when the browser fails th
   const res = await h.call('/api/menu/proof-cafe-22222222/print.pdf');
   assert.equal(res.headers.get('content-type'), 'application/pdf');
   assert.equal(new Uint8Array(await res.arrayBuffer()).length, 2000, 'the browser-made file');
-  assert.ok(h.ASSETS.objects.has('k/menu-v1.html.print-v4x.pdf'));
+  assert.ok(h.ASSETS.objects.has('k/menu-v1.html.print-v5x.pdf'));
   await h.call('/api/menu/proof-cafe-22222222/print.pdf');
   assert.equal(h.env.BROWSER.calls.length, 1, 'made once per menu version');
   const fold = await h.call('/api/menu/proof-cafe-22222222/tri-fold.pdf');
@@ -232,6 +232,6 @@ test('routes: the browser-made PDF is served and kept; when the browser fails th
   down.env.BROWSER = browserThat(() => { throw new Error('unavailable'); });
   const drawn = new Uint8Array(await (await down.call('/api/menu/proof-cafe-22222222/print.pdf')).arrayBuffer());
   assert.equal(await pagesOf(drawn), 1, 'a real, drawn PDF');
-  assert.ok(down.ASSETS.objects.has('k/menu-v1.html.print-v4.pdf'));
-  assert.ok(!down.ASSETS.objects.has('k/menu-v1.html.print-v4x.pdf'));
+  assert.ok(down.ASSETS.objects.has('k/menu-v1.html.print-v5.pdf'));
+  assert.ok(!down.ASSETS.objects.has('k/menu-v1.html.print-v5x.pdf'));
 });
