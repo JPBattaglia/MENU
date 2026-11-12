@@ -482,6 +482,8 @@ async function buildTriFoldPdf(input) {
     if (plan) break;
   }
   if (!plan) return null;
+  // planOnly: just whether, and how comfortably, this menu fits a tri-fold (the browser-made version asks first).
+  if (input.planOnly) return { cols: plan.cols, size: plan.size };
   // Columns start at the same height and the set sits in the middle of the sheet when it is shorter than the panel.
   const lowest = Math.min(...plan.placed.map((p) => p.top - p.block.height));
   const drop = Math.max(0, (lowest - bottom) / 2);

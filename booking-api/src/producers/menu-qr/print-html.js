@@ -1,0 +1,192 @@
+// Print layouts made from the menu page itself (owner, Nov 12, 2026: the PDFs "should all match the exact same style
+// and theme as the online menu that was chosen"). Each takes the stored menu page, keeps its own stylesheet, so the
+// design's colours, fonts, pattern and decorations come along unchanged, and lays the same header and sections out
+// for paper. A headless browser turns the result into a PDF (browser-pdf.js); print-pdf.js stays as the fallback.
+//   buildPrintHtml(format, { pageHtml, qrSvg, qrUrl }) -> string | null
+//   format: "print.pdf" (letter, as many pages as needed) | "tri-fold.pdf" (letter landscape, two sides)
+//           | "table-tent.pdf" (letter, folds across the middle)
+// Returns null when the page is not one buildDesignedMenuHtml made.
+import { escapeHtml2 } from "../../lib/util.js";
+
+const pick = (html, re) => re.exec(html)?.[0] || "";
+
+function parts(pageHtml) {
+  const html = String(pageHtml || "");
+  const head = pick(html, /<head>[\s\S]*?<\/head>/);
+  const header = pick(html, /<header>[\s\S]*?<\/header>/);
+  const content = pick(html, /<section class="menu-content"[\s\S]*<\/section>(?=\s*(?:<p class="notes">|<\/main>))/);
+  const notes = pick(html, /<p class="notes">[\s\S]*?<\/p>/);
+  if (!head || !header || !content) return null;
+  return { head, header, content, notes };
+}
+
+// Shared by every layout: exact colours on paper, no section links, nothing split awkwardly.
+const BASE = `
+  html, body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  body { margin: 0; }
+  .jump { display: none !important; }
+  .menu-section { scroll-margin-top: 0; }
+  li, h2, .notes, .scan { break-inside: avoid; }
+  h2 { break-after: avoid; }
+  .scan svg { display: block; background: #fff; fill: #000; }
+  .scan b { color: var(--primary); }
+  .scan small, .by { color: var(--muted); }
+  .by { font-size: 7pt; letter-spacing: .04em; }
+  header h1 { overflow-wrap: anywhere; }`;
+
+const link = (qrUrl) => escapeHtml2(String(qrUrl || "").replace(/^https?:\/\//, ""));
+
+// Letter pages: the menu page as it is, in two columns, with the QR code at the end.
+function printPage({ head, header, content, notes }, qrSvg, qrUrl) {
+  return `<!doctype html>
+<html lang="en">
+${head.replace("</head>", `<style>${BASE}
+  @page { size: letter; margin: 0; }
+  body { font-size: var(--fs, 11.5px) !important; min-height: 11in; }
+  header { padding: 30px 0.6in 16px !important; }
+  header img { max-height: 76px; }
+  h1 { font-size: 34px !important; }
+  main { max-width: none; padding: 0 0.6in 0.3in; }
+  .menu-content { column-count: 2; column-gap: 0.45in; }
+  .menu-section:first-child { padding-top: .5em; }
+  main, .menu-content, li, .row { font-size: 1em; }
+  .menu-section { padding-top: 1.4em; }
+  h2 { font-size: 1.3em !important; margin-bottom: .5em; padding-bottom: .4em; }
+  li { padding-top: .5em; padding-bottom: .5em; }
+  ul { grid-template-columns: 1fr !important; gap: .6em; }
+  .desc { font-size: .88em !important; margin-top: .15em; }
+  .notes { margin-top: 1.5em; padding: .9em 1em; font-size: .88em; }
+  .scan { display: flex; align-items: center; justify-content: flex-end; gap: 12px; margin-top: 20px; padding-top: 12px; border-top: 1px solid var(--rule); text-align: right; }
+  .scan svg { width: 0.95in; height: 0.95in; flex: none; }
+  .scan b { display: block; font-size: 12px; }
+  .scan small { display: block; font-size: 8.5px; margin-top: 3px; }
+  .scan .by { margin-right: auto; align-self: flex-end; }
+  body.one { height: 11in; display: flex; flex-direction: column; }
+  body.one main { flex: 1; display: flex; flex-direction: column; }
+  body.one .scan { margin-top: auto; }
+</style></head>`)}
+<body>
+  ${header}
+  <main>
+    ${content}
+    ${notes}
+    <div class="scan"><span class="by">Menu by MENU-MADE</span><div><b>${qrSvg ? "Scan for our menu online" : "See our menu online"}</b><small>${link(qrUrl)}</small></div>${qrSvg}</div>
+  </main>
+  <script>
+    // A short menu gets the largest type that still fits one page; a long one keeps the reading size and runs on.
+    (function () {
+      var page = 11 * 96;
+      for (var s = 17; s >= 11.5; s -= 0.5) { document.body.style.setProperty("--fs", s + "px"); if (document.body.scrollHeight <= page) { document.body.className = "one"; return; } }
+    })();
+  </script>
+</body>
+</html>`;
+}
+
+// Tri-fold: outside = flap (notes) | back (QR code) | cover (the page header); inside = the menu in three panels.
+// The type is the largest that fits the three panels; the script finds it in the browser, where the real fonts are.
+function triFold({ head, header, content, notes }, qrSvg, qrUrl) {
+  // The chalkboard's wooden frame belongs to each side of the sheet, not to the scrolling page.
+  const frame = /border: 16px ridge/.test(head) ? `
+  .sheet { border: 14px ridge #74492a; box-shadow: inset 0 0 0 3px #3a2414, inset 0 0 70px rgba(0,0,0,.55); }
+  .panel { width: calc(100% / 3); height: 100%; }` : "";
+  const note = notes.replace(/^<p class="notes">/, "").replace(/<\/p>$/, "");
+  return `<!doctype html>
+<html lang="en">
+${head.replace("</head>", `<style>${BASE}
+  @page { size: 11in 8.5in; margin: 0; }
+  .sheet { width: 11in; height: 8.5in; display: flex; overflow: hidden; break-after: page; }
+  .panel { width: calc(11in / 3); height: 8.5in; padding: 0.36in; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; }
+  .cover { padding: 0; }
+  .cover header { width: 100%; height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 0.36in !important; margin: 0 !important; border-radius: 0 !important; }
+  .cover header img { max-width: 80%; max-height: 1.7in; }
+  .cover h1 { font-size: 30px !important; }
+  .flap p { margin: 0; font-size: 13px; line-height: 1.5; font-style: italic; color: var(--ink); }
+  .flap p::before, .flap p::after { content: ""; display: block; width: 60px; height: 1.5px; margin: 16px auto; background: var(--accent); }
+  .back .scan { display: flex; flex-direction: column; align-items: center; gap: 10px; margin: auto 0; }
+  .back .scan svg { width: 1.7in; height: 1.7in; }
+  .back .scan b { font-size: 14px; }
+  .back .scan small { font-size: 8.5px; }
+  .inside { display: block; }
+  body { border: 0 !important; box-shadow: none !important; min-height: 0 !important; }
+  .inside main { max-width: none; margin: 0 !important; border: 0 !important; outline: 0 !important; background: transparent !important; width: 100%; height: 100%; padding: 0.36in; font-size: var(--fs, 12px); }${frame}
+  .inside main::before { display: none !important; }
+  .inside .menu-content { height: 100%; column-count: 3; column-gap: 0.72in; column-fill: balance; display: block !important; }
+  .inside .menu-section { padding-top: 0; margin: 0 0 1.3em; break-inside: avoid; display: block !important; }
+  .inside h2 { font-size: 1.3em !important; margin: 0 0 .5em; padding-bottom: .35em; }
+  .inside li { padding-top: .42em; padding-bottom: .42em; font-size: 1em; }
+  .inside ul { grid-template-columns: 1fr !important; gap: .5em; }
+  .inside .row { font-size: 1em; }
+  .inside .desc { font-size: .88em !important; margin-top: .15em; line-height: 1.35; }
+  .inside.split .menu-section { break-inside: auto; }
+</style></head>`)}
+<body>
+  <div class="sheet outside">
+    <div class="panel flap">${note ? `<p>${note}</p>` : ""}</div>
+    <div class="panel back"><div class="scan">${qrSvg}<b>${qrSvg ? "Scan for our menu online" : "See our menu online"}</b><small>${link(qrUrl)}</small></div><span class="by">Menu by MENU-MADE</span></div>
+    <div class="panel cover">${header}</div>
+  </div>
+  <div class="sheet inside"><main>${content}</main></div>
+  <script>
+    (function () {
+      var main = document.querySelector(".inside main"), box = document.querySelector(".inside .menu-content"), sheet = document.querySelector(".inside");
+      function fits(size) { main.style.setProperty("--fs", size + "px"); return box.scrollWidth <= box.clientWidth + 1 && box.scrollHeight <= box.clientHeight + 1; }
+      function largest() { for (var s = 19; s >= 7.5; s -= 0.5) if (fits(s)) return s; return 0; }
+      // Whole sections per panel when that costs little; sections split between panels only for a long menu.
+      var whole = largest();
+      sheet.classList.add("split");
+      var split = largest();
+      if (whole && split - whole <= 3) { sheet.classList.remove("split"); fits(whole); }
+      else if (!split) fits(7.5);
+      // Shorter than the panel: sit in the middle of the sheet.
+      var last = 0, top = box.getBoundingClientRect().top;
+      box.querySelectorAll("li, h2").forEach(function (el) { last = Math.max(last, el.getBoundingClientRect().bottom - top); });
+      var spare = box.clientHeight - last;
+      if (spare > 8) { main.style.paddingTop = "calc(0.36in + " + Math.floor(spare / 2) + "px)"; box.style.height = Math.ceil(last + 2) + "px"; }
+    })();
+  </script>
+</body>
+</html>`;
+}
+
+// Table tent: two faces, the top one upside down so it reads the right way once folded.
+function tableTent({ head, header }, qrSvg, qrUrl) {
+  if (!qrSvg) return null;
+  const face = `<div class="face">${header}<div class="scan">${qrSvg}<div><span>Scan for</span><b>our menu</b><ol><li>Open your phone's camera</li><li>Point it at the code</li><li>Tap the link that appears</li></ol><small>${link(qrUrl)}</small></div></div><span class="by">Menu by MENU-MADE</span></div>`;
+  return `<!doctype html>
+<html lang="en">
+${head.replace("</head>", `<style>${BASE}
+  @page { size: letter; margin: 0; }
+  body { width: 8.5in; height: 11in; overflow: hidden; }
+  .face { height: 50%; display: flex; flex-direction: column; align-items: center; overflow: hidden; position: relative; }
+  .face:first-child { transform: rotate(180deg); border-top: 1px dashed var(--rule); }
+  .face header { width: 100%; padding: 22px 0.5in 14px !important; margin: 0 !important; border-radius: 0 !important; }
+  .face header img { max-height: 0.9in; }
+  .face h1 { font-size: 30px !important; }
+  .face header p { display: none; }
+  .scan { flex: 1; display: flex; align-items: center; justify-content: center; gap: 0.4in; text-align: left; }
+  .scan svg { width: 2.3in; height: 2.3in; flex: none; }
+  .scan span { display: block; font-size: 22px; color: var(--ink); }
+  .scan b { display: block; font-size: 42px; line-height: 1.05; font-family: inherit; }
+  .scan ol { margin: 14px 0 12px; padding-left: 18px; font-size: 12px; line-height: 1.6; color: var(--muted); }
+  .scan ol li { display: list-item; padding: 0; border: 0; border-radius: 0; background: none; text-align: left; }
+  .scan small { font-size: 9px; }
+  .by { position: absolute; bottom: 10px; left: 0; right: 0; text-align: center; }
+</style></head>`)}
+<body>
+  ${face}
+  ${face}
+</body>
+</html>`;
+}
+
+function buildPrintHtml(format, { pageHtml, qrSvg = "", qrUrl = "" } = {}) {
+  const found = parts(pageHtml);
+  if (!found) return null;
+  if (format === "print.pdf") return printPage(found, qrSvg, qrUrl);
+  if (format === "tri-fold.pdf") return triFold(found, qrSvg, qrUrl);
+  if (format === "table-tent.pdf") return tableTent(found, qrSvg, qrUrl);
+  return null;
+}
+
+export { buildPrintHtml };
