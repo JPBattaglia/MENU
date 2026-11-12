@@ -100,7 +100,7 @@ function menumadeContent(catalog, { offCodes = [], now = Date.now() } = {}) {
           ["confetti", "Confetti", "Deep violet, bright confetti", "deep violet with bright confetti and bold cards"]] },
         // Owner, Nov 12, 2026: three that fit either holiday; each holiday's generator shows its own three and these.
         { title: "Either holiday", items: [
-          ["winterlights", "Winter Lights", "Deep blue, white and silver, a string of lights", "deep blue, white and silver with a string of lights under the name"],
+          ["winterlights", "Winter Lights", "Winter blue and silver, snowflakes, a string of lights", "winter blue, white and silver with snowflakes and a string of lights under the name"],
           ["candlelight", "Candlelight", "Warm espresso and amber, framed title", "warm espresso and amber with a framed title and centred courses"],
           ["silvergold", "Silver and Gold", "Soft silver and warm gold, rounded cards", "soft silver and warm gold with gold stars and rounded cards in a fine frame"]] }
       ].map((group) => ({ title: group.title, items: group.items.map(([file, name, note, alt]) => ({
