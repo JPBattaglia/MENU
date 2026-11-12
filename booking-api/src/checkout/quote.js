@@ -1,6 +1,6 @@
 import { resolveActiveOffer } from "./catalog.js";
 import { productForCode, quoteMenuDesign } from "../producers/nino-design/products.js";
-import { HOLIDAY_PRICING, OCCASION_NAMES, holidayEndsOn, holidayOnSale, holidayPriceCents, isOccasion } from "./holiday.js";
+import { HOLIDAY_PRICING, OCCASION_NAMES, holidayEndsOn, holidayOnSale, holidayQuote, isOccasion } from "./holiday.js";
 
 // Keep the quoted menu scope with its existing offer/order item, so prepaid
 // hosting and extra pages do not create unrelated fulfillment projects.
@@ -68,7 +68,7 @@ function appendCheckoutLineItem(params, item, index, environment, { autoTax = fa
       params.append(`${prefix}[price_data][product_data][description]`, `Includes ${item.domain.name} for one year (${(item.domain.price_cents / 100).toFixed(2)} USD), registered in your name and managed by Menu-made. We email you before it renews (${(item.domain.renewal_cents / 100).toFixed(2)} USD a year); nothing renews without your OK.`);
     }
     if (item.holiday) {
-      params.append(`${prefix}[price_data][product_data][description]`, `Your ${OCCASION_NAMES[item.holiday.occasion]} menu online with its own link and QR code, a print-ready PDF and a table tent, live through ${item.holiday.ends_on}. Up to ${HOLIDAY_PRICING.includedPages} pages; $20 per extra page. You approve it before it goes live. No hosting fee; nothing renews.`);
+      params.append(`${prefix}[price_data][product_data][description]`, `Your ${OCCASION_NAMES[item.holiday.occasion]} menu online with its own link and QR code, a print-ready PDF and a table tent, live through ${item.holiday.ends_on}. Up to ${HOLIDAY_PRICING.includedPages} pages; $20 per extra page. You approve it before it goes live. No hosting fee; nothing renews.${item.holiday.both_other ? ` Includes your ${OCCASION_NAMES[item.holiday.both_other]} menu too: we email you a link to send it when it's ready.` : item.holiday.prepaid ? " Already covered by your order for both holidays." : ""}`);
     }
     if (item.menuPackage) {
       params.append(`${prefix}[price_data][product_data][description]`, "$129 setup includes up to 3 pages and two revisions; $20 per additional page; $15 first-year hosting. After the first year, hosting continues with Menu Care; without it the menu goes offline 30 days later.");
@@ -88,7 +88,7 @@ async function holidayItem(env, checkoutOptions, now = Date.now()) {
   if (row?.status !== "READY" || !isOccasion(row.occasion)) throw new CheckoutValidationError("That holiday menu preview wasn't found. Make a new one at menu-made.com/holiday-menu");
   if (!holidayOnSale(row.occasion, now)) throw new CheckoutValidationError(`${OCCASION_NAMES[row.occasion]} menus are finished for this year.`, 410);
   const email = checkoutOptions?.customer?.email || checkoutOptions?.email;
-  return { occasion: row.occasion, ends_on: holidayEndsOn(row.occasion, now), preview: token, design: row.design || null, pages: HOLIDAY_PRICING.includedPages, price_cents: await holidayPriceCents(env, email, now) };
+  return { occasion: row.occasion, ends_on: holidayEndsOn(row.occasion, now), preview: token, design: row.design || null, pages: HOLIDAY_PRICING.includedPages, ...(await holidayQuote(env, email, row.occasion, { both: checkoutOptions.holiday_both === true, now })) };
 }
 
 async function normalizeCheckoutItems(itemsInput, env, checkoutOptions = {}, { requirePublic = true, now = Date.now() } = {}) {

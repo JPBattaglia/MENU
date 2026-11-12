@@ -13,6 +13,8 @@ import { handleDomainRenewalPaid } from "../producers/website/domain-renewal.js"
 import { SUBSCRIPTION_EVENTS, handleSubscriptionEvent, onSubscriptionCheckoutCompleted } from "../subscriptions/webhooks.js";
 import { startDesignBrief } from "../producers/nino-design/brief.js";
 import { startStaffMerch } from "../producers/staff-merch/order.js";
+import { OCCASION_NAMES, isOccasion } from "./holiday.js";
+import { brandedEmailHtml, escapeHtml, sendTransactionalEmail } from "../lib/email.js";
 
 async function handleStripeWebhook(request, env) {
   try {
@@ -488,6 +490,9 @@ async function handleCheckoutCompleted(event, env) {
         if (holiday?.occasion) {
           await env.DB.prepare(`UPDATE projects SET metadata_json = json_set(COALESCE(metadata_json, '{}'), '$.holiday_menu', json(?)) WHERE id = ?`)
             .bind(JSON.stringify({ occasion: holiday.occasion, ends_on: holiday.ends_on, pages: holiday.pages, preview: holiday.preview || null }), projectId).run();
+          // Both holidays bought at once (checkout/holiday.js holidayQuote): the other menu comes later, so the buyer
+          // gets the link to make it. Sent once per order; a failure here never fails the payment event.
+          if (isOccasion(holiday.both_other)) await sendSecondHolidayLink(env, order, orderId, holiday).catch((error) => console.error("Second holiday link email failed:", error instanceof Error ? error.message : String(error)));
         }
         // INSERT OR IGNORE per input: creates only the rows a previous attempt did not.
         await createMenuQrInputs(
@@ -655,6 +660,32 @@ async function handleCheckoutCompleted(event, env) {
       })
     ).run();
   }
+}
+
+
+// "Both holidays" (owner, Nov 12, 2026): the link to make the second holiday's menu, which checks out at $0 with the
+// same email.
+async function sendSecondHolidayLink(env, order, orderId, holiday) {
+  const customer = await env.DB.prepare(`SELECT email FROM customers WHERE id = ?`).bind(order.customer_id).first();
+  if (!customer?.email) return;
+  const first = OCCASION_NAMES[holiday.occasion], other = OCCASION_NAMES[holiday.both_other];
+  const link = `https://menu-made.com/holiday-menu.html?occasion=${holiday.both_other}#try-free`;
+  await sendTransactionalEmail(env, {
+    to: customer.email,
+    subject: `Your ${other} menu is included: send it when it's ready`,
+    html: brandedEmailHtml({
+      preheader: `Your order covers both holidays. Here's where to send your ${other} menu.`,
+      eyebrow: "HOLIDAY MENU",
+      heading: `Your ${other} menu is already covered`,
+      paragraphs: [
+        `Your order covers both holidays. Your ${escapeHtml(first)} menu is being made now.`,
+        `When your ${escapeHtml(other)} menu is ready, <a href="${escapeHtml(link)}">upload it here</a>, pick a design and tap <strong>Make it live</strong>. Use this same email address at checkout and the total is $0.`,
+        `${escapeHtml(other)} menus can be sent until the holiday itself.`
+      ]
+    }),
+    text: `Your order covers both holidays. When your ${other} menu is ready, upload it here: ${link}\nUse this same email address at checkout and the total is $0.`,
+    idempotencyKey: `holiday-both/${orderId}`, purpose: "HOLIDAY_BOTH", templateKey: "holiday_both_link_v1"
+  });
 }
 
 export {

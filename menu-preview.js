@@ -33,6 +33,17 @@
   }
 
   const say = (html, isError = false) => { status.innerHTML = html; status.classList.toggle('is-error', isError); };
+  // Holiday picker: the "which menu now" question shows only for Both; ?occasion=newyear (the link emailed after a
+  // both-holidays order) picks that holiday.
+  {
+    const first = document.getElementById('occasionFirst');
+    const wanted = params.get('occasion');
+    const pick = form.querySelector(`input[name="occasion"][value="${wanted === 'newyear' || wanted === 'christmas' ? wanted : ''}"]`);
+    if (pick) pick.checked = true;
+    const sync = () => { if (first) first.hidden = form.querySelector('input[name="occasion"]:checked')?.value !== 'both'; };
+    form.querySelectorAll('input[name="occasion"]').forEach(input => input.addEventListener('change', sync));
+    sync();
+  }
   const esc = text => String(text).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 
   form.addEventListener('submit', async event => {
@@ -41,7 +52,12 @@
     const business = $('try_business').value.trim();
     const email = $('try_email').value.trim() || (rep ? 'info@menu-made.com' : '');
     const file = $('try_file').files[0];
-    const occasion = form.querySelector('input[name="occasion"]:checked')?.value || '';
+    // Holiday picker: "Both: $89" (owner, Nov 12, 2026) uploads one holiday's menu now; the choice rides to checkout
+    // in this browser (start.js reads mm-holiday-both), where it can still be ticked or unticked.
+    let occasion = form.querySelector('input[name="occasion"]:checked')?.value || '';
+    const both = occasion === 'both';
+    if (both) occasion = form.querySelector('input[name="occasion_first"]:checked')?.value || 'christmas';
+    if (occasion) { try { if (both) localStorage.setItem('mm-holiday-both', '1'); else localStorage.removeItem('mm-holiday-both'); } catch { /* storage off */ } }
     if (!business) { say('Add your business name.', true); $('try_business').focus(); return; }
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { say('Add an email address we can send the link to.', true); $('try_email').focus(); return; }
     if (!file) { say('Choose your menu file (a PDF or a photo).', true); $('try_file').focus(); return; }

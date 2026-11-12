@@ -32,6 +32,10 @@ const MENU = 'ONLINE_MENU_QR';
 const WEBSITE = 'WEBSITE_PACKAGE';
 // Holiday Menu (Nov 10, 2026): made in the holiday menu generator (holiday-menu.html), checked out on its own.
 const HOLIDAY = 'HOLIDAY_MENU';
+// Both holidays (owner, Nov 12, 2026): $89 instead of $59, one menu now and the other sent later. Ticked in the
+// generator's picker (menu-preview.js) or here; the order engine sets the real price (checkout/holiday.js).
+const HOLIDAY_SECOND_CENTS = 3000;
+var holidayBoth = false;
 // Short service names used by links from other pages and older emails.
 const ALIASES = {
   menu: MENU, online_menu_qr: MENU, 'online-menu-qr': MENU,
@@ -273,6 +277,7 @@ function render(openEmptyChoices = true) {
   for (const code of order.once) {
     els.items.append(lineFor(code, 'once'));
     today += code === MENU ? (quote?.totalCents || 0) : (Catalog.priceOf(offer(code), interval()) || 0);
+    if (code === HOLIDAY && holidayBoth) today += HOLIDAY_SECOND_CENTS;
   }
   if (domainPick && !domainAllowed()) domainPick = null;
   if (domainPick) {
@@ -668,7 +673,7 @@ async function checkout() {
     window.MenuMadeFunnel?.track('checkout_attempt');
     const response = await fetch((Catalog?.API || '') + (TEST_CHECKOUT ? '/api/create-checkout-test' : '/api/create-checkout'), {
       method: 'POST', signal: controller.signal, headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ items, interval: interval(), ...(quote ? { menu_pages: quote.pages } : {}), ...(siteChoice && order.once.has('SITE_FILES') ? { site_choice: siteChoice } : {}), ...(holidayPreview && order.once.has(HOLIDAY) ? { holiday_preview: holidayPreview } : {}), ...(domainPick && domainAllowed() ? { domain: domainPick.name } : {}), tracking: window.MenuMadeFunnel?.tracking(), customer })
+      body: JSON.stringify({ items, interval: interval(), ...(quote ? { menu_pages: quote.pages } : {}), ...(siteChoice && order.once.has('SITE_FILES') ? { site_choice: siteChoice } : {}), ...(holidayPreview && order.once.has(HOLIDAY) ? { holiday_preview: holidayPreview, ...(holidayBoth ? { holiday_both: true } : {}) } : {}), ...(domainPick && domainAllowed() ? { domain: domainPick.name } : {}), tracking: window.MenuMadeFunnel?.tracking(), customer })
     });
     const result = await response.json();
     if (!response.ok) { window.MenuMadeFunnel?.track('checkout_error'); showStatus(result?.error?.message || result?.error || 'Checkout error. Please refresh and try again.'); return; }
@@ -777,6 +782,26 @@ if (previewToken && /^[a-f0-9]{36}$/.test(previewToken)) {
     $('lead_document_status').textContent = data.occasion
       ? `Your ${data.occasion_name} menu from the preview is attached, in the ${data.design} design. Add a different file only if you want to replace it.`
       : 'The menu from your preview is attached. Add a different file only if you want to replace it.';
+    if (data.occasion && holidayPreview) {
+      const other = data.occasion === 'christmas' ? "New Year's Eve" : 'Christmas';
+      const today = new Date();
+      const otherOpen = data.occasion === 'christmas' || (today.getMonth() === 11 && today.getDate() <= 25) || today.getMonth() < 11;
+      if (otherOpen && !$('holidayBoth')) {
+        try { holidayBoth = localStorage.getItem('mm-holiday-both') === '1'; } catch { holidayBoth = false; }
+        const label = document.createElement('label');
+        label.className = 'mm-holiday-both';
+        const box = document.createElement('input');
+        box.type = 'checkbox'; box.id = 'holidayBoth'; box.checked = holidayBoth;
+        box.addEventListener('change', () => {
+          holidayBoth = box.checked;
+          try { if (holidayBoth) localStorage.setItem('mm-holiday-both', '1'); else localStorage.removeItem('mm-holiday-both'); } catch { /* storage off */ }
+          render(false);
+        });
+        label.append(box, ` Add my ${other} menu too: $89 for both holidays instead of $59. Send that menu later from the link we email you.`);
+        $('lead_document_status').after(label);
+        render(false);
+      }
+    }
   }).catch(() => {});
 }
 
