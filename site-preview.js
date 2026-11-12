@@ -66,7 +66,7 @@
       const response = await fetch(API + '/api/website-preview/create', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ request_id: upload.requestId, email, business, phone: $('site_phone').value, address: $('site_address').value,
-          hours: $('site_hours').value, website: $('site_current').value, city: $('site_city')?.value || '', tracking: window.MenuMadeFunnel?.tracking?.() || {}, ...(rep ? { rep } : {}) })
+          hours: $('site_hours').value, website: $('site_current').value, city: $('site_city')?.value || '', tracking: window.MenuMadeFunnel?.tracking?.() || {}, ...(rep ? { rep } : {}), ...(window.MenuMadeSandbox === true ? { sandbox: true } : {}) })
       });
       const result = await response.json().catch(() => null);
       if (response.ok && result?.ok && result.url) {

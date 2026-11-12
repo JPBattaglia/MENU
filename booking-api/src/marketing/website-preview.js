@@ -40,6 +40,8 @@ const PER_DAY = 20;              // each build is 1 to 3 Claude calls
 const PER_NETWORK_DAY = 2;
 const EMAIL_DAYS = 30;
 const REP_PER_DAY = 40;
+// Owner sandbox (owner, Nov 12, 2026): same rule as the menu previews (public-preview.js SANDBOX_PER_DAY).
+const SANDBOX_PER_DAY = 40;
 const UPLOAD_MAX_AGE_SECONDS = 2 * 3600;
 const HANDOFF_DAYS = 14;
 const SITE = "https://menu-made.com";
@@ -358,8 +360,11 @@ async function handleWebsitePreviewCreate(request, env, { now = Date.now(), deps
   const t = new Date(now).toISOString();
   const dayAgo = new Date(now - 86400000).toISOString();
   const rep = await isRep(env, body?.rep);
+  const sandbox = !rep && body?.sandbox === true;
   if (rep) {
     if (await count(env, `SELECT COUNT(*) AS n FROM website_previews WHERE source = 'rep' AND created_at > ?`, dayAgo) >= REP_PER_DAY) return json({ ok: false, error: `Rep mode has made ${REP_PER_DAY} website previews today, its daily limit.` }, 429);
+  } else if (sandbox) {
+    if (await count(env, `SELECT COUNT(*) AS n FROM website_previews WHERE campaign = 'sandbox' AND created_at > ?`, dayAgo) >= SANDBOX_PER_DAY) return json({ ok: false, error: `Test mode has made ${SANDBOX_PER_DAY} website previews today, its daily limit.` }, 429);
   } else {
     const existing = await env.DB.prepare(`SELECT token, status, expires_at FROM website_previews WHERE email = ? AND source = 'public' AND created_at > ? ORDER BY created_at DESC LIMIT 1`)
       .bind(email, new Date(now - EMAIL_DAYS * 86400000).toISOString()).first();
@@ -367,14 +372,14 @@ async function handleWebsitePreviewCreate(request, env, { now = Date.now(), deps
     if (existing?.status === "READY" && existing.expires_at > t) return json({ ok: true, url: viewUrl(existing.token), token: existing.token, reused: true });
     if (existing?.status === "READY") return json({ ok: false, used: true, error: "You've already had a free website preview with this email. Open the link in our email to pick your design.", start: viewUrl(existing.token) }, 409);
     if (await count(env, `SELECT COUNT(*) AS n FROM website_previews WHERE ip_hash = ? AND created_at > ?`, upload.ip_hash || "", dayAgo) >= PER_NETWORK_DAY) return json({ ok: false, error: "This connection has made its free previews for today. Please try again tomorrow." }, 429);
-    if (await count(env, `SELECT COUNT(*) AS n FROM website_previews WHERE source = 'public' AND created_at > ?`, dayAgo) >= PER_DAY) return json({ ok: false, error: "We've made all of today's free website previews. Please try again tomorrow, or start your order now." }, 429);
+    if (await count(env, `SELECT COUNT(*) AS n FROM website_previews WHERE source = 'public' AND COALESCE(campaign, '') <> 'sandbox' AND created_at > ?`, dayAgo) >= PER_DAY) return json({ ok: false, error: "We've made all of today's free website previews. Please try again tomorrow, or start your order now." }, 429);
   }
   if (!env.ANTHROPIC_API_KEY) return json({ ok: false, error: "Previews aren't available right now. Please try again later." }, 503);
 
   const token = newToken();
   const tracking = body?.tracking && typeof body.tracking === "object" ? body.tracking : {};
   await env.DB.prepare(`INSERT INTO website_previews (token, source, request_id, email, business, ip_hash, campaign, status, created_at, expires_at) VALUES (?, ?, ?, ?, ?, ?, ?, 'BUILDING', ?, ?)`)
-    .bind(token, rep ? "rep" : "public", requestId, email, business, upload.ip_hash || "", rep ? "rep" : oneLine(tracking.campaign, 100) || null, t, hoursFromNow(PREVIEW_HOURS, now)).run();
+    .bind(token, rep ? "rep" : "public", requestId, email, business, upload.ip_hash || "", rep ? "rep" : sandbox ? "sandbox" : oneLine(tracking.campaign, 100) || null, t, hoursFromNow(PREVIEW_HOURS, now)).run();
   const started = Date.now();
   const scope = { entityType: "WEBSITE_PREVIEW", entityId: token };
   let built;
