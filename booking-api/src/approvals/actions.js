@@ -55,11 +55,17 @@ async function approveApproval(env, ctx, approval, by = "OWNER") {
   return { changed: true };
 }
 
+// How many times the owner can ask for changes and get a redone version. One for most products; a menu is redone
+// from his words each time (menu-qr/draft-step.js), so he can go a few rounds before it needs a hand fix.
+const MAX_REGENERATIONS = { MENU_QR_V1: 5 };
+
 // The owner's note for the regeneration in progress, for producers that can act on it (null when none).
 async function loadRegenerationNote(env, projectId) {
   const row = await env.DB.prepare(`SELECT metadata_json FROM projects WHERE id = ?`).bind(projectId).first();
   const regeneration = parseJsonOrNull(row?.metadata_json)?.regeneration;
-  return regeneration?.note ? { note: regeneration.note, count: Number(regeneration.count || 1) } : null;
+  // notes: every change the owner has asked for on this order, oldest first (a redo starts from the source again,
+  // so a producer that applies notes applies all of them, not only the newest).
+  return regeneration?.note ? { note: regeneration.note, count: Number(regeneration.count || 1), notes: Array.isArray(regeneration.notes) && regeneration.notes.length ? regeneration.notes : [regeneration.note] } : null;
 }
 
 // Owner asks for changes. A product whose delivering step names "regenerate_from" gets exactly one automatic
@@ -75,7 +81,7 @@ async function requestChanges(env, approval, note) {
   const project = await env.DB.prepare(`SELECT order_item_id, metadata_json FROM projects WHERE id = ?`).bind(approval.project_id).first();
   const projectMeta = parseJsonOrNull(project?.metadata_json) || {};
   const used = Number(projectMeta.regeneration?.count || 0);
-  const regenerate = Boolean(config?.regenerateFrom) && used < 1;
+  const regenerate = Boolean(config?.regenerateFrom) && used < (MAX_REGENERATIONS[step?.workflow_key] || 1);
 
   const nextMeta = { ...metadata, owner_note: cleanNote, regenerated: regenerate };
   const updated = await env.DB.prepare(`
@@ -99,7 +105,8 @@ async function requestChanges(env, approval, note) {
       for (const deliverableId of metadata.deliverable_ids || []) {
         await env.DB.prepare(`UPDATE deliverables SET status = 'SUPERSEDED' WHERE id = ? AND customer_visible = 0`).bind(deliverableId).run();
       }
-      projectMeta.regeneration = { count: used + 1, note: cleanNote, requested_at: respondedAt, approval_id: approval.id };
+      const earlier = Array.isArray(projectMeta.regeneration?.notes) ? projectMeta.regeneration.notes : projectMeta.regeneration?.note ? [projectMeta.regeneration.note] : [];
+      projectMeta.regeneration = { count: used + 1, note: cleanNote, notes: [...earlier, cleanNote].slice(-10), requested_at: respondedAt, approval_id: approval.id };
       await env.DB.prepare(`UPDATE projects SET status = 'READY', blocked_reason = NULL, metadata_json = ?, updated_at = ? WHERE id = ?`)
         .bind(JSON.stringify(projectMeta), respondedAt, approval.project_id).run();
       await env.DB.prepare(`UPDATE order_items SET fulfillment_status = 'IN_PROGRESS' WHERE id = ?`).bind(project.order_item_id).run();

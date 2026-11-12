@@ -27,7 +27,7 @@ async function loadPackageDeliverables(projectId, env) {
   return [newest.MENU_DRAFT, newest.QR_CODE];
 }
 
-const AFTER_APPROVAL = "After you approve, the buyer's email has the live menu link and QR code, plus a print-ready menu (PDF), a tri-fold menu (PDF), a QR table tent (PDF) and a TV menu screen. Those four are made from the live menu page, so they appear once it is live.";
+const AFTER_APPROVAL = "The buyer gets six things: the live menu page, the QR code, a print-ready menu (PDF), a tri-fold menu (PDF), a QR table tent (PDF) and a TV menu screen. Each has its own preview button here. To change anything, use Request changes on the review page and say what to change; the menu is redone from your words and comes back for approval.";
 
 // Owner email for one waiting Menu + QR order (the shared digest uses this when a single item is waiting).
 async function menuQrOwnerEmail({ context, files, previews, approveUrl, targetStep, env }) {
@@ -39,7 +39,12 @@ async function menuQrOwnerEmail({ context, files, previews, approveUrl, targetSt
       SELECT output_json FROM workflow_steps
       WHERE workflow_run_id = ? AND step_key = 'GENERATE_MENU_DRAFT' AND status = 'SUCCEEDED' LIMIT 1
     `).bind(targetStep.workflow_run_id).first();
-  const extraction = parseJsonOrNull(draftStep?.output_json)?.source?.extraction || null;
+  const drafted = parseJsonOrNull(draftStep?.output_json)?.source || null;
+  const extraction = drafted?.extraction || null;
+  const ownerChange = drafted?.owner_change || null;
+  const changeNote = !ownerChange ? ""
+    : ownerChange.applied ? `Your change was made: ${ownerChange.summary || ownerChange.note}`
+    : `Your change could NOT be made automatically (${ownerChange.reason}). You asked: "${ownerChange.note}". Request it again in other words, or approve as it is.`;
   const pagesNote = pageBillingNote((await loadPreparedPayload(targetStep, env).catch(() => null))?.page_billing);
   const readingNote = extraction
     ? `Read from the uploaded menu file: ${extraction.item_count} items.${extraction.unreadable ? ` Check carefully: ${extraction.unreadable}` : ""}`
@@ -50,9 +55,10 @@ async function menuQrOwnerEmail({ context, files, previews, approveUrl, targetSt
     heading: `${business}'s menu is ready to review`,
     paragraphs: [
       "The menu page and QR code were produced automatically. Nothing goes to the buyer until you approve.",
+      ...changeNote ? [`<strong>${escapeHtml(changeNote)}</strong>`] : [],
       ...readingNote ? [escapeHtml(readingNote)] : [],
       ...pagesNote ? [escapeHtml(`Menu pages: ${pagesNote}`)] : [],
-      "Preview both files, then approve to send them to the buyer.",
+      "Preview everything the buyer will get with the buttons below, then approve to send it.",
       // Owner, Nov 12, 2026: "Where are the other things ... like PDF, table tents". They are made from the live
       // menu page, so they exist once it is approved; the buyer's email links each one.
       AFTER_APPROVAL
@@ -63,6 +69,7 @@ async function menuQrOwnerEmail({ context, files, previews, approveUrl, targetSt
   });
   const text = [
     `${business}'s online menu and QR code are ready for your review. Nothing goes to the buyer until you approve.`,
+    ...changeNote ? ["", changeNote] : [],
     ...readingNote ? ["", readingNote] : [],
     ...pagesNote ? ["", `Menu pages: ${pagesNote}`] : [],
     "",

@@ -170,6 +170,37 @@ async function handleHostedMenuPdf(request, env, slug, format = "print.pdf") {
   return new Response(bytes, { status: 200, headers: pdfHeaders });
 }
 
+// The same four formats before the menu is live (owner, Nov 12, 2026: "I need to preview and approve ALL items"):
+// built from the newest menu draft waiting for approval, with the QR code the live menu will have. Reached only
+// from the owner's signed approval link (approvals.js); never cached, so a redone draft shows at once.
+async function handleDraftFormat(request, env, projectId, format) {
+  if (!env.DB || !env.ASSETS) return simplePage(503, "Temporarily unavailable", "<p>Please try again in a minute.</p>");
+  const draft = await env.DB.prepare(`
+      SELECT a.storage_key FROM deliverables d JOIN assets a ON a.id = d.asset_id
+      WHERE d.project_id = ? AND d.deliverable_type = 'MENU_DRAFT' AND d.status != 'SUPERSEDED' ORDER BY d.version DESC LIMIT 1`).bind(projectId).first();
+  const object = draft?.storage_key ? await env.ASSETS.get(draft.storage_key) : null;
+  if (!object) return simplePage(404, "No draft to show", "<p>This order has no menu draft waiting. Open your newest approval email.</p>");
+  const destination = (await env.DB.prepare(`SELECT value_text FROM project_inputs WHERE project_id = ? AND input_key = 'qr_destination' LIMIT 1`).bind(projectId).first())?.value_text;
+  const qrUrl = typeof destination === "string" && /^https?:\/\//.test(destination) ? destination : "https://menu-made.com";
+  let parsed = null;
+  try { parsed = parseMenuHtml(await object.text()); } catch { parsed = null; }
+  const cant = (what) => simplePage(200, "Not available for this menu", `<p>This menu can't be turned into a ${what} automatically, so the buyer will not get one. The online menu and QR code are not affected.</p>`);
+  if (format === "tv") {
+    if (!parsed) return cant("TV screen");
+    const page = Number(new URL(request.url).searchParams.get("p")) || 1;
+    const screen = buildTvMenuHtml({ ...parsed, qrSvg: qrModulesToSvg(QRCode.create(qrUrl, { errorCorrectionLevel: "M" }).modules), page });
+    return new Response(screen.html, { status: 200, headers: { "Content-Type": "text/html; charset=utf-8", "Cache-Control": "no-store", "X-Robots-Tag": "noindex, nofollow",
+      "X-Content-Type-Options": "nosniff", "Content-Security-Policy": "default-src 'none'; img-src data:; style-src 'unsafe-inline'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'" } });
+  }
+  const spec = PRINT_FORMATS[format];
+  if (!spec) return simplePage(404, "Not found", "<p>This page doesn't exist.</p>");
+  const bytes = parsed ? await spec.build({ ...parsed, qrModules: QRCode.create(qrUrl, { errorCorrectionLevel: "M" }).modules, qrUrl }) : null;
+  if (!bytes) return spec.tooLong
+    ? simplePage(200, "Too long for a tri-fold", "<p>This menu is too long to fit a tri-fold at a readable size, so the buyer will be pointed to the print PDF instead, which fits any length.</p>")
+    : cant(spec.what);
+  return new Response(bytes, { status: 200, headers: { "Content-Type": "application/pdf", "Content-Disposition": `inline; filename="draft-${spec.file}.pdf"`, "Cache-Control": "no-store", "X-Robots-Tag": "noindex, nofollow", "X-Content-Type-Options": "nosniff" } });
+}
+
 // Menu screen for a TV running a browser. Long menus rotate through screens with a Refresh header (no scripts);
 // a single screen reloads every 5 minutes so Menu Care changes appear by themselves.
 async function handleHostedMenuTv(request, env, slug) {
@@ -197,7 +228,7 @@ async function handleHostedMenuTv(request, env, slug) {
   });
 }
 
-export {
+export { handleDraftFormat,
   handleDeliveryDownload,
   handleHostedMenu,
   handleHostedMenuPdf,

@@ -32,6 +32,8 @@ async function filesFor(approval, env) {
   return files;
 }
 
+const DRAFT_FORMATS = [["print.pdf", "Preview print-ready menu (PDF)"], ["tri-fold.pdf", "Preview tri-fold menu (PDF)"], ["table-tent.pdf", "Preview QR table tent (PDF)"], ["tv", "Preview TV menu screen"]];
+
 async function describeApproval(env, approval) {
   const metadata = parseJsonOrNull(approval.metadata_json) || {};
   const base = publicBaseUrl(env);
@@ -49,6 +51,11 @@ async function describeApproval(env, approval) {
   }
   const approveToken = await signLinkToken(env, { kind: "approve", id: approval.id, ttlDays: APPROVAL_TTL_DAYS });
   const approveUrl = `${base}/api/approvals/${approval.id}?t=${approveToken}`;
+  // Online Menu + QR and Holiday Menu: everything the buyer will get can be looked at before approving (owner,
+  // Nov 12, 2026). These four are drawn from the draft on request (delivery.js handleDraftFormat).
+  if (context.workflow_key === "MENU_QR_V1") {
+    for (const [show, label] of DRAFT_FORMATS) previews.push({ label, url: `${approveUrl}&show=${show}` });
+  }
   return { approval, metadata, context, targetStep, presenter, files, previews, approveUrl, label: presenter.ownerLabel(context) };
 }
 
