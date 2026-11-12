@@ -798,7 +798,9 @@ if (previewToken && /^[a-f0-9]{36}$/.test(previewToken)) {
           try { if (holidayBoth) localStorage.setItem('mm-holiday-both', '1'); else localStorage.removeItem('mm-holiday-both'); } catch { /* storage off */ }
           render(false);
         });
-        label.append(box, ` Add my ${other} menu too: $89 for both holidays instead of $59. Send that menu later from the link we email you.`);
+        const words = document.createElement('span');
+        words.textContent = `Add my ${other} menu too: $89 for both holidays instead of $59. Send that menu later from the link we email you.`;
+        label.append(box, words);
         $('lead_document_status').after(label);
         render(false);
       }
