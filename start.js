@@ -626,7 +626,7 @@ function collectBrief() {
     lines.push(`Google: ${mode === 'new' ? 'new profile' : 'existing profile'}${url ? '; ' + url : ''}`);
   }
   const brief = lines.join('\n');
-  if (brief.length > 420) return fail('lead_notes', 'The combined service brief is too long for checkout. Shorten the links, or send us a message with the details.');
+  if (brief.length > 420) return fail('lead_email', 'The combined service brief is too long for checkout. Shorten the links, or send us a message with the details.');
   return brief;
 }
 
@@ -643,7 +643,10 @@ async function checkout() {
   if (problem) { showStatus(problem); return; }
   const quote = order.once.has(MENU) ? menuQuote() : null;
   if (order.once.has(MENU) && !quote) { showStatus('Enter how many pages your menu has.'); els.menuPages.focus(); return; }
-  const name = els.name.value.trim(), business = els.business.value.trim(), email = els.email.value.trim(), phone = els.phone.value.trim(), notes = els.notes.value.trim();
+  const name = els.name.value.trim(), business = els.business.value.trim(), email = els.email.value.trim(), phone = els.phone.value.trim();
+  // The free-text notes box is gone (owner, Nov 12, 2026): nothing in production read it, so a buyer's request there
+  // was silently ignored. What each service needs is asked for by its own fields and its intake form.
+  const notes = els.notes ? els.notes.value.trim() : '';
   if (!name) { showStatus('Please enter your name.'); els.name.focus(); return; }
   if (!business) { showStatus('Please enter your business name.'); els.business.focus(); return; }
   if (!validateEmailField()) { els.email.focus(); return; }

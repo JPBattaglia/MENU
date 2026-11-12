@@ -27,6 +27,8 @@ async function loadPackageDeliverables(projectId, env) {
   return [newest.MENU_DRAFT, newest.QR_CODE];
 }
 
+const AFTER_APPROVAL = "After you approve, the buyer's email has the live menu link and QR code, plus a print-ready menu (PDF), a tri-fold menu (PDF), a QR table tent (PDF) and a TV menu screen. Those four are made from the live menu page, so they appear once it is live.";
+
 // Owner email for one waiting Menu + QR order (the shared digest uses this when a single item is waiting).
 async function menuQrOwnerEmail({ context, files, previews, approveUrl, targetStep, env }) {
   const test = isTestOrder(context);
@@ -50,7 +52,10 @@ async function menuQrOwnerEmail({ context, files, previews, approveUrl, targetSt
       "The menu page and QR code were produced automatically. Nothing goes to the buyer until you approve.",
       ...readingNote ? [escapeHtml(readingNote)] : [],
       ...pagesNote ? [escapeHtml(`Menu pages: ${pagesNote}`)] : [],
-      "Preview both files, then approve to send them to the buyer."
+      "Preview both files, then approve to send them to the buyer.",
+      // Owner, Nov 12, 2026: "Where are the other things ... like PDF, table tents". They are made from the live
+      // menu page, so they exist once it is approved; the buyer's email links each one.
+      AFTER_APPROVAL
     ],
     rows: [["Business", business], ["Buyer", buyer], ["Order", context.order_id], ["Link expires", `${APPROVAL_TTL_DAYS} days`]],
     buttons: [...previews, { label: "Review and approve", url: approveUrl, primary: true }],
@@ -60,6 +65,8 @@ async function menuQrOwnerEmail({ context, files, previews, approveUrl, targetSt
     `${business}'s online menu and QR code are ready for your review. Nothing goes to the buyer until you approve.`,
     ...readingNote ? ["", readingNote] : [],
     ...pagesNote ? ["", `Menu pages: ${pagesNote}`] : [],
+    "",
+    AFTER_APPROVAL,
     "",
     ...previews.map((p) => `${p.label}: ${p.url}`),
     "",
