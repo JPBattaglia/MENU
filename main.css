@@ -3197,3 +3197,7 @@ html.mm-lightbox-open { overflow: hidden; }
 @media (max-width: 640px) { .mm-holiday-strip { flex-wrap: wrap; padding: 8px 12px 10px 48px; gap: 8px; } .mm-holiday-strip::before { left: 12px; font-size: 22px; } }
 @media (max-width: 700px) { .mm-holiday-strip p { font-size: 17px !important; line-height: 1.35 !important; } }
 @media (max-width: 640px) { .mm-strip-more { display: none; } .mm-holiday-strip .btn { padding: 6px 12px; font-size: 15px; } }
+
+/* Start page (owner, Nov 12, 2026): the links in the consent line and under the checkout button are plain underlined
+   links in the same cyan, not pills. */
+.checkout-consent a, .checkout-privacy-note a { display: inline !important; padding: 0 !important; margin: 0 !important; border: 0 !important; border-radius: 0 !important; background: none !important; box-shadow: none !important; min-height: 0 !important; font-weight: inherit; text-decoration: underline !important; text-underline-offset: 3px; }
