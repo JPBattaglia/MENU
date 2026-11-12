@@ -60,5 +60,6 @@ test('the checkout pages load the switch before their own script and use it', ()
     assert.ok(html.indexOf('site-nav.js') > 0 && html.indexOf('site-nav.js') < html.indexOf(`${script}?`), `${page}: site-nav.js comes first`);
     assert.match(read(script), /window\.MenuMadeSandbox === true/);
   }
+  assert.match(read('start.js'), /const TEST_EXTRAS = TEST_CHECKOUT && !OWNER_SANDBOX;/, 'the sandbox sells only what buyers can buy');
   assert.match(read('start.js'), /TEST_CHECKOUT \? '\/api\/create-checkout-test' : '\/api\/create-checkout'/);
 });
