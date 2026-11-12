@@ -2952,6 +2952,15 @@ body.about-page .team-profile a{white-space:nowrap;font-size:clamp(11px,calc((10
 .mm-try-status { min-height: 1.5em; margin: 6px 0 0; }
 .mm-try-status .btn { margin: 10px 10px 0 0; }
 .mm-try-status.is-error { color: #ffd2d2; }
+/* Preview loading animation (Nov 12, 2026): the MΞNU gear turns while the menu is read and the designs are drawn. */
+.mm-wait { display: flex; align-items: center; gap: 16px; margin-top: 12px; padding: 14px 16px; border: 1px solid rgba(0,214,230,.35); border-radius: 14px; background: rgba(0,214,230,.06); }
+.mm-wait-gear { width: 56px; height: 56px; flex: none; object-fit: contain; animation: mm-wait-spin 2.4s linear infinite; filter: drop-shadow(0 0 8px rgba(0,214,230,.45)); }
+.mm-wait-text { display: flex; flex-direction: column; gap: 4px; }
+.mm-wait-step { color: #fff; font-size: 16px; }
+.mm-wait-time { color: var(--muted, #b9cdd6); font-size: 13.5px; font-variant-numeric: tabular-nums; }
+@keyframes mm-wait-spin { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { .mm-wait-gear { animation: mm-wait-pulse 1.6s ease-in-out infinite; } }
+@keyframes mm-wait-pulse { 50% { opacity: .45; } }
 .mm-try-rep { margin: 0 0 10px; padding: 8px 12px; border: 1px solid #00d6e6; border-radius: 6px; color: #5ff2ff; font-weight: 700; }
 .mm-try-fine { font-size: 13px; color: var(--muted); margin: 0; }
 .mm-hp { position: absolute; left: -9999px; width: 1px; height: 1px; opacity: 0; }
