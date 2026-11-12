@@ -33,9 +33,6 @@ async function handleApprovalRequest(request, env, ctx, approvalId) {
   const approval = await env.DB.prepare(`SELECT * FROM approvals WHERE id = ? AND approval_type = 'OWNER_RELEASE' LIMIT 1`).bind(approvalId).first();
   if (!approval) return simplePage(404, "Approval not found", "<p>This approval no longer exists.</p>");
   const context = await loadDeliveryContext(approval.project_id, env);
-  // A preview of one of the buyer's other formats (print PDF, tri-fold, table tent, TV screen), from this link.
-  const show = request.method === "GET" ? form.get("show") : null;
-  if (show && context?.workflow_key === "MENU_QR_V1" && /^(print\.pdf|tri-fold\.pdf|table-tent\.pdf|tv)$/.test(show)) return handleDraftFormat(request, env, approval.project_id, show);
   const business = context?.business_name || "This order";
   const pastExpiry = approval.expires_at && approval.expires_at < nowIso();
   if (approval.status === "PENDING" && (payload.expired || pastExpiry)) {
@@ -83,6 +80,19 @@ ${revision}<p>${escapeHtml(entry.presenter.approvalCopy?.intro || "Check the fil
   return simplePage(200, "Approved", done ? `<p>${escapeHtml(business)}: ${escapeHtml(done)}</p>` : `<p>${escapeHtml(business)}'s files are on their way to the buyer. You'll see the delivery email in your BCC copy within a minute.</p>`);
 }
 
+// A preview of one of the buyer's other formats (print PDF, tri-fold, table tent, TV screen) for a menu waiting for
+// approval: /api/approval-preview/<approval id>/<format>?t=<the approval link's token>. Its own address, so
+// nothing that looks for the approval link in an email finds a preview instead.
+async function handleApprovalPreview(request, env, approvalId, format) {
+  if (!env.DB) return simplePage(503, "Temporarily unavailable", "<p>Please try again in a minute.</p>");
+  const payload = await verifyLinkToken(env, new URL(request.url).searchParams.get("t"), ["approve"], approvalId);
+  if (!payload || payload.expired) return simplePage(403, "This link isn't valid", "<p>Open the preview from your most recent approval email.</p>");
+  const approval = await env.DB.prepare(`SELECT project_id FROM approvals WHERE id = ? AND approval_type = 'OWNER_RELEASE' LIMIT 1`).bind(approvalId).first();
+  const context = approval ? await loadDeliveryContext(approval.project_id, env) : null;
+  if (context?.workflow_key !== "MENU_QR_V1") return simplePage(404, "Not found", "<p>This page doesn't exist.</p>");
+  return handleDraftFormat(request, env, approval.project_id, format);
+}
+
 async function handleBatchApprovalRequest(request, env, ctx, digestId) {
   if (!env.DB) return simplePage(503, "Temporarily unavailable", "<p>Please try again in a minute.</p>");
   const form = await readForm(request);
@@ -119,6 +129,7 @@ ${pending.length ? `<form method="post" action="/api/approvals/batch/${escapeHtm
 }
 
 export {
+  handleApprovalPreview,
   requeueForNewApproval,
   handleApprovalRequest,
   handleBatchApprovalRequest
