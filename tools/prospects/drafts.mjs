@@ -13,7 +13,7 @@ import { readFileSync } from "node:fs";
 import { resolveMx } from "node:dns/promises";
 import { ImapFlow } from "imapflow";
 import MailComposer from "nodemailer/lib/mail-composer/index.js";
-import { build, buildFollowup, buildFirstFollowup, buildHoliday } from "./email.mjs";
+import { build, buildFollowup, buildFirstFollowup, buildHoliday, holidaySeasonNow } from "./email.mjs";
 import { verify } from "./verify.mjs";
 import { makePreview } from "./preview.mjs";
 import { chromium } from "playwright";
@@ -51,7 +51,9 @@ async function addFollowups() {
   const { prospects: due = [], price } = await api("followups", {});
   const done = [];
   let built = 0;
-  for (const p of due) {
+  for (const row of due) {
+    // In the holiday season the follow-up closes with the Holiday Menu offer as well.
+    const p = { ...row, holiday_note: holidaySeasonNow() };
     let email;
     if (p.kind === "no_preview") {
       const preview = await makePreview(api, p);
