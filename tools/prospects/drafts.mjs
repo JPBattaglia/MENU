@@ -141,14 +141,16 @@ if (SYNC_ONLY) { await client.logout(); console.log("Sync only: no drafts added.
 if (FOLLOWUPS_ONLY) { await addFollowups(); await client.logout(); process.exit(0); }
 if (REFRESH) {
   const lock = await client.getMailboxLock(draftsBox);
-  const old = [];
+  const old = [], oldHoliday = [];
   try {
     // An empty Drafts folder answers "1:*" with "Invalid message number" (Nov 10, 2026): nothing to rebuild.
-    if (client.mailbox?.exists) for await (const m of client.fetch("1:*", { uid: true, headers: ["x-menu-made-prospect", "x-menu-made-holiday"] })) {
+    if (client.mailbox?.exists) for await (const m of client.fetch("1:*", { uid: true, headers: ["x-menu-made-prospect", "x-menu-made-holiday", "x-menu-made-followup"] })) {
       const headers = m.headers?.toString() || "";
       const id = /x-menu-made-prospect:\s*(\S+)/i.exec(headers)?.[1];
-      // Holiday drafts stay as they are (they aren't the regular first email).
-      if (id && !/x-menu-made-holiday:/i.test(headers)) old.push({ uid: m.uid, id });
+      // Holiday drafts are rebuilt as holiday emails; follow-up drafts stay as they are (their preview details
+      // aren't in the batch list, and rebuilding one as a first email would be the wrong email).
+      if (!id || /x-menu-made-followup:/i.test(headers)) continue;
+      (/x-menu-made-holiday:/i.test(headers) ? oldHoliday : old).push({ uid: m.uid, id });
     }
   } finally { lock.release(); }
   const { prospects: rows } = await api("batch", { ids: [...new Set(old.map((o) => o.id))] });
@@ -167,8 +169,26 @@ if (REFRESH) {
     try { await client.messageDelete(uids.join(","), { uid: true }); } finally { l2.release(); }
     rebuilt++;
   }
+  // Holiday drafts (owner, Nov 12, 2026: the drafts showed the wrong colours): the same holiday email, built again
+  // with today's template; the preview link made for it is reused.
+  let holidayRebuilt = 0;
+  if (oldHoliday.length) {
+    const { prospects: hrows = [] } = await api("holiday", { ids: [...new Set(oldHoliday.map((o) => o.id))] });
+    for (const p of hrows) {
+      const demo = await api("holiday", { id: p.id }).catch(() => null);
+      const email = buildHoliday(p, demo?.ok ? demo.url : null);
+      const message = await raw({ from: FROM, to: p.email, subject: email.subject, text: email.text, html: email.html,
+        attachments: [{ filename: "menu-made.png", content: logo, cid: "logo@menu-made", contentDisposition: "inline" }],
+        headers: { "X-Menu-Made-Prospect": p.id, "X-Menu-Made-Holiday": "1" } });
+      await client.append(draftsBox, message, ["\\Draft", "\\Seen"]);
+      const uids = oldHoliday.filter((o) => o.id === p.id).map((o) => o.uid);
+      const l3 = await client.getMailboxLock(draftsBox);
+      try { await client.messageDelete(uids.join(","), { uid: true }); } finally { l3.release(); }
+      holidayRebuilt++;
+    }
+  }
   await client.logout();
-  console.log(`Refreshed ${rebuilt} drafts still in Drafts (${old.length} found).`);
+  console.log(`Refreshed ${rebuilt} drafts still in Drafts (${old.length} found); ${holidayRebuilt} holiday drafts rebuilt (${oldHoliday.length} found).`);
   process.exit(0);
 }
 

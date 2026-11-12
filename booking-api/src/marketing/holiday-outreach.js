@@ -7,6 +7,7 @@
 //   POST /api/system/prospects/holiday  {}            -> { ok, season, occasion, prospects: [...] }   who is due (up to 50)
 //                                       { id }        -> { ok, url } | { ok:false, skip }             their holiday preview
 //                                       { mark: [] }  -> { ok, changed }                              drafts made
+//                                       { ids: [] }   -> { ok, prospects: [...] }                     drafts to rebuild
 // Same OIDC audience and workflow as the other prospect endpoints.
 import { nowIso } from "../lib/http.js";
 import { verifyRenderer } from "../producers/social-posts/render-jobs.js";
@@ -91,6 +92,17 @@ async function handleHolidayOutreach(request, env, { now = Date.now(), fetcher =
     const result = await env.DB.prepare(`UPDATE prospects SET holiday_drafted_at = ?, followup_drafted_at = COALESCE(followup_drafted_at, ?), status = CASE WHEN status = 'NEW' THEN 'DRAFTED' ELSE status END, updated_at = ?
         WHERE holiday_drafted_at IS NULL AND id IN (${ids.map(() => "?").join(",")})`).bind(t, t, t, ...ids).run();
     return json({ ok: true, changed: result?.meta?.changes || 0 });
+  }
+  // { ids }: holiday drafts still in the owner's Drafts folder, to rebuild them after a template change. Only rows a
+  // holiday draft was made for, and never anyone who replied, opted out or bounced.
+  if (Array.isArray(body?.ids)) {
+    const ids = body.ids.filter((id) => typeof id === "string").slice(0, 50);
+    if (!ids.length) return json({ ok: true, prospects: [] });
+    const { results = [] } = await env.DB.prepare(`
+        SELECT id, name, city, email, website, status, sent_at, menu_url, opened_on, holiday_drafted_at FROM prospects
+        WHERE email IS NOT NULL AND holiday_drafted_at IS NOT NULL AND status NOT IN ('REPLIED', 'OPTED_OUT', 'BOUNCED')
+          AND id IN (${ids.map(() => "?").join(",")})`).bind(...ids).all();
+    return json({ ok: true, prospects: results.map((r) => ({ ...r, contacted: !!r.sent_at && r.sent_at < r.holiday_drafted_at })) });
   }
   if (typeof body?.id === "string") {
     const p = await env.DB.prepare(`SELECT id, name, email, status, menu_url FROM prospects WHERE id = ?`).bind(body.id).first();
