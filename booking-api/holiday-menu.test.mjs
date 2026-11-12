@@ -122,6 +122,10 @@ test('Both picked in the holiday picker: the Make it live button and the checkou
   assert.match(one, /Make it live: \$59</);
   assert.match(two, /Make it live: \$89 for both</);
   assert.doesNotMatch(two, /Make it live: \$59/);
+  // The second menu of an order for both holidays: no price on the button.
+  const paid = publicPreviewPage(html, 'a'.repeat(36), { occasion: 'newyear', prepaid: true });
+  assert.match(paid, /Make it live: already paid</);
+  assert.doesNotMatch(paid, /\$59|\$89/);
 });
 
 test('a holiday preview: six holiday designs (that holiday first), the holiday price, and checkout for Holiday Menu', async (t) => {

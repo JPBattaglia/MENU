@@ -36,6 +36,9 @@ const HOLIDAY = 'HOLIDAY_MENU';
 // generator's picker (menu-preview.js) or here; the order engine sets the real price (checkout/holiday.js).
 const HOLIDAY_SECOND_CENTS = 3000;
 var holidayBoth = false;
+// What this buyer's holiday menu costs when it is not the list price: $30 for a second menu, $0 when an order for
+// both holidays already covers it (from the preview handoff; null = list price).
+var holidayCents = null;
 // Short service names used by links from other pages and older emails.
 const ALIASES = {
   menu: MENU, online_menu_qr: MENU, 'online-menu-qr': MENU,
@@ -233,6 +236,8 @@ function lineFor(code, kind) {
     small.textContent = quote ? `${quote.pages} page${quote.pages === 1 ? '' : 's'} · first-year hosting included${quote.free ? ' · setup free with your yearly plan' : ''}` : 'Enter your page count';
   } else if (code === 'GUEST_APP_SETUP') {
     small.textContent = Catalog.label(o, interval()) + ' · one-time app build';
+  } else if (code === HOLIDAY && holidayCents !== null) {
+    small.textContent = holidayCents === 0 ? 'Already paid with your order for both holidays' : `${money(holidayCents)} · second holiday menu this season`;
   } else {
     small.textContent = Catalog.label(o, interval()) + ' · one-time';
   }
@@ -276,7 +281,7 @@ function render(openEmptyChoices = true) {
   let today = 0;
   for (const code of order.once) {
     els.items.append(lineFor(code, 'once'));
-    today += code === MENU ? (quote?.totalCents || 0) : (Catalog.priceOf(offer(code), interval()) || 0);
+    today += code === MENU ? (quote?.totalCents || 0) : code === HOLIDAY && holidayCents !== null ? holidayCents : (Catalog.priceOf(offer(code), interval()) || 0);
     if (code === HOLIDAY && holidayBoth) today += HOLIDAY_SECOND_CENTS;
   }
   if (domainPick && !domainAllowed()) domainPick = null;
@@ -782,7 +787,16 @@ if (previewToken && /^[a-f0-9]{36}$/.test(previewToken)) {
     $('lead_document_status').textContent = data.occasion
       ? `Your ${data.occasion_name} menu from the preview is attached, in the ${data.design} design. Add a different file only if you want to replace it.`
       : 'The menu from your preview is attached. Add a different file only if you want to replace it.';
-    if (data.occasion && holidayPreview) {
+    if (data.occasion && holidayPreview && Number.isInteger(data.holiday_price_cents) && data.holiday_price_cents !== (Catalog.priceOf(offer(HOLIDAY), interval()) ?? 5900)) {
+      holidayCents = data.holiday_price_cents;
+      const paid = document.createElement('p');
+      paid.className = 'mm-holiday-paid';
+      paid.textContent = data.holiday_prepaid
+        ? `Your ${data.occasion_name} menu is already paid for with your order for both holidays. Use the same email address and the total at checkout is $0; no card is needed.`
+        : `This is your second holiday menu this season, so it is ${money(holidayCents)}.`;
+      $('lead_document_status').after(paid);
+      render(false);
+    } else if (data.occasion && holidayPreview) {
       const other = data.occasion === 'christmas' ? "New Year's Eve" : 'Christmas';
       const today = new Date();
       const otherOpen = data.occasion === 'christmas' || (today.getMonth() === 11 && today.getDate() <= 25) || today.getMonth() < 11;

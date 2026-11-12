@@ -36,7 +36,7 @@ import { brandedEmailHtml, escapeHtml, sendTransactionalEmail } from "../lib/ema
 import { menuColors, readMenuWithClaude } from "../producers/menu-qr/claude-reader.js";
 import { LOGO_MODES, buildDesignedMenuHtml, parseLogoInfo } from "../producers/menu-qr/design.js";
 import { MENU_DESIGNS, designStyle, designsFor, menuDesignFor } from "../producers/menu-qr/menu-designs.js";
-import { HOLIDAY_PRICING, OCCASION_NAMES, holidayDollars, holidayOnSale, isOccasion, otherOccasion } from "../checkout/holiday.js";
+import { HOLIDAY_PRICING, OCCASION_NAMES, holidayDollars, holidayOnSale, holidayQuote, isOccasion, otherOccasion } from "../checkout/holiday.js";
 import { frameAware, wantsJson, preflight } from "./framed.js";
 import { sniffImage } from "../producers/website/intake.js";
 import { MENU_PACKAGE_PRICING } from "../checkout/quote.js";
@@ -77,7 +77,10 @@ const cleanText = (value, max) => String(value || "").replace(/[\r\n\x00]/g, " "
 const startUrl = (token, occasion = null, both = false) => isOccasion(occasion) ? `${SITE}/contact.html?service=holiday&preview=${token}${both ? "&both=1" : ""}` : `${SITE}/contact.html?service=menu&preview=${token}`;
 const holidayPrice = () => holidayDollars(HOLIDAY_PRICING.firstCents);
 const bothPrice = () => holidayDollars(HOLIDAY_PRICING.firstCents + HOLIDAY_PRICING.secondCents);
-const makeLiveLabel = (occasion, both = false) => isOccasion(occasion) ? (both ? `Make it live: ${bothPrice()} for both holidays` : `Make it live: ${holidayPrice()} for ${OCCASION_NAMES[occasion]}`) : `Make it live: ${dollars(firstYearCents())} for the first year`;
+// prepaid: this holiday was already covered by an order for both holidays (owner, Nov 12, 2026: the second menu
+// "shouldn't [cost $59] because it's already paid for"), so nothing here names a price.
+const PREPAID_LABEL = "Make it live: already paid";
+const makeLiveLabel = (occasion, both = false, prepaid = false) => isOccasion(occasion) ? (prepaid ? PREPAID_LABEL : both ? `Make it live: ${bothPrice()} for both holidays` : `Make it live: ${holidayPrice()} for ${OCCASION_NAMES[occasion]}`) : `Make it live: ${dollars(firstYearCents())} for the first year`;
 const homePage = (occasion) => isOccasion(occasion) ? `${SITE}/holiday-menu` : `${SITE}/online-menu`;
 const viewUrl = (token) => `${SITE}/api/menu-preview/view/${token}`;
 const designUrl = (token, key) => `${SITE}/api/menu-preview/view/${token}/${key}`;
@@ -98,7 +101,7 @@ function newToken() {
 // The paid product's own page design, plus the generator bar, a watermark on every screen, and no printing.
 // index: which of MENU_DESIGNS is on screen; custom: what Customize set (for the popup's "now using" line).
 // prospect: a private preview built for a prospect email (demo-menu.js), which lasts PROSPECT_DAYS, not PREVIEW_HOURS.
-function publicPreviewPage(menuHtml, token, { index = 0, custom = {}, business = "", prospect = false, occasion = null, both = false } = {}) {
+function publicPreviewPage(menuHtml, token, { index = 0, custom = {}, business = "", prospect = false, occasion = null, both = false, prepaid = false } = {}) {
   const list = designsFor(occasion);
   const d = list[index] || list[0];
   const next = list[(list.indexOf(d) + 1) % list.length];
@@ -109,7 +112,7 @@ function publicPreviewPage(menuHtml, token, { index = 0, custom = {}, business =
   <p><strong>Design ${list.indexOf(d) + 1} of ${list.length}: ${escapeHtml(d.label)}${OCCASION_NAMES[d.occasion] ? ` (${escapeHtml(OCCASION_NAMES[d.occasion])})` : ""}</strong><span> · ${escapeHtml(d.blurb)}. ${prospect ? `A private preview made for you by Menu-made: no QR code, ends in ${PROSPECT_DAYS} days.` : `Free preview: no QR code, ends in ${PREVIEW_HOURS / 24} days.`}</span></p>
   <a class="mm-gen-next" href="${escapeHtml(designUrl(token, next.key))}">Generate menu</a>
   <button type="button" class="mm-gen-own" onclick="var x = document.getElementById('mm-own'); x.showModal ? x.showModal() : x.setAttribute('open', '')">Customize</button>
-  <a class="mm-gen-pick" href="${escapeHtml(chooseUrl(token, d.key))}">${escapeHtml(isOccasion(occasion) ? (both ? `Make it live: ${bothPrice()} for both` : `Make it live: ${holidayPrice()}`) : makeLiveLabel(null))}</a>
+  <a class="mm-gen-pick" href="${escapeHtml(chooseUrl(token, d.key))}">${escapeHtml(isOccasion(occasion) ? (prepaid ? PREPAID_LABEL : both ? `Make it live: ${bothPrice()} for both` : `Make it live: ${holidayPrice()}`) : makeLiveLabel(null))}</a>
   <dialog class="mm-own" id="mm-own" aria-labelledby="mm-own-title" onclick="if (event.target === this) this.close()"><div class="mm-own-box">
   <div class="mm-own-head"><h2 id="mm-own-title">Customize your menu</h2><button type="button" class="mm-own-x" aria-label="Close" onclick="this.closest('dialog').close()">&times;</button></div>
   <form method="post" enctype="multipart/form-data" action="/api/menu-preview/customize/${token}" onsubmit="var b = this.parentNode; b.querySelector('.mm-own-busy').hidden = false; this.hidden = true;">
@@ -213,7 +216,7 @@ async function storeMenuDesigns(env, token, data) {
   const logo = await loadPreviewLogo(env, token, data.custom);
   const occasion = isOccasion(data.occasion) ? data.occasion : null;
   for (const [index, design] of designsFor(occasion).entries()) {
-    const page = publicPreviewPage(renderMenuDesign(data, design.key, logo), token, { index, custom: data.custom || {}, business: data.business, prospect: data.prospect === true, occasion, both: data.both === true });
+    const page = publicPreviewPage(renderMenuDesign(data, design.key, logo), token, { index, custom: data.custom || {}, business: data.business, prospect: data.prospect === true, occasion, both: data.both === true, prepaid: data.prepaid === true });
     await env.ASSETS.put(`menu-previews/${token}/${design.key}.html`, page, { httpMetadata: { contentType: "text/html; charset=utf-8" } });
   }
   await env.ASSETS.put(`menu-previews/${token}/data.json`, JSON.stringify(data), { httpMetadata: { contentType: "application/json" } });
@@ -260,7 +263,9 @@ async function handlePreviewCreate(request, env, { now = Date.now() } = {}) {
   if (!MENU_TYPES.has(String(doc.contentType || "").toLowerCase())) return json({ ok: false, error: "Previews work from a PDF or a photo (PNG, JPEG or WebP) of your menu." }, 415);
 
   // "Both: $89" in the holiday picker: this preview is one of two holiday menus, so its buttons say so.
-  const both = Boolean(occasion) && body?.both === true && holidayOnSale(otherOccasion(occasion), now);
+  // Already covered by this email's order for both holidays: the preview says so instead of naming a price.
+  const prepaid = Boolean(occasion) && (await holidayQuote(env, email, occasion, { now }).catch(() => null))?.prepaid === true;
+  const both = !prepaid && Boolean(occasion) && body?.both === true && holidayOnSale(otherOccasion(occasion), now);
   const t = new Date(now).toISOString();
   const dayAgo = new Date(now - 86400000).toISOString();
   const rep = await isRep(env, body?.rep);
@@ -314,7 +319,7 @@ async function handlePreviewCreate(request, env, { now = Date.now() } = {}) {
       ? { type: "document", source: { type: "base64", media_type: mime, data: bytesToBase64(bytes) } }
       : { type: "image", source: { type: "base64", media_type: mime, data: bytesToBase64(bytes) } };
     const read = await readMenuWithClaude(block, env);
-    await storeMenuDesigns(env, token, { business, menu: read.menu, colors: menuColors(read.menu), custom: {}, customized: 0, ...(occasion ? { occasion } : {}), ...(both ? { both: true } : {}) });
+    await storeMenuDesigns(env, token, { business, menu: read.menu, colors: menuColors(read.menu), custom: {}, customized: 0, ...(occasion ? { occasion } : {}), ...(both ? { both: true } : {}), ...(prepaid ? { prepaid: true } : {}) });
     await env.DB.prepare(`UPDATE menu_previews SET status = 'READY', item_count = ? WHERE token = ?`).bind(read.extraction?.item_count ?? null, token).run();
   } catch (error) {
     const reason = (error instanceof Error ? error.message : String(error)).slice(0, 300);
@@ -338,12 +343,12 @@ async function handlePreviewCreate(request, env, { now = Date.now() } = {}) {
         `Open it on your phone: <a href="${escapeHtml(url)}">see your menu preview</a>. It's only a preview, with no QR code, and it ends in ${PREVIEW_HOURS / 24} days.`,
         `Tap <strong>Generate menu</strong> to see it in ${designCount} ${holiday ? "holiday " : ""}designs, and <strong>Customize</strong> to add your logo and colour.`,
         holiday
-          ? `Like it? <a href="${escapeHtml(startUrl(token, occasion, both))}">Make it live for ${both ? `${bothPrice()} for both holidays` : holidayPrice()}</a>: its own link and QR code, a print-ready PDF and a table tent, live through the holiday. Your menu file is already attached, so checkout takes a minute.`
+          ? `Like it? <a href="${escapeHtml(startUrl(token, occasion, both))}">${prepaid ? "Make it live: it is already paid for" : `Make it live for ${both ? `${bothPrice()} for both holidays` : holidayPrice()}`}</a>: its own link and QR code, a print-ready PDF and a table tent, live through the holiday. Your menu file is already attached, so checkout takes a minute.`
           : `Like it? <a href="${escapeHtml(startUrl(token))}">Make it live for ${dollars(firstYearCents())}</a> for the first year. Your menu file is already attached, so checkout takes a minute.`
       ]
     }),
     text: holiday
-      ? `Your ${holiday} menu preview: ${url}\nIt ends in ${PREVIEW_HOURS / 24} days and has no QR code.\nMake it live (${both ? `${bothPrice()} for both holidays` : holidayPrice()}): ${startUrl(token, occasion, both)}`
+      ? `Your ${holiday} menu preview: ${url}\nIt ends in ${PREVIEW_HOURS / 24} days and has no QR code.\nMake it live (${prepaid ? "already paid" : both ? `${bothPrice()} for both holidays` : holidayPrice()}): ${startUrl(token, occasion, both)}`
       : `Your menu preview: ${url}\nIt ends in ${PREVIEW_HOURS / 24} days and has no QR code.\nMake it live (${dollars(firstYearCents())} first year): ${startUrl(token)}`,
     idempotencyKey: `menu-preview/${token}`, purpose: "MENU_PREVIEW", templateKey: holiday ? "holiday_menu_preview_v1" : "menu_preview_v1"
   }).catch((error) => console.error("Preview email failed:", error instanceof Error ? error.message : String(error)));
@@ -466,7 +471,7 @@ async function handlePreviewState(request, env, token, { now = Date.now() } = {}
     design: menuDesignFor(row.design) ? row.design : list[0].key,
     ...(isOccasion(row.occasion) ? { occasion: row.occasion } : {}),
     designs: list.map((d) => ({ key: d.key, label: d.label, blurb: d.blurb, url: designUrl(token, d.key), choose_url: chooseUrl(token, d.key) })),
-    next_label: "Generate menu", choose_label: makeLiveLabel(row.occasion, data?.both === true),
+    next_label: "Generate menu", choose_label: makeLiveLabel(row.occasion, data?.both === true, data?.prepaid === true),
     note: `Free preview: no QR code, ends in ${PREVIEW_HOURS / 24} days.`,
     customize: {
       url: `${SITE}/api/menu-preview/customize/${token}`, title: "Customize your menu", submit: `Update all ${n} designs`,
@@ -583,7 +588,10 @@ async function handlePreviewHandoff(env, token, { now = Date.now() } = {}) {
   const upload = await env.DB.prepare(`SELECT payload FROM mm_booking_requests WHERE id = ?`).bind(row.request_id).first().catch(() => null);
   const file = !!parseJsonOrNull(upload?.payload)?.document?.storageKey;
   const holiday = isOccasion(row.occasion) ? { occasion: row.occasion, occasion_name: OCCASION_NAMES[row.occasion], design: (menuDesignFor(row.design) || designsFor(row.occasion)[0]).label } : {};
-  return json({ ok: true, business: row.business, email: row.email, ...(file ? { request_id: row.request_id } : {}), ...holiday });
+  // What this email will be charged for the holiday (59, 30 for a second menu, or 0 when an order for both already
+  // covers it), so the Start page shows the real total. Checkout prices it again from the email typed there.
+  const quote = isOccasion(row.occasion) ? await holidayQuote(env, row.email, row.occasion, { now }).catch(() => null) : null;
+  return json({ ok: true, business: row.business, email: row.email, ...(file ? { request_id: row.request_id } : {}), ...holiday, ...(quote ? { holiday_price_cents: quote.price_cents, holiday_prepaid: quote.prepaid === true } : {}) });
 }
 
 export { handleRepLink, repUrl, REP_PER_DAY };
