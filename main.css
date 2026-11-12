@@ -2750,6 +2750,8 @@ a.is-soon{opacity:.85;background:transparent!important;color:var(--gold)!importa
 .mm-recurring{margin:6px 0 0;color:var(--muted);font-size:15px}
 .mm-recurring strong{color:#fff}
 .test-mode-banner{position:sticky;top:0;z-index:1000;background:#ffd84d;color:#071f2c;font-weight:700;text-align:center;padding:10px 16px}
+.owner-sandbox-bar{display:flex;flex-wrap:wrap;gap:8px 16px;align-items:center;justify-content:center}
+.owner-sandbox-bar button{font:inherit;font-weight:700;color:#ffd84d;background:#071f2c;border:0;border-radius:999px;padding:6px 14px;cursor:pointer}
 :where(body.start-page) .optional-content>.mm-toggle{display:flex;width:max-content;max-width:100%;margin:6px 0 18px}
 :where(body.start-page) .service-card.mm-choice.is-selected{border-color:var(--gold);box-shadow:0 0 0 2px var(--gold) inset}
 :where(body.start-page) .service-card.mm-choice.is-soon{opacity:.7}

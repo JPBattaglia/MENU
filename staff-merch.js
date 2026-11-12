@@ -7,7 +7,8 @@
 (() => {
   const NINO_API = 'https://nino-printful-commerce-api.ijpbattaglia.workers.dev';
   const API = location.hostname.endsWith('menu-made.com') ? '' : 'https://menu-made.com';
-  const TEST = new URLSearchParams(location.search).get('checkout') === 'test';
+  // The owner sandbox switch (site-nav.js) counts as test mode too.
+  const TEST = window.MenuMadeSandbox === true || new URLSearchParams(location.search).get('checkout') === 'test';
   const $ = (id) => document.getElementById(id);
   const money = (c) => '$' + (c / 100).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
   const decode = (t) => { const d = document.createElement('textarea'); d.innerHTML = String(t ?? ''); return d.value; };
@@ -22,7 +23,7 @@
   if (TEST) {
     const note = document.createElement('div');
     note.className = 'test-mode-banner'; note.setAttribute('role', 'status');
-    note.textContent = 'TEST MODE: Stripe test checkout (card 4242 4242 4242 4242). Printful gets a draft only; nothing is printed.';
+    note.textContent = (window.MenuMadeSandbox === true ? 'Staff merch in test mode: ' : 'TEST MODE: Stripe test checkout (card 4242 4242 4242 4242). ') + 'Printful gets a draft only; nothing is printed.';
     document.body.prepend(note);
   }
   const status = (msg, id = 'merchStatus') => { const el = $(id); el.textContent = msg || ''; el.hidden = !msg; };
