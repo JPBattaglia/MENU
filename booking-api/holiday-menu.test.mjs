@@ -124,7 +124,7 @@ test('Both picked in the holiday picker: the Make it live button and the checkou
   assert.doesNotMatch(two, /Make it live: \$59/);
   // The second menu of an order for both holidays: no price on the button.
   const paid = publicPreviewPage(html, 'a'.repeat(36), { occasion: 'newyear', prepaid: true });
-  assert.match(paid, /Make it live: already paid</);
+  assert.match(paid, /Complete your order: already paid</);
   assert.doesNotMatch(paid, /\$59|\$89/);
 });
 
@@ -148,6 +148,17 @@ test('a holiday preview: six holiday designs (that holiday first), the holiday p
   const last = await (await f.get(`/api/menu-preview/view/${token}/silvergold`)).text();
   assert.match(last, /Design 6 of 6: Silver and Gold<\/strong>/, 'a design for either holiday names no holiday');
   assert.match(last, /Make it live: \$59</, 'one holiday: $59 on the button');
+  // The same stored page once this email's order for both holidays covers Christmas: the button is checked on
+  // every open, so it stops naming a price. Without that order it is $59 again.
+  const raw = f.env.DB.raw;
+  raw.prepare(`INSERT INTO customers (id, created_at, updated_at, email) VALUES ('cb', '2026-11-01', '2026-11-01', 'owner@harbor.example')`).run();
+  raw.prepare(`INSERT INTO orders (id, created_at, updated_at, customer_id, status, subtotal_cents, total_cents, payment_status) VALUES ('ob', ?, ?, 'cb', 'ONBOARDING_REQUIRED', 8900, 8900, 'PAID')`).run(new Date().toISOString(), new Date().toISOString());
+  raw.prepare(`INSERT INTO order_items (id, order_id, offer_id, offer_version_id, unit_price_cents, line_total_cents, metadata_json) VALUES ('ib', 'ob', 'offer_holiday_menu', 'offerv1_holiday_menu', 8900, 8900, ?)`).run(JSON.stringify({ holiday_menu: { occasion: 'newyear', both_other: 'christmas' } }));
+  const covered = await (await f.get(`/api/menu-preview/view/${token}/silvergold`)).text();
+  assert.match(covered, /Complete your order: already paid</);
+  assert.doesNotMatch(covered, /Make it live: \$59/);
+  raw.prepare(`DELETE FROM order_items WHERE id = 'ib'`).run(); raw.prepare(`DELETE FROM orders WHERE id = 'ob'`).run(); raw.prepare(`DELETE FROM customers WHERE id = 'cb'`).run();
+  assert.match(await (await f.get(`/api/menu-preview/view/${token}/silvergold`)).text(), /Make it live: \$59</);
   assert.equal((await f.get(`/api/menu-preview/view/${token}/confetti`)).status, 410, "New Year's Eve designs are not in a Christmas preview");
   assert.ok(last.includes(`/api/menu-preview/view/${token}/evergreen">Generate menu`), 'goes round to the first');
   assert.equal((await f.get(`/api/menu-preview/view/${token}/classic`)).status, 410, 'regular designs are not in a holiday preview');

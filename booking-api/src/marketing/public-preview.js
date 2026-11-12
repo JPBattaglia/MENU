@@ -79,7 +79,8 @@ const holidayPrice = () => holidayDollars(HOLIDAY_PRICING.firstCents);
 const bothPrice = () => holidayDollars(HOLIDAY_PRICING.firstCents + HOLIDAY_PRICING.secondCents);
 // prepaid: this holiday was already covered by an order for both holidays (owner, Nov 12, 2026: the second menu
 // "shouldn't [cost $59] because it's already paid for"), so nothing here names a price.
-const PREPAID_LABEL = "Make it live: already paid";
+// Owner, Nov 12, 2026: not "Make it live: $59" but "a button that says complete dual order or something to that effect".
+const PREPAID_LABEL = "Complete your order: already paid";
 const makeLiveLabel = (occasion, both = false, prepaid = false) => isOccasion(occasion) ? (prepaid ? PREPAID_LABEL : both ? `Make it live: ${bothPrice()} for both holidays` : `Make it live: ${holidayPrice()} for ${OCCASION_NAMES[occasion]}`) : `Make it live: ${dollars(firstYearCents())} for the first year`;
 const homePage = (occasion) => isOccasion(occasion) ? `${SITE}/holiday-menu` : `${SITE}/online-menu`;
 const viewUrl = (token) => `${SITE}/api/menu-preview/view/${token}`;
@@ -343,7 +344,7 @@ async function handlePreviewCreate(request, env, { now = Date.now() } = {}) {
         `Open it on your phone: <a href="${escapeHtml(url)}">see your menu preview</a>. It's only a preview, with no QR code, and it ends in ${PREVIEW_HOURS / 24} days.`,
         `Tap <strong>Generate menu</strong> to see it in ${designCount} ${holiday ? "holiday " : ""}designs, and <strong>Customize</strong> to add your logo and colour.`,
         holiday
-          ? `Like it? <a href="${escapeHtml(startUrl(token, occasion, both))}">${prepaid ? "Make it live: it is already paid for" : `Make it live for ${both ? `${bothPrice()} for both holidays` : holidayPrice()}`}</a>: its own link and QR code, a print-ready PDF and a table tent, live through the holiday. Your menu file is already attached, so checkout takes a minute.`
+          ? `Like it? <a href="${escapeHtml(startUrl(token, occasion, both))}">${prepaid ? "Complete your order: it is already paid for" : `Make it live for ${both ? `${bothPrice()} for both holidays` : holidayPrice()}`}</a>: its own link and QR code, a print-ready PDF and a table tent, live through the holiday. Your menu file is already attached, so checkout takes a minute.`
           : `Like it? <a href="${escapeHtml(startUrl(token))}">Make it live for ${dollars(firstYearCents())}</a> for the first year. Your menu file is already attached, so checkout takes a minute.`
       ]
     }),
@@ -434,7 +435,7 @@ async function handlePreviewView(request, env, token, { now = Date.now(), design
   const gone = () => plainPage(410, "This preview has ended", `Free previews last ${PREVIEW_HOURS / 24} days. To get your menu as a phone page with a QR code, see <a href="${escapeHtml(`${SITE}/online-menu`)}">Online Menu + QR</a>.`);
   if (!/^[a-f0-9]{36}$/.test(token) || !env.DB || !env.ASSETS) return gone();
   if (design && !menuDesignFor(design)) return gone();
-  const row = await env.DB.prepare(`SELECT token, status, expires_at, open_count, design, campaign, occasion FROM menu_previews WHERE token = ?`).bind(token).first();
+  const row = await env.DB.prepare(`SELECT token, status, expires_at, open_count, design, campaign, occasion, email FROM menu_previews WHERE token = ?`).bind(token).first();
   if (!row || row.status !== "READY" || row.expires_at <= new Date(now).toISOString()) return gone();
   const agent = request.headers.get("User-Agent") || "";
   const counted = request.method === "GET" && agent && !SCANNER.test(agent);
@@ -448,7 +449,15 @@ async function handlePreviewView(request, env, token, { now = Date.now(), design
     // Prospect previews: the day-3 follow-up goes to owners who opened theirs.
     if (row.campaign === "prospect") await env.DB.prepare(`UPDATE prospect_demos SET open_count = open_count + 1, first_opened_at = COALESCE(first_opened_at, ?), last_opened_at = ? WHERE token = ?`).bind(t, t, token).run();
   }
-  return new Response(request.method === "HEAD" ? null : frameAware(await object.text()), { status: 200, headers: { "Content-Type": "text/html; charset=utf-8", "Cache-Control": "no-store", "X-Robots-Tag": "noindex, nofollow", "Referrer-Policy": "no-referrer" } });
+  if (request.method === "HEAD") return new Response(null, { status: 200, headers: { "Content-Type": "text/html; charset=utf-8", "Cache-Control": "no-store", "X-Robots-Tag": "noindex, nofollow", "Referrer-Policy": "no-referrer" } });
+  // The button's words are stored with the page, so a preview made before its email's order for both holidays (or
+  // before this check existed) would still name a price. Checked on every open: when that order covers this
+  // holiday, the button says so.
+  let page = await object.text();
+  if (isOccasion(row.occasion) && page.includes('class="mm-gen-pick"') && (await holidayQuote(env, row.email, row.occasion, { now }).catch(() => null))?.prepaid === true) {
+    page = page.replace(/(<a class="mm-gen-pick"[^>]*>)[^<]*(<\/a>)/g, (_, open, close) => `${open}${escapeHtml(PREPAID_LABEL)}${close}`);
+  }
+  return new Response(frameAware(page), { status: 200, headers: { "Content-Type": "text/html; charset=utf-8", "Cache-Control": "no-store", "X-Robots-Tag": "noindex, nofollow", "Referrer-Policy": "no-referrer" } });
 }
 
 // The Menu-made app's generator screen (app-shell/www/hybrid.js): which designs there are, where each one's page is,
@@ -458,8 +467,9 @@ async function handlePreviewState(request, env, token, { now = Date.now() } = {}
   if (request.method === "OPTIONS") return preflight();
   const gone = () => json({ ok: false, ended: true, error: `This preview has ended. Free previews last ${PREVIEW_HOURS / 24} days.` }, 410);
   if (!/^[a-f0-9]{36}$/.test(token) || !env.DB || !env.ASSETS) return gone();
-  const row = await env.DB.prepare(`SELECT status, expires_at, design, campaign, occasion FROM menu_previews WHERE token = ?`).bind(token).first();
+  const row = await env.DB.prepare(`SELECT status, expires_at, design, campaign, occasion, email FROM menu_previews WHERE token = ?`).bind(token).first();
   if (!row || row.status !== "READY" || row.expires_at <= new Date(now).toISOString()) return gone();
+  const paidNow = isOccasion(row.occasion) && (await holidayQuote(env, row.email, row.occasion, { now }).catch(() => null))?.prepaid === true;
   const data = parseJsonOrNull(await (await env.ASSETS.get(`menu-previews/${token}/data.json`))?.text());
   if (!data?.menu) return gone();
   const custom = data.custom || {};
@@ -471,7 +481,7 @@ async function handlePreviewState(request, env, token, { now = Date.now() } = {}
     design: menuDesignFor(row.design) ? row.design : list[0].key,
     ...(isOccasion(row.occasion) ? { occasion: row.occasion } : {}),
     designs: list.map((d) => ({ key: d.key, label: d.label, blurb: d.blurb, url: designUrl(token, d.key), choose_url: chooseUrl(token, d.key) })),
-    next_label: "Generate menu", choose_label: makeLiveLabel(row.occasion, data?.both === true, data?.prepaid === true),
+    next_label: "Generate menu", choose_label: makeLiveLabel(row.occasion, data?.both === true, paidNow || data?.prepaid === true),
     note: `Free preview: no QR code, ends in ${PREVIEW_HOURS / 24} days.`,
     customize: {
       url: `${SITE}/api/menu-preview/customize/${token}`, title: "Customize your menu", submit: `Update all ${n} designs`,
