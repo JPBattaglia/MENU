@@ -42,10 +42,11 @@ test('invalid files never reach the endpoint and content changes change the retr
   await assert.rejects(api.send({}, new File(['bad'], 'menu.exe')), /Choose a PDF/);
   await assert.rejects(api.send({}, new File([], 'menu.txt')), /empty/);
   // Limits (owner, Nov 12, 2026): a PDF up to 20 MB, a photo up to 40 MB (shrunk before sending), others 5 MB.
-  await assert.rejects(api.send({}, new File([new Uint8Array(20 * 1024 * 1024 + 1)], 'menu.pdf')), /over 20 MB/);
-  await assert.rejects(api.send({}, new File([new Uint8Array(40 * 1024 * 1024 + 1)], 'menu.jpg')), /over 40 MB/);
-  assert.doesNotThrow(() => api.validate(new File([new Uint8Array(12 * 1024 * 1024)], 'menu.pdf')));
-  assert.doesNotThrow(() => api.validate(new File([new Uint8Array(9 * 1024 * 1024)], 'menu.jpg')));
+  // Only the name and size are checked, so these stand-ins avoid building 40 MB files in the test.
+  await assert.rejects(api.send({}, { name: 'menu.pdf', size: 20 * 1024 * 1024 + 1 }), /over 20 MB/);
+  await assert.rejects(api.send({}, { name: 'menu.jpg', size: 40 * 1024 * 1024 + 1 }), /over 40 MB/);
+  assert.doesNotThrow(() => api.validate({ name: 'menu.pdf', size: 12 * 1024 * 1024 }));
+  assert.doesNotThrow(() => api.validate({ name: 'menu.jpg', size: 9 * 1024 * 1024 }));
   await assert.rejects(api.send({}, new File([new Uint8Array(5 * 1024 * 1024 + 1)], 'menu.txt')), /5 MB/);
   assert.notEqual(await api.fingerprint(new File(['one'], 'menu.txt')), await api.fingerprint(new File(['two'], 'menu.txt')));
 });
