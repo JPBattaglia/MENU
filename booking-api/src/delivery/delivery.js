@@ -130,9 +130,9 @@ async function handleHostedMenu(request, env, slug) {
 // Menu + QR): print.pdf (letter), tri-fold.pdf and table-tent.pdf. Built from the current menu page, so Menu Care
 // updates reach them too. Each version is drawn once and kept in R2 next to the page it was made from.
 const PRINT_FORMATS = {
-  "print.pdf": { build: buildPrintMenuPdf, cache: "print-v3", file: "menu", what: "print PDF" },
-  "tri-fold.pdf": { build: buildTriFoldPdf, cache: "tri-fold-v2", file: "tri-fold-menu", what: "tri-fold", tooLong: true },
-  "table-tent.pdf": { build: buildTableTentPdf, cache: "table-tent-v2", file: "table-tent", what: "table tent" }
+  "print.pdf": { build: buildPrintMenuPdf, cache: "print-v4", file: "menu", what: "print PDF" },
+  "tri-fold.pdf": { build: buildTriFoldPdf, cache: "tri-fold-v3", file: "tri-fold-menu", what: "tri-fold", tooLong: true },
+  "table-tent.pdf": { build: buildTableTentPdf, cache: "table-tent-v3", file: "table-tent", what: "table tent" }
 };
 
 // One print format of a menu page. First choice: the page itself printed by a browser, so the PDF matches the chosen
