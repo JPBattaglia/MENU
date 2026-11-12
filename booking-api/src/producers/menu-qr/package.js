@@ -30,11 +30,14 @@ async function loadPackageDeliverables(projectId, env) {
 const AFTER_APPROVAL = "The buyer gets six things: the live menu page, the QR code, a print-ready menu (PDF), a tri-fold menu (PDF), a QR table tent (PDF) and a TV menu screen. Each has its own preview button here. To change anything, use Request changes on the review page and say what to change; the menu is redone from your words and comes back for approval.";
 
 // Owner email for one waiting Menu + QR order (the shared digest uses this when a single item is waiting).
-async function menuQrOwnerEmail({ context, files, previews, approveUrl, targetStep, env }) {
+async function menuQrOwnerEmail({ context, files, previews, approveUrl, targetStep, env, approval }) {
   const test = isTestOrder(context);
   const business = context.business_name || "A customer";
   const buyer = [context.first_name, context.last_name].filter(Boolean).join(" ") || context.customer_email;
-  const subject = `${test ? "[TEST] " : ""}Approve ${business}'s online menu + QR`;
+  // A redone version says so in the subject (owner, Nov 12, 2026: the new email had the same subject as the last
+  // one, so his mail app filed it in the old conversation and it looked as if nothing had arrived).
+  const version = Number(approval?.revision_number) || 1;
+  const subject = `${test ? "[TEST] " : ""}Approve ${business}'s online menu + QR${version > 1 ? ` (version ${version})` : ""}`;
   const draftStep = await env.DB.prepare(`
       SELECT output_json FROM workflow_steps
       WHERE workflow_run_id = ? AND step_key = 'GENERATE_MENU_DRAFT' AND status = 'SUCCEEDED' LIMIT 1
