@@ -306,6 +306,11 @@ test('"Make it live" saves the design and opens checkout; the paid menu finds th
   assert.equal(choice.custom.color, '#7a1f2b');
   assert.equal(choice.custom.subtitle, 'Since 1998');
   assert.equal(await menuPreviewChoice(f.env, 'missing'), null);
+  // A file added at checkout gives the order a new document reference: the preview named on the order still decides.
+  f.env.DB.raw.prepare(`INSERT INTO orders (id, created_at, updated_at, customer_id, status, subtotal_cents, total_cents, payment_status, notes) VALUES ('o2', '2026-11-12', '2026-11-12', 'c1', 'PAID', 0, 0, 'PAID', ?)`).run(`Menu: 3 pages\nPreview ref: ${token}\nDocument ref: 11111111-2222-4333-8444-555555555555`);
+  const replaced = await menuPreviewChoice(f.env, 'o2');
+  assert.equal(replaced.design, 'bistro');
+  assert.equal(replaced.custom.subtitle, 'Since 1998');
 });
 
 test('a preview made before the generator still opens as it was', async (t) => {

@@ -11,7 +11,7 @@
   <link rel="icon" type="image/png" href="MENU=.png">
   <link rel="shortcut icon" href="MENU=.png">
   <link rel="apple-touch-icon" href="MENU=.png">
-  <link rel="stylesheet" href="main.css?v=20261112-tidy">
+  <link rel="stylesheet" href="main.css?v=20261112-previewref">
   <script src="funnel.js?v=20261016-service-measurement" defer></script>
   <script src="site-nav.js?v=20261112-sandbox" defer></script>
 <script src="app-links.js" defer></script>
@@ -220,9 +220,12 @@
 
             <div class="field">
               <label for="lead_document">Upload your current menu <span id="menuUploadNote" hidden>(PDF or photo; needed for Online Menu + QR)</span></label>
-              <input id="lead_document" type="file" accept=".pdf,.doc,.docx,.txt,.png,.jpg,.jpeg,.webp" aria-describedby="lead_document_help lead_document_status">
-              <div class="mini" id="lead_document_help">One PDF (up to 20 MB), a photo (PNG, JPEG or WebP, any phone photo works), or a Word or text file (up to 5 MB).</div>
-              <div class="mini" id="lead_document_status" role="status" aria-live="polite"></div>
+              <div class="mini upload-status" id="lead_document_status" role="status" aria-live="polite"></div>
+              <button class="link-btn" id="menuUploadSwap" type="button" hidden>Use a different file</button>
+              <div id="menuUploadControls">
+                <input id="lead_document" type="file" accept=".pdf,.doc,.docx,.txt,.png,.jpg,.jpeg,.webp" aria-describedby="lead_document_help lead_document_status">
+                <div class="mini" id="lead_document_help">One PDF (up to 20 MB), a photo (PNG, JPEG or WebP, any phone photo works), or a Word or text file (up to 5 MB).</div>
+              </div>
             </div>
 
             <section class="site-addons" id="menuAddon" aria-labelledby="menuAddonTitle" hidden>
@@ -348,7 +351,7 @@
 </footer>
 <script src="section-parallax.js?v=20261015-unified" defer></script>
 <script src="document-upload.js?v=20261112-sandbox" defer></script>
-<script src="start.js?v=20261112-tidy" defer></script>
+<script src="start.js?v=20261112-previewref" defer></script>
 <script src="booking.js?v=20261016-buyer-flow" defer></script>
 </body>
 </html>

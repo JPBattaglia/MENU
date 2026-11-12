@@ -90,6 +90,7 @@ function bringMenu() {
   menuNote = 'Your plan starts with your menu online, so Online Menu + QR was added (its setup is free with yearly billing). Already have a menu with us? Remove it.';
 }
 let uploadedDocumentRequest = null;
+let menuPreview = ''; // the free menu preview "Make it live" came from (its design and Customize settings)
 let previewDocumentId = ''; // a free preview's stored menu file, reused so the buyer doesn't upload it again
 let lockedFieldValues = null;
 // A domain bought with the hosted site (Nov 7, 2026): { name, price_cents, renewal_cents } from /api/domains.
@@ -657,7 +658,9 @@ async function checkout() {
     ...(order.plan ? [{ key: order.plan, qty: 1, interval: interval(), ...(order.plan === CUSTOM ? { includes: order.custom } : {}) }] : []),
     ...[...order.once].map(code => ({ key: code, qty: 1 }))
   ];
-  const customer = { name, business, email, phone, notes: composeNotes(brief, notes, 500) };
+  // The preview this order came from goes on the order, so its design and name are used even if a new file is added.
+  const orderBrief = menuPreview && order.once.has(MENU) ? [brief, 'Preview ref: ' + menuPreview].filter(Boolean).join('\n') : brief;
+  const customer = { name, business, email, phone, notes: composeNotes(orderBrief, notes, 500) };
   const file = $('lead_document').files[0];
   const controller = new AbortController(); let timeout;
   clearStatus(); checkoutInFlight = true; els.checkoutBtn.disabled = true; lockControls(true);
@@ -672,10 +675,10 @@ async function checkout() {
       const key = JSON.stringify(payload) + fingerprint;
       if (!uploadedDocumentRequest || uploadedDocumentRequest.key !== key) uploadedDocumentRequest = { key, payload: { ...payload, requestId: crypto.randomUUID() }, received: false };
       if (!uploadedDocumentRequest.received) { await window.MenuMadeDocuments.send(uploadedDocumentRequest.payload, file, controller.signal); uploadedDocumentRequest.received = true; }
-      customer.notes = composeNotes(brief, notes, 500, uploadedDocumentRequest.payload.requestId);
+      customer.notes = composeNotes(orderBrief, notes, 500, uploadedDocumentRequest.payload.requestId);
       $('lead_document_status').textContent = 'Menu received. Reference: ' + uploadedDocumentRequest.payload.requestId;
     } else if (previewDocumentId && (order.once.has(MENU) || order.once.has(HOLIDAY))) {
-      customer.notes = composeNotes(brief, notes, 500, previewDocumentId);
+      customer.notes = composeNotes(orderBrief, notes, 500, previewDocumentId);
     }
     els.checkoutBtn.textContent = 'Opening secure checkout…';
     window.MenuMadeFunnel?.track('checkout_attempt');
@@ -779,6 +782,7 @@ const previewToken = params.get('preview');
 // A holiday preview (contact.html?service=holiday&preview=<token>) is also the Holiday Menu's design choice.
 var holidayPreview = previewToken && /^[a-f0-9]{36}$/.test(previewToken) && /^(holiday|holiday_menu|holiday-menu|HOLIDAY_MENU)$/.test(params.get('service') || '') ? previewToken : '';
 if (previewToken && /^[a-f0-9]{36}$/.test(previewToken)) {
+  if (!holidayPreview) menuPreview = previewToken;
   fetch((Catalog?.API || '') + '/api/menu-preview/handoff/' + previewToken).then(r => r.json()).then(data => {
     if (!data?.ok) return;
     if (!els.business.value) els.business.value = data.business || '';
@@ -789,7 +793,13 @@ if (previewToken && /^[a-f0-9]{36}$/.test(previewToken)) {
     previewDocumentId = data.request_id;
     $('lead_document_status').textContent = data.occasion
       ? `Your ${data.occasion_name} menu from the preview is attached, in the ${data.design} design. Add a different file only if you want to replace it.`
-      : 'The menu from your preview is attached. Add a different file only if you want to replace it.';
+      : `The menu from your preview is attached${data.design ? `, in the ${data.design} design` : ''}. Nothing to upload. Add a different file only if you want to replace it; your design and name stay as you chose them.`;
+    // With the preview's file attached the chooser is optional, so it is tucked behind a link.
+    const controls = $('menuUploadControls'), swap = $('menuUploadSwap');
+    if (controls && swap) {
+      controls.hidden = true; swap.hidden = false;
+      swap.addEventListener('click', () => { controls.hidden = false; swap.hidden = true; $('lead_document').focus(); });
+    }
     if (data.occasion && holidayPreview && Number.isInteger(data.holiday_price_cents) && data.holiday_price_cents !== (Catalog.priceOf(offer(HOLIDAY), interval()) ?? 5900)) {
       holidayCents = data.holiday_price_cents;
       const paid = document.createElement('p');
