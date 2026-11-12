@@ -200,6 +200,7 @@ async function deliver(env, row) {
 }
 
 return {
+  validateDocument, // for tests: the size limits without building a 20 MB request
   async fetch(request, env, ctx) {
     if (!['/api/booking', '/api/inquiry'].includes(new URL(request.url).pathname)) return json({ ok: false }, 404);
     if (request.method !== 'POST') return new Response(null, { status: 405, headers: { Allow: 'POST' } });
