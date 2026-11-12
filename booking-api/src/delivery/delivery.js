@@ -220,9 +220,13 @@ async function handleDraftFormat(request, env, projectId, format) {
   const cant = (what) => simplePage(200, "Not available for this menu", `<p>This menu can't be turned into a ${what} automatically, so the buyer will not get one. The online menu and QR code are not affected.</p>`);
   if (format === "tv") {
     if (!parsed) return cant("TV screen");
-    const page = Number(new URL(request.url).searchParams.get("p")) || 1;
-    const screen = buildTvMenuHtml({ ...parsed, qrSvg: qrModulesToSvg(QRCode.create(qrUrl, { errorCorrectionLevel: "M" }).modules), page });
+    const here = new URL(request.url);
+    const page = Number(here.searchParams.get("p")) || 1;
+    // The approval link's own query (its signature) is kept; only the screen number changes.
+    const pageHref = (n) => { const to = new URL(here); to.searchParams.set("p", String(n)); return to.pathname + to.search; };
+    const screen = buildTvMenuHtml({ ...parsed, qrSvg: qrModulesToSvg(QRCode.create(qrUrl, { errorCorrectionLevel: "M" }).modules), page, pageHref });
     return new Response(screen.html, { status: 200, headers: { "Content-Type": "text/html; charset=utf-8", "Cache-Control": "no-store", "X-Robots-Tag": "noindex, nofollow",
+      ...(screen.pages > 1 ? { "Refresh": `12; url=${pageHref(screen.page % screen.pages + 1)}` } : {}),
       "X-Content-Type-Options": "nosniff", "Content-Security-Policy": "default-src 'none'; img-src data:; style-src 'unsafe-inline'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'" } });
   }
   const spec = PRINT_FORMATS[format];
@@ -246,8 +250,8 @@ async function handleHostedMenuTv(request, env, slug) {
   }
   const page = Number(new URL(request.url).searchParams.get("p")) || 1;
   const qrSvg = qrModulesToSvg(QRCode.create(found.hostedUrl, { errorCorrectionLevel: "M" }).modules);
-  const screen = buildTvMenuHtml({ ...parsed, qrSvg, page });
   const tvUrl = `${found.hostedUrl}/tv`;
+  const screen = buildTvMenuHtml({ ...parsed, qrSvg, page, pageHref: (n) => `${tvUrl}?p=${n}` });
   const refresh = screen.pages > 1 ? `12; url=${tvUrl}?p=${screen.page % screen.pages + 1}` : `300; url=${tvUrl}`;
   return new Response(screen.html, {
     status: 200,

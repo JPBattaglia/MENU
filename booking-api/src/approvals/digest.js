@@ -8,6 +8,7 @@ import { DELIVERABLE_LABELS } from "../lib/config.js";
 import { presenterFor, labelFor } from "./presenters.js";
 import { DEFAULT_STEP_KEY } from "./actions.js";
 import { isTestOrder, loadDeliveryContext, loadStepContext } from "./release.js";
+import { triFoldPossible } from "../producers/menu-qr/trifold-check.js";
 
 async function sha256Hex(text) {
   const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(text));
@@ -54,7 +55,9 @@ async function describeApproval(env, approval) {
   // Online Menu + QR and Holiday Menu: everything the buyer will get can be looked at before approving (owner,
   // Nov 12, 2026). These four are drawn from the draft on request (delivery.js handleDraftFormat).
   if (context.workflow_key === "MENU_QR_V1") {
-    for (const [show, label] of DRAFT_FORMATS) previews.push({ label, url: `${base}/api/approval-preview/${approval.id}/${show}?t=${approveToken}` });
+    // A menu too long for a tri-fold gets no tri-fold button (the owner email says why, package.js).
+    const triFold = await triFoldPossible(env, approval.project_id);
+    for (const [show, label] of DRAFT_FORMATS) if (show !== "tri-fold.pdf" || triFold !== false) previews.push({ label, url: `${base}/api/approval-preview/${approval.id}/${show}?t=${approveToken}` });
   }
   return { approval, metadata, context, targetStep, presenter, files, previews, approveUrl, label: presenter.ownerLabel(context) };
 }
