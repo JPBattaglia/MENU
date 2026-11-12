@@ -1669,6 +1669,8 @@ body:not(.sample-menu-page).services-page .premium-media .hospitality-photo {
     :where(body.start-page) .cart-panel .link-btn:disabled{ display:none; }
     :where(body.start-page) .cart-panel .link-btn:focus-visible{ outline:2px solid var(--brand-soft); outline-offset:3px; border-radius:4px; }
     :where(body.start-page) .checkout-step #checkoutBtn{ width:100%; max-width:none; }
+    :where(body.start-page) .cart-panel .upload-status:empty{ display:none; }
+    :where(body.start-page) #menuUploadControls[hidden]{ display:none; }
     :where(body.start-page) .checkout-step #backBtn{ display:block; margin:6px auto 0; }
 
     :where(body.start-page) .field{

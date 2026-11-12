@@ -589,6 +589,13 @@ async function menuPreviewChoice(env, orderId) {
   const order = await env.DB.prepare(`SELECT notes FROM orders WHERE id = ?`).bind(orderId).first();
   const reference = /Document ref: ([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})/i.exec(order?.notes || "")?.[1];
   let row = reference ? await env.DB.prepare(`SELECT token, design, occasion FROM menu_previews WHERE request_id = ? AND status = 'READY' ORDER BY created_at DESC LIMIT 1`).bind(reference.toLowerCase()).first() : null;
+  // The order also names the preview it came from ("Preview ref", sent by the Start page): a buyer who adds a file
+  // at checkout gets a new document reference, and the design and name they chose in the preview must still be
+  // used (owner's sandbox order, Nov 12, 2026: Modern and a changed name were chosen, the plain menu came out).
+  if (!row) {
+    const preview = /Preview ref: ([a-f0-9]{36})(?![a-f0-9])/i.exec(order?.notes || "")?.[1];
+    if (preview) row = await env.DB.prepare(`SELECT token, design, occasion FROM menu_previews WHERE token = ? AND status = 'READY'`).bind(preview.toLowerCase()).first();
+  }
   // A Holiday Menu names the preview it was made from on its order item: a holiday prospect email's preview shows the
   // business's regular menu in the holiday designs, and the buyer uploads the holiday menu itself at checkout.
   let holiday = null;
@@ -618,11 +625,12 @@ async function handlePreviewHandoff(env, token, { now = Date.now() } = {}) {
   // A prospect preview read from a web page (not a file) has no stored file to attach: checkout asks for one.
   const upload = await env.DB.prepare(`SELECT payload FROM mm_booking_requests WHERE id = ?`).bind(row.request_id).first().catch(() => null);
   const file = !!parseJsonOrNull(upload?.payload)?.document?.storageKey;
+  const chosen = !isOccasion(row.occasion) && menuDesignFor(row.design) ? { design: menuDesignFor(row.design).label } : {};
   const holiday = isOccasion(row.occasion) ? { occasion: row.occasion, occasion_name: OCCASION_NAMES[row.occasion], design: (menuDesignFor(row.design) || designsFor(row.occasion)[0]).label } : {};
   // What this email will be charged for the holiday (59, 30 for a second menu, or 0 when an order for both already
   // covers it), so the Start page shows the real total. Checkout prices it again from the email typed there.
   const quote = isOccasion(row.occasion) ? await holidayQuote(env, row.email, row.occasion, { now }).catch(() => null) : null;
-  return json({ ok: true, business: row.business, email: row.email, ...(file ? { request_id: row.request_id } : {}), ...holiday, ...(quote ? { holiday_price_cents: quote.price_cents, holiday_prepaid: quote.prepaid === true } : {}) });
+  return json({ ok: true, business: row.business, email: row.email, ...(file ? { request_id: row.request_id } : {}), ...chosen, ...holiday, ...(quote ? { holiday_price_cents: quote.price_cents, holiday_prepaid: quote.prepaid === true } : {}) });
 }
 
 export { handleRepLink, repUrl, REP_PER_DAY };
