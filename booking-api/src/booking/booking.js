@@ -30,6 +30,8 @@ async function readBody(request, maxBytes = 8192, multipart = false) {
 // Upload limits (owner, Nov 12, 2026: "why is there a 5MB limit"): a PDF can be up to 20 MB (designed menus with
 // pictures often pass 5). Everything else stays at 5 MB: the menu reader takes images up to about 5 MB each, and
 // document-upload.js shrinks a larger photo in the browser before it is sent.
+const UPLOADS_PER_HOUR = 5;
+const SANDBOX_UPLOADS_PER_HOUR = 60;
 const PDF_LIMIT = 20 * 1024 * 1024;
 const OTHER_LIMIT = 5 * 1024 * 1024;
 const DOCUMENT_LIMIT = PDF_LIMIT;
@@ -241,12 +243,17 @@ return {
       if (!ip) return json({ ok: false }, 403);
       const now = Math.floor(Date.now() / 1000);
       const ipHash = await hash(`${env.BOOKING_RATE_SALT}:${ip}`);
+      // Uploads per network per hour. The owner sandbox (site-nav.js; owner, Nov 12, 2026: "Too many requests" while
+      // testing, after the preview limits were lifted) gets room to upload a menu over and over; the flag is only a
+      // browser setting, so it raises the limit instead of removing it, and only for a menu sent for checkout or a
+      // preview. It is read from the request, never stored, so a retry still matches its first attempt.
+      const perNetwork = raw.sandbox === true && data.purpose === 'checkout' ? SANDBOX_UPLOADS_PER_HOUR : UPLOADS_PER_HOUR;
       // Rate checks and insertion occur in one SQL statement to prevent concurrent bypass.
       const result = await env.DB.prepare(`INSERT INTO mm_booking_requests (id, payload, ip_hash, created_at)
         SELECT ?, ?, ?, ? WHERE
-        (SELECT COUNT(*) FROM mm_booking_requests WHERE ip_hash = ? AND created_at > ?) < 5
+        (SELECT COUNT(*) FROM mm_booking_requests WHERE ip_hash = ? AND created_at > ?) < ?
         AND (SELECT COUNT(*) FROM mm_booking_requests WHERE created_at > ?) < 100
-        ON CONFLICT(id) DO NOTHING`).bind(data.requestId, payload, ipHash, now, ipHash, now - 3600, now - 3600).run();
+        ON CONFLICT(id) DO NOTHING`).bind(data.requestId, payload, ipHash, now, ipHash, now - 3600, perNetwork, now - 3600).run();
       if (!result.meta.changes) {
         const concurrent = await env.DB.prepare('SELECT * FROM mm_booking_requests WHERE id = ?').bind(data.requestId).first();
         if (concurrent) {
