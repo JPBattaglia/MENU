@@ -42,7 +42,7 @@ function printPage({ head, header, content, notes }, qrSvg, qrUrl) {
 <html lang="en">
 ${head.replace("</head>", `<style>${BASE}
   @page { size: letter; margin: 0; }
-  body { font-size: var(--fs, 11.5px) !important; min-height: 11in; }
+  body { font-size: var(--fs, 11.5px) !important; width: 8.5in; min-height: 11in; }
   header { padding: 30px 0.6in 16px !important; }
   header img { max-height: 76px; }
   h1 { font-size: 34px !important; }
@@ -61,7 +61,7 @@ ${head.replace("</head>", `<style>${BASE}
   .scan b { display: block; font-size: 12px; }
   .scan small { display: block; font-size: 8.5px; margin-top: 3px; }
   .scan .by { margin-right: auto; align-self: flex-end; }
-  body.one { height: 11in; display: flex; flex-direction: column; }
+  body.one { height: 11in; min-height: 0; overflow: hidden; display: flex; flex-direction: column; }
   body.one main { flex: 1; display: flex; flex-direction: column; }
   body.one .scan { margin-top: auto; }
 </style></head>`)}
@@ -74,9 +74,14 @@ ${head.replace("</head>", `<style>${BASE}
   </main>
   <script>
     // A short menu gets the largest type that still fits one page; a long one keeps the reading size and runs on.
+    // Measured at the paper's own width (body is 8.5in wide whatever window the browser has), with a little spare so
+    // a rounding difference at print time can't push the last line onto a second sheet (owner, Nov 12, 2026: "the
+    // PDF doesn't fit one page and cuts off onto a second page").
     (function () {
-      var page = 11 * 96;
-      for (var s = 17; s >= 11.5; s -= 0.5) { document.body.style.setProperty("--fs", s + "px"); if (document.body.scrollHeight <= page) { document.body.className = "one"; return; } }
+      var page = 11 * 96 - 24, body = document.body, end = document.querySelector(".scan");
+      function height() { return end.getBoundingClientRect().bottom - body.getBoundingClientRect().top + 30; }
+      for (var s = 17; s >= 9.5; s -= 0.5) { body.style.setProperty("--fs", s + "px"); if (height() <= page) { body.className = "one"; return; } }
+      body.style.setProperty("--fs", "11.5px");
     })();
   </script>
 </body>
@@ -119,6 +124,9 @@ ${head.replace("</head>", `<style>${BASE}
   .inside .row { font-size: 1em; }
   .inside .desc { font-size: .88em !important; margin-top: .15em; line-height: 1.35; }
   .inside.split .menu-section { break-inside: auto; }
+  .inside .menu-content.paned { display: flex !important; column-count: auto; gap: 0.72in; }
+  .inside .pane { flex: 1 1 0; min-width: 0; height: 100%; display: flex; flex-direction: column; justify-content: center; }
+  .inside .pane .menu-section:last-child { margin-bottom: 0; }
 </style></head>`)}
 <body>
   <div class="sheet outside">
@@ -138,11 +146,32 @@ ${head.replace("</head>", `<style>${BASE}
       var split = largest();
       if (whole && split - whole <= 3) { sheet.classList.remove("split"); fits(whole); }
       else if (!split) fits(7.5);
-      // Shorter than the panel: sit in the middle of the sheet.
-      var last = 0, top = box.getBoundingClientRect().top;
-      box.querySelectorAll("li, h2").forEach(function (el) { last = Math.max(last, el.getBoundingClientRect().bottom - top); });
-      var spare = box.clientHeight - last;
-      if (spare > 8) { main.style.paddingTop = "calc(0.36in + " + Math.floor(spare / 2) + "px)"; box.style.height = Math.ceil(last + 2) + "px"; }
+      // Each panel's dishes sit in the middle of that panel (owner, Nov 12, 2026: "center everything in each section
+      // of the trifold"): the browser's columns become three panes, each holding what landed in its column.
+      var left = box.getBoundingClientRect().left, step = (box.clientWidth + 0.72 * 96) / 3;
+      function col(el) { return Math.max(0, Math.min(2, Math.round((el.getBoundingClientRect().left - left) / step))); }
+      var panes = [0, 1, 2].map(function () { var d = document.createElement("div"); d.className = "pane"; return d; });
+      var plan = [];
+      box.querySelectorAll(".menu-section").forEach(function (sec) {
+        var h = sec.querySelector("h2"), list = sec.querySelector("ul"), parts = {};
+        Array.prototype.forEach.call(list.children, function (li) { var c = col(li); (parts[c] = parts[c] || []).push(li); });
+        var hc = h ? col(h) : -1;
+        [0, 1, 2].forEach(function (c) {
+          if (!parts[c] && hc !== c) return;
+          plan.push({ c: c, sec: sec, list: list, h: hc === c ? h : null, items: parts[c] || [] });
+        });
+      });
+      plan.forEach(function (p) {
+        var sec = p.sec.cloneNode(false), list = p.list.cloneNode(false);
+        if (!p.h) { sec.removeAttribute("id"); sec.removeAttribute("aria-labelledby"); }
+        if (p.h) sec.appendChild(p.h);
+        p.items.forEach(function (li) { list.appendChild(li); });
+        if (p.items.length) sec.appendChild(list);
+        panes[p.c].appendChild(sec);
+      });
+      box.textContent = "";
+      panes.forEach(function (d) { box.appendChild(d); });
+      box.classList.add("paned");
     })();
   </script>
 </body>
