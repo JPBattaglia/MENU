@@ -49,6 +49,11 @@ const PREVIEW_HOURS = 72;
 const PROSPECT_DAYS = 21;          // prospect-email previews (demo-menu.js), same as the website ones
 const PER_DAY = 30;
 const REP_PER_DAY = 40;
+// Owner sandbox (owner, Nov 12, 2026: "turn off free preview limitations in test mode"): a create call from a browser
+// with the sandbox switch on (site-nav.js) skips the per-email, per-network and daily public limits, so he can
+// make previews over and over while testing. The switch is only a browser setting, so SANDBOX_PER_DAY caps what
+// anyone who finds it could cost, and sandbox previews never use up the public daily allowance.
+const SANDBOX_PER_DAY = 40;
 const REP_KIND = "menu-rep";
 const REP_TTL_DAYS = 120;
 const PER_NETWORK_DAY = 2;
@@ -258,7 +263,11 @@ async function handlePreviewCreate(request, env, { now = Date.now() } = {}) {
   if (rep && await count(env, `SELECT COUNT(*) AS n FROM menu_previews WHERE campaign = 'rep' AND created_at > ?`, dayAgo) >= REP_PER_DAY) {
     return json({ ok: false, error: `Rep mode has made ${REP_PER_DAY} previews today, its daily limit.` }, 429);
   }
-  if (!rep) {
+  const sandbox = !rep && body?.sandbox === true;
+  if (sandbox && await count(env, `SELECT COUNT(*) AS n FROM menu_previews WHERE campaign = 'sandbox' AND created_at > ?`, dayAgo) >= SANDBOX_PER_DAY) {
+    return json({ ok: false, error: `Test mode has made ${SANDBOX_PER_DAY} previews today, its daily limit.` }, 429);
+  }
+  if (!rep && !sandbox) {
   const since = new Date(now - EMAIL_DAYS * 86400000).toISOString();
   const existing = await env.DB.prepare(`SELECT token, request_id, business, status, expires_at, occasion FROM menu_previews WHERE email = ? AND created_at > ? ORDER BY created_at DESC LIMIT 1`)
     .bind(email, since).first();
@@ -279,7 +288,7 @@ async function handlePreviewCreate(request, env, { now = Date.now() } = {}) {
   if (await count(env, `SELECT COUNT(*) AS n FROM menu_previews WHERE ip_hash = ? AND created_at > ?`, upload.ip_hash || "", dayAgo) >= PER_NETWORK_DAY) {
     return json({ ok: false, error: "This connection has made its free previews for today. Please try again tomorrow." }, 429);
   }
-  if (await count(env, `SELECT COUNT(*) AS n FROM menu_previews WHERE created_at > ? AND COALESCE(campaign, '') <> 'prospect'`, dayAgo) >= PER_DAY) {
+  if (await count(env, `SELECT COUNT(*) AS n FROM menu_previews WHERE created_at > ? AND COALESCE(campaign, '') NOT IN ('prospect', 'sandbox')`, dayAgo) >= PER_DAY) {
     return json({ ok: false, error: "We've made all of today's free previews. Please try again tomorrow, or start your order now." }, 429);
   }
   }
@@ -287,7 +296,7 @@ async function handlePreviewCreate(request, env, { now = Date.now() } = {}) {
 
   const token = newToken();
   const tracking = body?.tracking && typeof body.tracking === "object" ? body.tracking : {};
-  const campaign = rep ? "rep" : cleanText(tracking.campaign, 100) || null;
+  const campaign = rep ? "rep" : sandbox ? "sandbox" : cleanText(tracking.campaign, 100) || null;
   const started = Date.now();
   // Claim the slot first, so two quick submits can't both start a build.
   await env.DB.prepare(`INSERT INTO menu_previews (token, request_id, email, business, ip_hash, campaign, status, created_at, expires_at, occasion) VALUES (?, ?, ?, ?, ?, ?, 'BUILDING', ?, ?, ?)`)

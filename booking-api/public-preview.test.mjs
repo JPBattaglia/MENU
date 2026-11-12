@@ -203,6 +203,20 @@ test('rep mode: a valid rep link skips the public limits, a forged one does not,
   assert.equal(calls.email, before + 1);
 });
 
+test('owner sandbox: test mode skips the per-email and per-network limits, is tagged sandbox, and leaves the public allowance alone', async (t) => {
+  const f = setup();
+  stubClaude(t);
+  for (let i = 0; i < PER_EMAIL + PER_NETWORK_DAY + 1; i++) {
+    const out = await (await f.create({ request_id: await f.upload({ email: 'owner@menu-made.example' }), email: 'owner@menu-made.example', business: 'Same Cafe', sandbox: true })).json();
+    assert.equal(out.ok, true, JSON.stringify(out));
+    assert.equal(out.reused, undefined, 'each test run gets a new preview');
+  }
+  assert.equal(f.env.DB.raw.prepare(`SELECT COUNT(*) AS n FROM menu_previews WHERE campaign = 'sandbox'`).get().n, PER_EMAIL + PER_NETWORK_DAY + 1);
+  // Only a real true counts, and without it the same network is back under the public limit.
+  const plain = await f.create({ request_id: await f.upload({ email: 'buyer@cafe.example' }), email: 'buyer@cafe.example', business: 'Buyer Cafe', sandbox: 'true' });
+  assert.equal(plain.status, 429, 'a buyer on that network gets the public network limit');
+});
+
 // ---------- Menu generator (owner, Nov 7, 2026) ----------
 
 const PNG = new Uint8Array([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0, 0, 0, 13, 73, 72, 68, 82]);
