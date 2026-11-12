@@ -5,6 +5,7 @@
 // changes show up on the TV without anyone touching it. No scripts: the server sends a Refresh header.
 import { escapeHtml2 as esc } from "../../lib/util.js";
 import { markItems, markLabel } from "./dietary.js";
+import { FONTS, mix, styleCss, toStyle } from "./style.js";
 
 const SIZES = [3.4, 3.1, 2.8, 2.6, 2.4, 2.2, 2.0, 1.85];
 const PAGED_SIZE = 2.4;
@@ -53,7 +54,35 @@ function paginate(sections, size, limit = Infinity) {
   return screens;
 }
 
-function buildTvMenuHtml({ businessName, primary, accent, logoDataUri, menu, qrSvg, page = 1 }) {
+// The chosen design on the TV screen (owner, Nov 12, 2026: the other formats "should all match the exact same style
+// and theme as the online menu that was chosen"): its paper, text and heading colours, its fonts, its heading case
+// and its background pattern, over the screen's own layout. Empty for a menu with no stored design.
+function designCss(style) {
+  const s = toStyle(style);
+  if (!s) return "";
+  const band = s.dark ? mix(s.paper, "#000000", 0.28) : s.heading;
+  const bandText = s.dark ? s.heading : "#ffffff";
+  const texture = /body \{ background-image: url\("data:image\/svg\+xml[^}]*\}/.exec(styleCss(s))?.[0] || "";
+  const upper = s.headingCase === "upper" ? "uppercase" : "none";
+  return `
+  html, body { background-color: ${s.paper}; color: ${s.text}; font-family: ${FONTS[s.bodyFont]}; }
+  ${texture}
+  header { background: ${band}; color: ${bandText}; }
+  h1 { font-family: ${FONTS[s.titleFont]}; }
+  main { column-rule-color: ${s.rule}; }
+  h2 { color: ${s.heading}; border-bottom-color: ${s.accent}; font-family: ${FONTS[s.headingFont]}; text-transform: ${upper}; }
+  h2 small { color: ${s.muted}; }
+  .nm { color: ${s.item}; }
+  .ld { border-bottom-color: ${s.rule}; }
+  .pr { color: ${s.price}; }
+  .it p { color: ${s.muted}; }
+  .mk { background: transparent; border-color: ${s.accent}; color: ${s.accent}; }
+  footer { background: ${s.paper}; color: ${s.muted}; border-top-color: ${s.rule}; }
+  footer .qr { color: ${s.heading}; }
+  footer .qr svg { padding: .5vh; }`;
+}
+
+function buildTvMenuHtml({ businessName, primary, accent, logoDataUri, menu, qrSvg, page = 1, style = null, hideName = false }) {
   const marked = markItems(menu);
   const sections = (marked.menu.sections || []).map((section) => ({
     name: String(section.name || "Menu"),
@@ -122,13 +151,13 @@ function buildTvMenuHtml({ businessName, primary, accent, logoDataUri, menu, qrS
   footer .key .mk { margin: 0 .3em 0 0; font-size: .8em; vertical-align: .1em; }
   footer .qr { margin-left: auto; display: flex; align-items: center; gap: 1vw; font-size: 2vh; font-weight: 600; color: var(--primary); }
   footer .qr svg { height: 8.4vh; width: 8.4vh; background: #fff; }
-  footer .pg { font-size: 1.8vh; letter-spacing: .1em; }
+  footer .pg { font-size: 1.8vh; letter-spacing: .1em; }${designCss(style)}
 </style>
 </head>
 <body>
   <header>
     ${logoDataUri ? `<img src="${esc(logoDataUri)}" alt="">` : ""}
-    <h1>${esc(businessName || "Menu")}</h1>
+    ${hideName && logoDataUri ? "" : `<h1>${esc(businessName || "Menu")}</h1>`}
     <span class="label">MENU</span>
   </header>
   <main>${body}
