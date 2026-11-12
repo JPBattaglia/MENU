@@ -212,7 +212,9 @@ ${head.replace("</head>", `<style>${BASE}
   .face header img { max-height: 0.9in; }
   .face h1 { font-size: 30px !important; }
   .face header p { display: none; }
-  .scan { flex: 1; display: flex; align-items: center; justify-content: center; gap: 0.4in; text-align: left; }
+  /* The code and its instructions sit in a double-line box in the design's accent colour, like the framed menu
+     page (owner, Nov 12, 2026). */
+  .scan { margin: auto; display: flex; align-items: center; justify-content: center; gap: 0.4in; text-align: left; padding: 0.28in 0.4in; border: 1px solid var(--accent); outline: 1px solid var(--accent); outline-offset: 5px; }
   .scan svg { width: 2.3in; height: 2.3in; flex: none; }
   .scan span { display: block; font-size: 22px; color: var(--ink); }
   .scan b { display: block; font-size: 42px; line-height: 1.05; font-family: inherit; }
