@@ -15,7 +15,7 @@ import { readFileSync } from "node:fs";
 import { resolveMx } from "node:dns/promises";
 import { ImapFlow } from "imapflow";
 import nodemailer from "nodemailer";
-import { build, buildFollowup, buildFirstFollowup } from "./email.mjs";
+import { build, buildFollowup, buildFirstFollowup, holidaySeasonNow } from "./email.mjs";
 import { verify } from "./verify.mjs";
 import { makePreview } from "./preview.mjs";
 
@@ -112,8 +112,10 @@ let left = DRY ? 0 : plan.left;
 const { prospects: due = [], price } = await api("followups", { via: "getmenumade" });
 const followed = [];
 let built = 0;
-for (const p of due) {
+for (const row of due) {
   if (left <= 0) break;
+  // In the holiday season the follow-up closes with the Holiday Menu offer as well (owner, Nov 12, 2026).
+  const p = { ...row, holiday_note: holidaySeasonNow() };
   let email;
   if (p.kind === "no_preview") {
     const preview = await makePreview(api, p);

@@ -151,6 +151,14 @@ const HOLIDAY = "https://menu-made.com/holiday-menu?utm_source=outreach&utm_medi
 const usd = (cents) => `$${(cents / 100).toLocaleString("en-US", { maximumFractionDigits: 2 })}`;
 const HOLIDAY_FOOTER = "You're receiving this because your business is listed publicly online. Reply \"no thanks\" and we won't contact you again. Menu-made, 706 Kearny St, San Francisco, CA 94108.";
 
+// Through the holiday season every other draft carries the offer too (owner, Nov 12, 2026: a follow-up draft was the
+// only one of 25 without it): one closing paragraph and a button, added by render() when p.holiday_note is set.
+export function holidaySeasonNow(now = Date.now()) {
+  const year = new Date(now).getUTCFullYear();
+  return now >= Date.parse(`${year}-11-01T00:00:00-07:00`) && now <= Date.parse(`${year}-12-20T23:59:59-08:00`);
+}
+const holidayNote = () => `One more thing for this time of year: if you're doing a Christmas or New Year's Eve menu, we can put that online too, with its own QR code, print PDF, tri-fold, table tent and TV screen. It's ${usd(HOLIDAY_PRICING.firstCents)} per holiday, or ${usd(HOLIDAY_PRICING.firstCents + HOLIDAY_PRICING.secondCents)} for both, and you can see your menu in the holiday designs free before you decide.`;
+
 export function buildHoliday(p, demoUrl = null) {
   const one = usd(HOLIDAY_PRICING.firstCents);
   const both = usd(HOLIDAY_PRICING.firstCents + HOLIDAY_PRICING.secondCents);
@@ -159,7 +167,7 @@ export function buildHoliday(p, demoUrl = null) {
     p.contacted
       ? "I wrote to you a little while ago about your menu. With the holidays close, one more idea and then I'll leave you be."
       : `${opening(p)}I'm JP with Menu-made, a small San Francisco studio that puts food and drink menus online.`,
-    "If you're doing a Christmas or New Year's Eve menu this year, we can put it online as its own phone menu, with a QR code for the tables, a print-ready PDF and a table tent. It sits beside the menu you already have, and after the holiday the link points guests back to your regular menu.",
+    "If you're doing a Christmas or New Year's Eve menu this year, we can put it online as its own phone menu, with a QR code for the tables, a print-ready PDF, a tri-fold, a table tent and a TV screen. It sits beside the menu you already have, and after the holiday the link points guests back to your regular menu.",
     ...(demoUrl ? ["To show you the look, I put the menu from your site into our holiday designs. Tap Generate menu to flip through them. It's private: only you have the link."] : []),
     `It's ${one} per holiday, or ${both} for both. Upload your holiday menu and you'll see it in all six holiday designs, free, before you decide.`,
     "If it's not for you this year, no problem at all."];
@@ -170,6 +178,10 @@ export function buildHoliday(p, demoUrl = null) {
 }
 
 function render(p, subject, paras, buttons, footer = FOOTER) {
+  if (p?.holiday_note && footer !== HOLIDAY_FOOTER) {
+    paras = [...paras, holidayNote()];
+    buttons = [...buttons, ["See holiday menus", HOLIDAY, false]];
+  }
   const pHtml = paras.map((x) => `<p style="margin:0 0 16px;font-size:16px;line-height:1.6;color:${MAIL.text};">${esc(x)}</p>`).join("");
   const bHtml = buttons.map(([l, u, prim]) => `<tr><td style="padding:0 0 12px;"><a href="${esc(u)}" style="display:inline-block;${prim
     ? `background-color:${MAIL.cyan};color:${MAIL.ink};padding:13px 22px;`
