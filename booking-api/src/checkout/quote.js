@@ -81,17 +81,17 @@ function appendCheckoutLineItem(params, item, index, environment, { autoTax = fa
 
 // Holiday Menu: the holiday preview it was made from (its occasion and chosen design), on sale until the holiday,
 // $30 instead of $59 when the same email already bought one this season.
-async function holidayItem(env, checkoutOptions, now = Date.now()) {
+async function holidayItem(env, checkoutOptions, now = Date.now(), environment = null) {
   const token = String(checkoutOptions.holiday_preview || "").toLowerCase();
   if (!/^[a-f0-9]{36}$/.test(token) || !env.DB) throw new CheckoutValidationError("Make your holiday menu in the holiday menu generator first: menu-made.com/holiday-menu");
   const row = await env.DB.prepare(`SELECT status, occasion, design FROM menu_previews WHERE token = ?`).bind(token).first();
   if (row?.status !== "READY" || !isOccasion(row.occasion)) throw new CheckoutValidationError("That holiday menu preview wasn't found. Make a new one at menu-made.com/holiday-menu");
   if (!holidayOnSale(row.occasion, now)) throw new CheckoutValidationError(`${OCCASION_NAMES[row.occasion]} menus are finished for this year.`, 410);
   const email = checkoutOptions?.customer?.email || checkoutOptions?.email;
-  return { occasion: row.occasion, ends_on: holidayEndsOn(row.occasion, now), preview: token, design: row.design || null, pages: HOLIDAY_PRICING.includedPages, ...(await holidayQuote(env, email, row.occasion, { both: checkoutOptions.holiday_both === true, now })) };
+  return { occasion: row.occasion, ends_on: holidayEndsOn(row.occasion, now), preview: token, design: row.design || null, pages: HOLIDAY_PRICING.includedPages, ...(await holidayQuote(env, email, row.occasion, { both: checkoutOptions.holiday_both === true, now, environment })) };
 }
 
-async function normalizeCheckoutItems(itemsInput, env, checkoutOptions = {}, { requirePublic = true, now = Date.now() } = {}) {
+async function normalizeCheckoutItems(itemsInput, env, checkoutOptions = {}, { requirePublic = true, now = Date.now(), environment = null } = {}) {
   const normalizedItems = [];
   let menuSelected = false;
   let holidaySelected = false;
@@ -117,7 +117,7 @@ async function normalizeCheckoutItems(itemsInput, env, checkoutOptions = {}, { r
       if (holidaySelected || (item.qty !== undefined && item.qty !== 1)) throw new CheckoutValidationError("One holiday menu per order. Each holiday menu has its own checkout.");
       holidaySelected = true;
       if (Number(catalogRow.price_cents) !== HOLIDAY_PRICING.firstCents) throw new CheckoutValidationError("Holiday Menu pricing is being updated. Please try again later.", 503);
-      holiday = await holidayItem(env, checkoutOptions, now);
+      holiday = await holidayItem(env, checkoutOptions, now, environment);
       quantity = 1;
     }
     let menuPackage;

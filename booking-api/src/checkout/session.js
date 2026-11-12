@@ -7,6 +7,7 @@ import { stripeRequest } from "../lib/stripe.js";
 import { buildSubscriptionCart, appendSubscriptionParams } from "../subscriptions/checkout.js";
 import { pausedForSale, pausedMessage } from "../lib/switches.js";
 import { domainForCheckout } from "../producers/website/domain-purchase.js";
+import { handleCheckoutCompleted } from "./webhook.js";
 
 
 // One checkout for both environments. "sandbox" uses the Stripe test key and inline prices;
@@ -39,7 +40,7 @@ async function createCheckout(request, env, environment) {
     const itemsInput = Array.isArray(data?.items) ? data.items : [];
     // Plans and bundles are split out first; everything else goes through the one-time catalog.
     const cart = await buildSubscriptionCart(itemsInput, data, env, environment);
-    const normalizedItems = await normalizeCheckoutItems(cart.oneTimeInputs, env, data, { requirePublic: live });
+    const normalizedItems = await normalizeCheckoutItems(cart.oneTimeInputs, env, data, { requirePublic: live, environment });
     cart.validateSetups(normalizedItems);
     if (normalizedItems.length === 0 && !cart.plan) {
       return jsonResponse({ ok: false, error: "No valid active public offers selected" }, 400);
@@ -84,6 +85,11 @@ async function createCheckout(request, env, environment) {
     pending.returnTo = returnTo;
     if (!pending.ok) {
       return jsonResponse({ ok: false, error: pending.error }, pending.status);
+    }
+    // A holiday menu already covered by an order for both holidays has nothing to charge: no Stripe page, straight
+    // to the Success page (see completePrepaidHoliday).
+    if (!cart.plan && normalizedItems.length === 1 && normalizedItems[0].holiday?.prepaid === true && normalizedItems[0].priceCents === 0) {
+      return jsonResponse({ ok: true, environment, order_id: pending.orderId, url: await finishWithoutPayment(env, environment, pending), prepaid: true });
     }
     const opened = await openStripeSession(env, environment, { cart, normalizedItems, orderItems, pending, tracking: data?.tracking || {} });
     if (!opened.ok) {
@@ -193,6 +199,32 @@ async function openStripeSession(env, environment, { cart, normalizedItems, orde
     return { ok: true, url: stripeData.url, sessionId: stripeData.id };
 }
 
+// The second menu of an order for both holidays (owner, Nov 12, 2026: "It shouldn't have to go through the checkout at
+// all ... it should just go straight to Success page and process the email for the final product"). There is nothing
+// to charge, so no Stripe session is opened: the order is created, marked paid by the same code a Stripe payment
+// runs (handleCheckoutCompleted), and production starts. Its session id is made up, with Stripe's own prefix for the
+// environment so everything that tells test from live by that prefix still does; it does not exist at Stripe.
+// Returns { ok, url } with the Success page for the order, or { ok: false } when the email is not owed this menu.
+async function completePrepaidHoliday(env, environment, { token, email, name = "", business = "", phone = "", requestId = "" }) {
+  const data = { items: [{ code: "HOLIDAY_MENU" }], holiday_preview: token,
+    customer: { email, name: name || business || email, business, phone, notes: requestId ? `Document ref: ${requestId}` : "" } };
+  const items = await normalizeCheckoutItems(data.items, env, data, { requirePublic: environment === "live", environment });
+  if (items.length !== 1 || items[0].holiday?.prepaid !== true || items[0].priceCents !== 0) return { ok: false, error: "This holiday menu is not covered by an earlier order." };
+  const pending = await createPendingOrder(data, items, env, environment);
+  if (!pending.ok) return { ok: false, error: pending.error };
+  return { ok: true, orderId: pending.orderId, url: await finishWithoutPayment(env, environment, pending) };
+}
+
+// Marks an order with nothing to charge as paid and starts it, and returns its Success page.
+async function finishWithoutPayment(env, environment, pending) {
+  const sessionId = `${environment === "sandbox" ? "cs_test_" : "cs_live_"}prepaid${pending.orderId.replace(/-/g, "")}`;
+  await env.DB.prepare(`UPDATE orders SET stripe_checkout_session_id = ?, updated_at = ? WHERE id = ?`).bind(sessionId, nowIso(), pending.orderId).run();
+  await handleCheckoutCompleted({ id: `evt_prepaid${pending.orderId.replace(/-/g, "")}`, type: "checkout.session.completed", data: { object: {
+    id: sessionId, payment_intent: null, amount_total: 0, currency: "usd", payment_status: "paid", mode: "payment", total_details: { amount_tax: 0 },
+    metadata: { order_id: pending.orderId, environment, email: pending.email, name: pending.name, business: pending.businessName, prepaid: "both_holidays" } } } }, env);
+  return `https://menu-made.com/checkoutsuccess.html?session_id=${sessionId}&order_id=${encodeURIComponent(pending.orderId)}`;
+}
+
 function createCheckoutSessionTest(request, env) {
   return createCheckout(request, env, "sandbox");
 }
@@ -202,6 +234,7 @@ function createCheckoutSession(request, env) {
 }
 
 export {
+  completePrepaidHoliday,
   openStripeSession,
   createCheckout,
   createCheckoutSessionTest,
