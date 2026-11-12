@@ -3073,10 +3073,7 @@ body.mm-xmas {
   --brand: #d4242f; --brand-soft: #f0c75e; --cyan: #f0c75e; --link-color: #f6d983;
   --panel: #14513a; --panel-strong: #1b6447; --muted: #f1ead8;
   --button-border: #e8c97a;
-  background:
-    radial-gradient(900px 520px at 12% 8%, rgba(212,36,47,.22), transparent 62%),
-    radial-gradient(760px 520px at 88% 18%, rgba(240,199,94,.14), transparent 66%),
-    linear-gradient(180deg, var(--bg), var(--bg-deep));
+  background: linear-gradient(180deg, var(--bg), var(--bg-deep));
 }
 /* Snow (owner, Nov 11, 2026: "more varied"): three layers, far (small, faint, slow), middle, and near (big, soft,
    fast, drifting sideways). Each layer is a tall strip of tiled flakes moved with transform, so it stays smooth on phones. */
