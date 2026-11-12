@@ -1252,12 +1252,14 @@
 
   // The loading screen: the app's own picture, spinning, until the first content is on screen.
   var loader = null, loaderAt = 0;
-  // The loading picture: the app's own loading animation when it has one (Nino: the ring of fire, already animated),
-  // else its logo, spinning (Menu-made's gear).
+  // The loading picture: the app's own loading picture when it has one, else its logo, spinning (Menu-made's gear).
+  // Its own picture is either already animated (shown as it is) or a still one the app turns slowly, once every
+  // cfg.loader_spin seconds (Nino: his logo in its ring, owner Nov 11, 2026: "just make it rotate slowly").
   function loaderPicture(cls) {
-    var anim = /^https:\/\//.test(cfg.loader_url || "");
-    if (!anim && !/^https:\/\//.test(cfg.logo_url || "")) return null;
-    var img = el("img", cls + (anim ? " is-animated" : "")); img.src = anim ? cfg.loader_url : cfg.logo_url; img.alt = "";
+    var own = /^https:\/\//.test(cfg.loader_url || ""), spin = own ? Number(cfg.loader_spin) || 0 : 0;
+    if (!own && !/^https:\/\//.test(cfg.logo_url || "")) return null;
+    var img = el("img", cls + (own ? (spin > 0 ? " is-slow" : " is-animated") : "")); img.src = own ? cfg.loader_url : cfg.logo_url; img.alt = "";
+    if (spin > 0) img.style.animationDuration = spin + "s";
     return img;
   }
   function showLoader() {

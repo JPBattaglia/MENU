@@ -99,6 +99,11 @@ test('the app shell: configure.mjs writes hybrid_url (and drops site_url), refus
     assert.equal(www.site_url, undefined);
     assert.equal(www.intro_url, 'https://menu-made.com/assets/own-apps/nino-intro-neon.mp4');
     assert.equal(www.loader_url, 'https://menu-made.com/assets/own-apps/nino-loader.webp');
+    assert.equal(www.loader_spin, undefined, 'an animated loader is not turned');
+    run({ ...base, hybrid_url: 'https://menu-made.com/api/app-hybrid/nino', loader_url: 'https://menu-made.com/assets/own-apps/nino-loader-logo.png', loader_spin: 8 });
+    assert.equal(JSON.parse(readFileSync(join(shell, 'www/config.json'), 'utf8')).loader_spin, 8, 'a still loader turns once every 8 seconds');
+    run({ ...base, hybrid_url: 'https://menu-made.com/api/app-hybrid/nino', loader_url: 'https://menu-made.com/assets/own-apps/nino-loader-logo.png', loader_spin: 'fast' });
+    assert.equal(JSON.parse(readFileSync(join(shell, 'www/config.json'), 'utf8')).loader_spin, undefined);
     run({ ...base, hybrid_url: 'https://menu-made.com/api/app-hybrid/nino', intro_url: 'https://evil.example/x.mp4', loader_url: 'https://menu-made.com/x.svg' });
     const dropped = JSON.parse(readFileSync(join(shell, 'www/config.json'), 'utf8'));
     assert.equal(dropped.intro_url, undefined, 'an intro from anywhere but menu-made.com is left out');

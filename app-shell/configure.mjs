@@ -53,6 +53,8 @@ writeFileSync(join(here, "www", "config.json"), JSON.stringify({
   // The opening clip (plays once as the app opens, no sound) and the loading animation; menu-made.com only.
   ...(hybrid && /^https:\/\/menu-made\.com\/[A-Za-z0-9%=._\/-]+\.mp4$/.test(cfg.intro_url || "") ? { intro_url: cfg.intro_url } : {}),
   ...(hybrid && /^https:\/\/menu-made\.com\/[A-Za-z0-9%=._\/-]+\.(webp|gif|png)$/.test(cfg.loader_url || "") ? { loader_url: cfg.loader_url } : {}),
+  // A still loading picture is turned by the app: the seconds one full turn takes (1 to 60).
+  ...(hybrid && Number.isFinite(Number(cfg.loader_spin)) && Number(cfg.loader_spin) >= 1 && Number(cfg.loader_spin) <= 60 ? { loader_spin: Number(cfg.loader_spin) } : {}),
   ...(site ? { site_url: site.url, site_screens: (Array.isArray(cfg.site_screens) ? cfg.site_screens : []).filter((p) => /^\/[A-Za-z0-9._\/-]*$/.test(p)).slice(0, 3) } : {}),
   // TestFlight and App Store builds use Apple's production push service; only Xcode debug builds use sandbox.
   push_environment: cfg.push_environment === "sandbox" ? "sandbox" : "production"

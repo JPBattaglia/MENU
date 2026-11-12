@@ -110,7 +110,9 @@ async function buildConfigFor(env, storeApp, packageId = storeApp.bundle_id) {
       ...(look?.label ? { app_label: look.label } : {}),
       ...(look?.logo_url ? { logo_url: look.logo_url } : {}),
       ...(look?.intro_url ? { intro_url: look.intro_url } : {}),
-      ...(look?.loader_url ? { loader_url: look.loader_url } : {})
+      ...(look?.loader_url ? { loader_url: look.loader_url } : {}),
+      // A still loading picture the app turns itself: seconds for one full turn.
+      ...(look?.loader_spin ? { loader_spin: look.loader_spin } : {})
     },
     ...(repoLogo ? { logo_file: repoLogo, logo_placeholder: LOGO_PLACEHOLDER } : {}),
     ...(look?.icon_bg ? { icon_background: look.icon_bg } : {}),

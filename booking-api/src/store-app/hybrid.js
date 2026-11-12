@@ -382,7 +382,11 @@ const HYBRID_LOOK = {
   // unchanged (logo_url).
   nino: { label: "Nino", logo_url: `${MM}/assets/own-apps/nino-app-logo.png`, icon_file: "assets/own-apps/nino-icon-logo.png",
     icon_bg: "#0d0303", icon_pad: 0.1, icon_pad_android: 0.22,
-    intro_url: `${MM}/assets/own-apps/nino-intro-neon.mp4`, loader_url: `${MM}/assets/own-apps/nino-loader.webp` }
+    intro_url: `${MM}/assets/own-apps/nino-intro-neon.mp4`,
+    // Loading animation (owner, Nov 11, 2026: "Use this and just make it rotate slowly"): his NinoLogoAppIcon copy.png
+    // (the red and navy mark in its ring, 512 px, see-through background), unaltered, turned by the app once every
+    // loader_spin seconds. It replaces the ring of fire N (nino-loader.webp, kept for the builds that still ask for it).
+    loader_url: `${MM}/assets/own-apps/nino-loader-logo.png`, loader_spin: 8 }
 };
 const hybridLookForBundle = (bundleId) => HYBRID_LOOK[HYBRID_BUNDLES.get(String(bundleId || ""))] || null;
 const hybridUrlForBundle = (bundleId) => hybridUrl(HYBRID_BUNDLES.get(String(bundleId || "")) || "");

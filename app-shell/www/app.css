@@ -248,6 +248,10 @@ body.hy-theme-menumade .hy-loader { background: linear-gradient(#013f45, #012f34
 .hy-intro-video { width: 100%; height: 100%; object-fit: cover; background: #120004; }
 .hy-intro-skip { position: absolute; right: 16px; bottom: calc(env(safe-area-inset-bottom) + 24px); min-height: 44px; padding: 8px 18px; border-radius: 999px; border: 1px solid rgba(255,255,255,.45); background: rgba(0,0,0,.45); color: #fff; font: inherit; font-weight: 700; }
 .hy-loader-img.is-animated { width: 168px; height: auto; animation: none; filter: none; }
+/* A still loading picture of the app's own, turned slowly (hybrid.js sets how long one turn takes). */
+.hy-loader-img.is-slow { width: 168px; height: 168px; filter: none; }
+.hy-busy-img.is-slow { width: 150px; height: 150px; filter: none; }
+.hy-inline-loader-img.is-slow { width: 88px; height: 88px; }
 .hy-inline-loader { display: flex; justify-content: center; padding: 18px 0; }
 .hy-inline-loader-img { width: 72px; height: auto; animation: hy-spin 1.6s linear infinite; }
 .hy-inline-loader-img.is-animated { width: 88px; animation: none; }
