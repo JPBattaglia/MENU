@@ -61,27 +61,39 @@ ${head.replace("</head>", `<style>${BASE}
   .scan b { display: block; font-size: 12px; }
   .scan small { display: block; font-size: 8.5px; margin-top: 3px; }
   .scan .by { margin-right: auto; align-self: flex-end; }
-  body.one { height: 11in; min-height: 0; overflow: hidden; display: flex; flex-direction: column; }
+  header img, header:has(h1.name-hidden) img { max-height: 0.95in; }
+  body.one { min-height: 0; }
+  body.one .leaf { overflow: hidden; display: flex; flex-direction: column; }
   body.one main { flex: 1; display: flex; flex-direction: column; }
   body.one .scan { margin-top: auto; }
 </style></head>`)}
 <body>
+  <div class="leaf">
   ${header}
   <main>
     ${content}
     ${notes}
     <div class="scan"><span class="by">Menu by MENU-MADE</span><div><b>${qrSvg ? "Scan for our menu online" : "See our menu online"}</b><small>${link(qrUrl)}</small></div>${qrSvg}</div>
   </main>
+  </div>
   <script>
     // A short menu gets the largest type that still fits one page; a long one keeps the reading size and runs on.
-    // Measured at the paper's own width (body is 8.5in wide whatever window the browser has), with a little spare so
-    // a rounding difference at print time can't push the last line onto a second sheet (owner, Nov 12, 2026: "the
-    // PDF doesn't fit one page and cuts off onto a second page").
+    // Measured at the paper's own width (body is 8.5in wide whatever window the browser has) and measured again
+    // once the logo has loaded: before that the logo has no height, the type was chosen too large and the page
+    // ran onto a second sheet (owner, Nov 12, 2026: "still bleeding onto a second page ... it could be the logo").
+    // A menu that fits is then held in a box exactly one sheet tall, so nothing can spill.
     (function () {
-      var page = 11 * 96 - 24, body = document.body, end = document.querySelector(".scan");
-      function height() { return end.getBoundingClientRect().bottom - body.getBoundingClientRect().top + 30; }
-      for (var s = 17; s >= 9.5; s -= 0.5) { body.style.setProperty("--fs", s + "px"); if (height() <= page) { body.className = "one"; return; } }
-      body.style.setProperty("--fs", "11.5px");
+      var body = document.body, leaf = document.querySelector(".leaf"), end = document.querySelector(".scan");
+      function fit() {
+        var sheet = 11 * 96 - (body.offsetHeight - body.clientHeight), page = sheet - 20;
+        body.className = ""; leaf.style.height = "";
+        function height() { return end.getBoundingClientRect().bottom - leaf.getBoundingClientRect().top + 34; }
+        for (var s = 17; s >= 9.5; s -= 0.5) { body.style.setProperty("--fs", s + "px"); if (height() <= page) { body.className = "one"; leaf.style.height = sheet + "px"; return; } }
+        body.style.setProperty("--fs", "11.5px");
+      }
+      fit();
+      window.addEventListener("load", fit);
+      Array.prototype.forEach.call(document.images, function (img) { if (!img.complete) img.addEventListener("load", fit); });
     })();
   </script>
 </body>
