@@ -3060,6 +3060,8 @@ body.about-page .team-profile a{white-space:nowrap;font-size:clamp(11px,calc((10
 .mm-holiday-designs figcaption span { display: block; font-weight: 400; color: var(--muted); font-size: 13px; }
 .mm-holiday-group h3 { margin: 26px 0 0; }
 .mm-occasion { border: 0; margin: 6px 0 0; padding: 0; display: flex; flex-wrap: wrap; gap: 10px; }
+/* The hidden attribute must win over display:flex above ("which menu now" shows only for Both). */
+.mm-occasion[hidden] { display: none; }
 .mm-occasion legend { font-weight: 800; font-size: 13.5px; margin-bottom: 6px; padding: 0; }
 .mm-occasion label { display: inline-flex; align-items: center; gap: 8px; margin: 0; padding: 9px 14px; border: 1px solid rgba(0,214,230,.45); border-radius: 999px; background: rgba(0,0,0,.22); font-weight: 700; cursor: pointer; }
 .mm-occasion input { accent-color: #00d6e6; }
