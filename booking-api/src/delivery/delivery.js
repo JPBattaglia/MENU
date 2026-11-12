@@ -132,7 +132,7 @@ async function handleHostedMenu(request, env, slug) {
 const PRINT_FORMATS = {
   "print.pdf": { build: buildPrintMenuPdf, cache: "print-v6", file: "menu", what: "print PDF" },
   "tri-fold.pdf": { build: buildTriFoldPdf, cache: "tri-fold-v3", file: "tri-fold-menu", what: "tri-fold", tooLong: true },
-  "table-tent.pdf": { build: buildTableTentPdf, cache: "table-tent-v3", file: "table-tent", what: "table tent" }
+  "table-tent.pdf": { build: buildTableTentPdf, cache: "table-tent-v4", file: "table-tent", what: "table tent" }
 };
 
 // One print format of a menu page. First choice: the page itself printed by a browser, so the PDF matches the chosen
