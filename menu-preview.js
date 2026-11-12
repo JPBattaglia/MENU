@@ -34,7 +34,27 @@
     form.prepend(intro);
   }
 
-  const say = (html, isError = false) => { status.innerHTML = html; status.classList.toggle('is-error', isError); };
+  const say = (html, isError = false) => { stopWait(); status.innerHTML = html; status.classList.toggle('is-error', isError); };
+
+  // Loading animation while the preview is made (owner, Nov 12, 2026): the MΞNU gear turning, what is happening now,
+  // and the seconds so far, so the wait never looks stuck. Returns a stop function; say() then replaces it.
+  let waitTimer = null;
+  const stopWait = () => { if (waitTimer) { clearInterval(waitTimer); waitTimer = null; } };
+  const showWait = (steps, expect) => {
+    stopWait();
+    const started = Date.now();
+    status.classList.remove('is-error');
+    status.innerHTML = '<span class="mm-wait"><img class="mm-wait-gear" src="MENU=.png" alt="" width="56" height="56">'
+      + '<span class="mm-wait-text"><strong class="mm-wait-step"></strong><span class="mm-wait-time"></span></span></span>';
+    const step = status.querySelector('.mm-wait-step'), time = status.querySelector('.mm-wait-time');
+    const tick = () => {
+      const s = Math.floor((Date.now() - started) / 1000);
+      step.textContent = steps[Math.min(steps.length - 1, Math.floor(s / 15))];
+      time.textContent = `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')} · ${expect}. Keep this page open.`;
+    };
+    tick();
+    waitTimer = setInterval(tick, 1000);
+  };
   // Holiday picker: the "which menu now" question shows only for Both; ?occasion=newyear (the link emailed after a
   // both-holidays order) picks that holiday.
   {
@@ -65,7 +85,7 @@
     if (!file) { say('Choose your menu file (a PDF or a photo).', true); $('try_file').focus(); return; }
     if (!/\.(pdf|png|jpe?g|webp)$/i.test(file.name)) { say('Previews work from a PDF or a photo (PNG, JPEG or WebP).', true); return; }
     busy = true; button.disabled = true; button.textContent = 'Sending your menu…';
-    say('');
+    showWait(['Sending your menu…'], 'a few seconds');
     try {
       window.MenuMadeDocuments.validate(file);
       const key = [business, email.toLowerCase(), occasion, await window.MenuMadeDocuments.fingerprint(file)].join('|');
@@ -76,7 +96,7 @@
         upload = { key, requestId };
       }
       button.textContent = 'Reading your menu…';
-      say('Reading your menu. This takes about a minute; keep this page open.');
+      showWait(['Reading your menu…', 'Finding the sections, dishes and prices…', 'Drawing your menu in every design…', 'Almost there…'], 'usually about a minute');
       window.MenuMadeFunnel?.track?.('menu_preview_start');
       const response = await fetch(API + '/api/menu-preview/create', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
@@ -99,6 +119,7 @@
     } catch (error) {
       say(esc(error?.message || 'Something went wrong. Please try again.'), true);
     } finally {
+      stopWait();
       busy = false; button.disabled = false; button.textContent = 'Generate menu';
     }
   });
