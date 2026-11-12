@@ -787,7 +787,8 @@ if (previewToken && /^[a-f0-9]{36}$/.test(previewToken)) {
       const today = new Date();
       const otherOpen = data.occasion === 'christmas' || (today.getMonth() === 11 && today.getDate() <= 25) || today.getMonth() < 11;
       if (otherOpen && !$('holidayBoth')) {
-        try { holidayBoth = localStorage.getItem('mm-holiday-both') === '1'; } catch { holidayBoth = false; }
+        // Picked in the generator: the link carries both=1 (any device); the browser's own note is the fallback.
+        try { holidayBoth = params.get('both') === '1' || localStorage.getItem('mm-holiday-both') === '1'; } catch { holidayBoth = params.get('both') === '1'; }
         const label = document.createElement('label');
         label.className = 'mm-holiday-both';
         const box = document.createElement('input');

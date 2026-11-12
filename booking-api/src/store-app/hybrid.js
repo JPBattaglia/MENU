@@ -86,8 +86,8 @@ function menumadeContent(catalog, { offCodes = [], now = Date.now() } = {}) {
     // review first like the site offers"): the Holiday Menu page's "Six holiday designs" section, same words and
     // pictures (holiday-menu.html #designs, assets/holiday), each opening full size.
     designs: {
-      title: "Six holiday designs",
-      text: "Three for Christmas and three for New Year's Eve. Your menu is shown in all of them, so you can pick the one that fits. Tap a design to see it full size.",
+      title: "Nine holiday designs",
+      text: "Three for Christmas, three for New Year's Eve and three that suit either. Your menu is shown in the six that fit your holiday, so you can pick the one you like. Tap a design to see it full size.",
       action: "See my menu in it free",
       groups: [
         { title: "Christmas", items: [
@@ -97,7 +97,12 @@ function menumadeContent(catalog, { offCodes = [], now = Date.now() } = {}) {
         { title: "New Year's Eve", items: [
           ["midnight", "Midnight Gold", "Black and gold, fireworks", "black and gold with fireworks over the name"],
           ["champagne", "Champagne", "Ivory and gold, rising bubbles", "ivory and champagne gold with rising bubbles"],
-          ["confetti", "Confetti", "Deep violet, bright confetti", "deep violet with bright confetti and bold cards"]] }
+          ["confetti", "Confetti", "Deep violet, bright confetti", "deep violet with bright confetti and bold cards"]] },
+        // Owner, Nov 12, 2026: three that fit either holiday; each holiday's generator shows its own three and these.
+        { title: "Either holiday", items: [
+          ["winterlights", "Winter Lights", "Deep blue, white and silver, a string of lights", "deep blue, white and silver with a string of lights under the name"],
+          ["candlelight", "Candlelight", "Warm espresso and amber, framed title", "warm espresso and amber with a framed title and centred courses"],
+          ["wintergreens", "Winter Greens", "Snow white and deep green, rounded cards", "snow white and deep green with gold touches and rounded cards"]] }
       ].map((group) => ({ title: group.title, items: group.items.map(([file, name, note, alt]) => ({
         name, note, alt: `${name} design: ${alt}`, image: `${MM}/assets/holiday/${file}.webp`, large: `${MM}/assets/holiday/${file}-large.webp` })) }))
     },
