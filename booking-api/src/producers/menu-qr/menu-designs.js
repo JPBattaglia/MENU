@@ -49,8 +49,8 @@ const HOLIDAY_DESIGNS = [
   // template"). Each holiday's generator shows its own three, then these three; the other holiday's are left out.
   // Winter Lights is the one in blue, white and silver; it carries no holiday symbol, only the colours. Its header is
   // the same blue as the page (owner, Nov 12, 2026: the top "should be the same blue background or not white").
-  { key: "winterlights", occasion: "either", label: "Winter Lights", blurb: "Deep blue, white and silver, a string of lights under the name",
-    style: { paper: "#10264f", text: "#eaf0fb", heading: "#ffffff", accent: "#c9d6ea", item: "#ffffff", price: "#c9d6ea", title_font: "elegant-serif", heading_font: "modern-sans", body_font: "modern-sans", heading_case: "upper", item_case: "as-printed", heading_align: "center", divider: "star", item_layout: "stacked", header: "plain", nav: "pills", section: "short", texture: "stars", deco: "lights" } },
+  { key: "winterlights", occasion: "either", label: "Winter Lights", blurb: "Winter blue, white and silver, snowflakes, a string of lights under the name",
+    style: { paper: "#27548f", text: "#eaf0fb", heading: "#ffffff", accent: "#c9d6ea", item: "#ffffff", price: "#c9d6ea", title_font: "elegant-serif", heading_font: "modern-sans", body_font: "modern-sans", heading_case: "upper", item_case: "as-printed", heading_align: "center", divider: "star", item_layout: "stacked", header: "plain", nav: "pills", section: "short", texture: "snowflakes", deco: "lights" } },
   { key: "candlelight", occasion: "either", label: "Candlelight", blurb: "Warm espresso and amber, framed title, centred courses",
     style: { paper: "#24160f", text: "#f3e6d3", heading: "#f0b45a", accent: "#f0b45a", item: "#fff6e8", price: "#f0b45a", title_font: "script", heading_font: "elegant-serif", body_font: "classic-serif", heading_case: "upper", item_case: "as-printed", heading_align: "center", divider: "ornament", item_layout: "centered", header: "frame", nav: "links", section: "label", frame: "line" } },
   // Owner, Nov 12, 2026: "replace the green and white one with a silver and gold one" (was Winter Greens).
