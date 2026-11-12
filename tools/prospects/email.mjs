@@ -177,6 +177,9 @@ export function buildHoliday(p, demoUrl = null) {
   return render(p, subject, paras, buttons, HOLIDAY_FOOTER);
 }
 
+// The head declares "light dark", not "dark" alone, the same as the customer emails (booking-api lib/email.js
+// MAIL_HEAD): Apple Mail repaints a dark-only email with light backgrounds and dark text (owner saw it on a prospect
+// draft Nov 12, 2026; the customer emails were fixed Nov 9 and this template was missed).
 function render(p, subject, paras, buttons, footer = FOOTER) {
   if (p?.holiday_note && footer !== HOLIDAY_FOOTER) {
     paras = [...paras, holidayNote()];
@@ -186,7 +189,7 @@ function render(p, subject, paras, buttons, footer = FOOTER) {
   const bHtml = buttons.map(([l, u, prim]) => `<tr><td style="padding:0 0 12px;"><a href="${esc(u)}" style="display:inline-block;${prim
     ? `background-color:${MAIL.cyan};color:${MAIL.ink};padding:13px 22px;`
     : `background-color:${MAIL.bar};color:${MAIL.text};padding:12px 21px;border:1px solid ${MAIL.cyan};`}text-decoration:none;font-size:15px;font-weight:bold;border-radius:6px;">${esc(l)}</a></td></tr>`).join("");
-  const html = `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="color-scheme" content="dark"><meta name="supported-color-schemes" content="dark"><style>a{color:${MAIL.link};}</style><title>${esc(subject)}</title></head>
+  const html = `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="color-scheme" content="light dark"><meta name="supported-color-schemes" content="light dark"><style>:root{color-scheme:light dark;supported-color-schemes:light dark;}a{color:${MAIL.link};}</style><title>${esc(subject)}</title></head>
 <body style="margin:0;padding:0;background-color:${MAIL.page};font-family:Arial,Helvetica,sans-serif;">
 <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="background-color:${MAIL.page};"><tr><td align="center" style="padding:28px 12px;">
 <table role="presentation" width="600" cellspacing="0" cellpadding="0" border="0" style="width:100%;max-width:600px;background-color:${MAIL.card};border:1px solid ${MAIL.line};">
