@@ -19,7 +19,7 @@ import { nowIso, parseJsonOrNull } from "../lib/http.js";
 import { signLinkToken } from "../lib/links.js";
 import { storeMenuDesigns } from "../marketing/public-preview.js";
 import { hostedMenuSlug } from "../onboarding/menu-inputs.js";
-import { designsFor, menuDesignFor } from "../producers/menu-qr/menu-designs.js";
+import { HOLIDAY_DESIGNS, designsFor, menuDesignFor } from "../producers/menu-qr/menu-designs.js";
 import { dailyClock } from "./daily-clock.js";
 import { buildMenuPdf, cancelTestOrder, diagnose, payTestCheckout, updateTest } from "./menu-qr-selftest.js";
 
@@ -74,7 +74,7 @@ async function checkout(env, app, body) {
 async function removePreview(env, token) {
   if (!/^[a-f0-9]{36}$/.test(String(token || ""))) return;
   await env.DB.prepare(`DELETE FROM menu_previews WHERE token = ? AND campaign = 'selftest'`).bind(token).run().catch(() => null);
-  for (const key of [...designsFor("christmas").map((d) => `${d.key}.html`), "data.json"]) await env.ASSETS.delete(`menu-previews/${token}/${key}`).catch(() => null);
+  for (const key of [...HOLIDAY_DESIGNS.map((d) => `${d.key}.html`), "data.json"]) await env.ASSETS.delete(`menu-previews/${token}/${key}`).catch(() => null);
 }
 
 async function stageStart(env, app, test) {

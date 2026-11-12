@@ -31,7 +31,7 @@ const SECTIONS = ["rule", "banner", "label", "fill", "side", "numbered", "short"
 const TEXTURES = ["none", "dots", "lines", "chalk", "grid", "snow", "stars", "bubbles", "confetti"];
 // Holiday decorations (Holiday Menu, owner, Nov 10, 2026): drawn in CSS and inline SVG data (the hosted menu's security
 // policy allows data: images, nothing from outside), in fixed holiday colours.
-const DECOS = ["none", "holly", "candycane", "baubles", "fireworks", "garland"];
+const DECOS = ["none", "holly", "candycane", "baubles", "fireworks", "garland", "lights"];
 
 const hex = (value) => {
   const v = String(value || "").trim().toLowerCase();
@@ -202,6 +202,8 @@ function decoCss(deco) {
   return {
     none: "",
     holly: strip('<svg xmlns="http://www.w3.org/2000/svg" width="96" height="34"><g transform="translate(48 17)"><path d="M0 0C-8-12-26-12-36-4c8 0 10 6 6 10C-22 2-12 4 0 0z" fill="#1f6b3a"/><path d="M0 0C8-12 26-12 36-4c-8 0-10 6-6 10C22 2 12 4 0 0z" fill="#2a8048"/><circle cx="-4" cy="2" r="4.2" fill="#c8323b"/><circle cx="4" cy="3" r="4.2" fill="#b0252e"/><circle cx="0" cy="-4" r="4.2" fill="#d9434b"/></g></svg>', 34),
+    // A string of small lights in white, silver and pale blue (Winter Lights, Nov 12, 2026): no holiday symbol.
+    lights: strip('<svg xmlns="http://www.w3.org/2000/svg" width="96" height="30"><path d="M0 5Q24 19 48 5T96 5" fill="none" stroke="#9fb3d6" stroke-width="1.6"/><g><circle cx="12" cy="13" r="8" fill="#ffffff" opacity=".18"/><circle cx="12" cy="13" r="4" fill="#ffffff"/><circle cx="36" cy="13" r="8" fill="#8fc1ff" opacity=".22"/><circle cx="36" cy="13" r="4" fill="#8fc1ff"/><circle cx="60" cy="13" r="8" fill="#ffffff" opacity=".18"/><circle cx="60" cy="13" r="4" fill="#dfe6f2"/><circle cx="84" cy="13" r="8" fill="#8fc1ff" opacity=".22"/><circle cx="84" cy="13" r="4" fill="#bcd4f7"/></g></svg>', 30),
     garland: strip('<svg xmlns="http://www.w3.org/2000/svg" width="80" height="30"><path d="M0 6Q40 30 80 6" fill="none" stroke="#2a6b3f" stroke-width="7" stroke-linecap="round"/><path d="M0 6Q40 30 80 6" fill="none" stroke="#3f8a55" stroke-width="2" stroke-dasharray="2 5"/><circle cx="40" cy="18" r="4.5" fill="#e2bf72"/><circle cx="18" cy="13" r="3" fill="#c8323b"/><circle cx="62" cy="13" r="3" fill="#c8323b"/></svg>', 30),
     candycane: `header { border-top: 12px solid #c62828; border-bottom: 12px solid #c62828; border-image: repeating-linear-gradient(45deg, #c62828 0 10px, #ffffff 10px 20px, #1f6b3a 20px 30px, #ffffff 30px 40px) 12; }`,
     baubles: `header { padding-top: 92px !important; background-image: url("${svg('<svg xmlns="http://www.w3.org/2000/svg" width="210" height="84"><g stroke="#d8c38f" stroke-width="1.2"><line x1="30" y1="0" x2="30" y2="40"/><line x1="105" y1="0" x2="105" y2="62"/><line x1="180" y1="0" x2="180" y2="30"/></g><circle cx="30" cy="50" r="11" fill="#c8323b"/><rect x="26" y="37" width="8" height="4" fill="#d8c38f"/><circle cx="105" cy="72" r="11" fill="#e2bf72"/><rect x="101" y="59" width="8" height="4" fill="#d8c38f"/><circle cx="180" cy="40" r="11" fill="#2e7d4f"/><rect x="176" y="27" width="8" height="4" fill="#d8c38f"/><circle cx="26" cy="46" r="3" fill="#fff" opacity=".45"/><circle cx="101" cy="68" r="3" fill="#fff" opacity=".45"/><circle cx="176" cy="36" r="3" fill="#fff" opacity=".45"/></svg>')}"); background-repeat: repeat-x; background-position: center top; background-size: auto 84px; }`,

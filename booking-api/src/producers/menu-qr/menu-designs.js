@@ -30,8 +30,8 @@ const MENU_DESIGNS = [
   { key: "yours", label: "Your printed menu", blurb: "The colours and type of the menu you sent" }
 ];
 // Holiday Menu (owner, Nov 10, 2026): a short-run menu for Christmas or New Year's Eve, on top of whatever menu the
-// business already has. The holiday generator shows only these, three per holiday, Christmas first in a Christmas
-// preview and New Year's first in a New Year's one. Decorations (deco, snow, stars, bubbles, confetti) are in style.js.
+// business already has. The holiday generator shows only these: three per holiday, plus three that fit either
+// holiday (see designsFor). Decorations (deco, snow, stars, bubbles, confetti) are in style.js.
 const HOLIDAY_DESIGNS = [
   { key: "evergreen", occasion: "christmas", label: "Evergreen", blurb: "Pine green and gold, holly under the name, falling snow",
     style: { paper: "#12352a", text: "#f4efe2", heading: "#e6c36a", accent: "#e6c36a", item: "#fbf6ec", price: "#e6c36a", title_font: "elegant-serif", heading_font: "elegant-serif", body_font: "classic-serif", heading_case: "upper", item_case: "as-printed", heading_align: "center", divider: "star", item_layout: "stacked", header: "plain", nav: "links", section: "rule", texture: "snow", deco: "holly" } },
@@ -44,16 +44,26 @@ const HOLIDAY_DESIGNS = [
   { key: "champagne", occasion: "newyear", label: "Champagne", blurb: "Ivory and champagne gold, rising bubbles, centred courses",
     style: { paper: "#faf6ee", text: "#2b2418", heading: "#8a6a2c", accent: "#b88a3a", item: "#2b2418", price: "#8a6a2c", title_font: "elegant-serif", heading_font: "elegant-serif", body_font: "elegant-serif", heading_case: "upper", item_case: "upper", heading_align: "center", divider: "star", item_layout: "centered", header: "minimal", nav: "links", section: "rule", texture: "bubbles", frame: "line" } },
   { key: "confetti", occasion: "newyear", label: "Confetti", blurb: "Deep violet, bright confetti, bold headings and cards",
-    style: { paper: "#1a1240", text: "#f1eefc", heading: "#ffd166", accent: "#ef476f", item: "#ffffff", price: "#ffd166", title_font: "condensed-sans", heading_font: "condensed-sans", body_font: "modern-sans", heading_case: "upper", item_case: "as-printed", heading_align: "left", divider: "none", item_layout: "grid", header: "hero", nav: "tabs", section: "fill", texture: "confetti" } }
+    style: { paper: "#1a1240", text: "#f1eefc", heading: "#ffd166", accent: "#ef476f", item: "#ffffff", price: "#ffd166", title_font: "condensed-sans", heading_font: "condensed-sans", body_font: "modern-sans", heading_case: "upper", item_case: "as-printed", heading_align: "left", divider: "none", item_layout: "grid", header: "hero", nav: "tabs", section: "fill", texture: "confetti" } },
+  // Either holiday (owner, Nov 12, 2026: "add 3 that fit either holiday and include a slight hanuka colors
+  // template"). Each holiday's generator shows its own three, then these three; the other holiday's are left out.
+  // Winter Lights is the one in blue, white and silver; it carries no holiday symbol, only the colours.
+  { key: "winterlights", occasion: "either", label: "Winter Lights", blurb: "Deep blue, white and silver, a string of lights under the name",
+    style: { paper: "#10264f", text: "#eaf0fb", heading: "#ffffff", accent: "#c9d6ea", item: "#ffffff", price: "#c9d6ea", title_font: "elegant-serif", heading_font: "modern-sans", body_font: "modern-sans", heading_case: "upper", item_case: "as-printed", heading_align: "center", divider: "star", item_layout: "stacked", header: "band", nav: "pills", section: "short", texture: "stars", deco: "lights" } },
+  { key: "candlelight", occasion: "either", label: "Candlelight", blurb: "Warm espresso and amber, framed title, centred courses",
+    style: { paper: "#24160f", text: "#f3e6d3", heading: "#f0b45a", accent: "#f0b45a", item: "#fff6e8", price: "#f0b45a", title_font: "script", heading_font: "elegant-serif", body_font: "classic-serif", heading_case: "upper", item_case: "as-printed", heading_align: "center", divider: "ornament", item_layout: "centered", header: "frame", nav: "links", section: "label", frame: "line" } },
+  { key: "wintergreens", occasion: "either", label: "Winter Greens", blurb: "Snow white and deep green, gold touches, rounded cards",
+    style: { paper: "#f6f8f3", text: "#22302a", heading: "#1f5a3d", accent: "#b88a3a", item: "#22302a", price: "#1f5a3d", title_font: "rounded-sans", heading_font: "rounded-sans", body_font: "rounded-sans", heading_case: "title", item_case: "as-printed", heading_align: "left", divider: "none", item_layout: "cards", header: "arch", nav: "chips", section: "side", texture: "dots" } }
 ];
 const OCCASIONS = { christmas: "Christmas", newyear: "New Year's Eve" };
 
 const MENU_DESIGN_KEYS = MENU_DESIGNS.map((d) => d.key);
 const menuDesignFor = (key) => MENU_DESIGNS.find((d) => d.key === key) || HOLIDAY_DESIGNS.find((d) => d.key === key) || null;
-// The generator's list: the regular designs, or for a holiday preview the holiday ones, that holiday's first.
+// The generator's list: the regular designs, or for a holiday preview that holiday's three and the three that fit
+// either holiday. The other holiday's designs are left out (owner, Nov 12, 2026).
 function designsFor(occasion) {
   if (!OCCASIONS[occasion]) return MENU_DESIGNS;
-  return [...HOLIDAY_DESIGNS.filter((d) => d.occasion === occasion), ...HOLIDAY_DESIGNS.filter((d) => d.occasion !== occasion)];
+  return [...HOLIDAY_DESIGNS.filter((d) => d.occasion === occasion), ...HOLIDAY_DESIGNS.filter((d) => d.occasion === "either")];
 }
 
 // The raw style for a design. "yours" is the reader's own (null when it saw none: the standard page).

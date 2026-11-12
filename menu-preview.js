@@ -78,7 +78,7 @@
       window.MenuMadeFunnel?.track?.('menu_preview_start');
       const response = await fetch(API + '/api/menu-preview/create', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ request_id: upload.requestId, email, business, tracking: window.MenuMadeFunnel?.tracking?.() || {}, ...(rep ? { rep } : {}), ...(window.MenuMadeSandbox === true ? { sandbox: true } : {}), ...(occasion ? { occasion } : {}) })
+        body: JSON.stringify({ request_id: upload.requestId, email, business, tracking: window.MenuMadeFunnel?.tracking?.() || {}, ...(rep ? { rep } : {}), ...(window.MenuMadeSandbox === true ? { sandbox: true } : {}), ...(occasion ? { occasion } : {}), ...(both ? { both: true } : {}) })
       });
       const result = await response.json().catch(() => null);
       if (response.ok && result?.ok && result.url) {
