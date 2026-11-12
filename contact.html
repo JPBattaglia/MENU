@@ -11,7 +11,7 @@
   <link rel="icon" type="image/png" href="MENU=.png">
   <link rel="shortcut icon" href="MENU=.png">
   <link rel="apple-touch-icon" href="MENU=.png">
-  <link rel="stylesheet" href="main.css?v=20261112-paid">
+  <link rel="stylesheet" href="main.css?v=20261112-tidy">
   <script src="funnel.js?v=20261016-service-measurement" defer></script>
   <script src="site-nav.js?v=20261112-sandbox" defer></script>
 <script src="app-links.js" defer></script>
@@ -172,58 +172,17 @@
 
       <aside class="cart" aria-label="Your order">
         <div class="cart-panel">
-          <div class="cart-head"><div><h3>Your order</h3><p class="cart-sub">Review your choices and the total before checkout.</p></div></div>
+          <div class="cart-head"><div><h3>Your order</h3><p class="cart-sub">Check your order, add your details, then check out.</p></div><button class="link-btn" id="clearBtn" type="button" disabled>Clear order</button></div>
           <ul class="cart-items" id="cartItems" aria-live="polite"></ul>
           <p class="mini" id="emptyOrder">Nothing chosen yet. Use “Choose a plan or service” to start.</p>
           <p class="mm-problem" id="orderProblem" role="alert" hidden></p>
-
-          <section class="site-addons" id="menuAddon" aria-labelledby="menuAddonTitle" hidden>
-            <h4 id="menuAddonTitle">Add to your menu</h4>
-            <div class="site-addon">
-              <div><strong>Menu Care</strong> <span class="site-addon-price" data-price="MENU_CARE"></span><small>Send menu changes any time and we update it; your QR codes keep working. After the first year it also keeps your menu online.</small></div>
-              <button class="btn secondary" type="button" data-menu-care-add>Add</button>
-            </div>
-            <p class="mini site-addon-note" id="menuAddonNote" aria-live="polite"></p>
-          </section>
-
-          <section class="site-addons" id="siteAddons" aria-labelledby="siteAddonsTitle" hidden>
-            <h4 id="siteAddonsTitle">Add to your website</h4>
-            <p class="mini">Your site comes as a zip you can put online anywhere. Add a plan and we put it online at your own web address and keep it up to date.</p>
-            <div class="site-addon" data-addon="WEBSITE_CARE">
-              <div><strong>Website Care</strong> <span class="site-addon-price" data-price="WEBSITE_CARE"></span><small>We host it, keep it running and make the changes you ask for.</small></div>
-              <button class="btn secondary" type="button" data-addon-add="WEBSITE_CARE">Add</button>
-            </div>
-            <div class="site-addon" data-addon="BUNDLE_PRO">
-              <div><strong>Pro Plan</strong> <span class="site-addon-price" data-price="BUNDLE_PRO"></span><small>Website Care plus Menu Care, Google Profile Care (with review replies), Social Posts and Accessibility Monitoring.</small></div>
-              <button class="btn secondary" type="button" data-addon-add="BUNDLE_PRO">Add</button>
-            </div>
-            <fieldset class="site-addon-own">
-              <legend><strong>Or Website Care plus what you need</strong> <small>10% off with one more service, 20% off with two or more</small></legend>
-              <label><input type="checkbox" value="REVIEW_REPLIES"> Review Replies <span data-price="REVIEW_REPLIES"></span></label>
-              <label><input type="checkbox" value="GOOGLE_PROFILE_CARE"> Google Profile Care <span data-price="GOOGLE_PROFILE_CARE"></span></label>
-              <label><input type="checkbox" value="SOCIAL_POSTS"> Social Posts <span data-price="SOCIAL_POSTS"></span></label>
-              <label><input type="checkbox" value="ACCESSIBILITY_MONITORING"> Accessibility Monitoring <span data-price="ACCESSIBILITY_MONITORING"></span></label>
-            </fieldset>
-            <p class="mini site-addon-note" id="siteAddonNote" aria-live="polite"></p>
-            <div class="site-domain" id="siteDomain" hidden>
-              <h5>Your own domain <small>optional</small></h5>
-              <p class="mini">Get a web address like yourplace.com, registered in your name for one year. We set it up and point it at your site.</p>
-              <div class="domain-search">
-                <label class="sr-only" for="domainQuery">Domain or business name</label>
-                <input id="domainQuery" type="text" placeholder="yourplace.com" autocomplete="off" autocapitalize="none" spellcheck="false" maxlength="80">
-                <button class="btn secondary" type="button" id="domainSearchBtn">Search</button>
-              </div>
-              <ul class="domain-results" id="domainResults"></ul>
-              <p class="mini" id="domainNote" aria-live="polite"></p>
-            </div>
-          </section>
 
           <div class="menu-config" id="menuConfig" hidden>
             <p class="mini" id="menuPlanNote" aria-live="polite" hidden></p>
             <div class="field">
               <label for="menuPages">How many pages is your current menu?</label>
               <input id="menuPages" name="menu_pages" type="number" min="1" max="50" step="1" value="3" inputmode="numeric" aria-describedby="menuPagesHelp menuPagesError">
-              <div class="mini" id="menuPagesHelp">Count every page of the menu you’ll upload. Up to 3 pages are included. We check the page count of your file; if it has more pages, we email you a checkout link for the difference before we start.</div>
+              <div class="mini" id="menuPagesHelp">Up to 3 pages are included. If your file has more pages, we email you a checkout link for the difference before we start.</div>
               <div class="validation-msg" id="menuPagesError" aria-live="polite"></div>
             </div>
             <dl class="menu-breakdown" aria-label="Menu price breakdown">
@@ -233,20 +192,12 @@
             </dl>
           </div>
 
-          <div class="cart-total" id="orderTotalRow" hidden>
-            <span id="orderTotalLabel">Due today · USD</span>
-            <strong id="cartTotal" aria-live="polite" aria-atomic="true">—</strong>
-          </div>
-          <p class="mm-recurring" id="recurringRow" hidden><span>Then</span> <strong id="recurringTotal"></strong></p>
-
           <div class="cart-actions" id="orderActions" hidden>
             <button class="btn primary" id="continueBtn" type="button" disabled>Continue to details</button>
-            <button class="btn secondary" id="clearBtn" type="button" disabled>Clear</button>
           </div>
-          <div class="status" id="status" role="status" aria-live="polite"></div>
-          <details class="billing-details" id="billingDetails" hidden><summary>How billing works</summary><p class="mini">Today’s total covers your first month or year of the plan and any one-time services. Plans renew automatically. You can switch plans or cancel from the billing link in your plan emails; cancelling stops the plan at the end of the paid period. You’ll see the final total at Stripe before you checkout.</p></details>
 
           <div class="intake" id="intakeStep">
+            <h4 class="step-title">Your details</h4>
             <div class="two">
               <div class="field"><label for="lead_name">Your name *</label><input id="lead_name" maxlength="100" type="text" autocomplete="name" required></div>
               <div class="field"><label for="lead_business">Business name *</label><input id="lead_business" maxlength="150" type="text" autocomplete="organization" required></div>
@@ -274,15 +225,67 @@
               <div class="mini" id="lead_document_status" role="status" aria-live="polite"></div>
             </div>
 
+            <section class="site-addons" id="menuAddon" aria-labelledby="menuAddonTitle" hidden>
+              <h4 id="menuAddonTitle">Add to your menu</h4>
+              <div class="site-addon">
+                <div><strong>Menu Care</strong> <span class="site-addon-price" data-price="MENU_CARE"></span><small>Send menu changes any time and we update it; your QR codes keep working. After the first year it also keeps your menu online.</small></div>
+                <button class="btn secondary" type="button" data-menu-care-add>Add</button>
+              </div>
+              <p class="mini site-addon-note" id="menuAddonNote" aria-live="polite"></p>
+            </section>
+
+            <section class="site-addons" id="siteAddons" aria-labelledby="siteAddonsTitle" hidden>
+              <h4 id="siteAddonsTitle">Add to your website</h4>
+              <p class="mini">Your site comes as a zip you can put online anywhere. Add a plan and we put it online at your own web address and keep it up to date.</p>
+              <div class="site-addon" data-addon="WEBSITE_CARE">
+                <div><strong>Website Care</strong> <span class="site-addon-price" data-price="WEBSITE_CARE"></span><small>We host it, keep it running and make the changes you ask for.</small></div>
+                <button class="btn secondary" type="button" data-addon-add="WEBSITE_CARE">Add</button>
+              </div>
+              <div class="site-addon" data-addon="BUNDLE_PRO">
+                <div><strong>Pro Plan</strong> <span class="site-addon-price" data-price="BUNDLE_PRO"></span><small>Website Care plus Menu Care, Google Profile Care (with review replies), Social Posts and Accessibility Monitoring.</small></div>
+                <button class="btn secondary" type="button" data-addon-add="BUNDLE_PRO">Add</button>
+              </div>
+              <fieldset class="site-addon-own">
+                <legend><strong>Or Website Care plus what you need</strong> <small>10% off with one more service, 20% off with two or more</small></legend>
+                <label><input type="checkbox" value="REVIEW_REPLIES"> Review Replies <span data-price="REVIEW_REPLIES"></span></label>
+                <label><input type="checkbox" value="GOOGLE_PROFILE_CARE"> Google Profile Care <span data-price="GOOGLE_PROFILE_CARE"></span></label>
+                <label><input type="checkbox" value="SOCIAL_POSTS"> Social Posts <span data-price="SOCIAL_POSTS"></span></label>
+                <label><input type="checkbox" value="ACCESSIBILITY_MONITORING"> Accessibility Monitoring <span data-price="ACCESSIBILITY_MONITORING"></span></label>
+              </fieldset>
+              <p class="mini site-addon-note" id="siteAddonNote" aria-live="polite"></p>
+              <div class="site-domain" id="siteDomain" hidden>
+                <h5>Your own domain <small>optional</small></h5>
+                <p class="mini">Get a web address like yourplace.com, registered in your name for one year. We set it up and point it at your site.</p>
+                <div class="domain-search">
+                  <label class="sr-only" for="domainQuery">Domain or business name</label>
+                  <input id="domainQuery" type="text" placeholder="yourplace.com" autocomplete="off" autocapitalize="none" spellcheck="false" maxlength="80">
+                  <button class="btn secondary" type="button" id="domainSearchBtn">Search</button>
+                </div>
+                <ul class="domain-results" id="domainResults"></ul>
+                <p class="mini" id="domainNote" aria-live="polite"></p>
+              </div>
+            </section>
+
+          </div>
+
+          <div class="cart-total" id="orderTotalRow" hidden>
+            <span id="orderTotalLabel">Due today · USD</span>
+            <strong id="cartTotal" aria-live="polite" aria-atomic="true">—</strong>
+          </div>
+          <p class="mm-recurring" id="recurringRow" hidden><span>Then</span> <strong id="recurringTotal"></strong></p>
+          <details class="billing-details" id="billingDetails" hidden><summary>How billing works</summary><p class="mini">Today’s total covers your first month or year of the plan and any one-time services. Plans renew automatically. You can switch plans or cancel from the billing link in your plan emails; cancelling stops the plan at the end of the paid period. You’ll see the final total at Stripe before you checkout.</p></details>
+          <div class="status" id="status" role="status" aria-live="polite"></div>
+
+          <div class="checkout-step" id="checkoutStep">
             <div class="checkline">
               <input id="scopeConfirm" type="checkbox" required>
               <label for="scopeConfirm" class="mini checkout-consent">I’ve read <a href="services.html">what’s included</a>, how billing works, the <a href="terms.html">terms</a> and the <a href="refunds.html">refund policy</a>.</label>
             </div>
             <div class="cart-actions checkout-actions">
               <button class="btn primary" id="checkoutBtn" type="button">Proceed to secure checkout</button>
-              <button class="btn secondary" id="backBtn" type="button">Hide details</button>
             </div>
             <div class="mini checkout-privacy-note">Your details are used to start and deliver your order. <a href="privacy.html">Privacy policy</a>, <a href="terms.html">Terms</a>, <a href="refunds.html">Refunds &amp; support</a>.</div>
+            <button class="link-btn" id="backBtn" type="button">Hide details</button>
           </div>
 
           <p class="mini order-security" id="orderSecurity" hidden>Payment is handled by Stripe. MENU-MADE never sees your card details.</p>
@@ -345,7 +348,7 @@
 </footer>
 <script src="section-parallax.js?v=20261015-unified" defer></script>
 <script src="document-upload.js?v=20261112-sandbox" defer></script>
-<script src="start.js?v=20261112-nonotes" defer></script>
+<script src="start.js?v=20261112-tidy" defer></script>
 <script src="booking.js?v=20261016-buyer-flow" defer></script>
 </body>
 </html>
