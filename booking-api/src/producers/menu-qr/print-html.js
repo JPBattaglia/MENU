@@ -38,16 +38,22 @@ const link = (qrUrl) => escapeHtml2(String(qrUrl || "").replace(/^https?:\/\//, 
 
 // Letter pages: the menu page as it is, in two columns, with the QR code at the end.
 function printPage({ head, header, content, notes }, qrSvg, qrUrl) {
+  // A design with a ruled frame keeps it, close to the paper's edge; the page's own side margins are not added twice.
+  const framed = /outline-offset: 5px/.test(head);
+  const box = framed
+    ? "main { max-width: none; margin: 0.12in 0.38in 0.38in !important; padding: 0.12in 0.3in 0.22in !important; }"
+    : "main { max-width: none; padding: 0 0.5in 0.32in; }";
   return `<!doctype html>
 <html lang="en">
 ${head.replace("</head>", `<style>${BASE}
   @page { size: letter; margin: 0; }
   body { font-size: var(--fs, 11.5px) !important; width: 8.5in; min-height: 11in; }
-  header { padding: 30px 0.6in 16px !important; }
-  header img { max-height: 76px; }
+  header { padding: 20px 0.5in 12px !important; }
+  header img { max-height: 76px; margin-bottom: 8px; }
   h1 { font-size: 34px !important; }
-  main { max-width: none; padding: 0 0.6in 0.3in; }
-  .menu-content { column-count: 2; column-gap: 0.45in; }
+  header p { margin-top: 4px; }
+  ${box}
+  .menu-content { column-count: 2; column-gap: 0.4in; }
   .menu-section:first-child { padding-top: .5em; }
   main, .menu-content, li, .row { font-size: 1em; }
   .menu-section { padding-top: 1.4em; }
@@ -55,25 +61,26 @@ ${head.replace("</head>", `<style>${BASE}
   li { padding-top: .5em; padding-bottom: .5em; }
   ul { grid-template-columns: 1fr !important; gap: .6em; }
   .desc { font-size: .88em !important; margin-top: .15em; }
-  .notes { margin-top: 1.5em; padding: .9em 1em; font-size: .88em; }
-  .scan { display: flex; align-items: center; justify-content: flex-end; gap: 12px; margin-top: 20px; padding-top: 12px; border-top: 1px solid var(--rule); text-align: right; }
+  .scan .notes { margin: 0 0 6px; padding: .7em .9em; font-size: .88em; text-align: left; }
+  .scan .left { flex: 1; min-width: 0; margin-right: 0.3in; text-align: left; }
+  .scan { display: flex; align-items: center; justify-content: flex-end; gap: 12px; margin-top: 14px; padding-top: 10px; border-top: 1px solid var(--rule); text-align: right; }
   .scan svg { width: 0.95in; height: 0.95in; flex: none; }
   .scan b { display: block; font-size: 12px; }
   .scan small { display: block; font-size: 8.5px; margin-top: 3px; }
-  .scan .by { margin-right: auto; align-self: flex-end; }
+  .scan .by { display: block; }
   header img, header:has(h1.name-hidden) img { max-height: 0.95in; }
   body.one { min-height: 0; }
   body.one .leaf { overflow: hidden; display: flex; flex-direction: column; }
   body.one main { flex: 1; display: flex; flex-direction: column; }
-  body.one .scan { margin-top: auto; }
+  body.one .menu-content { margin-top: auto; margin-bottom: auto; }
+  body.one .scan { margin-top: 14px; }
 </style></head>`)}
 <body>
   <div class="leaf">
   ${header}
   <main>
     ${content}
-    ${notes}
-    <div class="scan"><span class="by">Menu by MENU-MADE</span><div><b>${qrSvg ? "Scan for our menu online" : "See our menu online"}</b><small>${link(qrUrl)}</small></div>${qrSvg}</div>
+    <div class="scan"><div class="left">${notes}<span class="by">Menu by MENU-MADE</span></div><div><b>${qrSvg ? "Scan for our menu online" : "See our menu online"}</b><small>${link(qrUrl)}</small></div>${qrSvg}</div>
   </main>
   </div>
   <script>
@@ -88,7 +95,7 @@ ${head.replace("</head>", `<style>${BASE}
         var sheet = 11 * 96 - (body.offsetHeight - body.clientHeight), page = sheet - 20;
         body.className = ""; leaf.style.height = "";
         function height() { return end.getBoundingClientRect().bottom - leaf.getBoundingClientRect().top + 34; }
-        for (var s = 17; s >= 9.5; s -= 0.5) { body.style.setProperty("--fs", s + "px"); if (height() <= page) { body.className = "one"; leaf.style.height = sheet + "px"; return; } }
+        for (var s = 19; s >= 9.5; s -= 0.5) { body.style.setProperty("--fs", s + "px"); if (height() <= page) { body.className = "one"; leaf.style.height = sheet + "px"; return; } }
         body.style.setProperty("--fs", "11.5px");
       }
       fit();
