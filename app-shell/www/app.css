@@ -326,24 +326,41 @@ body.hy-theme-menumade .hy-full { background: #013f45; }
 /* Home's two generator cards read as buttons: accent border, lift, a filled call to action, a pressed state. */
 .hy-duo-card { border: 2px solid var(--hy-accent); box-shadow: 0 8px 20px rgba(0,0,0,.35); cursor: pointer; transition: transform .08s ease, box-shadow .08s ease; -webkit-tap-highlight-color: transparent; }
 .hy-duo-card:active { transform: scale(.97); box-shadow: 0 2px 8px rgba(0,0,0,.35); }
-/* Holiday Menu in season (Nov 11, 2026): the banner on Home and the pop-up, in the website's pine green, berry red and gold. */
-/* Owner, Nov 11, 2026: the website's gradients, red to green: left to right on the banner, top to bottom on the pop-up
-   (no corner glow). The banner's button is pine green, as on the site, so it stands out on the red side. */
-.hy-holiday-strip { display: flex; flex-direction: column; align-items: stretch; gap: 10px; margin: 14px 16px 0; padding: 14px 16px; text-align: left; font: inherit; color: #f4efe2; border: 1px solid rgba(226,191,114,.7); border-radius: var(--hy-radius); background: linear-gradient(90deg, #b3161f 0%, #8e1119 25%, #0d3b2a 75%, #0b2e20 100%); box-shadow: 0 8px 20px rgba(0,0,0,.35); cursor: pointer; -webkit-tap-highlight-color: transparent; }
+/* Holiday Menu in season (Nov 11, 2026): the banner on Home and the pop-up.
+   Owner, Nov 11, 2026: these match the website's holiday banner and pop-up (main.css .mm-holiday-strip, .mm-xmas-card)
+   in every visible detail: candy-cane border and tree on the banner, red-to-green gradients (left to right on the
+   banner, top to bottom on the pop-up), gold highlight, the pop-up's candy-cane top edge, red ring and falling snow.
+   When the site's holiday look changes, change this to match. */
+.hy-holiday-strip { position: relative; overflow: hidden; display: flex; flex-direction: column; align-items: stretch; gap: 10px; margin: 14px 16px 0; padding: 10px 12px 12px 48px; text-align: left; font: inherit; color: #fff; border: 6px solid transparent; border-radius: var(--hy-radius);
+  background: radial-gradient(520px 160px at 50% 0%, rgba(240,199,94,.22), transparent 70%) padding-box,
+    linear-gradient(90deg, #b3161f 0%, #8e1119 25%, #0d3b2a 75%, #0b2e20 100%) padding-box,
+    repeating-linear-gradient(-45deg, #d4242f 0 10px, #ffffff 10px 20px) border-box;
+  box-shadow: 0 14px 30px rgba(0,0,0,.3); cursor: pointer; -webkit-tap-highlight-color: transparent; }
+.hy-holiday-strip::before { content: "\1F384"; position: absolute; left: 12px; top: 50%; transform: translateY(-50%); font-size: 22px; }
 .hy-holiday-line { font-size: 16px; line-height: 1.4; }
 .hy-holiday-line strong { color: #f6d983; }
-.hy-holiday-go { padding: 10px 8px; text-align: center; font-weight: 700; font-size: 15px; border-radius: var(--hy-btn-radius); background: linear-gradient(135deg, #1f7a52, #0d3b2a); color: #fff; border: 2px solid #e8c97a; }
-.hy-pop { position: fixed; inset: 0; z-index: 60; display: flex; align-items: center; justify-content: center; padding: 20px; background: rgba(0,0,0,.6); }
-.hy-pop-card { position: relative; width: 100%; max-width: 420px; max-height: 88vh; overflow: auto; padding: 26px 20px 18px; text-align: center; color: #f4efe2; border: 2px solid #e8c97a; border-radius: 22px; background: linear-gradient(180deg, #b3161f 0%, #7c0f16 45%, #0d3b2a 100%); box-shadow: 0 24px 60px rgba(0,0,0,.6); }
-.hy-pop-card h2 { font-family: var(--hy-display); font-size: 26px; line-height: 1.15; margin: 4px 0 10px; color: #fff; }
-.hy-pop-card p { margin: 0 0 12px; font-size: 16px; line-height: 1.45; }
-.hy-pop-icons { font-size: 34px; letter-spacing: 6px; }
-.hy-pop-kicker { text-transform: uppercase; letter-spacing: .12em; font-weight: 800; font-size: 13px !important; color: #f0c75e; margin-top: 8px !important; }
-.hy-pop-price { font-family: var(--hy-display); font-size: 40px; font-weight: 800; color: #f0c75e; margin: 4px 0 16px; }
-.hy-pop-price small { display: block; font-family: inherit; font-size: 14px; font-weight: 600; color: #f1ead8; margin-top: 2px; }
-.hy-pop-card .hy-btn-big { width: 100%; margin: 0; background: #d4242f; color: #fff; border-color: #e8c97a; }
-.hy-pop-card .hy-link { margin-top: 12px; color: #f6d983; }
-.hy-pop-close { position: absolute; top: 6px; right: 8px; width: 44px; height: 44px; font-size: 28px; line-height: 1; border: 0; background: transparent; color: #f4efe2; }
+.hy-holiday-go { padding: 10px 8px; text-align: center; font-weight: 700; font-size: 15px; border-radius: var(--hy-btn-radius); background: linear-gradient(135deg, #1f7a52, #0d3b2a); color: #fff; border: 2px solid #f0c75e; }
+.hy-pop { position: fixed; inset: 0; z-index: 60; display: flex; align-items: center; justify-content: center; padding: 20px; background: rgba(4,20,14,.72); }
+.hy-pop::before {
+  content: ""; position: fixed; inset: 0; pointer-events: none; z-index: 0;
+  background-image: radial-gradient(3.3px 3.3px at 133px 544px, rgba(255,255,255,0.7), rgba(255,255,255,0.28) 60%, transparent), radial-gradient(2.8px 2.8px at 450px 187px, rgba(255,255,255,0.83), rgba(255,255,255,0.33) 60%, transparent), radial-gradient(3.1px 3.1px at 153px 176px, rgba(255,255,255,0.69), rgba(255,255,255,0.28) 60%, transparent), radial-gradient(2.9px 2.9px at 123px 569px, rgba(255,255,255,0.67), rgba(255,255,255,0.27) 60%, transparent), radial-gradient(3.0px 3.0px at 543px 568px, rgba(255,255,255,0.79), rgba(255,255,255,0.32) 60%, transparent), radial-gradient(3.1px 3.1px at 573px 58px, rgba(255,255,255,0.72), rgba(255,255,255,0.29) 60%, transparent), radial-gradient(2.5px 2.5px at 100px 519px, rgba(255,255,255,0.79), rgba(255,255,255,0.32) 60%, transparent), radial-gradient(2.2px 2.2px at 64px 453px, rgba(255,255,255,0.75), rgba(255,255,255,0.3) 60%, transparent), radial-gradient(3.4px 3.4px at 620px 524px, rgba(255,255,255,0.71), rgba(255,255,255,0.28) 60%, transparent), radial-gradient(2.5px 2.5px at 520px 546px, rgba(255,255,255,0.89), rgba(255,255,255,0.36) 60%, transparent), radial-gradient(2.8px 2.8px at 253px 535px, rgba(255,255,255,0.91), rgba(255,255,255,0.36) 60%, transparent), radial-gradient(3.3px 3.3px at 265px 572px, rgba(255,255,255,0.92), rgba(255,255,255,0.37) 60%, transparent), radial-gradient(2.4px 2.4px at 458px 140px, rgba(255,255,255,0.77), rgba(255,255,255,0.31) 60%, transparent), radial-gradient(2.7px 2.7px at 323px 74px, rgba(255,255,255,0.85), rgba(255,255,255,0.34) 60%, transparent), radial-gradient(2.7px 2.7px at 217px 685px, rgba(255,255,255,0.74), rgba(255,255,255,0.3) 60%, transparent), radial-gradient(2.3px 2.3px at 158px 658px, rgba(255,255,255,0.85), rgba(255,255,255,0.34) 60%, transparent), radial-gradient(2.4px 2.4px at 140px 478px, rgba(255,255,255,0.72), rgba(255,255,255,0.29) 60%, transparent), radial-gradient(3.3px 3.3px at 407px 498px, rgba(255,255,255,0.7), rgba(255,255,255,0.28) 60%, transparent), radial-gradient(3.0px 3.0px at 229px 165px, rgba(255,255,255,0.86), rgba(255,255,255,0.34) 60%, transparent), radial-gradient(3.4px 3.4px at 413px 347px, rgba(255,255,255,0.78), rgba(255,255,255,0.31) 60%, transparent), radial-gradient(2.6px 2.6px at 94px 374px, rgba(255,255,255,0.66), rgba(255,255,255,0.26) 60%, transparent), radial-gradient(2.9px 2.9px at 451px 18px, rgba(255,255,255,0.77), rgba(255,255,255,0.31) 60%, transparent), radial-gradient(2.8px 2.8px at 302px 524px, rgba(255,255,255,0.94), rgba(255,255,255,0.38) 60%, transparent), radial-gradient(2.3px 2.3px at 234px 107px, rgba(255,255,255,0.68), rgba(255,255,255,0.27) 60%, transparent), radial-gradient(2.5px 2.5px at 185px 276px, rgba(255,255,255,0.88), rgba(255,255,255,0.35) 60%, transparent), radial-gradient(3.2px 3.2px at 692px 264px, rgba(255,255,255,0.77), rgba(255,255,255,0.31) 60%, transparent), radial-gradient(2.8px 2.8px at 527px 584px, rgba(255,255,255,0.8), rgba(255,255,255,0.32) 60%, transparent), radial-gradient(2.6px 2.6px at 285px 58px, rgba(255,255,255,0.89), rgba(255,255,255,0.36) 60%, transparent), radial-gradient(2.4px 2.4px at 74px 275px, rgba(255,255,255,0.93), rgba(255,255,255,0.37) 60%, transparent), radial-gradient(3.0px 3.0px at 266px 85px, rgba(255,255,255,0.83), rgba(255,255,255,0.33) 60%, transparent), radial-gradient(2.5px 2.5px at 270px 124px, rgba(255,255,255,0.79), rgba(255,255,255,0.32) 60%, transparent), radial-gradient(2.6px 2.6px at 566px 427px, rgba(255,255,255,0.93), rgba(255,255,255,0.37) 60%, transparent); background-size: 700px 700px; animation: hy-snow-pop 24s linear infinite;
+}
+@keyframes hy-snow-pop { from { background-position: 0 0; } to { background-position: 28px 700px; } }
+.hy-pop-card { position: relative; z-index: 1; width: 100%; max-width: 460px; max-height: 88vh; overflow: auto; padding: 34px 24px 22px; text-align: center; color: #fff; border: 3px solid #f0c75e; border-radius: 24px;
+  background: radial-gradient(420px 260px at 50% 0%, rgba(240,199,94,.25), transparent 70%), linear-gradient(180deg, #b3161f 0%, #7c0f16 45%, #0d3b2a 100%);
+  box-shadow: 0 0 0 8px rgba(212,36,47,.35), 0 30px 70px rgba(0,0,0,.55); animation: hy-pop-in .35s ease-out; }
+.hy-pop-card::before { content: ""; position: absolute; left: 0; right: 0; top: 0; height: 10px; border-radius: 21px 21px 0 0; background: repeating-linear-gradient(-45deg, #fff 0 10px, #d4242f 10px 20px); }
+@keyframes hy-pop-in { from { transform: translateY(16px) scale(.96); opacity: 0; } to { transform: none; opacity: 1; } }
+@media (prefers-reduced-motion: reduce) { .hy-pop::before, .hy-pop-card { animation: none; } }
+.hy-pop-card h2 { font-family: var(--hy-display); font-size: 28px; line-height: 1.15; margin: 8px 0 10px; color: #fff; text-shadow: 0 0 22px rgba(240,199,94,.45); }
+.hy-pop-card p { margin: 0 0 8px; font-size: 17px; line-height: 1.5; color: #f8f1e1; }
+.hy-pop-icons { font-size: 34px; letter-spacing: 8px; margin: 4px 0 6px; }
+.hy-pop-kicker { text-transform: uppercase; letter-spacing: .08em; font-weight: 700; font-size: 13px !important; color: #f6d983 !important; margin: 0 !important; }
+.hy-pop-price { font-family: var(--hy-display); font-size: 36px; font-weight: 700; line-height: 1; color: #f6d983; margin: 14px 0 18px; }
+.hy-pop-price small { display: block; font-family: inherit; font-size: 15px; font-weight: 400; line-height: 1.4; color: #f8f1e1; margin-top: 6px; }
+.hy-pop-card .hy-btn-big { width: 100%; margin: 0; background: linear-gradient(135deg, #e0313b, #a5141d); color: #fff; border-color: #f0c75e; }
+.hy-pop-card .hy-link { margin-top: 10px; color: #f6d983; text-decoration: underline; text-underline-offset: 4px; }
+.hy-pop-close { position: absolute; top: 16px; right: 12px; width: 36px; height: 36px; font-size: 22px; line-height: 1; border-radius: 50%; border: 1px solid rgba(255,255,255,.5); background: rgba(0,0,0,.25); color: #fff; }
 .hy-toggle.hy-toggle-in { margin: 0 0 12px; }
 .hy-duo-top { display: flex; align-items: center; justify-content: space-between; gap: 8px; align-self: stretch; }
 .hy-duo-top .hy-pill { margin: 0; padding: 4px 10px; font-size: 12px; white-space: nowrap; }
