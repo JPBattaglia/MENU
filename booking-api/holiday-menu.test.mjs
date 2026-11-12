@@ -128,6 +128,39 @@ test('Both picked in the holiday picker: the Make it live button and the checkou
   assert.doesNotMatch(paid, /\$59|\$89/);
 });
 
+test('the second menu of a both-holidays order skips checkout: the button makes the order and lands on the Success page', async (t) => {
+  const f = setup();
+  stubFetch(t);
+  const raw = f.env.DB.raw;
+  const at = new Date().toISOString();
+  raw.prepare(`INSERT INTO customers (id, created_at, updated_at, email, first_name, last_name) VALUES ('cb', ?, ?, 'owner@harbor.example', 'Ana', 'Reyes')`).run(at, at);
+  raw.prepare(`INSERT INTO orders (id, created_at, updated_at, customer_id, status, subtotal_cents, total_cents, payment_status, stripe_checkout_session_id) VALUES ('ob', ?, ?, 'cb', 'ONBOARDING_REQUIRED', 8900, 8900, 'PAID', 'cs_test_first')`).run(at, at);
+  raw.prepare(`INSERT INTO order_items (id, order_id, offer_id, offer_version_id, unit_price_cents, line_total_cents, metadata_json) VALUES ('ib', 'ob', 'offer_holiday_menu', 'offerv1_holiday_menu', 8900, 8900, ?)`).run(JSON.stringify({ holiday_menu: { occasion: 'christmas', both_other: 'newyear' } }));
+  // Production's workflow, as the live database has it (the payment step makes the project from it).
+  raw.prepare(`INSERT OR IGNORE INTO workflow_definitions (id, workflow_key, version, status, steps_json, created_at, updated_at) VALUES ('wd', 'MENU_QR_V1', 1, 'ACTIVE', ?, ?, ?)`)
+    .run(JSON.stringify([{ key: 'PREPARE_INPUTS', order: 10 }, { key: 'GENERATE_MENU_DRAFT', order: 20 }, { key: 'GENERATE_QR', order: 30 }, { key: 'QUALITY_CHECK', order: 40 }, { key: 'PACKAGE_DELIVERABLES', order: 50 }]), at, at);
+  const out = await (await f.create({ request_id: await f.upload(), email: 'owner@harbor.example', business: 'Harbor Kitchen', occasion: 'newyear' })).json();
+  assert.equal(out.ok, true, JSON.stringify(out));
+  const token = out.token;
+  assert.match(await (await f.get(`/api/menu-preview/view/${token}`)).text(), /Complete your order: already paid</);
+  // A live checkout never counts the test order: there it is a first menu at $59.
+  assert.equal((await holiday.holidayQuote(f.env, 'owner@harbor.example', 'newyear', { environment: 'live' })).price_cents, 5900);
+  assert.deepEqual(await holiday.holidayQuote(f.env, 'owner@harbor.example', 'newyear', { environment: 'sandbox' }), { price_cents: 0, prepaid: true });
+  const res = await f.get(`/api/menu-preview/choose/${token}/midnight`);
+  assert.equal(res.status, 303);
+  const where = res.headers.get('location');
+  assert.match(where, /^https:\/\/menu-made\.com\/checkoutsuccess\.html\?session_id=cs_test_prepaid[0-9a-f]{32}&order_id=[0-9a-f-]{36}$/, 'straight to the Success page, as a test order like the first');
+  const made = raw.prepare(`SELECT id, payment_status, total_cents FROM orders WHERE id <> 'ob'`).all();
+  assert.equal(made.length, 1);
+  assert.deepEqual([made[0].payment_status, made[0].total_cents], ['PAID', 0]);
+  const project = raw.prepare(`SELECT json_extract(metadata_json, '$.holiday_menu.occasion') AS occasion FROM projects WHERE order_id = ?`).get(made[0].id);
+  assert.equal(project?.occasion, 'newyear', 'production has its project');
+  // Pressing the button again goes back to the same order.
+  const again = await f.get(`/api/menu-preview/choose/${token}/midnight`);
+  assert.equal(again.headers.get('location'), where);
+  assert.equal(raw.prepare(`SELECT COUNT(*) AS n FROM orders`).get().n, 2);
+});
+
 test('a holiday preview: six holiday designs (that holiday first), the holiday price, and checkout for Holiday Menu', async (t) => {
   const f = setup();
   const calls = stubFetch(t);

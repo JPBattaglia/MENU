@@ -187,7 +187,7 @@ var worker_default = {
     const menuCustomize = url.pathname.match(/^\/api\/menu-preview\/customize\/([a-f0-9]{36})$/);
     if (menuCustomize && (request.method === "POST" || request.method === "OPTIONS")) return handlePreviewCustomize(request, env, menuCustomize[1]);
     const menuChoose = url.pathname.match(/^\/api\/menu-preview\/choose\/([a-f0-9]{36})\/([a-z]{2,20})$/);
-    if (menuChoose && request.method === "GET") return handlePreviewChoose(env, menuChoose[1], menuChoose[2]);
+    if (menuChoose && request.method === "GET") return handlePreviewChoose(env, menuChoose[1], menuChoose[2], { request });
     const previewMatch = url.pathname.match(/^\/api\/menu-preview\/([a-f0-9]{36})$/);
     if (previewMatch && (request.method === "GET" || request.method === "HEAD")) return handleMenuPreview(request, env, previewMatch[1]);
     const storeAppDoneMatch = url.pathname.match(/^\/api\/store-app\/([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})\/done$/i);

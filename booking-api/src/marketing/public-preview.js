@@ -36,7 +36,8 @@ import { brandedEmailHtml, escapeHtml, sendTransactionalEmail } from "../lib/ema
 import { menuColors, readMenuWithClaude } from "../producers/menu-qr/claude-reader.js";
 import { LOGO_MODES, buildDesignedMenuHtml, parseLogoInfo } from "../producers/menu-qr/design.js";
 import { MENU_DESIGNS, designStyle, designsFor, menuDesignFor } from "../producers/menu-qr/menu-designs.js";
-import { HOLIDAY_PRICING, OCCASION_NAMES, holidayDollars, holidayOnSale, holidayQuote, isOccasion, otherOccasion } from "../checkout/holiday.js";
+import { HOLIDAY_PRICING, OCCASION_NAMES, holidayDollars, holidayOnSale, holidayQuote, isOccasion, otherOccasion, prepaidCover } from "../checkout/holiday.js";
+import { completePrepaidHoliday } from "../checkout/session.js";
 import { frameAware, wantsJson, preflight } from "./framed.js";
 import { sniffImage } from "../producers/website/intake.js";
 import { MENU_PACKAGE_PRICING } from "../checkout/quote.js";
@@ -551,12 +552,32 @@ async function handlePreviewCustomize(request, env, token, { now = Date.now() } 
 const withinHandoff = (row, now) => Date.parse(row.created_at) >= now - (row.campaign === "prospect" ? PROSPECT_DAYS + 1 : HANDOFF_DAYS) * 86400000;
 
 // "Make it live" on a design: remember the design (the paid menu is built in it), then checkout.
-async function handlePreviewChoose(env, token, key, { now = Date.now() } = {}) {
+async function handlePreviewChoose(env, token, key, { now = Date.now(), request = null } = {}) {
   const design = menuDesignFor(key);
   if (!/^[a-f0-9]{36}$/.test(token) || !design || !env.DB) return plainPage(404, "Preview not found", `See <a href="${escapeHtml(`${SITE}/online-menu`)}">Online Menu + QR</a>.`);
-  const row = await env.DB.prepare(`SELECT status, created_at, campaign, occasion FROM menu_previews WHERE token = ?`).bind(token).first();
+  const row = await env.DB.prepare(`SELECT status, created_at, campaign, occasion, email, business, request_id FROM menu_previews WHERE token = ?`).bind(token).first();
   if (!row || row.status !== "READY" || !withinHandoff(row, now)) return plainPage(410, "This preview has ended", `See <a href="${escapeHtml(homePage(row?.occasion))}">${isOccasion(row?.occasion) ? "Holiday Menu" : "Online Menu + QR"}</a>.`);
   await env.DB.prepare(`UPDATE menu_previews SET design = ? WHERE token = ?`).bind(design.key, token).run();
+  if (isOccasion(row.occasion)) {
+    const to = (url) => new Response(null, { status: 303, headers: { Location: url, "Cache-Control": "no-store" } });
+    // Already ordered from this preview: back to that order's Success page, never a second order.
+    const done = await env.DB.prepare(`
+        SELECT o.id AS id, o.stripe_checkout_session_id AS session FROM orders o JOIN order_items oi ON oi.order_id = o.id
+        WHERE o.payment_status = 'PAID' AND json_extract(oi.metadata_json, '$.holiday_menu.preview') = ? ORDER BY o.created_at DESC LIMIT 1`).bind(token).first().catch(() => null);
+    if (done?.session) return to(`${SITE}/checkoutsuccess.html?session_id=${encodeURIComponent(done.session)}&order_id=${encodeURIComponent(done.id)}`);
+    // Covered by this email's order for both holidays (owner, Nov 12, 2026): no checkout at all. The order is made
+    // here, in the environment the first one was paid in, and the buyer lands on the Success page. Link checkers
+    // that follow the button never place an order; if anything fails, the Start page still can.
+    const agent = request?.headers?.get("User-Agent") || "";
+    const cover = agent && !SCANNER.test(agent) ? await prepaidCover(env, row.email, row.occasion, { now }).catch(() => null) : null;
+    if (cover) {
+      const out = await completePrepaidHoliday(env, cover.environment, { token, email: row.email, business: row.business || cover.business || "",
+        name: [cover.first_name, cover.last_name].filter(Boolean).join(" "), phone: cover.phone || "", requestId: row.request_id || "" })
+        .catch((error) => ({ ok: false, error: error instanceof Error ? error.message : String(error) }));
+      if (out.ok) return to(out.url);
+      console.error("Completing a covered holiday menu failed:", out.error);
+    }
+  }
   const both = isOccasion(row.occasion) && parseJsonOrNull(await (await env.ASSETS?.get(`menu-previews/${token}/data.json`).catch(() => null))?.text().catch(() => null))?.both === true;
   return new Response(null, { status: 303, headers: { Location: startUrl(token, row.occasion, both), "Cache-Control": "no-store" } });
 }

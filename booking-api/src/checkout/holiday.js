@@ -63,29 +63,53 @@ async function holidayPriceCents(env, email, now = Date.now()) {
 // pays $89 once, and the item records the holiday still owed (both_other). Their order for that other holiday,
 // made in the generator when its menu is ready, is then $0. Everything else is as before: $59 first, $30 second.
 const otherOccasion = (occasion) => (occasion === "christmas" ? "newyear" : "christmas");
-async function holidayQuote(env, email, occasion, { both = false, now = Date.now() } = {}) {
+// An order belongs to the environment it was paid in: Stripe test mode (the owner sandbox) or live. A test order
+// never makes a live one cheaper or free, and the other way round.
+const environmentOf = (sessionId) => (String(sessionId || "").startsWith("cs_test_") ? "sandbox" : "live");
+const owedBy = (row) => { try { return JSON.parse(row.meta || "{}")?.holiday_menu?.both_other || null; } catch { return null; } };
+
+// This season's paid holiday menus for an email, with what the buyer's first order holds (used to complete the second).
+async function paidHolidayRows(env, email, now = Date.now()) {
   const clean = String(email || "").trim().toLowerCase();
-  let rows = [];
-  if (clean && env?.DB) {
-    const since = `${seasonYear(now)}-07-01T00:00:00.000Z`;
-    const found = await env.DB.prepare(`
-        SELECT oi.metadata_json AS meta FROM orders o
-        JOIN customers c ON c.id = o.customer_id
-        JOIN order_items oi ON oi.order_id = o.id
-        JOIN offers f ON f.id = oi.offer_id
-        WHERE lower(c.email) = ? AND f.code = 'HOLIDAY_MENU' AND o.payment_status = 'PAID' AND o.created_at >= ?`).bind(clean, since).all().catch(() => null);
-    rows = found?.results || [];
-  }
+  if (!clean || !env?.DB) return [];
+  const since = `${seasonYear(now)}-07-01T00:00:00.000Z`;
+  const found = await env.DB.prepare(`
+      SELECT oi.metadata_json AS meta, o.id AS order_id, o.stripe_checkout_session_id AS session,
+             c.first_name AS first_name, c.last_name AS last_name, c.phone AS phone, b.name AS business
+      FROM orders o
+      JOIN customers c ON c.id = o.customer_id
+      JOIN order_items oi ON oi.order_id = o.id
+      JOIN offers f ON f.id = oi.offer_id
+      LEFT JOIN businesses b ON b.id = o.business_id
+      WHERE lower(c.email) = ? AND f.code = 'HOLIDAY_MENU' AND o.payment_status = 'PAID' AND o.created_at >= ?`).bind(clean, since).all().catch(() => null);
+  return (found?.results || []).map((row) => ({ ...row, environment: environmentOf(row.session) }));
+}
+
+// The order for both holidays that still owes this holiday's menu, if there is one: the only holiday order in its
+// environment so far, and it names this holiday as the one to come.
+function coverIn(rows, occasion, environment) {
+  const mine = rows.filter((row) => row.environment === environment);
+  return mine.length === 1 && owedBy(mine[0]) === occasion ? mine[0] : null;
+}
+async function prepaidCover(env, email, occasion, { now = Date.now() } = {}) {
+  const rows = await paidHolidayRows(env, email, now);
+  return coverIn(rows, occasion, "live") || coverIn(rows, occasion, "sandbox");
+}
+
+// What a holiday menu costs this buyer. environment: the checkout's own ("live" or "sandbox"), so only orders paid
+// there count; left out (previews, the Start page's display) it answers for whichever environment covers it.
+async function holidayQuote(env, email, occasion, { both = false, now = Date.now(), environment = null } = {}) {
+  const all = await paidHolidayRows(env, email, now);
+  if (environment ? coverIn(all, occasion, environment) : (coverIn(all, occasion, "live") || coverIn(all, occasion, "sandbox"))) return { price_cents: 0, prepaid: true };
+  const rows = environment ? all.filter((row) => row.environment === environment) : all;
   if (!rows.length) {
     const other = otherOccasion(occasion);
     if (both === true && holidayOnSale(other, now)) return { price_cents: HOLIDAY_PRICING.firstCents + HOLIDAY_PRICING.secondCents, both_other: other };
     return { price_cents: HOLIDAY_PRICING.firstCents };
   }
-  const owed = rows.map((row) => { try { return JSON.parse(row.meta || "{}")?.holiday_menu?.both_other || null; } catch { return null; } }).filter(Boolean);
-  if (rows.length === 1 && owed[0] === occasion) return { price_cents: 0, prepaid: true };
   return { price_cents: HOLIDAY_PRICING.secondCents };
 }
 
 const dollars = (cents) => `$${(cents / 100).toLocaleString("en-US", { maximumFractionDigits: 2 })}`;
 
-export { HOLIDAY_PRICING, OCCASION_NAMES, isOccasion, seasonYear, holidayEndsOn, holidayEnded, holidayOnSale, holidayPriceCents, holidayQuote, otherOccasion, dollars as holidayDollars };
+export { HOLIDAY_PRICING, OCCASION_NAMES, isOccasion, seasonYear, holidayEndsOn, holidayEnded, holidayOnSale, holidayPriceCents, holidayQuote, prepaidCover, otherOccasion, dollars as holidayDollars };
