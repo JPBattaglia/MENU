@@ -2,8 +2,11 @@
 // Prices and availability come from site-catalog.js (GET /api/catalog); nothing here is a price.
 // Owner testing: add ?checkout=test to use Stripe test mode (no real charge). Test mode can also check out
 // offers that are not on sale yet, so a new plan can be tried before it is listed.
-const TEST_CHECKOUT = new URLSearchParams(location.search).get('checkout') === 'test';
-if (TEST_CHECKOUT) document.addEventListener('DOMContentLoaded', () => {
+// The owner sandbox switch (site-nav.js) does the same on every visit until it is turned off, and
+// shows its own bar.
+const OWNER_SANDBOX = window.MenuMadeSandbox === true;
+const TEST_CHECKOUT = OWNER_SANDBOX || new URLSearchParams(location.search).get('checkout') === 'test';
+if (TEST_CHECKOUT && !OWNER_SANDBOX) document.addEventListener('DOMContentLoaded', () => {
   const note = document.createElement('div');
   note.textContent = 'TEST MODE — Stripe test checkout. Use card 4242 4242 4242 4242. No real charge.';
   note.setAttribute('role', 'status');

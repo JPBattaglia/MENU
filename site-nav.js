@@ -1,3 +1,42 @@
+// Owner sandbox (owner, Nov 12, 2026): a switch that lives in one browser, so he can test every service and plan
+// without touching live checkout for anyone else. menu-made.com/?sandbox=on turns it on (any page), ?sandbox=off
+// or the bar's button turns it off. While on, every page shows the TEST MODE bar and the two pages that start a
+// checkout (start.js, staff-merch.js read window.MenuMadeSandbox) use Stripe test mode. No page links to
+// ?sandbox=on, so a buyer never lands in it (booking-api/site-check.test.mjs).
+(() => {
+  'use strict';
+  const KEY = 'mm-owner-sandbox';
+  let on = false;
+  try {
+    const asked = new URLSearchParams(location.search).get('sandbox');
+    if (asked === 'on') localStorage.setItem(KEY, '1');
+    if (asked === 'off') localStorage.removeItem(KEY);
+    on = localStorage.getItem(KEY) === '1';
+  } catch { on = false; }
+  window.MenuMadeSandbox = on;
+  if (!on) return;
+  const show = () => {
+    const bar = document.createElement('div');
+    bar.className = 'test-mode-banner owner-sandbox-bar';
+    bar.setAttribute('role', 'status');
+    const text = document.createElement('span');
+    text.textContent = 'TEST MODE on this device. Checkout takes card 4242 4242 4242 4242 (any future date, any CVC). No real charge.';
+    const leave = document.createElement('button');
+    leave.type = 'button';
+    leave.textContent = 'Leave test mode';
+    leave.addEventListener('click', () => {
+      try { localStorage.removeItem(KEY); } catch { /* storage blocked: nothing to clear */ }
+      const url = new URL(location.href);
+      url.searchParams.delete('sandbox');
+      url.searchParams.delete('checkout');
+      location.replace(url.toString());
+    });
+    bar.append(text, leave);
+    document.body.prepend(bar);
+  };
+  if (document.body) show(); else document.addEventListener('DOMContentLoaded', show);
+})();
+
 (() => {
   'use strict';
   const toggle = document.querySelector('button.gear-burger');
