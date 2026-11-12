@@ -27,13 +27,19 @@ async function readBody(request, maxBytes = 8192, multipart = false) {
   return JSON.parse(new TextDecoder().decode(bytes));
 }
 
-const DOCUMENT_LIMIT = 5 * 1024 * 1024;
+// Upload limits (owner, Nov 12, 2026: "why is there a 5MB limit"): a PDF can be up to 20 MB (designed menus with
+// pictures often pass 5). Everything else stays at 5 MB: the menu reader takes images up to about 5 MB each, and
+// document-upload.js shrinks a larger photo in the browser before it is sent.
+const PDF_LIMIT = 20 * 1024 * 1024;
+const OTHER_LIMIT = 5 * 1024 * 1024;
+const DOCUMENT_LIMIT = PDF_LIMIT;
 const DOCUMENT_TYPES = { pdf: 'application/pdf', doc: 'application/msword', docx: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', txt: 'text/plain', png: 'image/png', jpg: 'image/jpeg', jpeg: 'image/jpeg', webp: 'image/webp' };
 
 async function validateDocument(file) {
   if (!file || typeof file === 'string' || !file.size || file.size > DOCUMENT_LIMIT) throw new Error('Invalid file size');
   const name = String(file.name).split(/[\\/]/).pop().replace(/[\x00-\x1f\x7f]/g, '').slice(0, 180);
   const extension = name.split('.').pop().toLowerCase();
+  if (file.size > (extension === 'pdf' ? PDF_LIMIT : OTHER_LIMIT)) throw new Error('Invalid file size');
   const contentType = DOCUMENT_TYPES[extension];
   if (!contentType) throw new Error('Unsupported document');
   const bytes = new Uint8Array(await file.arrayBuffer());

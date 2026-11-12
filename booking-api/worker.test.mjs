@@ -123,7 +123,9 @@ test('invalid content, unsupported extension and oversize files are rejected bef
   const f=uploadFixture(); const d=inquiryData();
   assert.equal((await worker.fetch(uploadRequest(d,'not a pdf'),f.env,f.ctx)).status,400);
   assert.equal((await worker.fetch(uploadRequest(d,'%PDF-1.7','menu.exe'),f.env,f.ctx)).status,400);
-  assert.equal((await worker.fetch(uploadRequest(d,'%PDF-'+ 'x'.repeat(5*1024*1024)),f.env,f.ctx)).status,413);
+  // Limits (owner, Nov 12, 2026): a PDF up to 20 MB, anything else up to 5 MB.
+  assert.equal((await worker.fetch(uploadRequest(d,'%PDF-'+ 'x'.repeat(20*1024*1024)),f.env,f.ctx)).status,413);
+  assert.equal((await worker.fetch(uploadRequest(d,'x'.repeat(5*1024*1024+1),'menu.txt'),f.env,f.ctx)).status,413);
   assert.equal(f.rows.size,0); assert.equal(f.objects.size,0);
 });
 test('storage failure cannot report upload success and the same request recovers on retry', async () => {
