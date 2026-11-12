@@ -492,7 +492,7 @@ async function handleCheckoutCompleted(event, env) {
             .bind(JSON.stringify({ occasion: holiday.occasion, ends_on: holiday.ends_on, pages: holiday.pages, preview: holiday.preview || null }), projectId).run();
           // Both holidays bought at once (checkout/holiday.js holidayQuote): the other menu comes later, so the buyer
           // gets the link to make it. Sent once per order; a failure here never fails the payment event.
-          if (isOccasion(holiday.both_other)) await sendSecondHolidayLink(env, order, orderId, holiday).catch((error) => console.error("Second holiday link email failed:", error instanceof Error ? error.message : String(error)));
+          if (isOccasion(holiday.both_other)) await sendSecondHolidayLink(env, order, orderId, holiday, String(session?.id || "").startsWith("cs_test_")).catch((error) => console.error("Second holiday link email failed:", error instanceof Error ? error.message : String(error)));
         }
         // INSERT OR IGNORE per input: creates only the rows a previous attempt did not.
         await createMenuQrInputs(
@@ -665,11 +665,13 @@ async function handleCheckoutCompleted(event, env) {
 
 // "Both holidays" (owner, Nov 12, 2026): the link to make the second holiday's menu, which checks out at $0 with the
 // same email.
-async function sendSecondHolidayLink(env, order, orderId, holiday) {
+// sandbox: a test order (owner sandbox). Its link turns test mode on in whichever browser opens it, because links
+// tapped in an email often open in a browser where the switch was never set (owner, Nov 12, 2026).
+async function sendSecondHolidayLink(env, order, orderId, holiday, sandbox = false) {
   const customer = await env.DB.prepare(`SELECT email FROM customers WHERE id = ?`).bind(order.customer_id).first();
   if (!customer?.email) return;
   const first = OCCASION_NAMES[holiday.occasion], other = OCCASION_NAMES[holiday.both_other];
-  const link = `https://menu-made.com/holiday-menu.html?occasion=${holiday.both_other}#try-free`;
+  const link = `https://menu-made.com/holiday-menu.html?occasion=${holiday.both_other}${sandbox ? "&sandbox=on" : ""}#try-free`;
   await sendTransactionalEmail(env, {
     to: customer.email,
     subject: `Your ${other} menu is included: send it when it's ready`,
