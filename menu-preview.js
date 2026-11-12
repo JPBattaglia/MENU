@@ -18,7 +18,9 @@
   // public limits don't apply. The link is kept on this device so a home-screen shortcut keeps working.
   const params = new URLSearchParams(location.search);
   let rep = params.get('rep') || '';
-  try { if (rep) localStorage.setItem('mm-rep', rep); else rep = localStorage.getItem('mm-rep') || ''; } catch { /* storage off */ }
+  // The link emailed after an order for both holidays (?occasion=...) is the buyer's own upload, never a rep visit.
+  const buyerLink = /^(christmas|newyear)$/.test(params.get('occasion') || '');
+  try { if (rep) localStorage.setItem('mm-rep', rep); else if (!buyerLink) rep = localStorage.getItem('mm-rep') || ''; } catch { /* storage off */ }
   if (rep) {
     form.classList.add('is-rep');
     const label = form.querySelector('label[for="try_email"]');

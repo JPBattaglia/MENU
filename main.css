@@ -3201,3 +3201,5 @@ html.mm-lightbox-open { overflow: hidden; }
 /* Start page (owner, Nov 12, 2026): the links in the consent line and under the checkout button are plain underlined
    links in the same cyan, not pills. */
 .checkout-consent a, .checkout-privacy-note a { display: inline !important; padding: 0 !important; margin: 0 !important; border: 0 !important; border-radius: 0 !important; background: none !important; box-shadow: none !important; min-height: 0 !important; font-weight: inherit; text-decoration: underline !important; text-underline-offset: 3px; }
+
+.mm-holiday-paid { margin: 12px 0 0; padding: 12px 14px; border: 1px solid #f0c75e; border-radius: 14px; background: rgba(31,107,58,.28); font-weight: 700; }
