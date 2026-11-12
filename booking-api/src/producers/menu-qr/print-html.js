@@ -74,6 +74,22 @@ ${head.replace("</head>", `<style>${BASE}
   body.one main { flex: 1; display: flex; flex-direction: column; }
   body.one .menu-content { margin-top: auto; margin-bottom: auto; }
   body.one .scan { margin-top: 14px; }
+  /* More than one page (owner, Nov 12, 2026: "Menu's that are multiple pages need to be spaced out better"): each
+     sheet is its own page with its own frame and margins; sections are kept whole where they fit, split between
+     columns with a "continued" heading where they don't, and the last page's two columns end level. */
+  body.multi { min-height: 0; }
+  body.multi .leaf { display: none; }
+  .sheet { position: relative; height: 11in; overflow: hidden; display: flex; flex-direction: column; break-after: page; }
+  .sheet:last-child { break-after: auto; }
+  .sheet > main { flex: 1; min-height: 0; display: flex; flex-direction: column; }
+  .sheet + .sheet > main { ${framed ? "margin-top: 0.38in !important;" : "padding-top: 0.5in;"} }
+  .cols { flex: 1; min-height: 0; display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); column-gap: 0.4in; align-items: start; overflow: hidden; }
+  .cols > .menu-content.col { width: auto; min-width: 0; max-width: none; margin: 0; column-count: 1 !important; display: block !important; counter-reset: none; }
+  .book { counter-reset: mm-section; }
+  .menu-section.cont-piece, .menu-section.cont-piece h2 { counter-increment: none !important; }
+  .sheet .scan { flex: none; }
+  h2 .cont { font-size: .7em; letter-spacing: .04em; opacity: .75; text-transform: none; }
+  .pnum { position: absolute; left: 0; right: 0; bottom: 0.13in; text-align: center; font-size: 8px; letter-spacing: .08em; color: var(--muted); }
 </style></head>`)}
 <body>
   <div class="leaf">
@@ -84,19 +100,129 @@ ${head.replace("</head>", `<style>${BASE}
   </main>
   </div>
   <script>
-    // A short menu gets the largest type that still fits one page; a long one keeps the reading size and runs on.
+    // A short menu gets the largest type that still fits one page; a long one is laid out page by page.
     // Measured at the paper's own width (body is 8.5in wide whatever window the browser has) and measured again
     // once the logo has loaded: before that the logo has no height, the type was chosen too large and the page
     // ran onto a second sheet (owner, Nov 12, 2026: "still bleeding onto a second page ... it could be the logo").
-    // A menu that fits is then held in a box exactly one sheet tall, so nothing can spill.
     (function () {
       var body = document.body, leaf = document.querySelector(".leaf"), end = document.querySelector(".scan");
-      function fit() {
-        var sheet = 11 * 96 - (body.offsetHeight - body.clientHeight), page = sheet - 20;
+      var header = leaf.querySelector("header"), main0 = leaf.querySelector("main"), content = main0.querySelector(".menu-content");
+      var src = Array.prototype.slice.call(content.children).filter(function (el) { return el.classList.contains("menu-section"); });
+      var items = src.map(function (sec) { return Array.prototype.slice.call(sec.querySelectorAll("ul > li")); });
+      var book = null, pages = [], p = null, withScan = false, sheet = 0;
+
+      function restore() {
+        if (book) { book.remove(); book = null; }
+        leaf.insertBefore(header, leaf.firstChild);
+        main0.appendChild(end);
         body.className = ""; leaf.style.height = "";
+      }
+      function onePage() {
+        var page = sheet - 20;
         function height() { return end.getBoundingClientRect().bottom - leaf.getBoundingClientRect().top + 34; }
-        for (var s = 19; s >= 9.5; s -= 0.5) { body.style.setProperty("--fs", s + "px"); if (height() <= page) { body.className = "one"; leaf.style.height = sheet + "px"; return; } }
-        body.style.setProperty("--fs", "11.5px");
+        for (var s = 19; s >= 9.5; s -= 0.5) { body.style.setProperty("--fs", s + "px"); if (height() <= page) { body.className = "one"; leaf.style.height = sheet + "px"; return true; } }
+        return false;
+      }
+
+      function newPage() {
+        var sh = document.createElement("div"); sh.className = "sheet"; sh.style.height = sheet + "px";
+        if (!pages.length) sh.appendChild(header);
+        var m = main0.cloneNode(false), cols = document.createElement("div"); cols.className = "cols";
+        var a = content.cloneNode(false), b = content.cloneNode(false);
+        a.removeAttribute("aria-label"); b.removeAttribute("aria-label");
+        a.classList.add("col"); b.classList.add("col");
+        cols.appendChild(a); cols.appendChild(b); m.appendChild(cols); sh.appendChild(m); book.appendChild(sh);
+        if (withScan) m.appendChild(end);
+        p = { sh: sh, m: m, cols: cols, col: [a, b], ci: 0, limit: Infinity, pieces: [] };
+        pages.push(p);
+      }
+      function room() { return Math.min(p.cols.clientHeight, p.limit); }
+      function fits() { return p.col[p.ci].offsetHeight <= room() + 0.5; }
+      function next() { if (p.ci === 0) p.ci = 1; else newPage(); }
+      function piece(i, from) {
+        var sec = src[i].cloneNode(false), h = src[i].querySelector("h2").cloneNode(true), ul = src[i].querySelector("ul").cloneNode(false);
+        sec.removeAttribute("id"); sec.removeAttribute("aria-labelledby"); h.removeAttribute("id");
+        if (from > 0) { sec.classList.add("cont-piece"); var c = document.createElement("span"); c.className = "cont"; c.textContent = " (continued)"; h.appendChild(c); }
+        sec.appendChild(h); sec.appendChild(ul); p.col[p.ci].appendChild(sec);
+        p.pieces.push({ i: i, from: from });
+        return { sec: sec, ul: ul };
+      }
+      function drop(x) { x.sec.remove(); p.pieces.pop(); }
+      function whole(i, from) {
+        var x = piece(i, from);
+        for (var k = from; k < items[i].length; k++) x.ul.appendChild(items[i][k].cloneNode(true));
+        if (fits()) return true;
+        drop(x); return false;
+      }
+      function flow(list) {
+        list.forEach(function (u) {
+          var i = u.i, k = u.from, n = items[i].length, guard = 0;
+          if (whole(i, k)) return;
+          // Move the whole section to the next column when little is left here or the section is short.
+          if (p.col[p.ci].children.length) {
+            var free = (room() - p.col[p.ci].offsetHeight) / room();
+            if (free < 0.3 || n - k <= 5) { next(); if (whole(i, k)) return; }
+          }
+          // Otherwise split it between columns, at least two dishes under each heading.
+          while (k < n && guard++ < 400) {
+            var x = piece(i, k), placed = 0;
+            while (k < n) {
+              var li = items[i][k].cloneNode(true); x.ul.appendChild(li);
+              if (!fits()) { li.remove(); break; }
+              k++; placed++;
+            }
+            var left = n - k;
+            if (placed && left === 1 && placed > 2) { x.ul.lastChild.remove(); k--; placed--; left = 2; }
+            if (placed < 2 && left > 0 && p.col[p.ci].children.length > 1) { k -= placed; drop(x); next(); continue; }
+            if (!placed) { drop(x); if (!p.col[p.ci].children.length) { x = piece(i, k); x.ul.appendChild(items[i][k].cloneNode(true)); k++; } next(); continue; }
+            if (k < n) next();
+          }
+        });
+      }
+      function lastUnits(page) {
+        var seen = {}, list = [];
+        page.pieces.forEach(function (u) { if (!seen[u.i]) { seen[u.i] = 1; list.push({ i: u.i, from: u.from }); } });
+        return list;
+      }
+      function refill(index, units, limit) {
+        while (pages.length > index + 1) pages.pop().sh.remove();
+        p = pages[index];
+        if (withScan) p.m.appendChild(end);
+        p.col[0].innerHTML = ""; p.col[1].innerHTML = ""; p.ci = 0; p.limit = limit; p.pieces = [];
+        flow(units);
+      }
+      function layout(size, balance) {
+        body.style.setProperty("--fs", size + "px");
+        if (book) book.remove();
+        book = document.createElement("div"); book.className = "book"; body.appendChild(book);
+        pages = []; withScan = false; newPage();
+        flow(src.map(function (_, i) { return { i: i, from: 0 }; }));
+        // The QR code and notes close the last page; its columns are then shortened until they end level.
+        withScan = true;
+        var last = pages.length - 1, units = lastUnits(pages[last]);
+        refill(last, units, Infinity);
+        if (balance && pages.length === last + 1) {
+          var lo = 40, hi = pages[last].cols.clientHeight;
+          for (var step = 0; step < 9 && hi - lo > 6; step++) {
+            var mid = (lo + hi) / 2;
+            refill(last, units, mid);
+            if (pages.length === last + 1) hi = mid; else lo = mid;
+          }
+          refill(last, units, hi);
+        }
+        return pages.length;
+      }
+      function fit() {
+        restore();
+        sheet = 11 * 96 - (body.offsetHeight - body.clientHeight);
+        if (onePage()) return;
+        body.className = "multi";
+        // As few pages as the menu needs at the reading size, then the largest type that still fits that many,
+        // so the pages are full instead of the last one nearly empty.
+        var count = layout(11.5, false), best = 11.5;
+        for (var s = 15; s > 11.5; s -= 0.5) { if (layout(s, false) <= count) { best = s; break; } }
+        layout(best, true);
+        pages.forEach(function (page, n) { var t = document.createElement("div"); t.className = "pnum"; t.textContent = "Page " + (n + 1) + " of " + pages.length; page.sh.appendChild(t); });
       }
       fit();
       window.addEventListener("load", fit);

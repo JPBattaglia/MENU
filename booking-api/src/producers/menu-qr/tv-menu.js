@@ -82,7 +82,7 @@ function designCss(style) {
   footer .qr svg { padding: .5vh; }`;
 }
 
-function buildTvMenuHtml({ businessName, primary, accent, logoDataUri, menu, qrSvg, page = 1, style = null, hideName = false }) {
+function buildTvMenuHtml({ businessName, primary, accent, logoDataUri, menu, qrSvg, page = 1, style = null, hideName = false, pageHref = null }) {
   const marked = markItems(menu);
   const sections = (marked.menu.sections || []).map((section) => ({
     name: String(section.name || "Menu"),
@@ -151,7 +151,11 @@ function buildTvMenuHtml({ businessName, primary, accent, logoDataUri, menu, qrS
   footer .key .mk { margin: 0 .3em 0 0; font-size: .8em; vertical-align: .1em; }
   footer .qr { margin-left: auto; display: flex; align-items: center; gap: 1vw; font-size: 2vh; font-weight: 600; color: var(--primary); }
   footer .qr svg { height: 8.4vh; width: 8.4vh; background: #fff; }
-  footer .pg { font-size: 1.8vh; letter-spacing: .1em; }${designCss(style)}
+  footer .pg { font-size: 1.8vh; letter-spacing: .1em; }
+  footer .pg a { display: inline-block; min-width: 4.4vh; padding: .2vh 1vh; margin: 0 .6vh; border: 1px solid currentColor; border-radius: 99px; color: inherit; text-align: center; text-decoration: none; font-size: 2.6vh; line-height: 1.2; }
+  footer .pg small { display: block; margin-top: .4vh; font-size: 1.4vh; letter-spacing: .04em; opacity: .8; }
+  .turn { position: fixed; left: 0; bottom: 10vh; height: .5vh; width: 100%; background: var(--primary); transform-origin: left; animation: turn 12s linear forwards; }
+  @keyframes turn { from { transform: scaleX(0); } to { transform: scaleX(1); } }${designCss(style)}
 </style>
 </head>
 <body>
@@ -164,7 +168,11 @@ function buildTvMenuHtml({ businessName, primary, accent, logoDataUri, menu, qrS
   </main>
   <footer>
     ${used.length ? `<div class="key">${used.map((code) => `<span>${badge(code)}${esc(markLabel(code))}</span>`).join("")}</div>` : ""}
-    ${total > 1 ? `<span class="pg">${current} / ${total}</span>` : ""}
+    ${total > 1 ? (typeof pageHref === "function"
+      // Owner, Nov 12, 2026: "TV menu says 1/4 but I don't see how to see other 3 pages". The screens still turn by
+      // themselves every 12 seconds; the arrows let anyone step through them, and the bar shows the next turn coming.
+      ? `<span class="pg"><a href="${esc(pageHref((current + total - 2) % total + 1))}" aria-label="Previous screen">&#8249;</a> Screen ${current} of ${total} <a href="${esc(pageHref(current % total + 1))}" aria-label="Next screen">&#8250;</a><small>Next screen in 12 seconds</small></span><span class="turn" aria-hidden="true"></span>`
+      : `<span class="pg">${current} / ${total}</span>`) : ""}
     ${qrSvg ? `<div class="qr"><span>Scan for this menu on your phone</span>${qrSvg}</div>` : ""}
   </footer>
 </body>

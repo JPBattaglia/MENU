@@ -5,6 +5,7 @@ import { publicBaseUrl } from "../../lib/config.js";
 import { getInputValue, loadPreparedPayload } from "./inputs.js";
 import { isTestOrder, loadDeliveryContext, runDeliverStep } from "../../approvals/release.js";
 import { pageBillingNote } from "./page-billing.js";
+import { TRI_FOLD_NOTE, triFoldPossible } from "./trifold-check.js";
 
 async function loadPackageDeliverables(projectId, env) {
   const rows = (await env.DB.prepare(`
@@ -28,6 +29,7 @@ async function loadPackageDeliverables(projectId, env) {
 }
 
 const AFTER_APPROVAL = "The buyer gets six things: the live menu page, the QR code, a print-ready menu (PDF), a tri-fold menu (PDF), a QR table tent (PDF) and a TV menu screen. Each has its own preview button here. To change anything, use Request changes on the review page and say what to change; the menu is redone from your words and comes back for approval.";
+const AFTER_APPROVAL_NO_TRIFOLD = "The buyer gets five things: the live menu page, the QR code, a print-ready menu (PDF), a QR table tent (PDF) and a TV menu screen. Each has its own preview button here. To change anything, use Request changes on the review page and say what to change; the menu is redone from your words and comes back for approval.";
 
 // Owner email for one waiting Menu + QR order (the shared digest uses this when a single item is waiting).
 async function menuQrOwnerEmail({ context, files, previews, approveUrl, targetStep, env, approval }) {
@@ -48,6 +50,9 @@ async function menuQrOwnerEmail({ context, files, previews, approveUrl, targetSt
   const changeNote = !ownerChange ? ""
     : ownerChange.applied ? `Your change was made: ${ownerChange.summary || ownerChange.note}`
     : `Your change could NOT be made automatically (${ownerChange.reason}). You asked: "${ownerChange.note}". Request it again in other words, or approve as it is.`;
+  // No tri-fold preview button means the menu is too long for one (digest.js): say so instead of listing it.
+  const noTriFold = Array.isArray(previews) && previews.length > 0 && !previews.some((p) => /\/tri-fold\.pdf/.test(p.url || ""));
+  const afterApproval = noTriFold ? `${AFTER_APPROVAL_NO_TRIFOLD} ${TRI_FOLD_NOTE}` : AFTER_APPROVAL;
   const pagesNote = pageBillingNote((await loadPreparedPayload(targetStep, env).catch(() => null))?.page_billing);
   const readingNote = extraction
     ? `Read from the uploaded menu file: ${extraction.item_count} items.${extraction.unreadable ? ` Check carefully: ${extraction.unreadable}` : ""}`
@@ -64,7 +69,7 @@ async function menuQrOwnerEmail({ context, files, previews, approveUrl, targetSt
       "Preview everything the buyer will get with the buttons below, then approve to send it.",
       // Owner, Nov 12, 2026: "Where are the other things ... like PDF, table tents". They are made from the live
       // menu page, so they exist once it is approved; the buyer's email links each one.
-      AFTER_APPROVAL
+      afterApproval
     ],
     rows: [["Business", business], ["Buyer", buyer], ["Order", context.order_id], ["Link expires", `${APPROVAL_TTL_DAYS} days`]],
     buttons: [...previews, { label: "Review and approve", url: approveUrl, primary: true }],
@@ -76,7 +81,7 @@ async function menuQrOwnerEmail({ context, files, previews, approveUrl, targetSt
     ...readingNote ? ["", readingNote] : [],
     ...pagesNote ? ["", `Menu pages: ${pagesNote}`] : [],
     "",
-    AFTER_APPROVAL,
+    afterApproval,
     "",
     ...previews.map((p) => `${p.label}: ${p.url}`),
     "",
@@ -110,6 +115,7 @@ async function menuQrBuyerEmail({ context, files, linkFor, targetStep, env }) {
   // buyer who isn't technical can't use. The SVG moves to the end, for print shops.
   const printUrl = hosted ? `${qrDestination}/print.pdf` : null;
   const qrPngUrl = hosted ? `${qrDestination}/qr.png` : null;
+  const triFold = hosted ? await triFoldPossible(env, context.id) : null;
   if (hosted) {
     const svg = links.filter((link) => link.type === "QR_CODE");
     const rest = links.filter((link) => link.type !== "QR_CODE");
@@ -118,13 +124,17 @@ async function menuQrBuyerEmail({ context, files, linkFor, targetStep, env }) {
       { type: "QR_PNG", label: "Download your QR code (PNG image)", url: `${qrPngUrl}?download=1` },
       { type: "QR_PDF", label: "Print your QR code (PDF sheet)", url: `${qrDestination}/qr.pdf` },
       { type: "PRINT_PDF", label: "Download your print menu (PDF)", url: printUrl },
-      { type: "TRI_FOLD", label: "Download your tri-fold menu (PDF)", url: `${qrDestination}/tri-fold.pdf` },
+      ...(triFold === false ? [] : [{ type: "TRI_FOLD", label: "Download your tri-fold menu (PDF)", url: `${qrDestination}/tri-fold.pdf` }]),
       { type: "TABLE_TENT", label: "Download your QR table tent (PDF)", url: `${qrDestination}/table-tent.pdf` },
       { type: "TV", label: "Open your TV menu screen", url: `${qrDestination}/tv` },
       ...svg);
   }
-  const INCLUDED = "Your order includes six things, each with its own button below: your live menu page, your QR code, a print-ready menu, a tri-fold menu, a QR table tent and a TV menu screen.";
-  const TIPS = "Printing tips: print the tri-fold double-sided and flip on the short edge; fold the table tent in half; open the TV screen in a smart TV's browser.";
+  const INCLUDED = triFold === false
+    ? `Your order includes five things, each with its own button below: your live menu page, your QR code, a print-ready menu, a QR table tent and a TV menu screen. ${TRI_FOLD_NOTE}`
+    : "Your order includes six things, each with its own button below: your live menu page, your QR code, a print-ready menu, a tri-fold menu, a QR table tent and a TV menu screen.";
+  const TIPS = triFold === false
+    ? "Printing tips: fold the table tent in half; open the TV screen in a smart TV's browser."
+    : "Printing tips: print the tri-fold double-sided and flip on the short edge; fold the table tent in half; open the TV screen in a smart TV's browser.";
   const business = context.business_name || "your business";
   const firstName = context.first_name || "there";
   const subject = `${isTestOrder(context) ? "[TEST] " : ""}Your online menu and QR code are ready`;
