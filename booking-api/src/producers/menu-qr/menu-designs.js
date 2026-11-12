@@ -52,8 +52,9 @@ const HOLIDAY_DESIGNS = [
     style: { paper: "#10264f", text: "#eaf0fb", heading: "#ffffff", accent: "#c9d6ea", item: "#ffffff", price: "#c9d6ea", title_font: "elegant-serif", heading_font: "modern-sans", body_font: "modern-sans", heading_case: "upper", item_case: "as-printed", heading_align: "center", divider: "star", item_layout: "stacked", header: "band", nav: "pills", section: "short", texture: "stars", deco: "lights" } },
   { key: "candlelight", occasion: "either", label: "Candlelight", blurb: "Warm espresso and amber, framed title, centred courses",
     style: { paper: "#24160f", text: "#f3e6d3", heading: "#f0b45a", accent: "#f0b45a", item: "#fff6e8", price: "#f0b45a", title_font: "script", heading_font: "elegant-serif", body_font: "classic-serif", heading_case: "upper", item_case: "as-printed", heading_align: "center", divider: "ornament", item_layout: "centered", header: "frame", nav: "links", section: "label", frame: "line" } },
-  { key: "wintergreens", occasion: "either", label: "Winter Greens", blurb: "Snow white and deep green, gold touches, rounded cards",
-    style: { paper: "#f6f8f3", text: "#22302a", heading: "#1f5a3d", accent: "#b88a3a", item: "#22302a", price: "#1f5a3d", title_font: "rounded-sans", heading_font: "rounded-sans", body_font: "rounded-sans", heading_case: "title", item_case: "as-printed", heading_align: "left", divider: "none", item_layout: "cards", header: "arch", nav: "chips", section: "side", texture: "dots" } }
+  // Owner, Nov 12, 2026: "replace the green and white one with a silver and gold one" (was Winter Greens).
+  { key: "silvergold", occasion: "either", label: "Silver and Gold", blurb: "Soft silver and warm gold, gold stars, rounded cards in a fine frame",
+    style: { paper: "#e6e8ec", text: "#2b2e34", heading: "#96700f", accent: "#c9a227", item: "#2b2e34", price: "#96700f", title_font: "elegant-serif", heading_font: "elegant-serif", body_font: "rounded-sans", heading_case: "upper", item_case: "as-printed", heading_align: "center", divider: "star", item_layout: "cards", header: "minimal", nav: "pills", section: "rule", texture: "stars", frame: "line" } }
 ];
 const OCCASIONS = { christmas: "Christmas", newyear: "New Year's Eve" };
 

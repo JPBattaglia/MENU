@@ -53,13 +53,13 @@ function stubFetch(t) {
 
 test('nine holiday designs: three per holiday and three for either; a holiday shows its own three, then the shared three', () => {
   assert.equal(HOLIDAY_DESIGNS.length, 9);
-  assert.deepEqual(HOLIDAY_DESIGNS.filter((d) => d.occasion === 'either').map((d) => d.key), ['winterlights', 'candlelight', 'wintergreens']);
+  assert.deepEqual(HOLIDAY_DESIGNS.filter((d) => d.occasion === 'either').map((d) => d.key), ['winterlights', 'candlelight', 'silvergold']);
   assert.deepEqual(HOLIDAY_DESIGNS.filter((d) => d.occasion === 'christmas').map((d) => d.key), ['evergreen', 'candycane', 'silentnight']);
   assert.deepEqual(HOLIDAY_DESIGNS.filter((d) => d.occasion === 'newyear').map((d) => d.key), ['midnight', 'champagne', 'confetti']);
   assert.equal(designsFor(null), MENU_DESIGNS, 'the regular generator is unchanged');
   // Owner, Nov 12, 2026: the other holiday's designs are left out.
   assert.deepEqual(designsFor('newyear').map((d) => d.occasion), ['newyear', 'newyear', 'newyear', 'either', 'either', 'either']);
-  assert.deepEqual(designsFor('christmas').map((d) => d.key), ['evergreen', 'candycane', 'silentnight', 'winterlights', 'candlelight', 'wintergreens']);
+  assert.deepEqual(designsFor('christmas').map((d) => d.key), ['evergreen', 'candycane', 'silentnight', 'winterlights', 'candlelight', 'silvergold']);
   assert.match(styleCss(normalizeStyle(menuDesignFor('winterlights').style)), /main::before \{ content: ""; display: block; height: 30px;/, 'a string of lights under the header');
   assert.ok(menuDesignFor('evergreen') && menuDesignFor('classic'));
   const looks = new Set(HOLIDAY_DESIGNS.map((d) => styleCss(normalizeStyle(d.style))));
@@ -141,8 +141,8 @@ test('a holiday preview: six holiday designs (that holiday first), the holiday p
   assert.match(first, /Make it live: \$59</);
   assert.match(first, /<p>Christmas Menu<\/p>/, 'the line under the name says Christmas Menu');
   assert.ok(first.includes(`/api/menu-preview/view/${token}/candycane">Generate menu`));
-  const last = await (await f.get(`/api/menu-preview/view/${token}/wintergreens`)).text();
-  assert.match(last, /Design 6 of 6: Winter Greens<\/strong>/, 'a design for either holiday names no holiday');
+  const last = await (await f.get(`/api/menu-preview/view/${token}/silvergold`)).text();
+  assert.match(last, /Design 6 of 6: Silver and Gold<\/strong>/, 'a design for either holiday names no holiday');
   assert.match(last, /Make it live: \$59</, 'one holiday: $59 on the button');
   assert.equal((await f.get(`/api/menu-preview/view/${token}/confetti`)).status, 410, "New Year's Eve designs are not in a Christmas preview");
   assert.ok(last.includes(`/api/menu-preview/view/${token}/evergreen">Generate menu`), 'goes round to the first');

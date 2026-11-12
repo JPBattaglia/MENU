@@ -192,7 +192,7 @@ test('menumade: the Holiday menu generator is sent in season, in a field older a
   assert.match(g.buttons[2].text, /\$59 for one holiday.*second holiday menu this season is \$30/);
   assert.equal(g.strip.text, "your Christmas and New Year's Eve menus online with a QR code, $59 per holiday.");
   // The six designs to look through first, as the website's Holiday Menu page shows them.
-  assert.deepEqual(g.designs.groups.map((x) => [x.title, x.items.map((i) => i.name).join(', ')]), [['Christmas', 'Evergreen, Candy Cane, Silent Night'], ["New Year's Eve", 'Midnight Gold, Champagne, Confetti'], ['Either holiday', 'Winter Lights, Candlelight, Wintergreens'.replace('Wintergreens', 'Winter Greens')]]);
+  assert.deepEqual(g.designs.groups.map((x) => [x.title, x.items.map((i) => i.name).join(', ')]), [['Christmas', 'Evergreen, Candy Cane, Silent Night'], ["New Year's Eve", 'Midnight Gold, Champagne, Confetti'], ['Either holiday', 'Winter Lights, Candlelight, Silver and Gold']]);
   for (const item of g.designs.groups.flatMap((x) => x.items)) {
     const file = item.image.replace('https://menu-made.com/', '');
     assert.ok(existsSync(new URL('../' + file, import.meta.url)) && existsSync(new URL('../' + item.large.replace('https://menu-made.com/', ''), import.meta.url)), `${item.name} has its pictures on the site`);

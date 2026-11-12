@@ -102,7 +102,7 @@ function menumadeContent(catalog, { offCodes = [], now = Date.now() } = {}) {
         { title: "Either holiday", items: [
           ["winterlights", "Winter Lights", "Deep blue, white and silver, a string of lights", "deep blue, white and silver with a string of lights under the name"],
           ["candlelight", "Candlelight", "Warm espresso and amber, framed title", "warm espresso and amber with a framed title and centred courses"],
-          ["wintergreens", "Winter Greens", "Snow white and deep green, rounded cards", "snow white and deep green with gold touches and rounded cards"]] }
+          ["silvergold", "Silver and Gold", "Soft silver and warm gold, rounded cards", "soft silver and warm gold with gold stars and rounded cards in a fine frame"]] }
       ].map((group) => ({ title: group.title, items: group.items.map(([file, name, note, alt]) => ({
         name, note, alt: `${name} design: ${alt}`, image: `${MM}/assets/holiday/${file}.webp`, large: `${MM}/assets/holiday/${file}-large.webp` })) }))
     },
