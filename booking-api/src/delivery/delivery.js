@@ -6,6 +6,7 @@ import { verifyLinkToken } from "../lib/links.js";
 import { menuHostingState } from "../producers/menu-qr/hosting-renewal.js";
 import { buildPrintMenuPdf, buildTableTentPdf, buildTriFoldPdf } from "../producers/menu-qr/print-pdf.js";
 import { buildTvMenuHtml, qrModulesToSvg } from "../producers/menu-qr/tv-menu.js";
+import { renderMenuPdf } from "../producers/menu-qr/browser-pdf.js";
 import { parseMenuHtml } from "../producers/menu-care/menu-edit.js";
 import QRCode from "qrcode/lib/browser.js";
 
@@ -134,6 +135,28 @@ const PRINT_FORMATS = {
   "table-tent.pdf": { build: buildTableTentPdf, cache: "table-tent-v2", file: "table-tent", what: "table tent" }
 };
 
+// One print format of a menu page. First choice: the page itself printed by a browser, so the PDF matches the chosen
+// design exactly (browser-pdf.js). Otherwise the drawn version (print-pdf.js), which carries the design's colours.
+// Returns { bytes, exact }; bytes is null when the format can't be made for this menu.
+//   - A tri-fold is printed by the browser only when the drawn planner fits the menu on the three inside panels at
+//     9.5pt or more; a longer menu keeps the drawn layout (which can use the flap) or is refused as too long.
+async function buildPrintFormat(env, format, { pageHtml, parsed, qrUrl }) {
+  const spec = PRINT_FORMATS[format];
+  const qrModules = QRCode.create(qrUrl, { errorCorrectionLevel: "M" }).modules;
+  const input = parsed ? { ...parsed, qrModules, qrUrl } : null;
+  let browser = true;
+  if (format === "tri-fold.pdf") {
+    const plan = input ? await buildTriFoldPdf({ ...input, planOnly: true }) : null;
+    if (!plan) return { bytes: null, exact: false };
+    browser = plan.cols === 3 && plan.size >= 9.5;
+  }
+  if (browser) {
+    const bytes = await renderMenuPdf(env, format, { pageHtml, qrSvg: qrModulesToSvg(qrModules), qrUrl });
+    if (bytes) return { bytes, exact: true };
+  }
+  return { bytes: input ? await spec.build(input) : null, exact: false };
+}
+
 async function parseHosted(found) {
   try {
     return parseMenuHtml(await found.object.text());
@@ -154,19 +177,27 @@ async function handleHostedMenuPdf(request, env, slug, format = "print.pdf") {
     "Cache-Control": "public, max-age=300",
     "X-Content-Type-Options": "nosniff"
   };
+  // Two saved copies per version: the browser-made one ("x", exact) and the drawn one. A drawn copy saved while the
+  // browser was unavailable is only served for an hour before the browser is tried again.
   const cacheKey = `${found.row.storage_key}.${spec.cache}.pdf`;
+  const exactKey = `${found.row.storage_key}.${spec.cache}x.pdf`;
+  const exactCopy = await env.ASSETS.get(exactKey);
+  if (exactCopy) return new Response(exactCopy.body, { status: 200, headers: pdfHeaders });
   const cached = await env.ASSETS.get(cacheKey);
-  if (cached) return new Response(cached.body, { status: 200, headers: pdfHeaders });
-  const parsed = await parseHosted(found);
-  const qrModules = parsed ? QRCode.create(found.hostedUrl, { errorCorrectionLevel: "M" }).modules : null;
-  const bytes = parsed ? await spec.build({ ...parsed, qrModules, qrUrl: found.hostedUrl }) : null;
+  const fresh = cached && (!env.BROWSER || Date.now() - new Date(cached.uploaded || 0).getTime() < 3600000);
+  if (fresh) return new Response(cached.body, { status: 200, headers: pdfHeaders });
+  let pageHtml = "";
+  let parsed = null;
+  try { pageHtml = await found.object.text(); parsed = parseMenuHtml(pageHtml); } catch { parsed = null; }
+  const made = parsed ? await buildPrintFormat(env, format, { pageHtml, parsed, qrUrl: found.hostedUrl }) : { bytes: null };
+  const bytes = made.bytes;
   if (!bytes) {
     const reason = spec.tooLong
       ? `This menu is too long to fit a tri-fold at a readable size. <a href="${found.hostedUrl}/print.pdf">The print PDF</a> fits any length.`
       : `This menu can't be turned into a ${spec.what} automatically. <a href="${found.hostedUrl}">Open the online menu</a>, or reply to any email from Menu-Made and we'll make it for you.`;
     return simplePage(200, "Print version not available", `<p>${reason}</p>`);
   }
-  await env.ASSETS.put(cacheKey, bytes, { httpMetadata: { contentType: "application/pdf" } }).catch(() => {});
+  await env.ASSETS.put(made.exact ? exactKey : cacheKey, bytes, { httpMetadata: { contentType: "application/pdf" } }).catch(() => {});
   return new Response(bytes, { status: 200, headers: pdfHeaders });
 }
 
@@ -183,7 +214,8 @@ async function handleDraftFormat(request, env, projectId, format) {
   const destination = (await env.DB.prepare(`SELECT value_text FROM project_inputs WHERE project_id = ? AND input_key = 'qr_destination' LIMIT 1`).bind(projectId).first())?.value_text;
   const qrUrl = typeof destination === "string" && /^https?:\/\//.test(destination) ? destination : "https://menu-made.com";
   let parsed = null;
-  try { parsed = parseMenuHtml(await object.text()); } catch { parsed = null; }
+  let pageHtml = "";
+  try { pageHtml = await object.text(); parsed = parseMenuHtml(pageHtml); } catch { parsed = null; }
   const cant = (what) => simplePage(200, "Not available for this menu", `<p>This menu can't be turned into a ${what} automatically, so the buyer will not get one. The online menu and QR code are not affected.</p>`);
   if (format === "tv") {
     if (!parsed) return cant("TV screen");
@@ -194,7 +226,7 @@ async function handleDraftFormat(request, env, projectId, format) {
   }
   const spec = PRINT_FORMATS[format];
   if (!spec) return simplePage(404, "Not found", "<p>This page doesn't exist.</p>");
-  const bytes = parsed ? await spec.build({ ...parsed, qrModules: QRCode.create(qrUrl, { errorCorrectionLevel: "M" }).modules, qrUrl }) : null;
+  const bytes = parsed ? (await buildPrintFormat(env, format, { pageHtml, parsed, qrUrl })).bytes : null;
   if (!bytes) return spec.tooLong
     ? simplePage(200, "Too long for a tri-fold", "<p>This menu is too long to fit a tri-fold at a readable size, so the buyer will be pointed to the print PDF instead, which fits any length.</p>")
     : cant(spec.what);

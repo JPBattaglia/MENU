@@ -173,3 +173,65 @@ test('the other formats follow the online menu: its design colours, and a hidden
   assert.equal(await pagesOf(await buildTriFoldPdf(input)), 2);
   assert.equal(await pagesOf(await buildTableTentPdf(input)), 1);
 });
+
+// ---- PDFs printed by a browser from the menu page (owner, Nov 12, 2026) ----
+const { buildPrintHtml } = await import('./src/producers/menu-qr/print-html.js');
+const { renderMenuPdf } = await import('./src/producers/menu-qr/browser-pdf.js');
+const fakePdf = () => { const b = new Uint8Array(2000); b.set([0x25, 0x50, 0x44, 0x46]); return b; };
+const browserThat = (answer) => { const calls = []; return { calls, quickAction: async (action, options) => { calls.push({ action, options }); return answer(); } }; };
+
+test('print layouts are the menu page itself: its stylesheet, header and dishes, laid out for paper', async () => {
+  const { designStyle } = await import('./src/producers/menu-qr/menu-designs.js');
+  const menu = { sections: [section('Pizza', 3), section('Drinks', 2, false)], notes: 'Ask about allergies.' };
+  const pageHtml = buildDesignedMenuHtml({ businessName: 'Proof Cafe', menu, style: designStyle('winterlights', menu), logoDataUri: null });
+  const qrSvg = '<svg viewBox="0 0 9 9"><path d="M1 1h1v1h-1z"/></svg>';
+  for (const format of ['print.pdf', 'tri-fold.pdf', 'table-tent.pdf']) {
+    const html = buildPrintHtml(format, { pageHtml, qrSvg, qrUrl: HOSTED });
+    assert.match(html, /The customer's own menu style/, `${format}: the design's own stylesheet`);
+    assert.match(html, /<h1>Proof Cafe<\/h1>/, `${format}: the page header`);
+    assert.match(html, /proof-cafe-22222222/, `${format}: where the code leads`);
+    assert.doesNotMatch(html, /<nav class="jump"/, `${format}: no section links on paper`);
+  }
+  const fold = buildPrintHtml('tri-fold.pdf', { pageHtml, qrSvg, qrUrl: HOSTED });
+  assert.match(fold, /Pizza item 3/);
+  assert.match(fold, /class="panel flap"><p>Ask about allergies\.<\/p>/, 'notes on the flap');
+  assert.match(buildPrintHtml('print.pdf', { pageHtml, qrSvg, qrUrl: HOSTED }), /Drinks item 2/);
+  assert.equal(buildPrintHtml('table-tent.pdf', { pageHtml, qrSvg: '', qrUrl: HOSTED }), null, 'a table tent needs its code');
+  assert.equal(buildPrintHtml('print.pdf', { pageHtml: '<html><body><h1>Proof Cafe</h1></body></html>', qrSvg, qrUrl: HOSTED }), null, 'not a designed menu page');
+});
+
+test('the browser step returns a PDF or nothing: no binding, an error, a refusal or a non-PDF answer all fall back', async () => {
+  const pageHtml = designed({ sections: [section('Pizza', 3)], notes: '' });
+  const input = { pageHtml, qrSvg: '<svg></svg>', qrUrl: HOSTED };
+  assert.equal(await renderMenuPdf({}, 'print.pdf', input), null);
+  const good = browserThat(() => new Response(fakePdf(), { status: 200 }));
+  const bytes = await renderMenuPdf({ BROWSER: good }, 'print.pdf', input);
+  assert.equal(bytes.length, 2000);
+  assert.equal(good.calls[0].action, 'pdf');
+  assert.equal(good.calls[0].options.pdfOptions.printBackground, true);
+  assert.equal(good.calls[0].options.pdfOptions.preferCSSPageSize, true);
+  assert.match(good.calls[0].options.html, /Pizza item 1/);
+  assert.equal(await renderMenuPdf({ BROWSER: browserThat(() => { throw new Error('limit'); }) }, 'print.pdf', input), null);
+  assert.equal(await renderMenuPdf({ BROWSER: browserThat(() => new Response('busy', { status: 429 })) }, 'print.pdf', input), null);
+  assert.equal(await renderMenuPdf({ BROWSER: browserThat(() => new Response('{"errors":[]}', { status: 200 })) }, 'print.pdf', input), null);
+});
+
+test('routes: the browser-made PDF is served and kept; when the browser fails the drawn PDF is served instead', async () => {
+  const h = setup({ html: designed({ sections: [section('Pizza', 5)], notes: '' }) });
+  h.env.BROWSER = browserThat(() => new Response(fakePdf(), { status: 200 }));
+  const res = await h.call('/api/menu/proof-cafe-22222222/print.pdf');
+  assert.equal(res.headers.get('content-type'), 'application/pdf');
+  assert.equal(new Uint8Array(await res.arrayBuffer()).length, 2000, 'the browser-made file');
+  assert.ok(h.ASSETS.objects.has('k/menu-v1.html.print-v3x.pdf'));
+  await h.call('/api/menu/proof-cafe-22222222/print.pdf');
+  assert.equal(h.env.BROWSER.calls.length, 1, 'made once per menu version');
+  const fold = await h.call('/api/menu/proof-cafe-22222222/tri-fold.pdf');
+  assert.equal(new Uint8Array(await fold.arrayBuffer()).length, 2000);
+
+  const down = setup({ html: designed({ sections: [section('Pizza', 5)], notes: '' }) });
+  down.env.BROWSER = browserThat(() => { throw new Error('unavailable'); });
+  const drawn = new Uint8Array(await (await down.call('/api/menu/proof-cafe-22222222/print.pdf')).arrayBuffer());
+  assert.equal(await pagesOf(drawn), 1, 'a real, drawn PDF');
+  assert.ok(down.ASSETS.objects.has('k/menu-v1.html.print-v3.pdf'));
+  assert.ok(!down.ASSETS.objects.has('k/menu-v1.html.print-v3x.pdf'));
+});

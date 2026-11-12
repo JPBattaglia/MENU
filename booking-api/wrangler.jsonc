@@ -8,8 +8,10 @@
   "$schema": "node_modules/wrangler/config-schema.json",
   "name": "menu-checkout",
   "main": "src/main.js",
-  // Matches the version live before the split (b4e65b8b).
-  "compatibility_date": "2026-03-05",
+  // 2026-03-24 is the earliest date with BROWSER.quickAction (Browser Run, below). Before Nov 12, 2026 this was
+  // 2026-03-05, the version live before the split (b4e65b8b); the only default that changed in between and could
+  // matter is WebSocket binary frames arriving as Blob (2026-03-17), and this worker opens no WebSockets.
+  "compatibility_date": "2026-03-24",
   // Keep any plain-text variables already set in the dashboard (OWNER_EMAIL, PUBLIC_BASE_URL, BOOKING_*, ...).
   "keep_vars": true,
   // Customer sites are served at <slug>.menu-made.com (wildcard DNS + route verified live Oct 27, 2026), so emails
@@ -30,6 +32,9 @@
   "services": [
     { "binding": "MERCH", "service": "nino-printful-commerce-api", "entrypoint": "NinoMerch" }
   ],
+  // Cloudflare Browser Run: prints the menu page to PDF so print PDF, tri-fold and table tent match the chosen design
+  // (src/producers/menu-qr/browser-pdf.js). Included with Workers Paid: 10 browser hours a month, then $0.09 an hour.
+  "browser": { "binding": "BROWSER" },
   "r2_buckets": [
     { "binding": "ASSETS", "bucket_name": "menu-made-assets" }
   ],
