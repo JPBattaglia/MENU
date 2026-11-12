@@ -585,7 +585,7 @@ function showDetails(moveToDetails = true) {
 function lockControls(locked) {
   const fields = [els.menuPages, ...BRIEF_IDS.map($)];
   lockedFieldValues = locked ? new Map(fields.map(field => [field, field.value])) : null;
-  document.querySelectorAll('.js-add, #cartItems button, #clearBtn, #continueBtn, #backBtn, #menuPages, #intakeStep input, #intakeStep textarea, #intakeStep select, [data-billing-toggle] input')
+  document.querySelectorAll('.js-add, #cartItems button, #clearBtn, #continueBtn, #backBtn, #menuPages, #intakeStep input, #intakeStep textarea, #intakeStep select, #checkoutStep input, [data-billing-toggle] input')
     .forEach(control => { control.disabled = locked; });
 }
 

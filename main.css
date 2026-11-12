@@ -1659,6 +1659,17 @@ body:not(.sample-menu-page).services-page .premium-media .hospitality-photo {
       display:none;
     }
     :where(body.start-page) .intake.show{ display:block; }
+    /* Start page order panel, tidied Nov 12, 2026: order, details, upload, add-ons, total, checkout, in that order. */
+    :where(body.start-page) .checkout-step{ display:none; }
+    :where(body.start-page) .intake.show ~ .checkout-step{ display:block; }
+    :where(body.start-page) .intake .step-title{ margin:18px 0 12px; padding-top:16px; border-top:1px solid rgba(255,255,255,.08); font-size:18px; }
+    :where(body.start-page) .intake .site-addons{ margin:18px 0 0; }
+    :where(body.start-page) #orderActions:not(:has(#continueBtn:not([hidden]))){ display:none; }
+    :where(body.start-page) .cart-panel .link-btn{ background:none; border:0; padding:0; min-height:44px; font:inherit; font-size:14px; color:var(--brand-soft); text-decoration:underline; text-underline-offset:3px; cursor:pointer; white-space:nowrap; }
+    :where(body.start-page) .cart-panel .link-btn:disabled{ display:none; }
+    :where(body.start-page) .cart-panel .link-btn:focus-visible{ outline:2px solid var(--brand-soft); outline-offset:3px; border-radius:4px; }
+    :where(body.start-page) .checkout-step #checkoutBtn{ width:100%; max-width:none; }
+    :where(body.start-page) .checkout-step #backBtn{ display:block; margin:6px auto 0; }
 
     :where(body.start-page) .field{
       display:flex;
