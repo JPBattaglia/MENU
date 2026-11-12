@@ -40,7 +40,12 @@ test('ordinary inquiries retain JSON transport and backend errors do not appear 
 test('invalid files never reach the endpoint and content changes change the retry fingerprint', async () => {
   const api = setup(() => { throw new Error('should not send'); });
   await assert.rejects(api.send({}, new File(['bad'], 'menu.exe')), /Choose a PDF/);
-  await assert.rejects(api.send({}, new File([], 'menu.txt')), /non-empty/);
+  await assert.rejects(api.send({}, new File([], 'menu.txt')), /empty/);
+  // Limits (owner, Nov 12, 2026): a PDF up to 20 MB, a photo up to 40 MB (shrunk before sending), others 5 MB.
+  await assert.rejects(api.send({}, new File([new Uint8Array(20 * 1024 * 1024 + 1)], 'menu.pdf')), /over 20 MB/);
+  await assert.rejects(api.send({}, new File([new Uint8Array(40 * 1024 * 1024 + 1)], 'menu.jpg')), /over 40 MB/);
+  assert.doesNotThrow(() => api.validate(new File([new Uint8Array(12 * 1024 * 1024)], 'menu.pdf')));
+  assert.doesNotThrow(() => api.validate(new File([new Uint8Array(9 * 1024 * 1024)], 'menu.jpg')));
   await assert.rejects(api.send({}, new File([new Uint8Array(5 * 1024 * 1024 + 1)], 'menu.txt')), /5 MB/);
   assert.notEqual(await api.fingerprint(new File(['one'], 'menu.txt')), await api.fingerprint(new File(['two'], 'menu.txt')));
 });
