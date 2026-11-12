@@ -87,6 +87,29 @@ test('dates: on sale until the holiday, shown through the day after, a second me
   assert.equal(await holiday.holidayPriceCents(env, 'owner@harbor.example', Date.parse('2027-11-20T12:00:00Z')), 5900, 'next season starts over');
 });
 
+test('both holidays: $89 once, the other holiday then checks out at $0, and anything after that is $30', async () => {
+  const env = { DB: createD1() };
+  offerRows(env.DB.raw);
+  const q = (occasion, both, now = NOV_20) => holiday.holidayQuote(env, 'owner@harbor.example', occasion, { both, now });
+  assert.deepEqual(await q('christmas', false), { price_cents: 5900 });
+  assert.deepEqual(await q('christmas', true), { price_cents: 8900, both_other: 'newyear' });
+  assert.deepEqual(await q('newyear', true), { price_cents: 8900, both_other: 'christmas' });
+  assert.deepEqual(await q('newyear', true, Date.parse('2026-12-27T12:00:00-08:00')), { price_cents: 5900 }, 'Christmas is over, so there is no both');
+  assert.deepEqual(await q('christmas', 'true'), { price_cents: 5900 }, 'only a real true asks for both');
+  const sql = (text, ...a) => env.DB.raw.prepare(text).run(...a);
+  sql(`INSERT INTO customers (id, created_at, updated_at, email) VALUES ('c', '2026-11-01', '2026-11-01', 'Owner@Harbor.example')`);
+  sql(`INSERT INTO orders (id, created_at, updated_at, customer_id, status, subtotal_cents, total_cents, payment_status) VALUES ('o', '2026-11-12T00:00:00.000Z', '2026-11-12', 'c', 'ONBOARDING_REQUIRED', 8900, 8900, 'PAID')`);
+  sql(`INSERT INTO order_items (id, order_id, offer_id, offer_version_id, unit_price_cents, line_total_cents, metadata_json) VALUES ('i', 'o', 'offer_holiday_menu', 'offerv1_holiday_menu', 8900, 8900, ?)`,
+    JSON.stringify({ holiday_menu: { occasion: 'christmas', both_other: 'newyear', price_cents: 8900 } }));
+  assert.deepEqual(await q('newyear', false), { price_cents: 0, prepaid: true }, 'the other holiday is already covered');
+  assert.deepEqual(await q('newyear', true), { price_cents: 0, prepaid: true });
+  assert.deepEqual(await q('christmas', false), { price_cents: 3000 }, 'another menu for the holiday already bought is a second menu');
+  sql(`INSERT INTO orders (id, created_at, updated_at, customer_id, status, subtotal_cents, total_cents, payment_status) VALUES ('o2', '2026-11-20T00:00:00.000Z', '2026-11-20', 'c', 'ONBOARDING_REQUIRED', 0, 0, 'PAID')`);
+  sql(`INSERT INTO order_items (id, order_id, offer_id, offer_version_id, unit_price_cents, line_total_cents, metadata_json) VALUES ('i2', 'o2', 'offer_holiday_menu', 'offerv1_holiday_menu', 0, 0, ?)`,
+    JSON.stringify({ holiday_menu: { occasion: 'newyear', prepaid: true, price_cents: 0 } }));
+  assert.deepEqual(await q('newyear', false), { price_cents: 3000 }, 'the covered menu is used once');
+});
+
 test('a holiday preview: six holiday designs (that holiday first), the holiday price, and checkout for Holiday Menu', async (t) => {
   const f = setup();
   const calls = stubFetch(t);

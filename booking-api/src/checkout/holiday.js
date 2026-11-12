@@ -58,6 +58,34 @@ async function holidayPriceCents(env, email, now = Date.now()) {
   return row ? HOLIDAY_PRICING.secondCents : HOLIDAY_PRICING.firstCents;
 }
 
+// Both holidays in one checkout (owner, Nov 12, 2026: "it should be possible to select both to secure the $89
+// offer"; he chose one menu now, the other later). A buyer with no holiday menu yet this season who asks for both
+// pays $89 once, and the item records the holiday still owed (both_other). Their order for that other holiday,
+// made in the generator when its menu is ready, is then $0. Everything else is as before: $59 first, $30 second.
+const otherOccasion = (occasion) => (occasion === "christmas" ? "newyear" : "christmas");
+async function holidayQuote(env, email, occasion, { both = false, now = Date.now() } = {}) {
+  const clean = String(email || "").trim().toLowerCase();
+  let rows = [];
+  if (clean && env?.DB) {
+    const since = `${seasonYear(now)}-07-01T00:00:00.000Z`;
+    const found = await env.DB.prepare(`
+        SELECT oi.metadata_json AS meta FROM orders o
+        JOIN customers c ON c.id = o.customer_id
+        JOIN order_items oi ON oi.order_id = o.id
+        JOIN offers f ON f.id = oi.offer_id
+        WHERE lower(c.email) = ? AND f.code = 'HOLIDAY_MENU' AND o.payment_status = 'PAID' AND o.created_at >= ?`).bind(clean, since).all().catch(() => null);
+    rows = found?.results || [];
+  }
+  if (!rows.length) {
+    const other = otherOccasion(occasion);
+    if (both === true && holidayOnSale(other, now)) return { price_cents: HOLIDAY_PRICING.firstCents + HOLIDAY_PRICING.secondCents, both_other: other };
+    return { price_cents: HOLIDAY_PRICING.firstCents };
+  }
+  const owed = rows.map((row) => { try { return JSON.parse(row.meta || "{}")?.holiday_menu?.both_other || null; } catch { return null; } }).filter(Boolean);
+  if (rows.length === 1 && owed[0] === occasion) return { price_cents: 0, prepaid: true };
+  return { price_cents: HOLIDAY_PRICING.secondCents };
+}
+
 const dollars = (cents) => `$${(cents / 100).toLocaleString("en-US", { maximumFractionDigits: 2 })}`;
 
-export { HOLIDAY_PRICING, OCCASION_NAMES, isOccasion, seasonYear, holidayEndsOn, holidayEnded, holidayOnSale, holidayPriceCents, dollars as holidayDollars };
+export { HOLIDAY_PRICING, OCCASION_NAMES, isOccasion, seasonYear, holidayEndsOn, holidayEnded, holidayOnSale, holidayPriceCents, holidayQuote, otherOccasion, dollars as holidayDollars };
