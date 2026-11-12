@@ -158,7 +158,8 @@
       if (b.getAttribute("data-tab") === tab) b.setAttribute("aria-current", "page"); else b.removeAttribute("aria-current");
     });
     push.listeners = [];
-    document.body.classList.remove("hy-studio");
+    // A seasonal generator's screens wear the website's holiday look (app.css body.hy-xmas); every other screen doesn't.
+    document.body.classList.remove("hy-studio"); document.body.classList.remove("hy-xmas");
     while (screen.firstChild) screen.removeChild(screen.firstChild);
     var draw = (data.kind === "shop" ? SHOP : SERVICES)[tab];
     if (draw) draw(screen, opts || {});
@@ -189,6 +190,7 @@
   // Store listing pictures (scripts/store-screenshots.mjs sets MM_STORE_SHOTS) show the app as it is all year: nothing
   // seasonal, and no pop-up over the screens being photographed (build 86 failed on it, Nov 11, 2026).
   function seasonal() { return !window.MM_STORE_SHOTS && Array.isArray(data.seasonal) ? data.seasonal : []; }
+  function inSeason(g) { return seasonal().indexOf(g) >= 0; }
   function allGens() { return seasonal().concat(data.generators || []); }
   function genSpec(kind) { return allGens().filter(function (g) { return g.key === kind; })[0] || null; }
   function noun(g) { return g.noun || (g.key === "menu" ? "menu" : "website"); }
@@ -238,7 +240,7 @@
   function chooser(s) {
     s.appendChild(header("Free preview", "See it before you checkout"));
     allGens().forEach(function (g) {
-      var card = el("div", "hy-card hy-gen");
+      var card = el("div", "hy-card hy-gen" + (inSeason(g) ? " hy-gen-holiday" : ""));
       var top = el("div", "hy-plan-top"); top.appendChild(el("h2", null, g.title)); top.appendChild(el("span", "hy-pill", g.count + " designs")); card.appendChild(top);
       card.appendChild(el("p", null, g.text));
       card.appendChild(el("h3", "hy-label hy-label-in", "The three buttons you'll see"));
@@ -547,6 +549,7 @@
       document.body.classList.remove("hy-studio");
       var g = gen.kind ? genSpec(gen.kind) : null;
       if (!g) { gen = { kind: null, step: "choose" }; chooser(s); return; }
+      if (inSeason(g)) document.body.classList.add("hy-xmas");
       if (gen.step === "studio" && gen.token) { studio(s, g); return; }
       if (gen.step === "busy") { s.appendChild(header(g.title, gen.business || "")); s.appendChild(busyScreen(g.busy || ["Working…"], g.wait)); return; }
       genForm(s, g); gen.error = "";
