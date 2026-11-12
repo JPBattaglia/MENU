@@ -54,7 +54,7 @@ async function describeApproval(env, approval) {
   // Online Menu + QR and Holiday Menu: everything the buyer will get can be looked at before approving (owner,
   // Nov 12, 2026). These four are drawn from the draft on request (delivery.js handleDraftFormat).
   if (context.workflow_key === "MENU_QR_V1") {
-    for (const [show, label] of DRAFT_FORMATS) previews.push({ label, url: `${approveUrl}&show=${show}` });
+    for (const [show, label] of DRAFT_FORMATS) previews.push({ label, url: `${base}/api/approval-preview/${approval.id}/${show}?t=${approveToken}` });
   }
   return { approval, metadata, context, targetStep, presenter, files, previews, approveUrl, label: presenter.ownerLabel(context) };
 }

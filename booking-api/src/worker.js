@@ -7,7 +7,7 @@ import { handleDomainRenewDone, handleDomainRenewPay, runDomainRenewals } from "
 import { handleWebsitePreviewCreate, handleWebsitePreviewView, handleWebsitePreviewState, handleWebsitePreviewHandoff, handleWebsitePreviewCustomize, handleWebsitePreviewImage, handleProspectSiteDemo, runWebsitePreviewReminders, rebuildProspectSites } from "./marketing/website-preview.js";
 import { handleOrderCancel } from "./account/cancel.js";
 import { handleBuyerRevision } from "./approvals/buyer-revision.js";
-import { handleApprovalRequest, handleBatchApprovalRequest } from "./approvals/approvals.js";
+import { handleApprovalRequest, handleBatchApprovalRequest, handleApprovalPreview } from "./approvals/approvals.js";
 import { mmBookingEnvironment, mmBookingHandler } from "./booking/booking.js";
 import { getPublicOffers, getSiteCatalog } from "./checkout/catalog.js";
 import { recordFunnelEvent } from "./checkout/funnel.js";
@@ -114,6 +114,8 @@ var worker_default = {
     if (batchMatch && (request.method === "GET" || request.method === "POST")) {
       return handleBatchApprovalRequest(request, env, ctx, batchMatch[1].toLowerCase());
     }
+    const approvalPreview = url.pathname.match(/^\/api\/approval-preview\/([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})\/(print\.pdf|tri-fold\.pdf|table-tent\.pdf|tv)$/i);
+    if (approvalPreview && request.method === "GET") return handleApprovalPreview(request, env, approvalPreview[1], approvalPreview[2].toLowerCase());
     const approvalMatch = url.pathname.match(/^\/api\/approvals\/([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})$/i);
     if (approvalMatch && (request.method === "GET" || request.method === "POST")) {
       return handleApprovalRequest(request, env, ctx, approvalMatch[1].toLowerCase());

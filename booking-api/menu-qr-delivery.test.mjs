@@ -124,6 +124,18 @@ test('a paid Menu + QR order is produced, waits for owner approval, then reaches
     const [approveUrl] = linksIn(ownerEmail.text, '/api/approvals/');
     const previewUrls = linksIn(ownerEmail.text, '/api/delivery/');
     assert.ok(approveUrl); assert.equal(previewUrls.length, 2);
+    // Everything else the buyer gets can be looked at before approving (owner, Nov 12, 2026): print PDF, tri-fold,
+    // table tent and TV screen, drawn from the waiting draft at their own address.
+    const formatUrls = linksIn(ownerEmail.text, '/api/approval-preview/');
+    assert.deepEqual(formatUrls.map((u) => new URL(u).pathname.split('/').pop()), ['print.pdf', 'tri-fold.pdf', 'table-tent.pdf', 'tv']);
+    const printed = await call(f, formatUrls[0]);
+    assert.equal(printed.status, 200);
+    assert.equal(printed.headers.get('Content-Type'), 'application/pdf');
+    assert.equal(new TextDecoder().decode((await printed.arrayBuffer()).slice(0, 5)), '%PDF-');
+    const screen = await call(f, formatUrls[3]);
+    assert.equal(screen.status, 200);
+    assert.match(screen.headers.get('Content-Type'), /text\/html/);
+    assert.equal((await call(f, formatUrls[0].replace(/t=[^&]+/, 't=forged'))).status, 403, 'only the approval link opens them');
 
     // A second tick does nothing: no duplicate approval, no extra email.
     const idle = await api.runScheduledProduction(f.env);
