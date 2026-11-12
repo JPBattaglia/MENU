@@ -119,6 +119,26 @@ test('document upload persists privately, sends owner attachment, and deduplicat
     assert.equal((await worker.fetch(uploadRequest(d,'%PDF-1.7\ndifferent'),f.env,f.ctx)).status,409);
   } finally { globalThis.fetch=previous; }
 });
+test('uploads per network per hour: 5, or 60 for the owner sandbox sending a menu for checkout or a preview', async () => {
+  // Runs against the handler the live worker uses (src/booking/booking.js); worker.mjs, which most of this file
+  // tests, is an older copy that is not deployed.
+  const live = (await import('./src/booking/booking.js')).mmBookingHandler;
+  const previous = globalThis.fetch; globalThis.fetch = async () => new Response('{}');
+  try {
+    const limit = async (extra) => {
+      const f = uploadFixture(); const seen = []; const prepare = f.env.DB.prepare.bind(f.env.DB);
+      f.env.DB.prepare = (sql) => { const st = prepare(sql); const bind = st.bind.bind(st); st.bind = (...v) => { if (/INSERT INTO mm_booking_requests/.test(sql) && v.length === 8) seen.push(v); return bind(...v); }; return st; };
+      const res = await live.fetch(uploadRequest({ ...inquiryData(), ...extra }), f.env, f.ctx);
+      return [res.status, seen[0]?.[6]];
+    };
+    assert.deepEqual(await limit({}), [201, 5]);
+    assert.deepEqual(await limit({ purpose: 'checkout' }), [201, 5]);
+    assert.deepEqual(await limit({ purpose: 'checkout', sandbox: true }), [201, 60]);
+    assert.deepEqual(await limit({ sandbox: true }), [201, 5], 'an inquiry is not a test upload');
+    assert.deepEqual(await limit({ purpose: 'checkout', sandbox: 'true' }), [201, 5], 'only a real true counts');
+  } finally { globalThis.fetch = previous; }
+});
+
 test('invalid content, unsupported extension and oversize files are rejected before persistence', async () => {
   const f=uploadFixture(); const d=inquiryData();
   assert.equal((await worker.fetch(uploadRequest(d,'not a pdf'),f.env,f.ctx)).status,400);

@@ -43,14 +43,16 @@
   async function send(payload, file, signal) {
     validate(file);
     file = await shrink(file);
+    // Owner sandbox: uploads have a higher hourly limit while testing (booking-api/src/booking/booking.js).
+    const sent = window.MenuMadeSandbox === true ? { ...payload, sandbox: true } : payload;
     let body; let headers;
     if (file) {
       body = new FormData();
-      body.append('payload', JSON.stringify(payload));
+      body.append('payload', JSON.stringify(sent));
       body.append('document', file);
     } else {
       headers = { 'Content-Type': 'application/json' };
-      body = JSON.stringify(payload);
+      body = JSON.stringify(sent);
     }
     const response = await fetch((window.MenuMadeCatalog?.API || '') + '/api/inquiry', { method: 'POST', headers, body, signal });
     const result = await response.json().catch(() => null);
