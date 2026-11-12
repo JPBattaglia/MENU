@@ -8,6 +8,7 @@ import { approveApproval, requestChanges, requeueForNewApproval } from "./action
 import { describeApproval } from "./digest.js";
 import { isTestOrder, loadDeliveryContext } from "./release.js";
 import { presenterFor } from "./presenters.js";
+import { handleDraftFormat } from "../delivery/delivery.js";
 
 async function readForm(request) {
   if (request.method !== "POST") return new URLSearchParams(new URL(request.url).search);
@@ -32,6 +33,9 @@ async function handleApprovalRequest(request, env, ctx, approvalId) {
   const approval = await env.DB.prepare(`SELECT * FROM approvals WHERE id = ? AND approval_type = 'OWNER_RELEASE' LIMIT 1`).bind(approvalId).first();
   if (!approval) return simplePage(404, "Approval not found", "<p>This approval no longer exists.</p>");
   const context = await loadDeliveryContext(approval.project_id, env);
+  // A preview of one of the buyer's other formats (print PDF, tri-fold, table tent, TV screen), from this link.
+  const show = request.method === "GET" ? form.get("show") : null;
+  if (show && context?.workflow_key === "MENU_QR_V1" && /^(print\.pdf|tri-fold\.pdf|table-tent\.pdf|tv)$/.test(show)) return handleDraftFormat(request, env, approval.project_id, show);
   const business = context?.business_name || "This order";
   const pastExpiry = approval.expires_at && approval.expires_at < nowIso();
   if (approval.status === "PENDING" && (payload.expired || pastExpiry)) {

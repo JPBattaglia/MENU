@@ -71,6 +71,9 @@ async function runGenerateQrStep(targetStep, env) {
     project.id
   ).first();
   if (existingDeliverable) {
+    // A redo after the owner's change request sets the earlier files aside; the QR code has not changed (it points
+    // at the same menu address), so it is put back in use instead of being drawn again.
+    await env.DB.prepare(`UPDATE deliverables SET status = 'DRAFT' WHERE id = ? AND status = 'SUPERSEDED'`).bind(existingDeliverable.deliverable_id).run();
     const output2 = {
       generated_at: nowIso(),
       reused_existing: true,

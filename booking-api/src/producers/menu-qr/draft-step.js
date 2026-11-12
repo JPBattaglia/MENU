@@ -5,6 +5,8 @@ import { assertMenuRendered, buildDesignedMenuHtml, buildMenuDraftHtml, loadLogo
 import { fetchMenuSource, getInputValue, loadPreparedPayload } from "./inputs.js";
 import { completeStep, loadProject } from "../../workflows/runner.js";
 import { menuPreviewChoice } from "../../marketing/public-preview.js";
+import { loadRegenerationNote } from "../../approvals/actions.js";
+import { applyMenuChange } from "../menu-care/menu-edit.js";
 import { designStyle } from "./menu-designs.js";
 
 async function runGenerateMenuDraftStep(targetStep, env) {
@@ -56,6 +58,29 @@ async function runGenerateMenuDraftStep(targetStep, env) {
     source.menu = read.menu;
     source.extraction = read.extraction;
   }
+  // The owner's "Request changes" note (owner, Nov 12, 2026: "What good is the request changes if no one ever sees
+  // it or does anything about it?"). It is applied to the menu that was read, the way Menu Care applies a
+  // customer's change: only what the note asks for, nothing invented. What happened goes on the next approval
+  // email (package.js): applied with a one-line summary, or why it could not be.
+  const regeneration = await loadRegenerationNote(env, targetStep.project_id).catch(() => null);
+  if (regeneration?.note && source.menu && env.ANTHROPIC_API_KEY) {
+    try {
+      // Every change asked for so far, in order: the menu is read from the file again each time.
+      const asked = regeneration.notes.length > 1 ? regeneration.notes.map((n, i) => `${i + 1}. ${n}`).join("\n") : regeneration.note;
+      const change = await applyMenuChange(env, { menu: source.menu, requestText: asked,
+        scope: { entityType: "PROJECT", entityId: targetStep.project_id, correlationId: targetStep.workflow_run_id } });
+      if (change.understood && !change.problems.length && change.diff.length) {
+        source.menu = change.menu;
+        source.owner_change = { note: regeneration.note, applied: true, summary: change.summary };
+      } else {
+        source.owner_change = { note: regeneration.note, applied: false, reason: (change.problems[0] || (change.diff.length ? "" : "nothing in the menu changed") || change.summary || "the request was not clear").slice(0, 300) };
+      }
+    } catch (error) {
+      source.owner_change = { note: regeneration.note, applied: false, reason: (error instanceof Error ? error.message : String(error)).slice(0, 300) };
+    }
+  }
+  // A redone draft is a new version (1 the first time), so the earlier one is kept as it was and never reused.
+  const draftVersion = 1 + Number(regeneration?.count || 0);
   // The menu generator (Nov 7, 2026): the design chosen in the free preview, with its logo, colour and line under
   // the name. What the order itself was given (logo, colours) comes first.
   const choice = await menuPreviewChoice(env, project.order_id).catch(() => null);
@@ -109,10 +134,11 @@ async function runGenerateMenuDraftStep(targetStep, env) {
           d.project_id = ?
           AND d.deliverable_type =
             'MENU_DRAFT'
-          AND d.version = 1
+          AND d.version = ?
         LIMIT 1
       `).bind(
-    project.id
+    project.id,
+    draftVersion
   ).first();
   if (existingDeliverable) {
     const output2 = {
@@ -155,7 +181,7 @@ async function runGenerateMenuDraftStep(targetStep, env) {
   const filenameBase = sanitizeFilename(
     businessName
   );
-  const originalFilename = `${filenameBase}-menu-draft-v1.html`;
+  const originalFilename = `${filenameBase}-menu-draft-v${draftVersion}.html`;
   const storageKey = [
     "customers",
     project.customer_id,
@@ -163,7 +189,7 @@ async function runGenerateMenuDraftStep(targetStep, env) {
     project.id,
     "deliverables",
     "menu-draft",
-    "v1",
+    `v${draftVersion}`,
     `${assetId}.html`
   ].join("/");
   const timestamp = nowIso();
@@ -181,7 +207,7 @@ async function runGenerateMenuDraftStep(targetStep, env) {
         customerId: project.customer_id,
         businessId: project.business_id || "",
         deliverableType: "MENU_DRAFT",
-        version: "1",
+        version: String(draftVersion),
         originalFilename
       }
     }
@@ -251,7 +277,7 @@ async function runGenerateMenuDraftStep(targetStep, env) {
         source_url: source.resolved_url,
         source_content_type: source.content_type,
         deliverable_type: "MENU_DRAFT",
-        deliverable_version: 1
+        deliverable_version: draftVersion
       })
     ).run();
     assetInserted = true;
@@ -271,7 +297,7 @@ async function runGenerateMenuDraftStep(targetStep, env) {
           ?,
           ?,
           'MENU_DRAFT',
-          1,
+          ${draftVersion},
           'DRAFT',
           0,
           ?
@@ -307,7 +333,8 @@ async function runGenerateMenuDraftStep(targetStep, env) {
       requested_url: source.requested_url,
       resolved_url: source.resolved_url,
       content_type: source.content_type,
-      ...source.extraction ? { extraction: source.extraction } : {}
+      ...source.extraction ? { extraction: source.extraction } : {},
+      ...source.owner_change ? { owner_change: source.owner_change } : {}
     },
     asset: {
       id: assetId,
@@ -321,7 +348,7 @@ async function runGenerateMenuDraftStep(targetStep, env) {
     deliverable: {
       id: deliverableId,
       type: "MENU_DRAFT",
-      version: 1,
+      version: draftVersion,
       status: "DRAFT",
       customer_visible: false
     }
