@@ -278,7 +278,9 @@ test("owner's own apps: made once by the tick at no charge, owner keys, no buyer
     assert.match(cfg.body.icon_svg, /x="51.2" y="51.2"/, 'a 10% margin around the disc (owner: a little more space)');
     assert.match(cfg.body.android_foreground_svg, /x="112.64" y="112.64"/, "inside Android's safe zone");
     assert.equal(cfg.body.config.intro_url, 'https://menu-made.com/assets/own-apps/nino-intro-neon.mp4');
-    assert.equal(cfg.body.config.loader_url, 'https://menu-made.com/assets/own-apps/nino-loader.webp');
+    assert.equal(cfg.body.config.loader_url, 'https://menu-made.com/assets/own-apps/nino-loader-logo.png');
+    assert.equal(cfg.body.config.loader_spin, 8, 'the logo turns slowly (owner, Nov 11, 2026)');
+    assert.ok(fs.existsSync(new URL('../assets/own-apps/nino-loader-logo.png', import.meta.url)));
     assert.ok(cfg.body.icon_svg.includes(cfg.body.logo_placeholder), 'the build swaps the file in for the placeholder');
   } finally {
     globalThis.fetch = async (url, init) => {
