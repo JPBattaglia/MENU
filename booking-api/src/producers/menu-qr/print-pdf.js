@@ -587,4 +587,27 @@ async function buildTableTentPdf(input) {
   return finish(doc, name, "Table tent");
 }
 
-export { buildPrintMenuPdf, buildTriFoldPdf, buildTableTentPdf };
+// ---------- QR code sheet ----------
+// One letter page with the QR code large in the middle, ready to print as it is (owner, Nov 12, 2026: a buyer who
+// can't use an SVG needs the code in a form that just prints). Plain black on white so any printer copes.
+async function buildQrSheetPdf({ businessName, qrModules, qrUrl }) {
+  if (!qrModules?.size) return null;
+  const doc = await PDFDocument.create();
+  const bold = await doc.embedFont(StandardFonts.HelveticaBold);
+  const regular = await doc.embedFont(StandardFonts.Helvetica);
+  const safe = (text) => String(text ?? "").replace(/[^\x20-\x7e\xa0-\xff]/g, "").replace(/\s+/g, " ").trim();
+  const name = safe(businessName) || "Menu";
+  const page = doc.addPage([PAGE_W, PAGE_H]);
+  const size = 360;
+  const x = (PAGE_W - size) / 2;
+  const y = (PAGE_H - size) / 2 - 10;
+  drawQr(page, qrModules, x, y, size);
+  centerText(page, name, bold, fitSize(bold, name, 30, PAGE_W - 2 * MARGIN), PAGE_W / 2, y + size + 78, INK);
+  centerText(page, "Scan for our menu", regular, 20, PAGE_W / 2, y + size + 44, INK);
+  const link = safe(String(qrUrl || "").replace(/^https?:\/\//, ""));
+  if (link) centerText(page, link, regular, fitSize(regular, link, 11, PAGE_W - 2 * MARGIN), PAGE_W / 2, y - 44, MUTED);
+  centerText(page, "Menu by MENU-MADE", regular, 7, PAGE_W / 2, 26, LEADER);
+  return finish(doc, name, "QR code");
+}
+
+export { buildPrintMenuPdf, buildTriFoldPdf, buildTableTentPdf, buildQrSheetPdf };

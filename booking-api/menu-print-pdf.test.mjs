@@ -235,3 +235,17 @@ test('routes: the browser-made PDF is served and kept; when the browser fails th
   assert.ok(down.ASSETS.objects.has('k/menu-v1.html.print-v6.pdf'));
   assert.ok(!down.ASSETS.objects.has('k/menu-v1.html.print-v6x.pdf'));
 });
+
+test('the live menu has its QR code as a PNG image and as a printable PDF sheet', async () => {
+  const h = setup({ html: designed({ sections: [section('Pizza', 3)], notes: '' }) });
+  const png = await h.call('/api/menu/proof-cafe-22222222/qr.png');
+  assert.equal(png.headers.get('content-type'), 'image/png');
+  const bytes = new Uint8Array(await png.arrayBuffer());
+  assert.deepEqual([...bytes.slice(0, 8)], [0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a], 'a PNG file');
+  assert.equal(new DataView(bytes.buffer).getUint32(16), new DataView(bytes.buffer).getUint32(20), 'square');
+  assert.match((await h.call('/api/menu/proof-cafe-22222222/qr.png?download=1')).headers.get('content-disposition'), /attachment; filename="proof-cafe-22222222-qr-code\.png"/);
+  const pdf = await h.call('/api/menu/proof-cafe-22222222/qr.pdf');
+  assert.equal(pdf.headers.get('content-type'), 'application/pdf');
+  assert.equal(await pagesOf(new Uint8Array(await pdf.arrayBuffer())), 1);
+  assert.equal((await h.call('/api/menu/nobody-here/qr.png')).status, 404);
+});

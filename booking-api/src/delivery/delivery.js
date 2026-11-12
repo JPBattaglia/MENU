@@ -4,7 +4,8 @@ import { escapeHtml2 } from "../lib/util.js";
 import { OCCASION_NAMES, holidayEnded } from "../checkout/holiday.js";
 import { verifyLinkToken } from "../lib/links.js";
 import { menuHostingState } from "../producers/menu-qr/hosting-renewal.js";
-import { buildPrintMenuPdf, buildTableTentPdf, buildTriFoldPdf } from "../producers/menu-qr/print-pdf.js";
+import { buildPrintMenuPdf, buildQrSheetPdf, buildTableTentPdf, buildTriFoldPdf } from "../producers/menu-qr/print-pdf.js";
+import { qrPng } from "../producers/menu-qr/qr-image.js";
 import { buildTvMenuHtml, qrModulesToSvg } from "../producers/menu-qr/tv-menu.js";
 import { renderMenuPdf } from "../producers/menu-qr/browser-pdf.js";
 import { parseMenuHtml } from "../producers/menu-care/menu-edit.js";
@@ -260,7 +261,26 @@ async function handleHostedMenuTv(request, env, slug) {
   });
 }
 
+// The live menu's QR code in forms anyone can use (owner, Nov 12, 2026): qr.png (an image that opens, prints and
+// pastes anywhere, and shows in the delivery email) and qr.pdf (one letter page, ready to print). Made from the menu's
+// own address on request; the code never changes, so the answer can be cached for a day.
+async function handleHostedMenuQr(request, env, slug, kind) {
+  if (!env.DB || !env.ASSETS) return simplePage(503, "Temporarily unavailable", "<p>Please try again in a minute.</p>");
+  const found = await loadHostedMenu(env, slug);
+  if (found.response) return found.response;
+  const modules = QRCode.create(found.hostedUrl, { errorCorrectionLevel: "M" }).modules;
+  const download = new URL(request.url).searchParams.get("download") === "1" ? "attachment" : "inline";
+  if (kind === "png") {
+    const bytes = await qrPng(modules);
+    return new Response(bytes, { status: 200, headers: { "Content-Type": "image/png", "Content-Disposition": `${download}; filename="${slug}-qr-code.png"`, "Cache-Control": "public, max-age=86400", "X-Content-Type-Options": "nosniff" } });
+  }
+  const parsed = await parseHosted(found);
+  const bytes = await buildQrSheetPdf({ businessName: parsed?.businessName || "", qrModules: modules, qrUrl: found.hostedUrl });
+  return new Response(bytes, { status: 200, headers: { "Content-Type": "application/pdf", "Content-Disposition": `${download}; filename="${slug}-qr-code.pdf"`, "Cache-Control": "public, max-age=86400", "X-Content-Type-Options": "nosniff" } });
+}
+
 export { handleDraftFormat,
+  handleHostedMenuQr,
   handleDeliveryDownload,
   handleHostedMenu,
   handleHostedMenuPdf,
