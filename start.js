@@ -6,6 +6,9 @@
 // shows its own bar.
 const OWNER_SANDBOX = window.MenuMadeSandbox === true;
 const TEST_CHECKOUT = OWNER_SANDBOX || new URLSearchParams(location.search).get('checkout') === 'test';
+// The owner sandbox shows exactly what a buyer gets, paid with a test card. Only the older ?checkout=test address
+// keeps the extras below (offers not on sale yet, the old Website Package, Website Care without a site).
+const TEST_EXTRAS = TEST_CHECKOUT && !OWNER_SANDBOX;
 if (TEST_CHECKOUT && !OWNER_SANDBOX) document.addEventListener('DOMContentLoaded', () => {
   const note = document.createElement('div');
   note.textContent = 'TEST MODE — Stripe test checkout. Use card 4242 4242 4242 4242. No real charge.';
@@ -18,7 +21,7 @@ if (TEST_CHECKOUT && !OWNER_SANDBOX) document.addEventListener('DOMContentLoaded
 // Old "Website Package" and Conversion Fix links go there; test mode still opens the old package for existing orders.
 {
   const q = new URLSearchParams(location.search);
-  if (!TEST_CHECKOUT && /^(website|conversion|conversion_fix|CONVERSION_FIX|WEBSITE_PACKAGE)$/.test(q.get('service') || '') && !q.get('wpreview')) {
+  if (!TEST_EXTRAS && /^(website|conversion|conversion_fix|CONVERSION_FIX|WEBSITE_PACKAGE)$/.test(q.get('service') || '') && !q.get('wpreview')) {
     location.replace('website-design.html#try-free');
   }
 }
@@ -103,7 +106,7 @@ const nameOf = code => code === CUSTOM ? 'Your own plan' : (offer(code)?.name ||
 const planCents = code => code === CUSTOM ? (customQuote()?.cents ?? null) : Catalog.priceOf(offer(code), interval());
 const wholeMoney = cents => '$' + (cents / 100).toLocaleString('en-US', { minimumFractionDigits: cents % 100 ? 2 : 0, maximumFractionDigits: 2 });
 const planLabel = code => { if (code !== CUSTOM) return Catalog.label(offer(code), interval()); const c = planCents(code); return c === null ? '' : wholeMoney(c) + (interval() === 'year' ? '/yr' : '/mo'); };
-const sellable = o => Boolean(o) && (o.on_sale || TEST_CHECKOUT);
+const sellable = o => Boolean(o) && (o.on_sale || TEST_EXTRAS);
 
 function showStatus(message) { els.status.textContent = message; els.status.classList.add('show'); }
 function clearStatus() { els.status.textContent = ''; els.status.classList.remove('show'); }
@@ -157,7 +160,7 @@ function orderProblem() {
       ? 'The Website Package comes with Website Care. Add Website Care to your own plan, or check out the Website Package on its own.'
       : `The Website Package comes with Website Care. Check it out on its own, or with a plan that includes Website Care (Pro or Website Care on its own), and add ${plan.name} in a second checkout.`;
   }
-  if (planIncludes('WEBSITE_CARE') && !siteInOrder() && !hasOwnSite && !TEST_CHECKOUT) {
+  if (planIncludes('WEBSITE_CARE') && !siteInOrder() && !hasOwnSite && !TEST_EXTRAS) {
     return { text: 'Website Care looks after a site Menu-Made builds, so it starts with your site. Pick yours free in the site generator and this plan comes with it.', href: 'website-design.html?then=' + encodeURIComponent(thenParams()) + '#try-free', label: 'Pick your site' };
   }
   const codes = order.plan === CUSTOM ? [...order.custom, ...order.once] : [order.plan, ...order.once];
