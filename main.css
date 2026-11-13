@@ -3243,3 +3243,12 @@ html.mm-lightbox-open { overflow: hidden; }
 .checkout-consent a, .checkout-privacy-note a { display: inline !important; padding: 0 !important; margin: 0 !important; border: 0 !important; border-radius: 0 !important; background: none !important; box-shadow: none !important; min-height: 0 !important; font-weight: inherit; text-decoration: underline !important; text-underline-offset: 3px; }
 
 .mm-holiday-paid { margin: 12px 0 0; padding: 12px 14px; border: 1px solid #f0c75e; border-radius: 14px; background: rgba(31,107,58,.28); font-weight: 700; }
+
+/* "Get the MENU-MADE app" (owner, Nov 13, 2026): shown by app-links.js once a store has the app. */
+.mm-get-app[hidden] { display: none; }
+.mm-get-app-box { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 18px 28px; padding: clamp(20px, 4vw, 32px); border: 1px solid rgba(0,214,230,.45); border-radius: var(--radius-lg); background: rgba(0,0,0,.16); }
+.mm-get-app-copy { flex: 1 1 320px; }
+.mm-get-app-copy h2 { margin: 0 0 8px; }
+.mm-get-app-copy p { margin: 0; }
+.mm-get-app-buttons { display: flex; flex-wrap: wrap; gap: 12px; }
+.mm-store-btn { white-space: nowrap; }
