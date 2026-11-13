@@ -583,6 +583,26 @@ function remove(code) {
   render();
 }
 
+// Owner, Nov 12, 2026: arriving with something already chosen (a generator's "Choose this site" / "Make it live", a
+// plan, a service card) must land on "Your name" in Your order, never on the plan chooser above it. Runs after
+// layout settles (prices, add-ons and the preview handoff all change heights), and not when the buyer already moved.
+function landOnName() {
+  if (location.hash && location.hash !== '#') return;
+  let moved = false;
+  const stop = () => { moved = true; };
+  window.addEventListener('wheel', stop, { once: true, passive: true });
+  window.addEventListener('touchmove', stop, { once: true, passive: true });
+  window.addEventListener('keydown', stop, { once: true });
+  const go = () => {
+    if (moved || !els.intake.classList.contains('show')) return;
+    const reducedMotion = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+    els.name.scrollIntoView({ behavior: reducedMotion ? 'auto' : 'smooth', block: 'center' });
+    if (!els.name.value) els.name.focus({ preventScroll: true });
+  };
+  requestAnimationFrame(go);
+  setTimeout(go, 700);
+}
+
 function showDetails(moveToDetails = true) {
   els.intake.classList.add('show');
   els.continueBtn.hidden = true;
@@ -781,7 +801,7 @@ render(false);
     }
   }
   render(false);
-  if (chosen) { els.picker.open = false; showDetails(false); }
+  if (chosen) { els.picker.open = false; showDetails(false); landOnName(); }
   if (location.hash === '#optionalServices') els.picker.open = true;
 }).catch(() => {
   showStatus('Prices could not be loaded. Refresh the page, or send us a message below and we will reply with a checkout link.');
@@ -798,7 +818,7 @@ if (previewToken && /^[a-f0-9]{36}$/.test(previewToken)) {
     if (!data?.ok) return;
     if (!els.business.value) els.business.value = data.business || '';
     if (!els.email.value) els.email.value = data.email || '';
-    if (!els.name.value) els.name.focus();
+    if (!els.name.value) els.name.focus({ preventScroll: true });
     // A preview from a prospect email whose menu was a web page has no file to attach: the buyer adds it here.
     if (!/^[0-9a-f-]{36}$/.test(data.request_id || '')) return;
     previewDocumentId = data.request_id;
@@ -856,7 +876,7 @@ if (sitePreviewToken && /^[a-f0-9]{36}$/.test(sitePreviewToken)) {
     if (!data?.ok) return;
     if (!els.business.value) els.business.value = data.business || '';
     if (!els.email.value && data.email && data.email !== 'info@menu-made.com') els.email.value = data.email;
-    if (!els.name.value) els.name.focus();
+    if (!els.name.value) els.name.focus({ preventScroll: true });
   }).catch(() => {});
 }
 
