@@ -210,3 +210,11 @@ test('menumade: the Holiday menu generator is sent in season, in a field older a
   assert.match(js, /occasion: occasions\.length \? gen\.occasion : undefined/, 'the app sends the chosen holiday with the preview');
   assert.match(js, /function allGens\(\) \{ return seasonal\(\)\.concat\(data\.generators/);
 });
+
+test('pages the MENU-MADE app opens carry mm_app=1, so the site hides its Get the app buttons there', async () => {
+  const { tagAppPages } = await import('./src/store-app/hybrid.js');
+  const out = tagAppPages({ a: 'https://menu-made.com/online-menu.html', b: 'https://menu-made.com/contact.html?plan=X#y', c: 'https://menu-made.com/api/menu-preview/create',
+    d: 'https://menu-made.com/MENU%3D.png', e: 'https://menu-made.com/holiday-menu', f: ['https://ninobattaglia.com/shop.html'], g: 'https://menu-made.com/x.html?mm_app=1' });
+  assert.deepEqual(out, { a: 'https://menu-made.com/online-menu.html?mm_app=1', b: 'https://menu-made.com/contact.html?plan=X&mm_app=1#y', c: 'https://menu-made.com/api/menu-preview/create',
+    d: 'https://menu-made.com/MENU%3D.png', e: 'https://menu-made.com/holiday-menu?mm_app=1', f: ['https://ninobattaglia.com/shop.html'], g: 'https://menu-made.com/x.html?mm_app=1' });
+});

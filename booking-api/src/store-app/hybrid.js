@@ -322,9 +322,26 @@ async function handleHybridContent(request, env, key, { fetchImpl = fetch, cache
   }
   let content;
   try { content = await buildContent(env, key, fetchImpl); } catch { return jsonOut({ ok: false, error: "Temporarily unavailable" }, 503); }
+  // Website pages the MENU-MADE app opens carry mm_app=1, so the site leaves out its "Get the app" buttons there
+  // (owner, Nov 13, 2026). The Nino app already adds its own ?app=<member key> to every ninobattaglia.com link.
+  if (key === "menumade") content = tagAppPages(content);
   const response = jsonOut({ ...content, updated_at: new Date().toISOString() }, 200, TTL);
   if (cacheStore) await cacheStore.put(cacheKey, response.clone()).catch(() => null);
   return response;
+}
+
+// Adds mm_app=1 to every menu-made.com page address in the app's content (not /api/ addresses, images or videos).
+const APP_PAGE = /^https:\/\/menu-made\.com\/(?!api\/)([^?#]*)(\?[^#]*)?(#.*)?$/;
+function tagAppPages(value) {
+  if (typeof value === "string") {
+    const m = APP_PAGE.exec(value);
+    if (!m || !(m[1] === "" || /\.html$/.test(m[1]) || !/\.[a-z0-9]+$/i.test(m[1]))) return value;
+    if (/[?&]mm_app=1(&|$)/.test(m[2] || "")) return value;
+    return `https://menu-made.com/${m[1]}${m[2] ? `${m[2]}&` : "?"}mm_app=1${m[3] || ""}`;
+  }
+  if (Array.isArray(value)) return value.map(tagAppPages);
+  if (value && typeof value === "object") return Object.fromEntries(Object.entries(value).map(([k, v]) => [k, tagAppPages(v)]));
+  return value;
 }
 
 // Which store apps are hybrid: the owner's own two (own-apps.js), by bundle id. A bought Mobile App keeps the
@@ -396,7 +413,7 @@ const HYBRID_LOOK = {
 const hybridLookForBundle = (bundleId) => HYBRID_LOOK[HYBRID_BUNDLES.get(String(bundleId || ""))] || null;
 const hybridUrlForBundle = (bundleId) => hybridUrl(HYBRID_BUNDLES.get(String(bundleId || "")) || "");
 
-export { announceNinoDrops, hybridLookForBundle, HYBRID_BUNDLES, HYBRID_KEYS, hybridUrlForBundle, TTL as HYBRID_TTL, handleHybridContent, hybridUrl, menumadeContent, ninoContent };
+export { tagAppPages, announceNinoDrops, hybridLookForBundle, HYBRID_BUNDLES, HYBRID_KEYS, hybridUrlForBundle, TTL as HYBRID_TTL, handleHybridContent, hybridUrl, menumadeContent, ninoContent };
 
 // Store links for the owner's own apps, for the "Get the app" buttons on menu-made.com and ninobattaglia.com
 // (owner, Nov 10, 2026). A store's link is given only once that store has the app public (store_app_listings:
