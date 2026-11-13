@@ -4,6 +4,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { execFileSync } from 'node:child_process';
+import { createD1 } from './test-support/d1.mjs';
 import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -217,4 +218,19 @@ test('pages the MENU-MADE app opens carry mm_app=1, so the site hides its Get th
     d: 'https://menu-made.com/MENU%3D.png', e: 'https://menu-made.com/holiday-menu', f: ['https://ninobattaglia.com/shop.html'], g: 'https://menu-made.com/x.html?mm_app=1' });
   assert.deepEqual(out, { a: 'https://menu-made.com/online-menu.html?mm_app=1', b: 'https://menu-made.com/contact.html?plan=X&mm_app=1#y', c: 'https://menu-made.com/api/menu-preview/create',
     d: 'https://menu-made.com/MENU%3D.png', e: 'https://menu-made.com/holiday-menu?mm_app=1', f: ['https://ninobattaglia.com/shop.html'], g: 'https://menu-made.com/x.html?mm_app=1' });
+});
+
+test('app opens are counted per app, phone type and day, only from the apps themselves (owner, Nov 13, 2026)', async () => {
+  const env = { DB: createD1(), PRODUCTION_RUNNER_SECRET: 's' };
+  const open = (origin, ip = '1.1.1.1', ua = 'Phone') => hybrid.handleHybridContent(new Request('https://menu-made.com/api/app-hybrid/nino', { headers: { ...(origin ? { Origin: origin } : {}), 'CF-Connecting-IP': ip, 'User-Agent': ua } }), env, 'nino', { cacheStore: null, fetchImpl: async () => Response.json(NINO_CATALOG) });
+  await open('capacitor://localhost'); await open('capacitor://localhost'); await open('https://localhost', '2.2.2.2', 'Droid');
+  await open(null); await open('https://ninobattaglia.com');
+  const rows = env.DB.raw.prepare('SELECT platform, opens FROM app_opens ORDER BY platform').all().map((r) => ({ ...r }));
+  assert.deepEqual(rows, [{ platform: 'android', opens: 1 }, { platform: 'ios', opens: 2 }], 'a website or a plain request is not an app open');
+  assert.equal(env.DB.raw.prepare('SELECT COUNT(*) AS n FROM app_open_devices').get().n, 2, 'the same phone twice in a day is one device');
+  assert.match(env.DB.raw.prepare('SELECT device FROM app_open_devices LIMIT 1').get().device, /^[0-9a-f]{24}$/, 'no address or phone details are stored');
+  const { weeklyNumbers } = await import('./src/marketing/weekly-numbers.js');
+  const report = await weeklyNumbers(env);
+  assert.match(report.rows.find(([k]) => k === 'Nino app')[1], /^Opened 3 times this week \(iPhone 2, Android 1\)/);
+  assert.equal(report.rows.find(([k]) => k === 'MENU-MADE app')[1], 'Not opened this week.');
 });

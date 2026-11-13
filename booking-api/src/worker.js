@@ -341,7 +341,7 @@ var worker_default = {
     }
     // Hybrid Mobile Apps (src/store-app/hybrid.js): live content for the owner's two apps' native screens.
     const hybridMatch = url.pathname.match(/^\/api\/app-hybrid\/([a-z]{1,20})$/);
-    if (hybridMatch) return handleHybridContent(request, env, hybridMatch[1]);
+    if (hybridMatch) return handleHybridContent(request, env, hybridMatch[1], { ctx });
     const appLinksMatch = url.pathname.match(/^\/api\/app-links\/([a-z]{1,20})$/);
     if (appLinksMatch) return handleAppStoreLinks(request, env, appLinksMatch[1]);
     // Private client quote pages (menu-made.com/q/<id>): tick items, check out for exactly that total.
