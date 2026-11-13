@@ -26,7 +26,7 @@ const UA = "MenuMadeProspects/1.0 (+https://menu-made.com; info@menu-made.com)";
 // Small map tiles (south, west, north, east): whole-city area queries time out on the public Overpass servers.
 // Nov 12, 2026: owner OK'd going nationwide (the offers need no in-person visit). REGION picks what one run scans:
 //   "bay" (default, Mondays) = San Francisco and nearby cities, plus SF new openings;
-//   "next" (Thursdays) = the next metro in NATIONWIDE, rotating by week; or a NATIONWIDE key to scan that metro now.
+//   "next" (Tuesdays to Fridays) = the next metro in NATIONWIDE, one a run; or a NATIONWIDE key to scan that metro now.
 const BAY = [];
 for (const [la, lb] of [[37.70, 37.745], [37.745, 37.79], [37.79, 37.835]]) for (const [wa, wb] of [[-122.52, -122.465], [-122.465, -122.42], [-122.42, -122.35]]) BAY.push(["San Francisco", [la, wa, lb, wb]]);
 BAY.push(["Oakland", [37.73, -122.33, 37.80, -122.20]], ["Oakland", [37.80, -122.33, 37.86, -122.20]], ["Oakland", [37.73, -122.20, 37.86, -122.11]],
@@ -53,13 +53,19 @@ function tilesFor(city, [s, w, n, e], step = 0.05) {
     out.push([city, [+la.toFixed(3), +wa.toFixed(3), +Math.min(n, la + step).toFixed(3), +Math.min(e, wa + step).toFixed(3)]]);
   return out;
 }
+// "next" rotates through NATIONWIDE one metro a run. Nov 13, 2026: the search runs Tuesday to Friday (it was Thursdays
+// only), so the place in the list is counted in runs: four a week from Monday Nov 9, 2026, set so that Thursday Nov 12
+// was the first metro (already scanned) and Friday Nov 13 is the second. A Monday or weekend run takes the nearest slot.
+function nextMetroIndex(ms, count) {
+  const days = Math.floor((ms - Date.UTC(2026, 10, 9)) / 86400000); // 0 = Monday Nov 9, 2026 (UTC; the run starts 4:53 am Pacific)
+  const slot = Math.min(3, Math.max(0, (((days % 7) + 7) % 7) - 1));  // Tue 0, Wed 1, Thu 2, Fri 3
+  const run = Math.floor(days / 7) * 4 + slot - 2;
+  return ((run % count) + count) % count;
+}
 function pickRegion(region = "bay") {
   if (!region || region === "bay") return { key: "bay", tiles: BAY };
   let entry = NATIONWIDE.find(([k]) => k === region);
-  if (!entry && region === "next") { // rotate by week (Pacific), so each Thursday scans a different metro
-    const week = Math.floor((Date.now() - Date.UTC(2026, 10, 9)) / (7 * 86400000));
-    entry = NATIONWIDE[((week % NATIONWIDE.length) + NATIONWIDE.length) % NATIONWIDE.length];
-  }
+  if (!entry && region === "next") entry = NATIONWIDE[nextMetroIndex(Date.now(), NATIONWIDE.length)];
   if (!entry) { console.log(`Unknown region "${region}"; scanning the Bay Area.`); return { key: "bay", tiles: BAY }; }
   return { key: entry[0], tiles: tilesFor(entry[1], entry[2]) };
 }

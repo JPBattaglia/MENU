@@ -6,7 +6,7 @@
 // 1. Reply sync from the Zoho inbox: bounces -> BOUNCED; replies -> REPLIED, or OPTED_OUT for no thanks /
 //    unsubscribe; every new reply is forwarded to info@menu-made.com (Reply-To = the prospect) so JP answers from
 //    his normal inbox. Forwarded messages get the $MMForwarded keyword so they are forwarded once.
-// 2. The day's allowance from the worker's warm-up plan (send-plan: 3 a day at first, rising to 30 a day).
+// 2. The day's allowance from the worker's warm-up plan (send-plan: 3 a day at first, rising to 50 a day).
 // 3. Day-3 follow-ups of earlier auto-sent prospects first, then new prospects, each checked exactly like the
 //    drafts (mail server exists, gaps re-checked in a phone-size browser, menu preview built when possible).
 //

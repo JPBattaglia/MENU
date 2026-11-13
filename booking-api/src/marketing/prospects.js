@@ -201,10 +201,11 @@ async function handleProspectStatus(request, env) {
 // ---------- Auto-sending from jp@getmenumade.com (owner decision, Nov 5, 2026) ----------
 // A new sending domain has to warm up: a few emails a day, rising, weekdays only, counted from the first auto-send.
 //   POST /api/system/prospects/send-plan  {}  -> { day, cap, sent_today, left, warmup_done }
-// Business day 1 to 5: 3 a day; 6 to 8: 10; 9 to 12: 20; from day 13 (warm-up over): 30 a day, about 150 a week.
+// Business day 1 to 5: 3 a day; 6 to 8: 10; 9 to 12: 20; 13 to 17: 30; from day 18 (warm-up over): 50 a day, about 250 a week.
 // Nov 12, 2026: owner asked for more emails (10 a day was too few to expect sales); follow-ups count too.
-const WARMUP = [[5, 3], [8, 10], [12, 20]];
-const STEADY_CAP = 30;
+// Nov 13, 2026: owner said yes to raising the automatic sends again: after a week at 30 (days 13 to 17) it is 50 a day.
+const WARMUP = [[5, 3], [8, 10], [12, 20], [17, 30]];
+const STEADY_CAP = 50;
 const pacificDay = (ms) => new Intl.DateTimeFormat("en-CA", { timeZone: "America/Los_Angeles", year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date(ms));
 function businessDays(fromDay, toDay) {
   let n = 0;

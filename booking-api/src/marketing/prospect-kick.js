@@ -3,6 +3,7 @@
 // them itself through the GitHub API, once per Pacific day per slot. The workflows keep only workflow_dispatch, so
 // a late GitHub timer can never run a slot twice.
 //   prospects   Mondays 5:23 am Pacific           .github/workflows/prospects.yml (find new businesses)
+//   prospects-us Tuesdays to Fridays 4:53 am        .github/workflows/prospects.yml region=next (the next US metro)
 //   drafts      Mondays 7:37 am, Thursdays 8:41 am .github/workflows/prospect-drafts.yml (iCloud drafts + follow-ups)
 //   send        weekdays 10:19 am                  .github/workflows/prospect-drafts.yml with send=true (jp@getmenumade.com)
 // A slot is started on the first tick at or after its time, up to 6 hours late (the worker was down, or GitHub
@@ -13,7 +14,8 @@ const REPO = "https://api.github.com/repos/JPBattaglia/MENU/actions/workflows";
 const SLOTS = [
   { key: "prospects", days: [1], at: [5, 23], workflow: "prospects.yml", inputs: null, label: "the weekly prospect search" },
   { key: "drafts", days: [1], at: [7, 37], workflow: "prospect-drafts.yml", inputs: null, label: "the prospect email drafts" },
-  { key: "prospects-us", days: [4], at: [4, 53], workflow: "prospects.yml", inputs: { region: "next" }, label: "the nationwide prospect search (next US metro)" },
+  // Nov 13, 2026 (owner: "yes widen to national"): a US metro every Tuesday to Friday, not one a week.
+  { key: "prospects-us", days: [2, 3, 4, 5], at: [4, 53], workflow: "prospects.yml", inputs: { region: "next" }, label: "the nationwide prospect search (next US metro)" },
   { key: "drafts", days: [4], at: [8, 41], workflow: "prospect-drafts.yml", inputs: null, label: "the prospect email drafts" },
   { key: "send", days: [1, 2, 3, 4, 5], at: [10, 19], workflow: "prospect-drafts.yml", inputs: { send: "true" }, label: "the prospect email sender" }
 ];

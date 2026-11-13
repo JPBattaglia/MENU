@@ -108,11 +108,11 @@ test('browser-confirmed gaps replace the finder guesses; failed checks are skipp
   assert.equal(rows['node/105'].status, 'SKIPPED');
 });
 
-test('auto-send warm-up: 3 a day for the first week of business days, rising to 30, counted from the first auto-send', async () => {
+test('auto-send warm-up: 3 a day for the first week of business days, rising to 50, counted from the first auto-send', async () => {
   const { businessDays, sendCap, sendPlan } = await import('./src/marketing/prospects.js');
   assert.equal(businessDays('2026-11-06', '2026-11-06'), 1);
   assert.equal(businessDays('2026-11-06', '2026-11-09'), 2, 'Fri to Mon skips the weekend');
-  assert.deepEqual([1, 5, 6, 8, 9, 12, 13, 40].map(sendCap), [3, 3, 10, 10, 20, 20, 30, 30]);
+  assert.deepEqual([1, 5, 6, 8, 9, 12, 13, 17, 18, 40].map(sendCap), [3, 3, 10, 10, 20, 20, 30, 30, 50, 50]);
   const f = await setup();
   const now = Date.parse('2026-11-10T18:00:00Z'); // Tue 10 am PT
   let plan = await sendPlan(f.env, now);
@@ -123,7 +123,7 @@ test('auto-send warm-up: 3 a day for the first week of business days, rising to 
   plan = await sendPlan(f.env, now);
   assert.deepEqual(plan, { day: 3, cap: 3, sent_today: 1, left: 2, warmup_done: false });
   plan = await sendPlan(f.env, Date.parse('2026-12-01T18:00:00Z'));
-  assert.equal(plan.warmup_done, true); assert.equal(plan.cap, 30);
+  assert.equal(plan.warmup_done, true); assert.equal(plan.cap, 50); // business day 18
 });
 
 test('a SENT update from the auto-sender is marked sent_via getmenumade', async () => {
