@@ -57,6 +57,7 @@ import { handleExtraPagesDone, handleExtraPagesPay } from "./producers/menu-qr/p
 import { advanceSelfTests } from "./selftest/menu-qr-selftest.js";
 import { advanceWebsiteTrialSelfTests } from "./selftest/website-trial-selftest.js";
 import { advanceDomainSetupSelfTests } from "./selftest/domain-setup-selftest.js";
+import { advanceSandboxCancels } from "./admin/sandbox-cancel.js";
 import { advanceAccountSelfTests } from "./selftest/account-selftest.js";
 import { advanceMenuCareSelfTests } from "./selftest/menu-care-selftest.js";
 import { advanceConversionSelfTests } from "./selftest/conversion-selftest.js";
@@ -531,6 +532,7 @@ const mmWorkerWithBooking = {
       await advanceGoogleVisibilitySelfTests(env, app).catch((error) => console.error("Google Visibility self-test failed:", error instanceof Error ? error.message : String(error)));
       await advanceStage5ExitTests(env, app).catch((error) => console.error("Stage 5 exit test failed:", error instanceof Error ? error.message : String(error)));
       await advanceDomainSetupSelfTests(env).catch((error) => console.error("Domain setup self-test failed:", error instanceof Error ? error.message : String(error)));
+      await advanceSandboxCancels(env).catch((error) => console.error("Sandbox cancel failed:", error instanceof Error ? error.message : String(error)));
       await advanceAccountSelfTests(env).catch((error) => console.error("Account self-test failed:", error instanceof Error ? error.message : String(error)));
       await advanceAbandonedCheckoutSelfTests(env, app).catch((error) => console.error("Abandoned checkout self-test failed:", error instanceof Error ? error.message : String(error)));
       await advanceMenuHostingSelfTests(env).catch((error) => console.error("Menu hosting self-test failed:", error instanceof Error ? error.message : String(error)));
