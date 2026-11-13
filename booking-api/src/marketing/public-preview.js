@@ -381,7 +381,9 @@ async function runPreviewReminders(env, { now = Date.now(), force = false } = {}
     const mark = () => env.DB.prepare(`UPDATE menu_previews SET reminder_sent_at = ? WHERE token = ?`).bind(new Date(now).toISOString(), row.token).run();
     const email = String(row.email || "").trim().toLowerCase();
     // Already ordered from this menu file: nothing to remind about.
-    const ordered = await env.DB.prepare(`SELECT 1 AS x FROM orders WHERE notes LIKE ? AND payment_status = 'PAID' LIMIT 1`).bind(`%Document ref: ${row.request_id}%`).first().catch(() => null);
+    // instr, not LIKE: D1 refuses a LIKE pattern over 50 bytes and "%Document ref: <id>%" is 52, so this check never
+    // found an order and buyers who had already ordered were reminded too (found Nov 13, 2026).
+    const ordered = await env.DB.prepare(`SELECT 1 AS x FROM orders WHERE instr(notes, ?) > 0 AND payment_status = 'PAID' LIMIT 1`).bind(`Document ref: ${row.request_id}`).first().catch(() => null);
     if (!email || email === owner || ordered) { await mark(); continue; }
     const url = viewUrl(row.token);
     const ends = endsText(row.expires_at);
