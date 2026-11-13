@@ -5,6 +5,7 @@
 // Start one by inserting a self_tests row (status REQUESTED); results are written back to that row.
 // A run also starts automatically once a day. Only a failure emails the owner.
 import { hostedMenuSlug } from "../onboarding/menu-inputs.js";
+import { ownerSandboxToken } from "../lib/owner-sandbox.js";
 import { ownerEmailAddress, publicBaseUrl } from "../lib/config.js";
 import { SELF_TEST_EMAIL, brandedEmailHtml, sendTransactionalEmail } from "../lib/email.js";
 import { nowIso, parseJsonOrNull } from "../lib/http.js";
@@ -169,7 +170,7 @@ async function stageStart(env, app, test) {
   const checkout = await json(await app(new Request(`${base}/api/create-checkout-test`, {
     method: "POST",
     headers: { "Content-Type": "application/json", Origin: "https://menu-made.com" },
-    body: JSON.stringify({
+    body: JSON.stringify({ sandbox_token: await ownerSandboxToken(env),
       items: [{ key: "online_menu_qr", qty: 1 }],
       menu_pages: PAID_PAGES,
       customer: { name: "Menu-Made Self-Test", business: "Self-Test Cafe", email: SELF_TEST_EMAIL, phone: "",

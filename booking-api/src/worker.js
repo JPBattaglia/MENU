@@ -18,6 +18,7 @@ import { advanceAbandonedCheckoutSelfTests } from "./selftest/abandoned-checkout
 import { advanceMenuHostingSelfTests } from "./selftest/menu-hosting-selftest.js";
 import { CheckoutValidationError, quoteMenuPackage } from "./checkout/quote.js";
 import { createCheckoutSession, createCheckoutSessionTest } from "./checkout/session.js";
+import { handleOwnerSandboxLink, sandboxPassFromBody } from "./lib/owner-sandbox.js";
 import { handleClientQuote } from "./checkout/client-quotes.js";
 import { handleStripeWebhook } from "./checkout/webhook.js";
 import { siteHostAction } from "./producers/website/hosts.js";
@@ -404,7 +405,10 @@ var worker_default = {
         env
       );
     }
+    if (url.pathname === "/api/owner-sandbox/link" && (request.method === "GET" || request.method === "POST")) return handleOwnerSandboxLink(request, env);
     if (request.method === "POST" && url.pathname === "/api/create-checkout-test") {
+      // Owner only (Nov 13, 2026): a test checkout runs real production, so it needs the emailed owner pass.
+      if (!await sandboxPassFromBody(env, request)) return Response.json({ ok: false, error: "Test checkout is for the Menu-made owner only." }, { status: 403, headers: { "Access-Control-Allow-Origin": "*" } });
       return createCheckoutSessionTest(
         request,
         env

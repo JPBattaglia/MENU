@@ -6,6 +6,7 @@
 // preview pages. Each result is approved through the approve page and its delivery email is checked.
 // Start one by inserting a self_tests row, kind NINO_DESIGN_RUN, status REQUESTED. Only a failure emails the owner.
 import { ownerEmailAddress, publicBaseUrl } from "../lib/config.js";
+import { ownerSandboxToken } from "../lib/owner-sandbox.js";
 import { SELF_TEST_EMAIL, brandedEmailHtml, sendTransactionalEmail } from "../lib/email.js";
 import { nowIso, parseJsonOrNull } from "../lib/http.js";
 import { signLinkToken } from "../lib/links.js";
@@ -71,7 +72,7 @@ async function stageStart(env, app, test) {
   if (!env.STRIPE_SECRET_KEY_TEST) throw new Error("STRIPE_SECRET_KEY_TEST is not configured");
   const checkout = await json(await app(new Request(`${publicBaseUrl(env)}/api/create-checkout-test`, {
     method: "POST", headers: { "Content-Type": "application/json", Origin: "https://ninobattaglia.com" },
-    body: JSON.stringify({ items: Object.keys(NINO_PRODUCTS).map((key) => ({ key })), design_pages: 5, return_to: "nino",
+    body: JSON.stringify({ sandbox_token: await ownerSandboxToken(env), items: Object.keys(NINO_PRODUCTS).map((key) => ({ key })), design_pages: 5, return_to: "nino",
       customer: { name: "Menu-Made Self-Test", business: `Sample Cafe ${test.id.slice(0, 6)}`, email: SELF_TEST_EMAIL } })
   })));
   if (!checkout.body?.ok || !checkout.body.order_id) throw new Error(`Test checkout failed (HTTP ${checkout.status}): ${JSON.stringify(checkout.body).slice(0, 300)}`);

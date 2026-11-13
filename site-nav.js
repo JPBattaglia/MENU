@@ -1,19 +1,26 @@
 // Owner sandbox (owner, Nov 12, 2026): a switch that lives in one browser, so he can test every service and plan
-// without touching live checkout for anyone else. menu-made.com/?sandbox=on turns it on (any page), ?sandbox=off
-// or the bar's button turns it off. While on, every page shows the TEST MODE bar and the two pages that start a
-// checkout (start.js, staff-merch.js read window.MenuMadeSandbox) use Stripe test mode. No page links to
-// ?sandbox=on, so a buyer never lands in it (booking-api/site-check.test.mjs).
+// without touching live checkout for anyone else. Locked Nov 13, 2026 (owner: "Lock it"): it turns on only from the
+// links emailed to the owner inbox (menu-made.com/?sandbox=<owner pass>, booking-api/src/lib/owner-sandbox.js); the
+// pass is kept in this browser (window.MenuMadeSandboxToken) and sent with test checkouts, previews and uploads,
+// which the server refuses without it. ?sandbox=off or the bar's button turns it off. The old ?sandbox=on does
+// nothing. While on, every page shows the TEST MODE bar and the pages that start a checkout (start.js,
+// staff-merch.js read window.MenuMadeSandbox) use Stripe test mode.
 (() => {
   'use strict';
   const KEY = 'mm-owner-sandbox';
-  let on = false;
+  const PASS = /^[A-Za-z0-9_-]{20,}\.[A-Za-z0-9_-]{20,}$/;
+  let token = '';
   try {
-    const asked = new URLSearchParams(location.search).get('sandbox');
-    if (asked === 'on') localStorage.setItem(KEY, '1');
+    const asked = new URLSearchParams(location.search).get('sandbox') || '';
+    if (PASS.test(asked)) localStorage.setItem(KEY, asked);
     if (asked === 'off') localStorage.removeItem(KEY);
-    on = localStorage.getItem(KEY) === '1';
-  } catch { on = false; }
+    token = localStorage.getItem(KEY) || '';
+    // A switch stored before the lock ("1") is not a pass: clear it.
+    if (token && !PASS.test(token)) { localStorage.removeItem(KEY); token = ''; }
+  } catch { token = ''; }
+  const on = !!token;
   window.MenuMadeSandbox = on;
+  window.MenuMadeSandboxToken = on ? token : '';
   if (!on) return;
   const show = () => {
     const bar = document.createElement('div');

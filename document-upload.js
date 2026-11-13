@@ -44,7 +44,7 @@
     validate(file);
     file = await shrink(file);
     // Owner sandbox: uploads have a higher hourly limit while testing (booking-api/src/booking/booking.js).
-    const sent = window.MenuMadeSandbox === true ? { ...payload, sandbox: true } : payload;
+    const sent = window.MenuMadeSandbox === true ? { ...payload, sandbox: true, sandbox_token: window.MenuMadeSandboxToken } : payload;
     let body; let headers;
     if (file) {
       body = new FormData();

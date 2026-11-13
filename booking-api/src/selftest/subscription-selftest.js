@@ -11,6 +11,7 @@
 // Daily (15:30, 15:40, 15:50 UTC), or start one by inserting a self_tests row with one of the kinds and status
 // REQUESTED. Only a failure emails the owner. Test jobs are cancelled and the test clock deleted at the end.
 import { ownerEmailAddress, publicBaseUrl } from "../lib/config.js";
+import { ownerSandboxToken } from "../lib/owner-sandbox.js";
 import { SELF_TEST_EMAIL, brandedEmailHtml, sendTransactionalEmail } from "../lib/email.js";
 import { nowIso, parseJsonOrNull } from "../lib/http.js";
 import { payTestCheckout, stripeTest, updateTest } from "./menu-qr-selftest.js";
@@ -129,7 +130,7 @@ async function stageStart(env, app, test) {
   const checkout = await json(await app(new Request(`${publicBaseUrl(env)}/api/create-checkout-test`, {
     method: "POST",
     headers: { "Content-Type": "application/json", Origin: "https://menu-made.com" },
-    body: JSON.stringify({
+    body: JSON.stringify({ sandbox_token: await ownerSandboxToken(env),
       items: [{ key: runOf(test).plan }],
       interval: "month",
       stripe_test_customer: customer.id,
