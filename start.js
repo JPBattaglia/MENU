@@ -399,8 +399,19 @@ function domainLine() {
 function renderDomain() {
   const box = $('siteDomain');
   if (!box) return;
-  box.hidden = !domainAllowed();
+  // Owner, Nov 12, 2026: he went through checkout without seeing the domain, because the box only appeared once a
+  // hosting plan was added. It now shows whenever the site is in the order, and says what unlocks it.
+  box.hidden = !(domainsEnabled && order.once.has('SITE_FILES'));
   if (box.hidden) return;
+  const search = box.querySelector('.domain-search');
+  if (!domainAllowed()) {
+    if (search) search.hidden = true;
+    $('domainResults').innerHTML = '';
+    $('domainNote').textContent = 'Add Website Care or the Pro Plan above to get your own domain. We host your site there.';
+    return;
+  }
+  if (search) search.hidden = false;
+  if ($('domainNote').textContent.startsWith('Add Website Care')) $('domainNote').textContent = '';
   const query = $('domainQuery');
   if (!query.value && els.business.value.trim()) query.value = els.business.value.trim();
   const list = $('domainResults');
