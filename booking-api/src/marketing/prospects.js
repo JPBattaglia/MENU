@@ -102,13 +102,30 @@ async function handleProspectBatch(request, env) {
   }
   const limit = Math.max(1, Math.min(50, Number(body?.limit) || 25));
   const rows = (await env.DB.prepare(`
-      SELECT id, name, kind, cuisine, city, website, email, gaps_json, menu_url, offer_code, score, opened_on FROM prospects p
+      SELECT id, name, kind, cuisine, city, website, email, gaps_json, menu_url, offer_code, score, opened_on,
+        (opened_on IS NOT NULL AND opened_on >= ?1) AS t_open,
+        (offer_code = 'ONLINE_MENU_QR' AND menu_url IS NOT NULL AND (gaps_json LIKE '%menu_pdf%' OR gaps_json LIKE '%menu_image%')) AS t_menu
+      FROM prospects p
       WHERE status = 'NEW' AND email IS NOT NULL AND offer_code IS NOT NULL
         AND NOT EXISTS (SELECT 1 FROM prospects q WHERE q.email = p.email AND q.status != 'NEW')
-      ORDER BY (opened_on IS NOT NULL AND opened_on >= ?) DESC, (offer_code = 'ONLINE_MENU_QR' AND menu_url IS NOT NULL AND (gaps_json LIKE '%menu_pdf%' OR gaps_json LIKE '%menu_image%')) DESC,
-        score DESC, id LIMIT ?`).bind(new Date(Date.now() - NEW_OPENING_DAYS * 86400000).toISOString().slice(0, 10), limit * 3).all()).results || [];
-  const seen = new Set(); const batch = [];
-  for (const r of rows) { if (seen.has(r.email)) continue; seen.add(r.email); batch.push(r); if (batch.length === limit) break; }
+      ORDER BY t_open DESC, t_menu DESC, score DESC, id LIMIT ?2`).bind(new Date(Date.now() - NEW_OPENING_DAYS * 86400000).toISOString().slice(0, 10), limit * 6).all()).results || [];
+  // Nov 13, 2026 (owner: "widen to national"): within each priority group the batch takes one business per city in
+  // turn, so a day's emails reach the new US metros too instead of waiting behind the larger Bay Area backlog.
+  const seen = new Set(); const tiers = new Map();
+  for (const r of rows) {
+    if (seen.has(r.email)) continue; seen.add(r.email);
+    const tierKey = `${r.t_open ? 1 : 0}${r.t_menu ? 1 : 0}`;
+    if (!tiers.has(tierKey)) tiers.set(tierKey, new Map());
+    const cities = tiers.get(tierKey); const city = String(r.city || "").trim().toLowerCase();
+    if (!cities.has(city)) cities.set(city, []);
+    const { t_open, t_menu, ...row } = r; cities.get(city).push(row);
+  }
+  const batch = [];
+  for (const cities of tiers.values()) {
+    const queues = [...cities.values()];
+    while (batch.length < limit && queues.some((q) => q.length)) for (const q of queues) { if (q.length && batch.length < limit) batch.push(q.shift()); }
+    if (batch.length >= limit) break;
+  }
   return json({ ok: true, prospects: batch });
 }
 
@@ -201,10 +218,16 @@ async function handleProspectStatus(request, env) {
 // ---------- Auto-sending from jp@getmenumade.com (owner decision, Nov 5, 2026) ----------
 // A new sending domain has to warm up: a few emails a day, rising, weekdays only, counted from the first auto-send.
 //   POST /api/system/prospects/send-plan  {}  -> { day, cap, sent_today, left, warmup_done }
-// Business day 1 to 5: 3 a day; 6 to 8: 10; 9 to 12: 20; from day 13 (warm-up over): 30 a day, about 150 a week.
-// Nov 12, 2026: owner asked for more emails (10 a day was too few to expect sales); follow-ups count too.
-const WARMUP = [[5, 3], [8, 10], [12, 20]];
-const STEADY_CAP = 30;
+// Business day 1 to 5: 3 a day; 6 to 7: 10; 8 to 9: 20; 10 to 11: 35; from day 12 (warm-up over): 50 a day, about 250 a
+// week. Follow-ups count too. Nov 12, 2026: owner asked for more emails; Nov 13: "yes" to raising them and going
+// nationwide, so the ramp is shorter and ends at 50 (Zoho's own throttle is 50 to 500 an hour by reputation).
+// Brake: when more than 5% of the last 14 days' auto-sends bounced (20 or more sent), the day's cap drops to 10 until
+// the rate is back under, so a bad batch of addresses can't burn the sending domain.
+const WARMUP = [[5, 3], [7, 10], [9, 20], [11, 35]];
+const STEADY_CAP = 50;
+const BRAKE_CAP = 10;
+const BRAKE_RATE = 0.05;
+const BRAKE_MIN_SENT = 20;
 const pacificDay = (ms) => new Intl.DateTimeFormat("en-CA", { timeZone: "America/Los_Angeles", year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date(ms));
 function businessDays(fromDay, toDay) {
   let n = 0;
@@ -221,8 +244,13 @@ async function sendPlan(env, now = Date.now()) {
   const recent = (await env.DB.prepare(`SELECT sent_at, followup_drafted_at FROM prospects WHERE sent_via = 'getmenumade' AND (sent_at >= ? OR followup_drafted_at >= ?)`).bind(since, since).all()).results || [];
   let sentToday = 0;
   for (const r of recent) { if (r.sent_at && pacificDay(Date.parse(r.sent_at)) === today) sentToday++; if (r.followup_drafted_at && pacificDay(Date.parse(r.followup_drafted_at)) === today) sentToday++; }
-  const cap = sendCap(day);
-  return { day, cap, sent_today: sentToday, left: Math.max(0, cap - sentToday), warmup_done: day > WARMUP.at(-1)[0] && !!first };
+  let cap = sendCap(day);
+  const recentSends = await env.DB.prepare(`SELECT COUNT(*) AS sent, SUM(status = 'BOUNCED') AS bounced FROM prospects WHERE sent_via = 'getmenumade' AND sent_at >= ?`)
+    .bind(new Date(now - 14 * 86400000).toISOString()).first();
+  const sent14 = Number(recentSends?.sent || 0); const bounced14 = Number(recentSends?.bounced || 0);
+  const brake = sent14 >= BRAKE_MIN_SENT && bounced14 / sent14 > BRAKE_RATE ? `${bounced14} of the last ${sent14} auto-sends bounced` : null;
+  if (brake) cap = Math.min(cap, BRAKE_CAP);
+  return { day, cap, sent_today: sentToday, left: Math.max(0, cap - sentToday), warmup_done: day > WARMUP.at(-1)[0] && !!first, ...(brake ? { brake } : {}) };
 }
 
 async function handleSendPlan(request, env, { now = Date.now() } = {}) {

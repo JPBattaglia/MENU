@@ -108,11 +108,11 @@ test('browser-confirmed gaps replace the finder guesses; failed checks are skipp
   assert.equal(rows['node/105'].status, 'SKIPPED');
 });
 
-test('auto-send warm-up: 3 a day for the first week of business days, rising to 30, counted from the first auto-send', async () => {
+test('auto-send warm-up: 3 a day for the first week of business days, rising to 50, counted from the first auto-send', async () => {
   const { businessDays, sendCap, sendPlan } = await import('./src/marketing/prospects.js');
   assert.equal(businessDays('2026-11-06', '2026-11-06'), 1);
   assert.equal(businessDays('2026-11-06', '2026-11-09'), 2, 'Fri to Mon skips the weekend');
-  assert.deepEqual([1, 5, 6, 8, 9, 12, 13, 40].map(sendCap), [3, 3, 10, 10, 20, 20, 30, 30]);
+  assert.deepEqual([1, 5, 6, 7, 8, 9, 10, 11, 12, 40].map(sendCap), [3, 3, 10, 10, 20, 20, 35, 35, 50, 50]);
   const f = await setup();
   const now = Date.parse('2026-11-10T18:00:00Z'); // Tue 10 am PT
   let plan = await sendPlan(f.env, now);
@@ -123,7 +123,35 @@ test('auto-send warm-up: 3 a day for the first week of business days, rising to 
   plan = await sendPlan(f.env, now);
   assert.deepEqual(plan, { day: 3, cap: 3, sent_today: 1, left: 2, warmup_done: false });
   plan = await sendPlan(f.env, Date.parse('2026-12-01T18:00:00Z'));
-  assert.equal(plan.warmup_done, true); assert.equal(plan.cap, 30);
+  assert.equal(plan.warmup_done, true); assert.equal(plan.cap, 50);
+});
+
+test('auto-send brake: more than 5% of the last 14 days bouncing (20+ sent) holds the day at 10', async () => {
+  const { sendPlan } = await import('./src/marketing/prospects.js');
+  const f = await setup();
+  const now = Date.parse('2026-12-01T18:00:00Z');
+  const rows = Array.from({ length: 22 }, (_, i) => ({ ...CAFE, id: `node/9${String(i).padStart(2, '0')}`, email: `b${i}@b.example` }));
+  await f.post({ prospects: rows });
+  f.env.DB.raw.prepare(`UPDATE prospects SET status='SENT', sent_via='getmenumade', sent_at=?`).run('2026-11-25T17:00:00Z');
+  f.env.DB.raw.prepare(`UPDATE prospects SET sent_at=? WHERE id='node/900'`).run('2026-11-06T17:00:00Z'); // first auto-send: warm-up long over
+  let plan = await sendPlan(f.env, now);
+  assert.equal(plan.cap, 50); assert.equal(plan.brake, undefined, 'no bounces, no brake');
+  f.env.DB.raw.prepare(`UPDATE prospects SET status='BOUNCED' WHERE id='node/901'`).run();
+  assert.equal((await sendPlan(f.env, now)).cap, 50, '1 of 21 (under 5%) is not over the line');
+  f.env.DB.raw.prepare(`UPDATE prospects SET status='BOUNCED' WHERE id='node/902'`).run();
+  plan = await sendPlan(f.env, now);
+  assert.equal(plan.cap, 10); assert.match(plan.brake, /^2 of the last 21 auto-sends bounced$/);
+});
+
+test('the email batch takes one business per city in turn, after new openings and menu-file prospects', async () => {
+  const f = await setup();
+  const sf = (n, extra = {}) => ({ ...CAFE, id: `node/8${n}`, email: `sf${n}@x.example`, city: 'San Francisco', score: 20 - n, ...extra });
+  await f.post({ prospects: [sf(1), sf(2), sf(3), { ...sf(4), city: 'Los Angeles', email: 'la@x.example', score: 1 }, { ...sf(5), city: 'Seattle', email: 'sea@x.example', score: 0 }] });
+  const drafts = { ...f.good, aud: 'menu-made-prospect-drafts', job_workflow_ref: 'JPBattaglia/MENU/.github/workflows/prospect-drafts.yml@refs/heads/master' };
+  const req = new Request('https://menu-made.com/api/system/prospects/batch', { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${await f.sign(drafts)}` }, body: JSON.stringify({ limit: 4 }) });
+  const batch = (await (await worker.fetch(req, f.env, { waitUntil() {} })).json()).prospects;
+  assert.deepEqual(batch.map((p) => p.city), ['San Francisco', 'Los Angeles', 'Seattle', 'San Francisco']);
+  assert.equal(batch[0].t_open, undefined, 'internal ranking columns stay out of the answer');
 });
 
 test('a SENT update from the auto-sender is marked sent_via getmenumade', async () => {
