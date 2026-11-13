@@ -303,9 +303,8 @@ test('a bought domain: the ready email opens the site on that domain, menu-made.
   await runOrder(f);
   assert.equal(f.row(`SELECT status FROM domain_registrations WHERE domain = 'olivakitchen.com'`).status, 'QUEUED');
   const mail = f.emails.find((e) => /Your website is ready/.test(e.subject));
-  assert.match(mail.html, /Open olivakitchen\.com/);
-  assert.match(mail.html, /href="https:\/\/olivakitchen\.com\/"/);
+  // The "Open your live site" button goes to the bought domain.
+  assert.match(mail.html, /href="https:\/\/olivakitchen\.com\/"[^>]*>(?:<[^>]+>)*\s*Open your live site/);
   assert.match(mail.html, /Open it now on menu-made\.com/);
-  assert.doesNotMatch(mail.html, /Open your live site/);
   assert.match(mail.text, /Your site: https:\/\/olivakitchen\.com\//);
 });

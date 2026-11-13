@@ -201,7 +201,7 @@ const siteFilesOverrides = {
       subject: `${isTestOrder(context) ? "[TEST] " : ""}Your website is ready`,
       templateKey: "delivery_site_files_v1",
       html: brandedEmailHtml({ preheader: `${business}'s website, ready to download${live ? " and live" : ""}.`, eyebrow: "YOUR WEBSITE", heading: `${business}'s website is ready`, paragraphs,
-        buttons: [{ label: "Download your website (zip)", url: zip, primary: true }, ...(ownUrl ? [{ label: `Open ${domain.domain}`, url: ownUrl }, { label: "Open it now on menu-made.com", url: live }] : live ? [{ label: "Open your live site", url: live }] : []), { label: "Add your logo and photos", url: own }], footnote: "The download link works for 90 days, so save the zip. Questions? Reply to this email." }),
+        buttons: [{ label: "Download your website (zip)", url: zip, primary: true }, ...(ownUrl ? [{ label: "Open your live site", url: ownUrl }, { label: "Open it now on menu-made.com", url: live }] : live ? [{ label: "Open your live site", url: live }] : []), { label: "Add your logo and photos", url: own }], footnote: "The download link works for 90 days, so save the zip. Questions? Reply to this email." }),
       text: [`Your website for ${business} is ready.`, `Download (zip): ${zip}`, ...(ownUrl ? [`Your site: ${ownUrl} (answers within about 30 minutes; we'll email you)`, `Live now meanwhile: ${live}`] : live ? [`Live now: ${live}`] : []), `Add your logo and photos (free, ${OWN_DAYS} days): ${own}`, "The download link works for 90 days."].join("\n")
     };
   }
