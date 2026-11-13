@@ -104,6 +104,7 @@ async function runMonthOpening(targetStep, context, metadata, env, deps = {}) {
 async function tellBlocked(env, context, request, reasons) {
   const business = context.business_name || "A customer";
   const list = reasons.map((r) => `<li>${escapeHtml(r)}</li>`).join("");
+  const link = await menuCareLink(env, request.subscription_id);
   await sendTransactionalEmail(env, {
     to: context.customer_email,
     subject: `We need a little more detail for your menu change`,
@@ -114,11 +115,12 @@ async function tellBlocked(env, context, request, reasons) {
       paragraphs: [
         `Hi ${escapeHtml(context.first_name || "there")}, we didn't change your menu yet because:`,
         `<ul>${list}</ul>`,
-        "Please send it again with the exact wording and prices you want, using the same link as before. Your live menu has not changed."
+        "Please send it again with the exact wording and prices you want, using the button below. Your live menu has not changed."
       ],
+      buttons: [{ label: "Send it again", url: link, primary: true }],
       footnote: "Or just reply to this email and we'll take care of it."
     }),
-    text: `We didn't change your menu yet because:\n- ${reasons.join("\n- ")}\n\nPlease send it again with the exact wording and prices you want. Your live menu has not changed.`,
+    text: `We didn't change your menu yet because:\n- ${reasons.join("\n- ")}\n\nPlease send it again with the exact wording and prices you want. Your live menu has not changed.\n\nSend it again: ${link}`,
     idempotencyKey: `menu-care-blocked/${request.id}`,
     purpose: "MENU_CARE_BLOCKED",
     templateKey: "menu_care_blocked_v1",

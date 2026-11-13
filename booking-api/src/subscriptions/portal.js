@@ -1,6 +1,8 @@
 // Billing portal (stage 3): subscribers upgrade, switch to annual or cancel without the owner.
 // Emails carry a signed "Manage your plan" link; opening it creates a Stripe Customer Portal session
 // and redirects there. The link only identifies one subscription and expires after a year.
+import { menuCareLink } from "../producers/menu-care/care-step.js";
+import { siteCareLink } from "../producers/website-care/care-step.js";
 import { publicBaseUrl } from "../lib/config.js";
 import { brandedEmailHtml, escapeHtml, sendTransactionalEmail } from "../lib/email.js";
 import { jsonResponse } from "../lib/http.js";
@@ -125,6 +127,14 @@ async function sendSubscriptionWelcome(env, subscription) {
       ? "Use the button below anytime to update your card, see your invoices or cancel. To change which services you get, reply to this email."
       : "Use the button below anytime to update your card, switch between monthly and annual billing, or cancel."
   ];
+  // Owner, Nov 12, 2026: every Menu Care / Website Care subscriber gets a way to send requests from day one, not only
+  // from the month-opening email. The same signed links as that email and the account page.
+  const codes = new Set(subscription.included.map((p) => p.offerCode));
+  const requests = [
+    ...(codes.has("MENU_CARE") ? [{ label: "Request a menu change", url: await menuCareLink(env, subscription.id) }] : []),
+    ...(codes.has("WEBSITE_CARE") ? [{ label: "Request a website change", url: await siteCareLink(env, subscription.id) }] : [])
+  ];
+  if (requests.length) paragraphs.push(`Need something changed? Use the request button${requests.length > 1 ? "s" : ""} below anytime while your plan is active. Keep this email: ${requests.length > 1 ? "they work" : "it works"} every month.`);
   return sendTransactionalEmail(env, {
     to: customer.email,
     subject: `Your ${planName} is active`,
@@ -134,9 +144,9 @@ async function sendSubscriptionWelcome(env, subscription) {
       heading: `Welcome to your ${planName}`,
       paragraphs,
       rows: [["Plan", custom ? "Your own plan" : subscription.plan.offerName], ["Includes", includedNames], ["Billing", trial ? `Free until ${trial}, then ${price}` : price]],
-      buttons: [{ label: "Manage your plan", url: manageUrl, primary: true }]
+      buttons: [{ label: "Manage your plan", url: manageUrl, primary: true }, ...requests]
     }),
-    text: `Your ${planName} is active.\nIncludes: ${includedNames}\nBilling: ${trial ? `free until ${trial}, then ${price}` : price}\nManage your plan: ${manageUrl}`,
+    text: `Your ${planName} is active.\nIncludes: ${includedNames}\nBilling: ${trial ? `free until ${trial}, then ${price}` : price}\nManage your plan: ${manageUrl}${requests.map((r) => `\n${r.label}: ${r.url}`).join("")}`,
     idempotencyKey: key,
     purpose: "SUBSCRIPTION_WELCOME",
     templateKey: "subscription_welcome_v1",

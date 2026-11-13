@@ -174,6 +174,9 @@ test('a change request is applied, approved by the owner, and goes live at the s
     assert.match(f.emails[1].text, /Your online menu now shows/);
     assert.match(f.emails[1].text, new RegExp(HOSTED.replaceAll('.', '\\.')));
     assert.ok(f.emails[1].text.includes(`Print menu (PDF): ${HOSTED}/print.pdf`));
+    // Owner, Nov 12, 2026: the "updated" email carries the way to send the next request.
+    assert.match(f.emails[1].text, new RegExp(`Send another menu change: https://menu-made\\.com/api/menu-care/${SUB}\\?t=`));
+    assert.match(f.emails[1].html, /Send another menu change/);
     const after = await hosted(f);
     assert.match(after, /Bruschetta/); assert.match(after, /\$16/); assert.doesNotMatch(after, />\$15</);
     assert.match(after, /Pepperoni/, 'items the request did not mention are still there');
@@ -192,6 +195,7 @@ test('a request that needs a price nobody gave is not applied; the customer and 
     assert.equal(f.rows(`SELECT id FROM deliverables WHERE project_id != 'proj'`).length, 0);
     assert.deepEqual(f.emails.map(e => e.to[0]).sort(), ['info@menu-made.com', 'owner@proofcafe.example']);
     assert.match(f.emails.find(e => e.to[0] === 'owner@proofcafe.example').text, /exact wording and prices/);
+    assert.match(f.emails.find(e => e.to[0] === 'owner@proofcafe.example').text, new RegExp(`Send it again: https://menu-made\\.com/api/menu-care/${SUB}\\?t=`));
     assert.match(await hosted(f), /\$15/);
     assert.equal(f.row(`SELECT status FROM workflow_runs WHERE trigger_type = 'MENU_CARE_REQUEST'`).status, 'SUCCEEDED');
   });

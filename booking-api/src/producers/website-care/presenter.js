@@ -5,6 +5,7 @@ import { parseJsonOrNull } from "../../lib/http.js";
 import { isTestOrder } from "../../approvals/release.js";
 import { siteUrl } from "../website/presenter.js";
 import { websiteOverrides } from "../website/presenter.js";
+import { siteCareLink } from "./care-step.js";
 
 const careOf = (files) => parseJsonOrNull(files?.find((f) => f.deliverable_type === "SITE_BUILD")?.metadata_json) || {};
 
@@ -38,6 +39,9 @@ const websiteCareOverrides = {
     const info = careOf(files);
     const changes = info.care?.changes || [];
     const url = siteUrl(env, info.website?.slug);
+    // Owner, Nov 12, 2026: every Website Care email carries the way to send the next request.
+    const request = info.care?.request_id ? await env.DB.prepare(`SELECT subscription_id FROM site_change_requests WHERE id = ?`).bind(info.care.request_id).first() : null;
+    const again = request?.subscription_id ? await siteCareLink(env, request.subscription_id) : null;
     return {
       recipient: context.customer_email,
       subject: `${isTestOrder(context) ? "[TEST] " : ""}Your website is updated`,
@@ -45,10 +49,10 @@ const websiteCareOverrides = {
       html: brandedEmailHtml({
         preheader: `${business}'s website now has your changes.`, eyebrow: "WEBSITE & APP CARE", heading: "Your website is updated",
         paragraphs: [`Hi ${escapeHtml(context.first_name || "there")}, your website now shows:`, `<ul>${changes.map((l) => `<li>${escapeHtml(l)}</li>`).join("")}</ul>`, "Your web address stays the same."],
-        buttons: [{ label: "See my website", url, primary: true }],
-        footnote: "Something not right? Reply to this email."
+        buttons: [{ label: "See my website", url, primary: true }, ...again ? [{ label: "Send another website change", url: again }] : []],
+        footnote: again ? "Send as many changes as you need while Website Care is active. Something not right? Reply to this email." : "Something not right? Reply to this email."
       }),
-      text: [`Hi ${context.first_name || "there"},`, "", "Your website now shows:", ...changes.map((l) => `- ${l}`), "", `See your website: ${url}`, "Something not right? Reply to this email."].join("\n")
+      text: [`Hi ${context.first_name || "there"},`, "", "Your website now shows:", ...changes.map((l) => `- ${l}`), "", `See your website: ${url}`, ...again ? [`Send another website change: ${again}`] : [], "Something not right? Reply to this email."].join("\n")
     };
   }
 };

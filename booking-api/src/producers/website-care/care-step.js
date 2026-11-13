@@ -73,16 +73,18 @@ async function runMonthOpening(targetStep, context, metadata, env) {
 async function tellBlocked(env, context, request, reasons) {
   const business = context.business_name || "A customer";
   const list = reasons.map((r) => `<li>${escapeHtml(r)}</li>`).join("");
+  const link = await siteCareLink(env, request.subscription_id);
   await sendTransactionalEmail(env, {
     to: context.customer_email,
     subject: "We need a little more detail for your website change",
     html: brandedEmailHtml({
       preheader: "We could not apply this change yet.", eyebrow: "WEBSITE & APP CARE", heading: "We need a little more detail",
       paragraphs: [`Hi ${escapeHtml(context.first_name || "there")}, we didn't change your website yet because:`, `<ul>${list}</ul>`,
-        "Please send it again with the exact wording, prices or details you want, using the same link as before. Your live website has not changed."],
+        "Please send it again with the exact wording, prices or details you want, using the button below. Your live website has not changed."],
+      buttons: [{ label: "Send it again", url: link, primary: true }],
       footnote: "Or just reply to this email and we'll take care of it."
     }),
-    text: `We didn't change your website yet because:\n- ${reasons.join("\n- ")}\n\nPlease send it again with the exact details you want. Your live website has not changed.`,
+    text: `We didn't change your website yet because:\n- ${reasons.join("\n- ")}\n\nPlease send it again with the exact details you want. Your live website has not changed.\n\nSend it again: ${link}`,
     idempotencyKey: `site-care-blocked/${request.id}`, purpose: "WEBSITE_CARE_BLOCKED", templateKey: "website_care_blocked_v1",
     context: { customerId: context.customer_id, businessId: context.business_id, orderId: context.order_id, projectId: context.id }
   });

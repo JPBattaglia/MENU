@@ -4,6 +4,7 @@ import { brandedEmailHtml, escapeHtml } from "../../lib/email.js";
 import { parseJsonOrNull } from "../../lib/http.js";
 import { isTestOrder } from "../../approvals/release.js";
 import { publicBaseUrl } from "../../lib/config.js";
+import { menuCareLink } from "./care-step.js";
 
 const careOf = (files) => parseJsonOrNull(files?.[0]?.metadata_json)?.care || {};
 
@@ -52,6 +53,9 @@ const menuCareOverrides = {
     // Menus Menu-Made hosts also have a print PDF, rebuilt from the live page (owner, Nov 5, 2026).
     const printUrl = url && url.startsWith(`${publicBaseUrl(env)}/api/menu/`) ? `${url}/print.pdf` : null;
     const changes = care.changes || [];
+    // Owner, Nov 12, 2026: every Menu Care email carries the way to send the next request.
+    const request = care.request_id ? await env.DB.prepare(`SELECT subscription_id FROM menu_change_requests WHERE id = ?`).bind(care.request_id).first() : null;
+    const again = request?.subscription_id ? await menuCareLink(env, request.subscription_id) : null;
     return {
       recipient: context.customer_email,
       subject: `${isTestOrder(context) ? "[TEST] " : ""}Your menu is updated`,
@@ -62,11 +66,12 @@ const menuCareOverrides = {
         heading: "Your menu is updated",
         paragraphs: [`Hi ${escapeHtml(context.first_name || "there")}, your online menu now shows:`, `<ul>${changes.map((line) => `<li>${escapeHtml(line)}</li>`).join("")}</ul>`,
           "Your QR code and menu address stay the same.", ...printUrl ? ["Your print menu PDF has the changes too."] : []],
-        buttons: [...url ? [{ label: "See your menu", url, primary: true }] : [], ...printUrl ? [{ label: "Print menu (PDF)", url: printUrl }] : []],
-        footnote: "Something not right? Reply to this email."
+        buttons: [...url ? [{ label: "See your menu", url, primary: true }] : [], ...printUrl ? [{ label: "Print menu (PDF)", url: printUrl }] : [],
+          ...again ? [{ label: "Send another menu change", url: again }] : []],
+        footnote: again ? "Send as many changes as you need while Menu Care is active. Something not right? Reply to this email." : "Something not right? Reply to this email."
       }),
       text: [`Hi ${context.first_name || "there"},`, "", "Your online menu now shows:", ...changes.map((line) => `- ${line}`), "", url ? `See your menu: ${url}` : "", ...printUrl ? [`Print menu (PDF): ${printUrl}`] : [],
-        "Something not right? Reply to this email."].join("\n")
+        ...again ? [`Send another menu change: ${again}`] : [], "Something not right? Reply to this email."].join("\n")
     };
   }
 };

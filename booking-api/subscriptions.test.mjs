@@ -323,6 +323,9 @@ test('Growth: checkout creates the subscription, 4 entitlements and a welcome em
     const welcome = h.emails.find((e) => e.subject === 'Your Growth Plan is active');
     assert.ok(welcome, 'welcome email sent');
     assert.match(welcome.text, new RegExp(`/api/billing-portal/${row.id}\\?t=`));
+    // Owner, Nov 12, 2026: a plan with Menu Care gets its request link in the welcome email; no Website Care, no website link.
+    assert.match(welcome.text, new RegExp(`Request a menu change: https://menu-made\\.com/api/menu-care/${row.id}\\?t=`));
+    assert.doesNotMatch(welcome.text, /Request a website change/);
 
     const p1 = { start: '2026-10-25T18:00:00.000Z', end: '2026-11-25T18:00:00.000Z' };
     const inv1 = h.invoice(sub, { id: 'in_1', ...p1, amount: 17900 });
