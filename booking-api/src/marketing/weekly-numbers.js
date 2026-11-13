@@ -205,6 +205,30 @@ function openingLine(r) {
   return `${r.address || "San Francisco"}. Opened ${shortDate(r.opened_on)}. ${r.phone ? `${r.phone}. ` : ""}${r.website ? `${r.website.replace(/^https?:\/\/(www\.)?/, "").replace(/\/$/, "")}. ` : ""}${outreach[0].toUpperCase()}${outreach.slice(1)}.`;
 }
 
+// App opens (owner, Nov 13, 2026), from store-app/hybrid.js countAppOpen. Devices are counted per day (the salt
+// changes daily), so the report gives phones per day, not a weekly total of people.
+async function appOpens(env, now) {
+  try {
+    const days = []; for (let i = 0; i < 7; i++) days.push(new Intl.DateTimeFormat("en-CA", { timeZone: "America/Los_Angeles", year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date(now - i * DAY)));
+    const marks = days.map(() => "?").join(",");
+    const opens = (await env.DB.prepare(`SELECT app, platform, SUM(opens) AS n FROM app_opens WHERE day IN (${marks}) GROUP BY app, platform`).bind(...days).all()).results || [];
+    const phones = (await env.DB.prepare(`SELECT app, day, COUNT(*) AS n FROM app_open_devices WHERE day IN (${marks}) GROUP BY app, day`).bind(...days).all()).results || [];
+    const out = {};
+    for (const app of ["menumade", "nino"]) {
+      const o = opens.filter((r) => r.app === app);
+      const p = phones.filter((r) => r.app === app).map((r) => Number(r.n || 0));
+      out[app] = { opens: o.reduce((n, r) => n + Number(r.n || 0), 0), ios: o.filter((r) => r.platform === "ios").reduce((n, r) => n + Number(r.n || 0), 0),
+        android: o.filter((r) => r.platform === "android").reduce((n, r) => n + Number(r.n || 0), 0),
+        perDay: p.length ? Math.round(p.reduce((a, b) => a + b, 0) / 7) : 0, busiest: p.length ? Math.max(...p) : 0 };
+    }
+    return out;
+  } catch { return null; }
+}
+function appOpenLine(a) {
+  if (!a.opens) return "Not opened this week.";
+  return `Opened ${a.opens} time${a.opens === 1 ? "" : "s"} this week (iPhone ${a.ios}, Android ${a.android}), counting each return to the app. About ${a.perDay} phone${a.perDay === 1 ? "" : "s"} a day; busiest day ${a.busiest}.`;
+}
+
 // The report itself, exported for the tests: { subject, rows, paragraphs, text }.
 async function weeklyNumbers(env, now = Date.now()) {
   const weekIso = new Date(now - 7 * DAY).toISOString();
@@ -253,6 +277,8 @@ async function weeklyNumbers(env, now = Date.now()) {
       rows.push(["Nino designs looked at most", steps.designs.map((d) => `${titles.get(String(d.design)) || `design ${d.design}`} (${d.n})`).join(", ") + "."]);
     }
   }
+  const apps = await appOpens(env, now);
+  if (apps) { rows.push(["MENU-MADE app", appOpenLine(apps.menumade)]); rows.push(["Nino app", appOpenLine(apps.nino)]); }
   if (shopWeek) {
     const other = [...shopWeek.entries()].filter(([k]) => !CAMPAIGNS.some((c) => c.key === k)).reduce((n, [, v]) => n + v.sales, 0);
     totalSales += other;
@@ -281,4 +307,4 @@ async function handleWeeklyNumbers(request, env, { now = Date.now() } = {}) {
   return json({ ok: Boolean(sent?.ok), at: nowIso(), lines: report.rows.length, ...(sent?.ok ? {} : { error: String(sent?.error || "send failed") }) });
 }
 
-export { AUDIENCE as WEEKLY_NUMBERS_AUDIENCE, WORKFLOW as WEEKLY_NUMBERS_WORKFLOW, CAMPAIGNS, maxSpend, weakStep, weeklyNumbers, handleWeeklyNumbers };
+export { appOpenLine, AUDIENCE as WEEKLY_NUMBERS_AUDIENCE, WORKFLOW as WEEKLY_NUMBERS_WORKFLOW, CAMPAIGNS, maxSpend, weakStep, weeklyNumbers, handleWeeklyNumbers };

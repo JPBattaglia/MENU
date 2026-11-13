@@ -638,3 +638,17 @@ CREATE INDEX IF NOT EXISTS prospects_opened_on ON prospects (opened_on);
 ALTER TABLE website_previews ADD COLUMN rebuilt_at TEXT;
 ALTER TABLE menu_previews ADD COLUMN occasion TEXT;
 ALTER TABLE prospects ADD COLUMN holiday_drafted_at TEXT;
+CREATE TABLE IF NOT EXISTS app_opens (
+  day TEXT NOT NULL,          -- YYYY-MM-DD, Pacific time
+  app TEXT NOT NULL,          -- menumade | nino
+  platform TEXT NOT NULL,     -- ios | android
+  opens INTEGER NOT NULL DEFAULT 0,
+  PRIMARY KEY (day, app, platform)
+);
+CREATE TABLE IF NOT EXISTS app_open_devices (
+  day TEXT NOT NULL,
+  app TEXT NOT NULL,
+  platform TEXT NOT NULL,
+  device TEXT NOT NULL,       -- daily-salted hash, not reversible
+  PRIMARY KEY (day, app, device)
+);

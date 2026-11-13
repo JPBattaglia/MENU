@@ -311,10 +311,11 @@ async function buildContent(env, key, fetchImpl) {
   return ninoContent(await res.json(), releases);
 }
 
-async function handleHybridContent(request, env, key, { fetchImpl = fetch, cacheStore = globalThis.caches?.default } = {}) {
+async function handleHybridContent(request, env, key, { fetchImpl = fetch, cacheStore = globalThis.caches?.default, ctx = null } = {}) {
   if (request.method === "OPTIONS") return new Response(null, { status: 204, headers: { "Access-Control-Allow-Origin": "*", "Access-Control-Allow-Methods": "GET" } });
   if (request.method !== "GET") return jsonOut({ ok: false, error: "Not found" }, 404);
   if (!HYBRID_KEYS.has(key)) return jsonOut({ ok: false, error: "Not found" }, 404);
+  if (env.DB) { const counting = countAppOpen(request, env, key).catch(() => null); if (ctx?.waitUntil) ctx.waitUntil(counting); else await counting; }
   const cacheKey = new Request(new URL(request.url).toString(), { method: "GET" });
   if (cacheStore) {
     const hit = await cacheStore.match(cacheKey).catch(() => null);
@@ -328,6 +329,32 @@ async function handleHybridContent(request, env, key, { fetchImpl = fetch, cache
   const response = jsonOut({ ...content, updated_at: new Date().toISOString() }, 200, TTL);
   if (cacheStore) await cacheStore.put(cacheKey, response.clone()).catch(() => null);
   return response;
+}
+
+// App opens (owner, Nov 13, 2026). Only the apps themselves count: their screens run at capacitor://localhost (iPhone)
+// or https://localhost (Android), and the browser sends that as Origin. A device is a hash with a salt that changes
+// daily, so the numbers say how many phones opened the app on a day, never who.
+function appPlatform(request) {
+  const origin = request.headers.get("Origin") || "";
+  if (origin === "capacitor://localhost") return "ios";
+  if (origin === "https://localhost" || origin === "http://localhost") return "android";
+  return null;
+}
+function pacificDay(ms = Date.now()) {
+  return new Intl.DateTimeFormat("en-CA", { timeZone: "America/Los_Angeles", year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date(ms));
+}
+async function countAppOpen(request, env, key, now = Date.now()) {
+  const platform = appPlatform(request);
+  if (!platform) return false;
+  const day = pacificDay(now);
+  const raw = `${day}|${env.PRODUCTION_RUNNER_SECRET || "app-opens"}|${request.headers.get("CF-Connecting-IP") || ""}|${request.headers.get("User-Agent") || ""}`;
+  const digest = new Uint8Array(await crypto.subtle.digest("SHA-256", new TextEncoder().encode(raw)));
+  const device = [...digest.slice(0, 12)].map((b) => b.toString(16).padStart(2, "0")).join("");
+  await env.DB.batch([
+    env.DB.prepare("INSERT INTO app_opens (day, app, platform, opens) VALUES (?, ?, ?, 1) ON CONFLICT(day, app, platform) DO UPDATE SET opens = opens + 1").bind(day, key, platform),
+    env.DB.prepare("INSERT OR IGNORE INTO app_open_devices (day, app, platform, device) VALUES (?, ?, ?, ?)").bind(day, key, platform, device)
+  ]);
+  return true;
 }
 
 // Adds mm_app=1 to every menu-made.com page address in the app's content (not /api/ addresses, images or videos).
@@ -413,7 +440,7 @@ const HYBRID_LOOK = {
 const hybridLookForBundle = (bundleId) => HYBRID_LOOK[HYBRID_BUNDLES.get(String(bundleId || ""))] || null;
 const hybridUrlForBundle = (bundleId) => hybridUrl(HYBRID_BUNDLES.get(String(bundleId || "")) || "");
 
-export { tagAppPages, announceNinoDrops, hybridLookForBundle, HYBRID_BUNDLES, HYBRID_KEYS, hybridUrlForBundle, TTL as HYBRID_TTL, handleHybridContent, hybridUrl, menumadeContent, ninoContent };
+export { appPlatform, countAppOpen, pacificDay, tagAppPages, announceNinoDrops, hybridLookForBundle, HYBRID_BUNDLES, HYBRID_KEYS, hybridUrlForBundle, TTL as HYBRID_TTL, handleHybridContent, hybridUrl, menumadeContent, ninoContent };
 
 // Store links for the owner's own apps, for the "Get the app" buttons on menu-made.com and ninobattaglia.com
 // (owner, Nov 10, 2026). A store's link is given only once that store has the app public (store_app_listings:
