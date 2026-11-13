@@ -39,15 +39,15 @@ test('every design builds a complete, escaped one-page site from the same busine
   }
 });
 
-function setup({ hosted, viaPlan = '' }) {
+function setup({ hosted, viaPlan = '', domain = null }) {
   const DB = createD1(); const ASSETS = createR2();
   const sql = (q, ...a) => DB.raw.prepare(q).run(...a);
   const t = '2026-11-07T00:00:00.000Z';
-  DB.raw.exec(read('0009_website_package.sql')); DB.raw.exec(read('0041_site_files.sql'));
+  DB.raw.exec(read('0009_website_package.sql')); DB.raw.exec(read('0041_site_files.sql')); DB.raw.exec(read('0043_domain_registrations.sql'));
   sql(`INSERT INTO customers (id, created_at, updated_at, email, first_name, last_name) VALUES ('cust', ?, ?, 'owner@oliva.example', 'Ana', 'Rossi')`, t, t);
   sql(`INSERT INTO businesses (id, created_at, updated_at, name) VALUES ('biz', ?, ?, 'Oliva Kitchen')`, t, t);
   sql(`INSERT INTO orders (id, created_at, updated_at, customer_id, business_id, status, subtotal_cents, total_cents, payment_status, stripe_checkout_session_id) VALUES ('o1', ?, ?, 'cust', 'biz', 'ONBOARDING_REQUIRED', 29900, 29900, 'PAID', 'cs_live_x')`, t, t);
-  sql(`INSERT INTO order_items (id, order_id, offer_id, offer_version_id, unit_price_cents, line_total_cents, metadata_json) VALUES ('i1', 'o1', 'offer_site_files', 'offerv1_site_files', 29900, 29900, ?)`, JSON.stringify({ offer_code: 'SITE_FILES', site_preview: TOKEN, site_design: 'taproom' }));
+  sql(`INSERT INTO order_items (id, order_id, offer_id, offer_version_id, unit_price_cents, line_total_cents, metadata_json) VALUES ('i1', 'o1', 'offer_site_files', 'offerv1_site_files', 29900, 29900, ?)`, JSON.stringify({ offer_code: 'SITE_FILES', site_preview: TOKEN, site_design: 'taproom', ...(domain ? { domain } : {}) }));
   if (hosted) {
     sql(`INSERT INTO offers (id, created_at, updated_at, code, name, category, status, billing_type, fulfillment_type, requires_approval, default_workflow_key) VALUES ('offer_wc', ?, ?, 'WEBSITE_CARE', 'Website Care', 'WEBSITE', 'ACTIVE', 'RECURRING', 'DIGITAL', 1, 'WEBSITE_CARE_V1')`, t, t);
     sql(`INSERT INTO offer_versions (id, offer_id, version_number, created_at, effective_from, status, price_cents, scope_json) VALUES ('ov_wc', 'offer_wc', 1, ?, ?, 'ACTIVE', 4900, '{}')`, t, t);
@@ -296,4 +296,16 @@ test('logo background on websites: each design treats the logo against the colou
   assert.match(none, /<img class="foot-logo" style="--plate:transparent;box-shadow:none;padding:0"/, 'None also drops the footer plate');
   assert.match(buildDesignSite(site(white), COPY, 'bistro')['menu.html'], /<img class="foot-logo" style="--plate:#1d1d1f"/, 'a white logo gets a dark footer plate');
   assert.match(buildDesignSite(site(darkBold), COPY, 'bistro')['styles.css'], /\.logo-badge\{/);
+});
+
+test('a bought domain: the ready email opens the site on that domain, menu-made.com only as the meanwhile address', async () => {
+  const f = setup({ hosted: true, domain: { name: 'olivakitchen.com', price_cents: 1511, cost_cents: 1011, renewal_cents: 1511 } });
+  await runOrder(f);
+  assert.equal(f.row(`SELECT status FROM domain_registrations WHERE domain = 'olivakitchen.com'`).status, 'QUEUED');
+  const mail = f.emails.find((e) => /Your website is ready/.test(e.subject));
+  assert.match(mail.html, /Open olivakitchen\.com/);
+  assert.match(mail.html, /href="https:\/\/olivakitchen\.com\/"/);
+  assert.match(mail.html, /Open it now on menu-made\.com/);
+  assert.doesNotMatch(mail.html, /Open your live site/);
+  assert.match(mail.text, /Your site: https:\/\/olivakitchen\.com\//);
 });
