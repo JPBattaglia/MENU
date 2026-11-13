@@ -3,9 +3,15 @@
 // Nov 13, 2026 (owner: "put links to the menu apps in menu site"): pages may also carry a visible
 // "Get the MENU-MADE app" section ([data-app-section], hidden in the markup); it is shown with the same buttons once
 // at least one store has the app.
+// Inside the apps (owner, Nov 13, 2026) none of this shows: pages the MENU-MADE app opens carry mm_app=1, and the
+// in-app browser remembers it for the rest of that visit (session storage, so a phone's normal browser is unaffected).
 (() => {
   'use strict';
   try {
+    const KEY = 'mm-in-app';
+    let inApp = /(?:^|[?&])mm_app=1(?:&|$)/.test(location.search.slice(1));
+    try { if (inApp) sessionStorage.setItem(KEY, '1'); else inApp = sessionStorage.getItem(KEY) === '1'; } catch { /* storage off: this page only */ }
+    if (inApp) return;
     const foot = document.querySelector('footer');
     if (!window.fetch) return;
     const button = (url, text, big) => {
