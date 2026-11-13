@@ -12,6 +12,7 @@
 //   GET  /api/website-preview/handoff/<token>              -> { ok, business, email } for checkout
 //   POST /api/system/prospects/site-demo  { id }           (prospect-drafts.yml OIDC) -> { ok, url } | { ok:false, skip }
 import { logoBgSelect, logoMeasureScript } from "./logo-measure.js";
+import { sandboxPass } from "../lib/owner-sandbox.js";
 import { frameAware, wantsJson, preflight } from "./framed.js";
 import { LOGO_MODES, parseLogoInfo } from "../producers/menu-qr/design.js";
 import { nowIso, parseJsonOrNull } from "../lib/http.js";
@@ -360,7 +361,8 @@ async function handleWebsitePreviewCreate(request, env, { now = Date.now(), deps
   const t = new Date(now).toISOString();
   const dayAgo = new Date(now - 86400000).toISOString();
   const rep = await isRep(env, body?.rep);
-  const sandbox = !rep && body?.sandbox === true;
+  // Test mode needs the owner pass (Nov 13, 2026), not just the browser flag.
+  const sandbox = !rep && body?.sandbox === true && await sandboxPass(env, body?.sandbox_token);
   if (rep) {
     if (await count(env, `SELECT COUNT(*) AS n FROM website_previews WHERE source = 'rep' AND created_at > ?`, dayAgo) >= REP_PER_DAY) return json({ ok: false, error: `Rep mode has made ${REP_PER_DAY} website previews today, its daily limit.` }, 429);
   } else if (sandbox) {

@@ -30,9 +30,13 @@ test('a normal visit is live: no test mode, no bar', () => {
   assert.deepEqual(visit('?plan=STARTER&interval=year'), { on: false, store: {}, bars: 0 });
 });
 
-test('?sandbox=on turns it on for this browser, it stays on for later pages, and ?sandbox=off ends it', () => {
-  const first = visit('?sandbox=on');
-  assert.equal(first.on, true); assert.equal(first.bars, 1);
+const PASS = 'eyJrIjoib3duZXItc2FuZGJveCIsImkiOiJvd25lciJ9.AbCdEfGhIjKlMnOpQrStUvWxYz0123456789';
+
+test('only the emailed owner pass turns it on (Nov 13, 2026 lock); it stays on for later pages, and ?sandbox=off ends it', () => {
+  assert.deepEqual(visit('?sandbox=on'), { on: false, store: {}, bars: 0 }, 'the old switch does nothing');
+  assert.deepEqual(visit('', { 'mm-owner-sandbox': '1' }), { on: false, store: {}, bars: 0 }, 'a pre-lock switch is cleared');
+  const first = visit(`?sandbox=${PASS}`);
+  assert.equal(first.on, true); assert.equal(first.bars, 1); assert.equal(first.store['mm-owner-sandbox'], PASS);
   const later = visit('', first.store);
   assert.equal(later.on, true); assert.equal(later.bars, 1);
   assert.deepEqual(visit('?sandbox=off', later.store), { on: false, store: {}, bars: 0 });

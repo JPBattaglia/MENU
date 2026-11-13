@@ -10,6 +10,7 @@
 // never confirmed, so nothing prints or ships); the draft is checked and then deleted.
 // Start one by inserting a self_tests row, kind STAFF_MERCH_RUN, status REQUESTED. Only a failure emails the owner.
 import { ownerEmailAddress, publicBaseUrl } from "../lib/config.js";
+import { ownerSandboxToken } from "../lib/owner-sandbox.js";
 import { SELF_TEST_EMAIL, brandedEmailHtml, sendTransactionalEmail } from "../lib/email.js";
 import { nowIso, parseJsonOrNull } from "../lib/http.js";
 import { signLinkToken } from "../lib/links.js";
@@ -59,7 +60,7 @@ async function stageStart(env, app, test) {
   const logoItems = LOGO_KEYS.map((key) => ({ key, variant_id: pick(key).variants[0].id, quantity: 1 }));
   const quote = await json(await app(new Request(`${base}/api/merch/quote`, {
     method: "POST", headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ environment: "sandbox", logo_id: logo.body.logo_id, recipient: ADDRESS, logo_items: logoItems, items: [{ ...a, quantity: 1 }, { ...b, quantity: 1 }].map(({ product_id, variant_id, quantity }) => ({ product_id, variant_id, quantity })) })
+    body: JSON.stringify({ sandbox_token: await ownerSandboxToken(env), environment: "sandbox", logo_id: logo.body.logo_id, recipient: ADDRESS, logo_items: logoItems, items: [{ ...a, quantity: 1 }, { ...b, quantity: 1 }].map(({ product_id, variant_id, quantity }) => ({ product_id, variant_id, quantity })) })
   })));
   if (!quote.body?.ok) throw new Error(`Quote failed (HTTP ${quote.status}): ${quote.body?.error}`);
   const p = quote.body.pricing;

@@ -228,3 +228,17 @@ test('the hourly tick only runs in the first five minutes of the hour', async ()
     assert.notEqual(await maybeFollowUpAbandonedCheckouts(h.env, new Date('2026-10-29T15:02:00Z')), null);
   } finally { h.restore(); }
 });
+
+test('test checkout is locked to the emailed owner pass (owner, Nov 13, 2026)', async () => {
+  const { default: worker } = await import('./src/worker.js');
+  const { ownerSandboxToken } = await import('./src/lib/owner-sandbox.js');
+  const env = { PRODUCTION_RUNNER_SECRET: 'test-runner-secret', OWNER_SANDBOX_LOCK: 'on' };
+  const post = (body) => worker.fetch(new Request('https://menu-made.com/api/create-checkout-test', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) }), env, { waitUntil() {} });
+  assert.equal((await post({ items: [{ key: 'MENU_CARE' }] })).status, 403, 'no pass');
+  assert.equal((await post({ items: [{ key: 'MENU_CARE' }], sandbox_token: 'forged.token' })).status, 403, 'forged pass');
+  const passed = await post({ items: [{ key: 'MENU_CARE' }], sandbox_token: await ownerSandboxToken(env) });
+  assert.notEqual(passed.status, 403, 'a real pass gets through to checkout');
+  const { sandboxPass } = await import('./src/lib/owner-sandbox.js');
+  assert.equal(await sandboxPass({ PRODUCTION_RUNNER_SECRET: 'x' }, ''), true, 'no lock where the config does not turn it on (local runs)');
+  assert.equal(await sandboxPass({ OWNER_SANDBOX_LOCK: 'on' }, 'anything'), false, 'locked with no signing secret');
+});

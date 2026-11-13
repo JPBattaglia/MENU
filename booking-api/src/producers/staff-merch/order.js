@@ -12,6 +12,7 @@
 //   POST /api/merch/checkout   { quote_id, rate_id, customer }                   -> { url } (Stripe Checkout)
 //   GET  /api/merch-logo/<project>?t=                                            the logo, for Printful to download
 import { ownerEmailAddress, publicBaseUrl } from "../../lib/config.js";
+import { sandboxPass } from "../../lib/owner-sandbox.js";
 import { brandedEmailHtml, escapeHtml, isCustomerEmail, looksLikeEmail, sendTransactionalEmail } from "../../lib/email.js";
 import { jsonResponse, normalizeName, nowIso, parseJsonOrNull } from "../../lib/http.js";
 import { signLinkToken, verifyLinkToken } from "../../lib/links.js";
@@ -120,6 +121,8 @@ async function handleMerchQuote(request, env) {
   let data;
   try { data = await request.json(); } catch { return fail(400, "Invalid JSON body"); }
   const environment = environmentOf(data?.environment);
+  // Test mode needs the emailed owner pass (Nov 13, 2026).
+  if (environment === "sandbox" && !await sandboxPass(env, data?.sandbox_token)) return jsonResponse({ ok: false, error: "Test mode is for the Menu-made owner only." }, 403);
   const logoId = data?.logo_id ? String(data.logo_id) : null;
   const head = logoId && /^[0-9a-f-]{36}\.(png|jpg)$/.test(logoId) ? await env.ASSETS.head(`merch-uploads/${logoId}`) : null;
   if (logoId && !head) return fail(400, "Upload the logo again.");

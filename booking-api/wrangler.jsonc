@@ -18,7 +18,7 @@
   // and pages show that address instead of menu-made.com/api/site/<slug>/.
   // SELFTEST_SCHEDULE: the daily self-tests schedule themselves only where this is "on" (src/selftest/daily-clock.js).
   // CF_ACCOUNT_ID: Menu-made's Cloudflare account, for the Registrar API (src/producers/website/registrar.js).
-  "vars": { "SITE_WILDCARD": "1", "SELFTEST_SCHEDULE": "on", "CF_ACCOUNT_ID": "62531e43b35eeda3680b53b0c654177d" },
+  "vars": { "SITE_WILDCARD": "1", "SELFTEST_SCHEDULE": "on", "CF_ACCOUNT_ID": "62531e43b35eeda3680b53b0c654177d", "OWNER_SANDBOX_LOCK": "on" },
   "d1_databases": [
     { "binding": "DB", "database_name": "menu-made-db", "database_id": "1387bcdc-e462-41ce-bc6b-5cc1b0a47ad0" },
     // Marketing plan v4: the Nino shop's database, read only by the Friday numbers email (src/marketing/weekly-numbers.js).

@@ -31,6 +31,7 @@
 //   GET/POST /api/menu-preview/rep-link   "Email me the rep link" (always goes to the owner inbox; REP_TTL_DAYS)
 // and a fresh one is in every Friday numbers email, so there's no token to remember.
 import { nowIso, parseJsonOrNull } from "../lib/http.js";
+import { sandboxPass } from "../lib/owner-sandbox.js";
 import { bytesToBase64 } from "../lib/util.js";
 import { brandedEmailHtml, escapeHtml, sendTransactionalEmail } from "../lib/email.js";
 import { menuColors, readMenuWithClaude } from "../producers/menu-qr/claude-reader.js";
@@ -274,7 +275,8 @@ async function handlePreviewCreate(request, env, { now = Date.now() } = {}) {
   if (rep && await count(env, `SELECT COUNT(*) AS n FROM menu_previews WHERE campaign = 'rep' AND created_at > ?`, dayAgo) >= REP_PER_DAY) {
     return json({ ok: false, error: `Rep mode has made ${REP_PER_DAY} previews today, its daily limit.` }, 429);
   }
-  const sandbox = !rep && body?.sandbox === true;
+  // Test mode needs the owner pass (Nov 13, 2026), not just the browser flag.
+  const sandbox = !rep && body?.sandbox === true && await sandboxPass(env, body?.sandbox_token);
   if (sandbox && await count(env, `SELECT COUNT(*) AS n FROM menu_previews WHERE campaign = 'sandbox' AND created_at > ?`, dayAgo) >= SANDBOX_PER_DAY) {
     return json({ ok: false, error: `Test mode has made ${SANDBOX_PER_DAY} previews today, its daily limit.` }, 429);
   }

@@ -23,6 +23,7 @@
 // Outside the season (after Dec 31) nothing is on sale: the run passes once checkout has refused a holiday menu.
 // Start one by inserting a self_tests row with kind HOLIDAY_MENU_RUN and status REQUESTED. Only a failure emails the owner.
 import { HOLIDAY_PRICING, OCCASION_NAMES, holidayEndsOn, holidayOnSale, otherOccasion, seasonYear } from "../checkout/holiday.js";
+import { ownerSandboxToken } from "../lib/owner-sandbox.js";
 import { ownerEmailAddress, publicBaseUrl } from "../lib/config.js";
 import { SELF_TEST_EMAIL, brandedEmailHtml, sendTransactionalEmail } from "../lib/email.js";
 import { nowIso, parseJsonOrNull } from "../lib/http.js";
@@ -97,7 +98,7 @@ async function makePreview(env, app, { occasion, now, label }) {
 
 async function checkout(env, app, body) {
   return json(await app(new Request(`${publicBaseUrl(env)}/api/create-checkout-test`, {
-    method: "POST", headers: { "Content-Type": "application/json", Origin: "https://menu-made.com" }, body: JSON.stringify(body)
+    method: "POST", headers: { "Content-Type": "application/json", Origin: "https://menu-made.com" }, body: JSON.stringify({ ...body, sandbox_token: await ownerSandboxToken(env) })
   })));
 }
 

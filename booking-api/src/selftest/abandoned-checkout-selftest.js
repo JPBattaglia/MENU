@@ -5,6 +5,7 @@
 // run sends nothing. The order is cancelled at the end. Daily at 9:30am Pacific; start one by inserting a self_tests
 // row with kind ABANDONED_CHECKOUT. Only a failure emails the owner.
 import { followUpAbandonedCheckouts, handleCheckoutResume } from "../checkout/abandoned.js";
+import { ownerSandboxToken } from "../lib/owner-sandbox.js";
 import { ownerEmailAddress, publicBaseUrl } from "../lib/config.js";
 import { brandedEmailHtml, sendTransactionalEmail, SELF_TEST_EMAIL } from "../lib/email.js";
 import { nowIso } from "../lib/http.js";
@@ -41,7 +42,7 @@ async function runAbandonedCheckoutCheck(env, app, test) {
   const response = await app(new Request(`${base}/api/create-checkout-test`, {
     method: "POST",
     headers: { "Content-Type": "application/json", Origin: "https://menu-made.com" },
-    body: JSON.stringify({
+    body: JSON.stringify({ sandbox_token: await ownerSandboxToken(env),
       items: [{ key: "MENU_CARE", interval: "month" }, { key: "CONVERSION_FIX" }],
       interval: "month",
       customer: { name: "Menu-Made Self-Test", business: "Abandoned Checkout Self-Test Cafe", email: SELF_TEST_EMAIL, phone: "", notes: "Automated abandoned-checkout self-test" }

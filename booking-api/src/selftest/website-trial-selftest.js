@@ -11,6 +11,7 @@
 // charged for the app tier) -> Mobile App Care TRIALING 90 days with an active STORE_APP_CARE entitlement,
 // the Mobile App project created and its intake started -> cancel -> synced.
 import { ownerEmailAddress, publicBaseUrl } from "../lib/config.js";
+import { ownerSandboxToken } from "../lib/owner-sandbox.js";
 import { SELF_TEST_EMAIL, brandedEmailHtml, sendTransactionalEmail } from "../lib/email.js";
 import { nowIso, parseJsonOrNull } from "../lib/http.js";
 import { payTestCheckout, stripeTest, updateTest } from "./menu-qr-selftest.js";
@@ -55,7 +56,7 @@ async function stageStart(env, app, test) {
   const checkout = await json(await app(new Request(`${publicBaseUrl(env)}/api/create-checkout-test`, {
     method: "POST",
     headers: { "Content-Type": "application/json", Origin: "https://menu-made.com" },
-    body: JSON.stringify({
+    body: JSON.stringify({ sandbox_token: await ownerSandboxToken(env),
       items: [{ key: run.item }],
       interval: "month",
       stripe_test_customer: customer.id,

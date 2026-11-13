@@ -1,4 +1,5 @@
 import { FOOTER_TD, FROM_ADDRESS, INTERNAL_BCC, REPLY_TO_ADDRESS } from "../lib/email.js";
+import { sandboxPass } from '../lib/owner-sandbox.js';
 
 // Direct booking support; existing Worker code above remains unchanged.
 const mmBookingHandler = (() => {
@@ -247,7 +248,7 @@ return {
       // testing, after the preview limits were lifted) gets room to upload a menu over and over; the flag is only a
       // browser setting, so it raises the limit instead of removing it, and only for a menu sent for checkout or a
       // preview. It is read from the request, never stored, so a retry still matches its first attempt.
-      const perNetwork = raw.sandbox === true && data.purpose === 'checkout' ? SANDBOX_UPLOADS_PER_HOUR : UPLOADS_PER_HOUR;
+      const perNetwork = raw.sandbox === true && data.purpose === 'checkout' && await sandboxPass(env, raw.sandbox_token) ? SANDBOX_UPLOADS_PER_HOUR : UPLOADS_PER_HOUR;
       // Rate checks and insertion occur in one SQL statement to prevent concurrent bypass.
       const result = await env.DB.prepare(`INSERT INTO mm_booking_requests (id, payload, ip_hash, created_at)
         SELECT ?, ?, ?, ? WHERE

@@ -228,7 +228,7 @@
     $('quoteBtn').disabled = true; $('quoteBtn').textContent = 'Checking…';
     try {
       const res = await fetch(API + '/api/merch/quote', { method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ environment: TEST ? 'sandbox' : 'live', logo_id: state.logoId, thread_colors: state.threads, recipient,
+        body: JSON.stringify({ environment: TEST ? 'sandbox' : 'live', ...(TEST ? { sandbox_token: window.MenuMadeSandboxToken || '' } : {}), logo_id: state.logoId, thread_colors: state.threads, recipient,
           items: lines.filter((l) => l.kind === 'nino').map(({ product_id, variant_id, quantity }) => ({ product_id, variant_id, quantity })),
           logo_items: lines.filter((l) => l.kind === 'logo').map(({ key, variant_id, quantity }) => ({ key, variant_id, quantity })) }) });
       const data = await res.json().catch(() => ({}));
