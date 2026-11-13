@@ -266,7 +266,8 @@ async function stageSecondMenu(env, app, test) {
   const other = s.both_other;
   const now = Date.now();
   const base = publicBaseUrl(env);
-  const linked = await env.DB.prepare(`SELECT 1 AS ok FROM communications WHERE purpose = 'HOLIDAY_BOTH' AND status = 'SENT' AND metadata_json LIKE ? LIMIT 1`).bind(`%holiday-both/${test.order_id}%`).first();
+  // Matched on the key itself: D1 refuses a LIKE pattern over 50 bytes, and "%holiday-both/<order id>%" is 52 (Nov 13, 2026).
+  const linked = await env.DB.prepare(`SELECT 1 AS ok FROM communications WHERE purpose = 'HOLIDAY_BOTH' AND status = 'SENT' AND json_extract(metadata_json, '$.idempotency_key') = ? LIMIT 1`).bind(`holiday-both/${test.order_id}`).first();
   if (!linked) throw new Error(`The buyer was not emailed the link to send their ${OCCASION_NAMES[other]} menu`);
   const { token, requestId } = await makePreview(env, app, { occasion: other, now, label: "second menu" });
   test = await updateTest(env, test, { state: { second_token: token } });
