@@ -53,13 +53,22 @@ function tilesFor(city, [s, w, n, e], step = 0.05) {
     out.push([city, [+la.toFixed(3), +wa.toFixed(3), +Math.min(n, la + step).toFixed(3), +Math.min(e, wa + step).toFixed(3)]]);
   return out;
 }
+// "next" rotation (Nov 13, 2026): two nationwide runs a week (Tuesday and Thursday, Pacific), each a different metro.
+// Weeks count from Mon Nov 9, 2026. la-west (index 0) was scanned by hand on Nov 12, so Tue Nov 17 takes index 1
+// (seattle), Thu Nov 19 index 2, and so on through the list, then round again.
+function nextMetroIndex(ms = Date.now()) {
+  const parts = Object.fromEntries(new Intl.DateTimeFormat("en-US", { timeZone: "America/Los_Angeles", year: "numeric", month: "2-digit", day: "2-digit", weekday: "short" })
+    .formatToParts(new Date(ms)).map((p) => [p.type, p.value]));
+  const day = Date.UTC(Number(parts.year), Number(parts.month) - 1, Number(parts.day));
+  const week = Math.floor((day - Date.UTC(2026, 10, 9)) / (7 * 86400000));
+  const slot = parts.weekday === "Thu" || parts.weekday === "Fri" || parts.weekday === "Sat" || parts.weekday === "Sun" ? 1 : 0;
+  const n = week * 2 + slot - 1;
+  return ((n % NATIONWIDE.length) + NATIONWIDE.length) % NATIONWIDE.length;
+}
 function pickRegion(region = "bay") {
   if (!region || region === "bay") return { key: "bay", tiles: BAY };
   let entry = NATIONWIDE.find(([k]) => k === region);
-  if (!entry && region === "next") { // rotate by week (Pacific), so each Thursday scans a different metro
-    const week = Math.floor((Date.now() - Date.UTC(2026, 10, 9)) / (7 * 86400000));
-    entry = NATIONWIDE[((week % NATIONWIDE.length) + NATIONWIDE.length) % NATIONWIDE.length];
-  }
+  if (!entry && region === "next") entry = NATIONWIDE[nextMetroIndex()];
   if (!entry) { console.log(`Unknown region "${region}"; scanning the Bay Area.`); return { key: "bay", tiles: BAY }; }
   return { key: entry[0], tiles: tilesFor(entry[1], entry[2]) };
 }
