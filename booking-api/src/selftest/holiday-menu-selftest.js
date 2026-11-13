@@ -8,11 +8,21 @@
 //   AWAIT_ORDER_PAID the webhook made a MENU_QR_V1 project carrying the holiday and its end day; menu attached
 //   AWAIT_APPROVAL   menu and QR produced; owner approval requested and approved
 //   AWAIT_DELIVERY   delivered; the menu is live at its own holiday address, in the chosen design, with the holiday
-//                    line under the name; the business's regular address doesn't show it
-// Then the preview is removed, so it never counts as a real one (daily limit, Friday numbers).
+//                    line under the name; the business's regular address doesn't show it. Then what the buyer holds
+//                    is checked, not only that the run finished (owner, Nov 12, 2026: "include quality check"): every
+//                    item and price of the uploaded menu is on the page, the QR code points at this menu's own
+//                    address, the print PDF, tri-fold and table tent are real PDFs, and the TV screen shows the menu
+//   SECOND_MENU      (while the other holiday is still on sale) the order was for both holidays at $89: the "send your
+//                    other menu" email went out; a preview of the other holiday says it is already paid; "Make it
+//                    live" completes it with no Stripe page, as a paid $0 order
+//   AWAIT_SECOND     that $0 order has its own project, marked with the other holiday, with its menu attached; it is
+//                    then cancelled so the day's test makes one menu, not two
+// Each run starts by retiring the test inbox's earlier holiday test orders (marked refunded), so it is a first-time
+// buyer again: only a buyer with no holiday menu this season can buy both.
+// Then the previews are removed, so they never count as real ones (daily limit, Friday numbers).
 // Outside the season (after Dec 31) nothing is on sale: the run passes once checkout has refused a holiday menu.
 // Start one by inserting a self_tests row with kind HOLIDAY_MENU_RUN and status REQUESTED. Only a failure emails the owner.
-import { HOLIDAY_PRICING, OCCASION_NAMES, holidayEndsOn, holidayOnSale, seasonYear } from "../checkout/holiday.js";
+import { HOLIDAY_PRICING, OCCASION_NAMES, holidayEndsOn, holidayOnSale, otherOccasion, seasonYear } from "../checkout/holiday.js";
 import { ownerEmailAddress, publicBaseUrl } from "../lib/config.js";
 import { SELF_TEST_EMAIL, brandedEmailHtml, sendTransactionalEmail } from "../lib/email.js";
 import { nowIso, parseJsonOrNull } from "../lib/http.js";
@@ -34,6 +44,8 @@ const MENU_PAGES = [
   ["Holiday Desserts", [["Gingerbread Cake", "$11"], ["Peppermint Sundae", "$9"], ["Eggnog Custard", "$10"]]]
 ];
 const CHECK_ITEM = "Prime Rib";
+const ALL_ITEMS = MENU_PAGES.flatMap(([, items]) => items);
+const PREPAID_BUTTON = "already paid"; // public-preview.js PREPAID_LABEL: "Complete your order: already paid"
 const PREVIEW_MENU = {
   sections: MENU_PAGES.map(([name, items]) => ({ name, items: items.map(([item, price]) => ({ name: item, description: "", price })) })),
   notes: "", unreadable: ""
@@ -54,15 +66,33 @@ async function maybeScheduleDaily(env, now = dailyClock(env)) {
   await env.DB.prepare(`INSERT INTO self_tests (id, kind, status, requested_by, created_at, updated_at) VALUES (?, ?, 'REQUESTED', 'daily', ?, ?)`).bind(crypto.randomUUID(), KIND, t, t).run();
 }
 
-// What the test inbox should be charged: its own count of paid holiday orders this season, kept apart from
-// holidayPriceCents so a pricing mistake there shows up here.
-async function expectedPriceCents(env, now) {
-  const row = await env.DB.prepare(`
-      SELECT COUNT(*) AS n FROM orders o JOIN customers c ON c.id = o.customer_id
-      WHERE lower(c.email) = ? AND o.payment_status = 'PAID' AND o.created_at >= ?
-        AND EXISTS (SELECT 1 FROM order_items oi JOIN offers f ON f.id = oi.offer_id WHERE oi.order_id = o.id AND f.code = 'HOLIDAY_MENU')
-    `).bind(SELF_TEST_EMAIL, `${seasonYear(now)}-07-01T00:00:00.000Z`).first();
-  return Number(row?.n || 0) > 0 ? HOLIDAY_PRICING.secondCents : HOLIDAY_PRICING.firstCents;
+// The test inbox becomes a first-time holiday buyer again: its earlier holiday TEST orders (Stripe test mode only)
+// stop counting as paid. Without this it could never buy both holidays, which needs a buyer with no holiday menu yet.
+async function retireEarlierRuns(env, now) {
+  await env.DB.prepare(`
+      UPDATE orders SET payment_status = 'REFUNDED', updated_at = ?
+      WHERE payment_status = 'PAID' AND stripe_checkout_session_id LIKE 'cs_test_%' AND created_at >= ?
+        AND customer_id IN (SELECT id FROM customers WHERE lower(email) = ?)
+        AND EXISTS (SELECT 1 FROM order_items oi JOIN offers f ON f.id = oi.offer_id WHERE oi.order_id = orders.id AND f.code = 'HOLIDAY_MENU')
+    `).bind(nowIso(), `${seasonYear(now)}-07-01T00:00:00.000Z`, SELF_TEST_EMAIL).run();
+}
+
+// The upload and stored preview a buyer has when they tap "Make it live" (no AI read, no public daily limits).
+async function makePreview(env, app, { occasion, now, label }) {
+  const requestId = crypto.randomUUID();
+  const stamp = nowIso().slice(0, 16).replace("T", " ");
+  const upload = new FormData();
+  upload.append("payload", JSON.stringify({ type: "inquiry", purpose: "checkout", service: "Other project", name: "Menu-Made Self-Test",
+    business: BUSINESS, email: SELF_TEST_EMAIL, notes: `Automated holiday self-test ${stamp}${label ? ` (${label})` : ""}`, website: "", requestId }));
+  upload.append("document", new File([buildMenuPdf(MENU_PAGES, BUSINESS)], "self-test-holiday-menu.pdf", { type: "application/pdf" }));
+  const uploaded = await json(await app(new Request(`${publicBaseUrl(env)}/api/inquiry`, { method: "POST", body: upload, headers: { Origin: "https://menu-made.com", "CF-Connecting-IP": "self-test" } })));
+  if (!uploaded.body?.ok) throw new Error(`Menu upload failed (HTTP ${uploaded.status})`);
+  const token = `${crypto.randomUUID().replace(/-/g, "")}5e1f`; // 36 hex characters, like a real preview token
+  const t = new Date(now).toISOString();
+  await storeMenuDesigns(env, token, { business: BUSINESS, menu: PREVIEW_MENU, colors: "", custom: {}, customized: 0, occasion });
+  await env.DB.prepare(`INSERT INTO menu_previews (token, request_id, email, business, ip_hash, campaign, status, item_count, created_at, expires_at, occasion) VALUES (?, ?, ?, ?, '', 'selftest', 'READY', 6, ?, ?, ?)`)
+    .bind(token, requestId, SELF_TEST_EMAIL, BUSINESS, t, new Date(now + 86400000).toISOString(), occasion).run();
+  return { token, requestId };
 }
 
 async function checkout(env, app, body) {
@@ -92,33 +122,23 @@ async function stageStart(env, app, test) {
   const list = designsFor(occasion);
   const design = list[2]; // not the first, so a lost choice shows
 
-  // The menu file, uploaded the way the holiday page does before it builds a preview.
-  const requestId = crypto.randomUUID();
-  const stamp = nowIso().slice(0, 16).replace("T", " ");
-  const upload = new FormData();
-  upload.append("payload", JSON.stringify({ type: "inquiry", purpose: "checkout", service: "Other project", name: "Menu-Made Self-Test",
-    business: BUSINESS, email: SELF_TEST_EMAIL, notes: `Automated holiday self-test ${stamp}`, website: "", requestId }));
-  upload.append("document", new File([buildMenuPdf(MENU_PAGES, BUSINESS)], "self-test-holiday-menu.pdf", { type: "application/pdf" }));
-  const uploaded = await json(await app(new Request(`${base}/api/inquiry`, { method: "POST", body: upload, headers: { Origin: "https://menu-made.com", "CF-Connecting-IP": "self-test" } })));
-  if (!uploaded.body?.ok) throw new Error(`Menu upload failed (HTTP ${uploaded.status})`);
-
-  // Its holiday preview, stored as the generator stores one.
-  const token = `${crypto.randomUUID().replace(/-/g, "")}5e1f`; // 36 hex characters, like a real preview token
-  const t = new Date(now).toISOString();
-  await storeMenuDesigns(env, token, { business: BUSINESS, menu: PREVIEW_MENU, colors: "", custom: {}, customized: 0, occasion });
-  await env.DB.prepare(`INSERT INTO menu_previews (token, request_id, email, business, ip_hash, campaign, status, item_count, created_at, expires_at, occasion) VALUES (?, ?, ?, ?, '', 'selftest', 'READY', 6, ?, ?, ?)`)
-    .bind(token, requestId, SELF_TEST_EMAIL, BUSINESS, t, new Date(now + 86400000).toISOString(), occasion).run();
-  test = await updateTest(env, test, { status: "RUNNING", stage: "START", state: { token, occasion, design: design.key, request_id: requestId } });
+  // Yesterday's test orders stop counting, then the menu file is uploaded the way the holiday page does and its
+  // holiday preview stored as the generator stores one. Both holidays are bought while the other is still on sale.
+  await retireEarlierRuns(env, now);
+  const other = otherOccasion(occasion);
+  const both = holidayOnSale(other, now);
+  const { token, requestId } = await makePreview(env, app, { occasion, now });
+  test = await updateTest(env, test, { status: "RUNNING", stage: "START", state: { token, occasion, design: design.key, request_id: requestId, ...(both ? { both_other: other } : {}) } });
   // From here a failure has a preview (and soon an order) to clean up: hand the saved row to failTest.
   try {
-    return await buyAndPay(env, app, test, { base, now, occasion, name, list, design, token, requestId });
+    return await buyAndPay(env, app, test, { base, now, occasion, name, list, design, token, requestId, both, other });
   } catch (error) {
     if (error && typeof error === "object") error.selfTest = test.current || test;
     throw error;
   }
 }
 
-async function buyAndPay(env, app, holder, { base, now, occasion, name, list, design, token, requestId }) {
+async function buyAndPay(env, app, holder, { base, now, occasion, name, list, design, token, requestId, both, other }) {
   let test = holder;
 
   // The generator: six holiday designs, this holiday's first, the holiday price on the button.
@@ -141,8 +161,9 @@ async function buyAndPay(env, app, holder, { base, now, occasion, name, list, de
   // Checkout needs a holiday preview, takes one holiday menu, and charges the holiday price.
   const customer = { name: "Menu-Made Self-Test", business: BUSINESS, email: SELF_TEST_EMAIL, phone: "", notes: `Holiday menu (self-test)\nDocument ref: ${requestId}` };
   if ((await checkout(env, app, { items: [{ code: "HOLIDAY_MENU" }], customer })).body?.ok) throw new Error("Checkout opened for a holiday menu with no holiday preview");
-  const expected = await expectedPriceCents(env, now);
-  const opened = await checkout(env, app, { items: [{ code: "HOLIDAY_MENU" }], holiday_preview: token, customer });
+  // A first-time buyer: $59 for one holiday, $89 for both while the other holiday is still on sale.
+  const expected = both ? HOLIDAY_PRICING.firstCents + HOLIDAY_PRICING.secondCents : HOLIDAY_PRICING.firstCents;
+  const opened = await checkout(env, app, { items: [{ code: "HOLIDAY_MENU" }], holiday_preview: token, ...(both ? { holiday_both: true } : {}), customer });
   if (!opened.body?.ok || !opened.body.order_id) throw new Error(`Test checkout failed (HTTP ${opened.status}): ${JSON.stringify(opened.body).slice(0, 300)}`);
   const orderId = opened.body.order_id;
   test = await updateTest(env, test, { order_id: orderId });
@@ -151,9 +172,10 @@ async function buyAndPay(env, app, holder, { base, now, occasion, name, list, de
   if (order?.total_cents !== expected) throw new Error(`Expected a ${dollars(expected)} order, got ${order?.total_cents}`);
   const item = parseJsonOrNull((await env.DB.prepare(`SELECT metadata_json FROM order_items WHERE order_id = ? LIMIT 1`).bind(orderId).first())?.metadata_json)?.holiday_menu;
   if (item?.occasion !== occasion || item?.design !== design.key || item?.ends_on !== holidayEndsOn(occasion, now)) throw new Error(`The order doesn't carry the holiday: ${JSON.stringify(item)}`);
+  if ((item.both_other || null) !== (both ? other : null)) throw new Error(`The order ${both ? `doesn't record the ${OCCASION_NAMES[other]} menu still owed` : "records a second holiday nobody bought"}: ${JSON.stringify(item)}`);
   const paid = await payTestCheckout(env, order.stripe_checkout_session_id);
   return updateTest(env, test, { stage: "AWAIT_ORDER_PAID", state: { session_id: order.stripe_checkout_session_id, ends_on: item.ends_on, price_cents: expected },
-    log: `${name} preview opened with ${list.length} holiday designs; ${design.label} chosen; order ${orderId} placed at ${dollars(expected)}; paid with test card (${paid.amount})` });
+    log: `${name} preview opened with ${list.length} holiday designs; ${design.label} chosen; order ${orderId} placed at ${dollars(expected)}${both ? " for both holidays" : ""}; paid with test card (${paid.amount})` });
 }
 
 async function stageAwaitOrderPaid(env, app, test) {
@@ -209,17 +231,89 @@ async function stageAwaitDelivery(env, app, test) {
   // The business's regular address is not this menu's.
   const regular = await app(new Request(`${base}/api/menu/${hostedMenuSlug(test.project_id, project.business_name)}`));
   if (regular.status === 200 && (await regular.text()).includes(CHECK_ITEM)) throw new Error("The holiday menu also shows at the regular menu address");
+  const quality = await checkWhatTheBuyerGot(env, app, test, { base, slug, html });
   await removePreview(env, s.token);
-  return updateTest(env, test, { status: "PASSED", stage: "DONE", log: `Delivered to the buyer; live at /api/menu/${slug} in ${design.label} through ${s.ends_on}; preview removed` });
+  const delivered = `Delivered to the buyer; live at /api/menu/${slug} in ${design.label} through ${s.ends_on}; ${quality}; preview removed`;
+  if (!s.both_other) return updateTest(env, test, { status: "PASSED", stage: "DONE", log: delivered });
+  return updateTest(env, test, { stage: "SECOND_MENU", log: delivered });
 }
 
-const STAGES = { START: stageStart, AWAIT_ORDER_PAID: stageAwaitOrderPaid, AWAIT_APPROVAL: stageAwaitApproval, AWAIT_DELIVERY: stageAwaitDelivery };
+// Quality, not only completion (owner, Nov 12, 2026): what the buyer was sent is opened and read.
+async function checkWhatTheBuyerGot(env, app, test, { base, slug, html }) {
+  const text = html.replace(/&(#0?39|apos);/g, "'").replace(/&amp;/g, "&");
+  const missing = ALL_ITEMS.filter(([item, price]) => !text.includes(item) || !new RegExp(`\\$?\\s*${price.replace(/[^0-9.]/g, "")}(?![0-9])`).test(text)).map(([item, price]) => `${item} ${price}`);
+  if (missing.length) throw new Error(`The live menu is missing ${missing.length} of ${ALL_ITEMS.length} items or prices from the uploaded menu: ${missing.join(", ")}`);
+  const address = `${base}/api/menu/${slug}`;
+  const qr = await env.DB.prepare(`
+      SELECT json_extract(a.metadata_json, '$.destination_url') AS url FROM deliverables d JOIN assets a ON a.id = d.asset_id
+      WHERE d.project_id = ? AND d.deliverable_type = 'QR_CODE' ORDER BY d.version DESC LIMIT 1`).bind(test.project_id).first();
+  if (qr?.url !== address) throw new Error(`The QR code points at ${qr?.url || "nothing"}, not this menu's address (${address})`);
+  for (const format of ["print.pdf", "tri-fold.pdf", "table-tent.pdf"]) {
+    const file = await app(new Request(`${address}/${format}`));
+    const bytes = new Uint8Array(await file.arrayBuffer());
+    const isPdf = bytes.length > 1000 && String.fromCharCode(...bytes.slice(0, 5)) === "%PDF-";
+    if (file.status !== 200 || !/application\/pdf/.test(file.headers.get("content-type") || "") || !isPdf) throw new Error(`The buyer's ${format} is not a PDF (HTTP ${file.status}, ${file.headers.get("content-type") || "no type"}, ${bytes.length} bytes)`);
+  }
+  const tv = await app(new Request(`${address}/tv`));
+  const screen = await tv.text();
+  if (tv.status !== 200 || !screen.includes(CHECK_ITEM)) throw new Error(`The TV menu screen doesn't show the menu (HTTP ${tv.status})`);
+  return `all ${ALL_ITEMS.length} items and prices on the page, QR code points at it, print PDF, tri-fold, table tent and TV screen open`;
+}
+
+// The other holiday of an order for both: already paid, so "Make it live" finishes with no Stripe page.
+async function stageSecondMenu(env, app, test) {
+  const s = state(test);
+  const other = s.both_other;
+  const now = Date.now();
+  const base = publicBaseUrl(env);
+  const linked = await env.DB.prepare(`SELECT 1 AS ok FROM communications WHERE purpose = 'HOLIDAY_BOTH' AND status = 'SENT' AND metadata_json LIKE ? LIMIT 1`).bind(`%holiday-both/${test.order_id}%`).first();
+  if (!linked) throw new Error(`The buyer was not emailed the link to send their ${OCCASION_NAMES[other]} menu`);
+  const { token, requestId } = await makePreview(env, app, { occasion: other, now, label: "second menu" });
+  test = await updateTest(env, test, { state: { second_token: token } });
+  try {
+    const generator = await json(await app(new Request(`${base}/api/menu-preview/state/${token}`)));
+    if (!String(generator.body?.choose_label || "").includes(PREPAID_BUTTON)) throw new Error(`The ${OCCASION_NAMES[other]} preview's button says "${generator.body?.choose_label}", not that it is already paid`);
+    const handoff = await json(await app(new Request(`${base}/api/menu-preview/handoff/${token}`)));
+    if (handoff.body?.holiday_prepaid !== true || handoff.body?.holiday_price_cents !== 0) throw new Error(`Checkout prefill doesn't show the ${OCCASION_NAMES[other]} menu as paid: ${JSON.stringify(handoff.body).slice(0, 200)}`);
+    const customer = { name: "Menu-Made Self-Test", business: BUSINESS, email: SELF_TEST_EMAIL, phone: "", notes: `Holiday menu (self-test, second menu)\nDocument ref: ${requestId}` };
+    const done = await checkout(env, app, { items: [{ code: "HOLIDAY_MENU" }], holiday_preview: token, customer });
+    if (!done.body?.ok || done.body.prepaid !== true || !/checkoutsuccess\.html\?session_id=cs_test_prepaid/.test(String(done.body.url || ""))) throw new Error(`The prepaid ${OCCASION_NAMES[other]} menu didn't go straight to the Success page (HTTP ${done.status}): ${JSON.stringify(done.body).slice(0, 300)}`);
+    test = await updateTest(env, test, { state: { second_order_id: done.body.order_id } });
+    const order = await env.DB.prepare(`SELECT payment_status, total_cents FROM orders WHERE id = ?`).bind(done.body.order_id).first();
+    if (order?.payment_status !== "PAID" || order.total_cents !== 0) throw new Error(`The prepaid order is ${order?.payment_status} at ${order?.total_cents} cents, expected PAID at 0`);
+    return updateTest(env, test, { stage: "AWAIT_SECOND", log: `"Send your ${OCCASION_NAMES[other]} menu" email sent; its preview says already paid; order ${done.body.order_id} completed at $0 with no Stripe page` });
+  } catch (error) {
+    if (error && typeof error === "object") error.selfTest = test;
+    throw error;
+  }
+}
+
+async function stageAwaitSecond(env, app, test) {
+  const s = state(test);
+  const project = await env.DB.prepare(`SELECT id, metadata_json FROM projects WHERE order_id = ? AND workflow_key = 'MENU_QR_V1' LIMIT 1`).bind(s.second_order_id).first();
+  const meta = parseJsonOrNull(project?.metadata_json) || {};
+  const menuFile = project ? await env.DB.prepare(`SELECT status FROM project_inputs WHERE project_id = ? AND input_key = 'menu_file'`).bind(project.id).first() : null;
+  if (!project || meta.holiday_menu?.occasion !== s.both_other || menuFile?.status !== "VALID") {
+    if (Date.now() - Date.parse(test.stage_started_at || test.created_at) < ATTACH_GRACE_MINUTES * 60000) return null;
+    if (!project) throw new Error("The prepaid order never got a project");
+    if (meta.holiday_menu?.occasion !== s.both_other) throw new Error(`The prepaid project isn't marked as the ${OCCASION_NAMES[s.both_other]} menu`);
+    throw new Error("The second menu's file was not attached to its project");
+  }
+  // Proven up to production starting; the day's test makes one menu, not two.
+  await cancelTestOrder(env, { order_id: s.second_order_id });
+  await removePreview(env, s.second_token);
+  return updateTest(env, test, { status: "PASSED", stage: "DONE", log: `${OCCASION_NAMES[s.both_other]} project started with its menu attached, then cancelled; second preview removed` });
+}
+
+const STAGES = { START: stageStart, AWAIT_ORDER_PAID: stageAwaitOrderPaid, AWAIT_APPROVAL: stageAwaitApproval, AWAIT_DELIVERY: stageAwaitDelivery, SECOND_MENU: stageSecondMenu, AWAIT_SECOND: stageAwaitSecond };
 
 async function failTest(env, test, message) {
   const detail = await diagnose(env, test).catch(() => "");
   const failed = await updateTest(env, test, { status: "FAILED", error: `${message}${detail ? ` | ${detail}` : ""}`.slice(0, 1000), log: `FAILED: ${message}` });
   await cancelTestOrder(env, failed).catch((error) => console.error("Holiday self-test order cleanup failed:", error?.message || error));
   await removePreview(env, state(failed).token).catch(() => null);
+  await removePreview(env, state(failed).second_token).catch(() => null);
+  if (state(failed).second_order_id) await cancelTestOrder(env, { order_id: state(failed).second_order_id }).catch(() => null);
   await sendTransactionalEmail(env, {
     to: ownerEmailAddress(env),
     subject: "Holiday Menu self-test failed",
