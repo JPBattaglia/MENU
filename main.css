@@ -2948,6 +2948,19 @@ body.about-page .team-profile a{white-space:nowrap;font-size:clamp(11px,calc((10
 /* How-to videos beside the free generators (owner, Nov 12, 2026). Captions are in the picture; no sound. */
 .mm-try-video { margin: 20px 0 0; }
 .mm-try-video video { display: block; width: 100%; height: auto; aspect-ratio: 16 / 9; border-radius: 14px; border: 1px solid rgba(0,214,230,.35); background: #071f2c; }
+/* Full-screen button on the how-to videos (try-video.js, owner Nov 12, 2026). */
+.mm-video-frame { position: relative; }
+.mm-video-close[hidden], .mm-video-full[hidden] { display: none; }
+.mm-video-full, .mm-video-close { position: absolute; top: 10px; right: 10px; z-index: 2; display: inline-flex; align-items: center; gap: 6px; padding: 7px 12px; border: 1px solid rgba(255,255,255,.55); border-radius: 999px; background: rgba(7,31,44,.82); color: #fff; font: 700 13px/1 Arial, Helvetica, sans-serif; cursor: pointer; }
+.mm-video-full:hover, .mm-video-close:hover { background: #00a7b5; border-color: #00a7b5; }
+.mm-video-full:focus-visible, .mm-video-close:focus-visible { outline: 3px solid #00d6e6; outline-offset: 2px; }
+.mm-video-frame:fullscreen { background: #000; display: flex; align-items: center; justify-content: center; }
+.mm-video-frame:-webkit-full-screen { background: #000; display: flex; align-items: center; justify-content: center; }
+.mm-video-frame:fullscreen video, .mm-video-frame:-webkit-full-screen video, .mm-video-frame.is-filling video { width: 100%; height: 100%; aspect-ratio: auto; object-fit: contain; border: 0; border-radius: 0; background: #000; }
+.mm-video-frame:fullscreen .mm-video-full, .mm-video-frame:-webkit-full-screen .mm-video-full, .mm-video-frame.is-filling .mm-video-full { display: none; }
+.mm-video-frame.is-filling { position: fixed; inset: 0; z-index: 2147483000; background: #000; display: flex; align-items: center; justify-content: center; }
+.mm-video-frame.is-filling .mm-video-close { top: 16px; right: 16px; font-size: 15px; padding: 10px 16px; }
+html.mm-video-open, html.mm-video-open body { overflow: hidden; }
 .mm-try-video figcaption { margin-top: 8px; font-size: 13.5px; color: var(--muted, #b9cdd6); }
 .mm-try-form { display: grid; gap: 8px; }
 .mm-try-form label { font-weight: 800; font-size: 13.5px; margin-top: 6px; }
