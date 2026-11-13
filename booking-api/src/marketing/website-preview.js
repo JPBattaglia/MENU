@@ -711,8 +711,10 @@ async function runWebsitePreviewReminders(env, { now = Date.now(), force = false
     const mark = () => env.DB.prepare(`UPDATE website_previews SET reminder_sent_at = ? WHERE token = ?`).bind(new Date(now).toISOString(), row.token).run();
     const email = String(row.email || "").trim().toLowerCase();
     // Already bought from this preview (checkout stores site_preview on the order item): nothing to remind about.
-    const ordered = await env.DB.prepare(`SELECT 1 AS x FROM order_items oi JOIN orders o ON o.id = oi.order_id WHERE oi.metadata_json LIKE ? AND o.payment_status = 'PAID' LIMIT 1`)
-      .bind(`%"site_preview":"${row.token}"%`).first().catch(() => null);
+    // Matched on the field, not LIKE: D1 refuses a LIKE pattern over 50 bytes and this one was 55, so the check never
+    // found an order and buyers who had already ordered were reminded too (found Nov 13, 2026).
+    const ordered = await env.DB.prepare(`SELECT 1 AS x FROM order_items oi JOIN orders o ON o.id = oi.order_id WHERE json_extract(oi.metadata_json, '$.site_preview') = ? AND o.payment_status = 'PAID' LIMIT 1`)
+      .bind(row.token).first().catch(() => null);
     if (!email || email === owner || ordered) { await mark(); continue; }
     const url = viewUrl(row.token);
     const ends = endsText(row.expires_at);
