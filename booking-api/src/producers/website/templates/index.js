@@ -7,7 +7,7 @@
 //   styles.css    the design
 // plus the business's images at the paths given in site.logo / site.photos. The same files are shown in the generator,
 // delivered in the zip, and served when Menu-made hosts the site.
-import { BASE_CSS, brandOr, esc, inkOn, nameEl, page, siteData } from "./common.js";
+import { BASE_CSS, brandOr, esc, inkOn, nameEl, page, siteData, socialIcons } from "./common.js";
 import { logoTreatment } from "../../menu-qr/design.js";
 import { luminance } from "../../menu-qr/style.js";
 import { DESIGNS, DESIGN_KEYS, designFor, designForStyle } from "./designs.js";
@@ -134,7 +134,7 @@ function buildDesignSite(site, copy, key, { formAction = "" } = {}) {
     if (file === "about.html") body = appendInside(body, 'id="about"', gallery(d));
     if (file === "contact.html") body = appendInside(body, 'id="visit"', contactForm(d, formAction));
     if (d.logo) body = body.replace(/<footer([^>]*)>/, (m) => `${m}<img class="foot-logo" src="${esc(d.logo.path)}" alt="">`);
-    if (d.social.length) body = body.replace(/<footer([^>]*)>((?:<img class="foot-logo"[^>]*>)?)/, (m) => `${m}<p class="foot-social">${d.social.map(([n, u]) => `<a href="${esc(u)}" rel="noopener">${n}</a>`).join("")}</p>`);
+    if (d.social.length) body = body.replace(/<footer([^>]*)>((?:<img class="foot-logo"[^>]*>)?)/, (m) => `${m}<p class="foot-social">${socialIcons(d)}</p>`);
     // Every page needs one main heading for screen readers and search. The sub-pages (and Farmhouse's home, whose name
     // is a styled line) have none of their own, so a hidden one goes first in <main>; nothing changes on screen.
     if (!/<h1[\s>]/.test(body)) body = body.replace(/<main\b[^>]*>/, (m) => `${m}<h1 class="vh">${title ? `${esc(title)} | ` : ""}${esc(d.name)}</h1>`);
@@ -143,7 +143,8 @@ function buildDesignSite(site, copy, key, { formAction = "" } = {}) {
     if (!/\sid="main"/.test(html)) html = html.replace('<a class="skip" href="#main">', `<a class="skip" href="#${{ "menu.html": "menu", "about.html": "about", "contact.html": "visit" }[file]}">`);
     files[file] = decorateLogos(html, d, out, brand);
   }
-  files["styles.css"] = `${BASE_CSS}\n${out.css}\n${PARTS_CSS(brand)}\n`;
+  files["styles.css"] = `${BASE_CSS}\n${out.css}\n${PARTS_CSS(brand)}\n${socialCss(key, brand)}\n`;
+  for (const f of Object.keys(files)) if (f.endsWith(".html")) files[f] = files[f].replace(/<body([^>]*)>/, (m, attrs) => /class="/.test(attrs) ? m.replace(/class="/, `class="soc-${key} `) : `<body${attrs} class="soc-${key}">`);
   return files;
 }
 
@@ -160,11 +161,38 @@ const PARTS_CSS = (brand) => `.page-band{position:relative;display:flex;align-it
 .cform textarea{resize:vertical}.cform .hp{position:absolute;left:-9999px;width:1px;height:1px;overflow:hidden}
 .cform button{justify-self:start;padding:14px 26px;border:0;border-radius:8px;background:${brand};color:${inkOn(brand)};font:inherit;font-weight:700;cursor:pointer}.cform fieldset[disabled]{opacity:.7}
 .cform-note{margin:10px 0 0;font-size:.9em;opacity:.8}
-.foot-social{display:flex;flex-wrap:wrap;justify-content:center;gap:8px 18px;margin:0 0 12px}.foot-social a{color:inherit;font-weight:700;text-decoration:underline;text-underline-offset:3px}
+.foot-social{display:flex;justify-content:center;margin:0 0 14px}
 .foot-logo{display:block;height:72px;width:auto;max-width:240px;object-fit:contain;margin:0 auto 12px;background:var(--plate,#fff);border-radius:12px;padding:8px}
 .logo-halo{filter:drop-shadow(0 0 1px var(--glow)) drop-shadow(0 0 1px var(--glow)) drop-shadow(0 0 7px color-mix(in srgb,var(--glow) 70%,transparent))}
 .logo-badge{box-sizing:content-box;padding:8px 12px;border-radius:14px;background:var(--plate);box-shadow:0 3px 12px rgba(0,0,0,.18)}img.logo.logo-badge{max-width:calc(100% - 24px)}
 .logo-boxed{border-radius:10px;border:2px solid ${brand};box-shadow:0 3px 12px rgba(0,0,0,.18)}
 @media(max-width:600px){.brand .logo{height:44px;max-width:140px}.mark .logo{height:56px}.top .logo{height:96px}.crest .logo,.hero .logo{height:96px}.rail .logo{height:84px}header a.cta{white-space:nowrap}.brand{font-size:min(1em,20px)}}`;
+
+// Each design's own frame for the social icons: shape, fill, line and hover, from its accent (brand) colour.
+function socialCss(key, brand) {
+  const ink = inkOn(brand);
+  const base = `.soc-row{display:inline-flex;flex-wrap:wrap;align-items:center;gap:10px}.soc{display:inline-flex;align-items:center;justify-content:center;width:40px;height:40px;text-decoration:none;color:inherit;transition:transform .15s,background-color .15s,color .15s,box-shadow .15s}.soc svg{width:20px;height:20px;display:block}.soc:hover{transform:translateY(-2px)}.c-line:has(.soc-row){align-items:center}.soc:focus-visible{outline:2px solid currentColor;outline-offset:3px}@media(prefers-reduced-motion:reduce){.soc{transition:none}.soc:hover{transform:none}}`;
+  const own = {
+    // warm and classic: thin ring in the accent, fills on hover
+    trattoria: `.soc-trattoria .soc{border:1.5px solid ${brand};border-radius:50%;color:${brand}}.soc-trattoria footer .soc{color:inherit;border-color:currentColor}.soc-trattoria .soc:hover{background:${brand};color:${ink}}`,
+    // modern split: solid rounded squares
+    bistro: `.soc-bistro .soc{background:${brand};color:${ink};border-radius:10px}.soc-bistro .soc:hover{box-shadow:0 6px 16px rgba(0,0,0,.2)}`,
+    // dark and loud: square outline with an accent glow
+    night: `.soc-night .soc{border:2px solid ${brand};color:${brand};border-radius:4px;box-shadow:0 0 10px color-mix(in srgb,${brand} 45%,transparent)}.soc-night .soc:hover{background:${brand};color:${ink};box-shadow:0 0 18px ${brand}}`,
+    // hand-made: dashed chalk circle
+    farmhouse: `.soc-farmhouse .soc{border:2px dashed currentColor;border-radius:50%;opacity:.9}.soc-farmhouse .soc:hover{border-style:solid;opacity:1}`,
+    // quiet and refined: bare thin glyphs, wide spacing, a hairline under on hover
+    fine: `.soc-fine .soc-row{gap:22px}.soc-fine .soc{width:28px;height:32px;color:${brand};border-bottom:1px solid transparent}.soc-fine footer .soc{color:inherit}.soc-fine .soc svg{width:18px;height:18px}.soc-fine .soc:hover{transform:none;border-bottom-color:currentColor}`,
+    // bright and friendly: solid circles
+    fresh: `.soc-fresh .soc{background:${brand};color:${ink};border-radius:50%}.soc-fresh .soc:hover{box-shadow:0 0 0 4px color-mix(in srgb,${brand} 30%,transparent)}`,
+    // playful pastel: soft blobs, a little tilt
+    pop: `.soc-pop .soc{background:color-mix(in srgb,${brand} 22%,#fff);color:${brand};border-radius:42% 58% 55% 45%/50% 45% 55% 50%}.soc-pop .soc:hover{transform:rotate(-8deg) scale(1.08);background:${brand};color:${ink}}`,
+    // relaxed coastal: outlined rounded squares
+    coastal: `.soc-coastal .soc{border:1.5px solid currentColor;border-radius:12px}.soc-coastal .soc:hover{background:${brand};border-color:${brand};color:${ink}}`,
+    // bar sign: gold badges with a double ring
+    taproom: `.soc-taproom .soc{background:${brand};color:${ink};border-radius:50%;box-shadow:0 0 0 2px ${ink},0 0 0 4px ${brand}}.soc-taproom .soc-row{gap:16px;padding:4px}`
+  }[key] || "";
+  return base + own;
+}
 
 export { DESIGNS, DESIGN_KEYS, PAGES, buildDesignSite, composePage, designFor, designForStyle };

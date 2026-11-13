@@ -57,12 +57,25 @@ function hoursList(d, cls = "hours") {
   return `<dl class="${cls}">${d.hours.map((h) => (h.day ? `<dt>${esc(h.day)}</dt><dd>${esc(h.time)}</dd>` : `<dd class="wide">${esc(h.time)}</dd>`)).join("")}</dl>`;
 }
 
+// Social links as icons (owner, Nov 12, 2026: "icons that match each template"). One set of simple line/solid
+// glyphs drawn in currentColor; each design frames them its own way (SOCIAL_CSS in index.js, class soc-<design>).
+const SOCIAL_ICONS = {
+  Instagram: '<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><rect x="3.2" y="3.2" width="17.6" height="17.6" rx="5" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="12" cy="12" r="4.1" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="17.4" cy="6.6" r="1.25" fill="currentColor"/></svg>',
+  Facebook: '<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M13.6 21v-7.6h2.6l.4-3.1h-3V8.4c0-.9.3-1.5 1.6-1.5h1.6V4.1c-.3 0-1.2-.1-2.3-.1-2.3 0-3.9 1.4-3.9 4v2.3H8v3.1h2.6V21z" fill="currentColor"/></svg>',
+  TikTok: '<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M16.3 3c.3 2.2 1.6 3.7 3.7 3.9v3c-1.4.1-2.6-.3-3.7-1v6.3c0 3.1-2.3 5.6-5.6 5.6S5 18.4 5.4 15.1c.4-2.8 2.9-4.7 5.9-4.4v3.1c-1.4-.3-2.8.5-2.9 1.9-.1 1.3.9 2.4 2.3 2.4 1.4 0 2.4-1 2.4-2.6V3z" fill="currentColor"/></svg>',
+  Yelp: '<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M12 2.8l2.4 5.4 5.9.6-4.4 3.9 1.3 5.8L12 15.5l-5.2 3 1.3-5.8-4.4-3.9 5.9-.6z" fill="currentColor"/></svg>'
+};
+function socialIcons(d, cls = "soc-row") {
+  if (!d.social.length) return "";
+  return `<span class="${cls}">${d.social.map(([n, u]) => `<a class="soc" href="${esc(u)}" rel="noopener" aria-label="${n}" title="${n}">${SOCIAL_ICONS[n] || esc(n)}</a>`).join("")}</span>`;
+}
+
 function contactLines(d) {
   return [
     d.address ? `<p class="c-line"><span class="c-label">Address</span><span>${esc(d.address)}</span>${d.map ? `<a href="${esc(d.map)}" rel="noopener">Get directions</a>` : ""}</p>` : "",
     d.phone ? `<p class="c-line"><span class="c-label">Phone</span><a href="tel:${esc(d.tel)}">${esc(d.phone)}</a></p>` : "",
     d.email ? `<p class="c-line"><span class="c-label">Email</span><a href="mailto:${esc(d.email)}">${esc(d.email)}</a></p>` : "",
-    d.social.length ? `<p class="c-line"><span class="c-label">Follow</span><span>${d.social.map(([n, u]) => `<a href="${esc(u)}" rel="noopener">${n}</a>`).join(" · ")}</span></p>` : ""
+    d.social.length ? `<p class="c-line"><span class="c-label">Follow</span>${socialIcons(d)}</p>` : ""
   ].join("");
 }
 
@@ -102,4 +115,4 @@ section[id]{scroll-margin-top:84px}
 dl{margin:0}dt{font-weight:700}dd{margin:0}.c-line{display:flex;flex-wrap:wrap;gap:4px 12px;margin:0 0 12px}.c-label{font-weight:700;min-width:72px}
 @media (prefers-reduced-motion:reduce){html{scroll-behavior:auto}*{animation:none!important;transition:none!important}}`;
 
-export { BASE_CSS, aboutHtml, brandOr, callBtn, contactLines, esc, hoursList, inkOn, item, logoImg, menuBtn, mix, nameEl, nameHidden, nav, orderBtn, page, photo, shownName, siteData, textOn };
+export { BASE_CSS, SOCIAL_ICONS, aboutHtml, brandOr, callBtn, contactLines, esc, hoursList, inkOn, item, logoImg, menuBtn, mix, nameEl, nameHidden, nav, orderBtn, page, photo, shownName, siteData, socialIcons, textOn };
