@@ -10,6 +10,7 @@
 // Secrets: ICLOUD_USER (the Apple ID email used for iCloud Mail), ICLOUD_APP_PASSWORD (an app-specific password).
 // The repository is public: the log shows counts only.
 import { readFileSync } from "node:fs";
+import { isAutoReply } from "./auto-reply.mjs";
 import { resolveMx } from "node:dns/promises";
 import { ImapFlow } from "imapflow";
 import MailComposer from "nodemailer/lib/mail-composer/index.js";
@@ -123,6 +124,7 @@ if (!PREVIEW) for (const inboxBox of inboxBoxes) {
         bounces += failed.size;
         continue;
       }
+      if (isAutoReply(text, m.envelope?.subject || "")) continue; // auto-responses are not replies (Nov 12, 2026)
       const out = OPT_OUT.test(`${m.envelope?.subject || ""}\n${text.split(/\r?\n\r?\n/).slice(1).join("\n").slice(0, 4000)}`);
       updates.push({ email: from, status: out ? "OPTED_OUT" : "REPLIED" });
     }
