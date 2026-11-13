@@ -13,6 +13,7 @@ const REPO = "https://api.github.com/repos/JPBattaglia/MENU/actions/workflows";
 const SLOTS = [
   { key: "prospects", days: [1], at: [5, 23], workflow: "prospects.yml", inputs: null, label: "the weekly prospect search" },
   { key: "drafts", days: [1], at: [7, 37], workflow: "prospect-drafts.yml", inputs: null, label: "the prospect email drafts" },
+  { key: "prospects-us", days: [4], at: [4, 53], workflow: "prospects.yml", inputs: { region: "next" }, label: "the nationwide prospect search (next US metro)" },
   { key: "drafts", days: [4], at: [8, 41], workflow: "prospect-drafts.yml", inputs: null, label: "the prospect email drafts" },
   { key: "send", days: [1, 2, 3, 4, 5], at: [10, 19], workflow: "prospect-drafts.yml", inputs: { send: "true" }, label: "the prospect email sender" }
 ];

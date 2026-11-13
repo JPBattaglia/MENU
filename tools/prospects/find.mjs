@@ -24,11 +24,48 @@
 
 const UA = "MenuMadeProspects/1.0 (+https://menu-made.com; info@menu-made.com)";
 // Small map tiles (south, west, north, east): whole-city area queries time out on the public Overpass servers.
-const TILES = [];
-for (const [la, lb] of [[37.70, 37.745], [37.745, 37.79], [37.79, 37.835]]) for (const [wa, wb] of [[-122.52, -122.465], [-122.465, -122.42], [-122.42, -122.35]]) TILES.push(["San Francisco", [la, wa, lb, wb]]);
-TILES.push(["Oakland", [37.73, -122.33, 37.80, -122.20]], ["Oakland", [37.80, -122.33, 37.86, -122.20]], ["Oakland", [37.73, -122.20, 37.86, -122.11]],
+// Nov 12, 2026: owner OK'd going nationwide (the offers need no in-person visit). REGION picks what one run scans:
+//   "bay" (default, Mondays) = San Francisco and nearby cities, plus SF new openings;
+//   "next" (Thursdays) = the next metro in NATIONWIDE, rotating by week; or a NATIONWIDE key to scan that metro now.
+const BAY = [];
+for (const [la, lb] of [[37.70, 37.745], [37.745, 37.79], [37.79, 37.835]]) for (const [wa, wb] of [[-122.52, -122.465], [-122.465, -122.42], [-122.42, -122.35]]) BAY.push(["San Francisco", [la, wa, lb, wb]]);
+BAY.push(["Oakland", [37.73, -122.33, 37.80, -122.20]], ["Oakland", [37.80, -122.33, 37.86, -122.20]], ["Oakland", [37.73, -122.20, 37.86, -122.11]],
   ["Berkeley", [37.84, -122.32, 37.91, -122.23]], ["Alameda", [37.75, -122.34, 37.80, -122.22]],
   ["Daly City", [37.65, -122.50, 37.71, -122.38]], ["South San Francisco", [37.60, -122.48, 37.65, -122.38]], ["Sausalito", [37.84, -122.51, 37.87, -122.47]]);
+// Core areas of US metros (south, west, north, east), cut into about 5 km tiles. Big metros are split so one run fits.
+const NATIONWIDE = [
+  ["la-west", "Los Angeles", [33.95, -118.50, 34.12, -118.30]], ["seattle", "Seattle", [47.53, -122.42, 47.72, -122.26]],
+  ["san-jose", "San Jose", [37.24, -122.05, 37.42, -121.80]], ["portland", "Portland", [45.46, -122.74, 45.58, -122.55]],
+  ["san-diego", "San Diego", [32.68, -117.26, 32.82, -117.06]], ["la-east", "Los Angeles", [33.98, -118.30, 34.18, -118.10]],
+  ["sacramento", "Sacramento", [38.50, -121.54, 38.65, -121.38]], ["austin", "Austin", [30.20, -97.83, 30.40, -97.66]],
+  ["denver", "Denver", [39.66, -105.05, 39.79, -104.88]], ["chicago", "Chicago", [41.84, -87.72, 41.99, -87.60]],
+  ["manhattan", "New York", [40.70, -74.02, 40.82, -73.93]], ["brooklyn", "Brooklyn", [40.60, -74.03, 40.72, -73.90]],
+  ["boston", "Boston", [42.31, -71.15, 42.40, -71.02]], ["philadelphia", "Philadelphia", [39.91, -75.22, 40.00, -75.12]],
+  ["miami", "Miami", [25.72, -80.32, 25.88, -80.12]], ["atlanta", "Atlanta", [33.72, -84.45, 33.86, -84.32]],
+  ["nashville", "Nashville", [36.11, -86.84, 36.21, -86.71]], ["new-orleans", "New Orleans", [29.91, -90.13, 30.01, -90.00]],
+  ["phoenix", "Phoenix", [33.40, -112.13, 33.54, -111.88]], ["las-vegas", "Las Vegas", [36.08, -115.25, 36.22, -115.09]],
+  ["dallas", "Dallas", [32.74, -96.86, 32.88, -96.72]], ["houston", "Houston", [29.70, -95.47, 29.82, -95.32]],
+  ["minneapolis", "Minneapolis", [44.93, -93.32, 45.02, -93.20]], ["washington-dc", "Washington", [38.87, -77.08, 38.96, -76.97]]
+];
+function tilesFor(city, [s, w, n, e], step = 0.05) {
+  const out = [];
+  for (let la = s; la < n - 1e-9; la += step) for (let wa = w; wa < e - 1e-9; wa += step)
+    out.push([city, [+la.toFixed(3), +wa.toFixed(3), +Math.min(n, la + step).toFixed(3), +Math.min(e, wa + step).toFixed(3)]]);
+  return out;
+}
+function pickRegion(region = "bay") {
+  if (!region || region === "bay") return { key: "bay", tiles: BAY };
+  let entry = NATIONWIDE.find(([k]) => k === region);
+  if (!entry && region === "next") { // rotate by week (Pacific), so each Thursday scans a different metro
+    const week = Math.floor((Date.now() - Date.UTC(2026, 10, 9)) / (7 * 86400000));
+    entry = NATIONWIDE[((week % NATIONWIDE.length) + NATIONWIDE.length) % NATIONWIDE.length];
+  }
+  if (!entry) { console.log(`Unknown region "${region}"; scanning the Bay Area.`); return { key: "bay", tiles: BAY }; }
+  return { key: entry[0], tiles: tilesFor(entry[1], entry[2]) };
+}
+const REGION = pickRegion(process.env.REGION);
+const TILES = REGION.tiles;
+console.log(`Region: ${REGION.key} (${TILES.length} map tiles)`);
 const OVERPASS = ["https://overpass-api.de/api/interpreter", "https://overpass.private.coffee/api/interpreter", "https://maps.mail.ru/osm/tools/overpass/api/interpreter", "https://overpass.kumi.systems/api/interpreter"];
 const PLATFORMS = /(^|\.)(toasttab\.com|squareup\.com|square\.site|chownow\.com|clover\.com|popmenu\.com|bentobox\.com|spothopper\.com|olo\.com|doordash\.com|ubereats\.com|grubhub\.com|menufy\.com|order\.online|slicelife\.com|beyondmenu\.com|menusifu\.com|owner\.com|getbento\.com|resy\.com|opentable\.com|sevenrooms\.com|tock\.com|exploretock\.com)$/i;
 const BAD_EMAIL_DOMAINS = /(sentry|wixpress|example\.|domain\.com|email\.com|yourdomain|godaddy|squarespace|schema\.org|sentry\.io|wix\.com|mysite\.com|company\.com|test\.com|placeholder)/i;
@@ -234,8 +271,8 @@ async function lookup(o) {
 }
 
 const openingStats = { registry: 0, food: 0, matched: 0, lookedUp: 0, cached: 0, withEmail: 0, waiting: 0, failed: 0 };
-const registry = await sfNewOpenings();
-if (!registry) console.log("New openings: the city registry was unavailable this run; skipped.");
+const registry = REGION.key === "bay" ? await sfNewOpenings() : null; // the SF city registry only covers SF
+if (!registry) console.log(REGION.key === "bay" ? "New openings: the city registry was unavailable this run; skipped." : "New openings: SF only; not part of this region.");
 else {
   openingStats.registry = registry.length;
   const seenLoc = new Set(); const openings = [];
