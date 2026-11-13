@@ -28,7 +28,7 @@ test('Pacific clock and due slots: Monday 10:30 am has the search, the drafts an
   assert.deepEqual(dueSlots(MON_1030_PST).map((s) => s.key).sort(), ['drafts', 'prospects', 'send']);
   assert.deepEqual(dueSlots(at('2026-11-09T18:10:00Z')).map((s) => s.key).sort(), ['drafts', 'prospects'], 'send waits for 10:19');
   assert.deepEqual(dueSlots(at('2026-11-10T18:30:00Z')).map((s) => s.key), ['send'], 'Tuesday: send only');
-  assert.deepEqual(dueSlots(at('2026-11-12T17:00:00Z')).map((s) => s.key), ['drafts'], 'Thursday 9 am: drafts');
+  assert.deepEqual(dueSlots(at('2026-11-12T17:00:00Z')).map((s) => s.key).sort(), ['drafts', 'prospects-us'], 'Thursday 9 am: drafts and the nationwide search');
   assert.deepEqual(dueSlots(at('2026-11-14T18:30:00Z')), [], 'nothing on Saturdays');
   assert.deepEqual(dueSlots(at('2026-11-11T02:00:00Z')), [], 'more than 6 hours late is skipped');
 });

@@ -5,6 +5,11 @@
 name: Prospects
 on:
   workflow_dispatch:
+    inputs:
+      region:
+        description: "bay (SF and nearby), next (the next US metro in the rotation), or a metro key from find.mjs"
+        required: false
+        default: bay
 permissions:
   contents: read
   id-token: write
@@ -14,7 +19,7 @@ concurrency:
 jobs:
   find:
     runs-on: ubuntu-latest
-    timeout-minutes: 60
+    timeout-minutes: 150
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -22,6 +27,8 @@ jobs:
           node-version: 22
       - name: Find and check prospects
         run: node tools/prospects/find.mjs
+        env:
+          REGION: ${{ inputs.region }}
       - name: Mail servers for menu-made.com (public DNS)
         if: always()
         run: dig +short MX menu-made.com; dig +short TXT menu-made.com | grep -i spf || true
