@@ -2945,6 +2945,10 @@ body.about-page .team-profile a{white-space:nowrap;font-size:clamp(11px,calc((10
 /* Free Online Menu preview form (online-menu.html, Nov 4, 2026) */
 .mm-try { display: grid; gap: 28px; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); align-items: start; border: 1px solid rgba(0,214,230,.35); border-radius: var(--radius-lg); padding: clamp(20px, 4vw, 36px); background: rgba(0,0,0,.14); }
 .mm-try-copy h2 { margin-top: 6px; }
+/* How-to videos beside the free generators (owner, Nov 12, 2026). Captions are in the picture; no sound. */
+.mm-try-video { margin: 20px 0 0; }
+.mm-try-video video { display: block; width: 100%; height: auto; aspect-ratio: 16 / 9; border-radius: 14px; border: 1px solid rgba(0,214,230,.35); background: #071f2c; }
+.mm-try-video figcaption { margin-top: 8px; font-size: 13.5px; color: var(--muted, #b9cdd6); }
 .mm-try-form { display: grid; gap: 8px; }
 .mm-try-form label { font-weight: 800; font-size: 13.5px; margin-top: 6px; }
 .mm-try-form input:not(.mm-hp) { width: 100%; border-radius: 14px; border: 1px solid rgba(0,214,230,.45); background: rgba(0,0,0,.22); color: #fff; padding: 10px 12px; font: inherit; }
