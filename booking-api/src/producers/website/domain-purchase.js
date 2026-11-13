@@ -96,7 +96,7 @@ async function offerRealTestDomain(env, domain) {
       footnote: "The link works for 14 days and only once."
     }),
     text: `A test-mode website order picked ${domain}. Nothing has been bought. To register it for real (${cost} on Menu-made's Cloudflare account), open: ${url}`,
-    idempotencyKey: `domain-test-offer/${domain}/${row.order_id}`, purpose: "AUTOMATION_ALERT", templateKey: "domain_test_buy_offer_v1"
+    idempotencyKey: `domain-test-offer/${domain}/${row.order_id}`, purpose: "OWNER_ACTION", templateKey: "domain_test_buy_offer_v1"
   });
 }
 
