@@ -185,11 +185,15 @@ const siteFilesOverrides = {
     const live = hosted && site?.slug ? `https://${site.slug}.menu-made.com/` : null;
     const own = await ownLink(env, context.id);
     const domain = live ? await domainForOrder(env, context.order_id) : null;
+    // Owner, Nov 12, 2026: a buyer who bought a domain gets "Open your live site" on that domain, with the
+    // menu-made.com address only as the backup while the domain is being registered.
+    const ownUrl = domain && !["FAILED", "HELD"].includes(domain.status) ? `https://${domain.domain}/` : null;
     const paragraphs = [
       `Hi ${escapeHtml(context.first_name || "there")}, your website for ${escapeHtml(business)} is ready.`,
       "The download is a zip with the whole site. The README inside says how to put it online with any web host.",
       `Want your own logo and photos on it? <a href="${escapeHtml(own)}">Add them here</a> and we rebuild it for you, free, for the next ${OWN_DAYS} days.`,
-      live && domain ? `We're hosting it for you on Website Care. It's live now at <a href="${escapeHtml(live)}">${escapeHtml(live)}</a>, and we're registering <strong>${escapeHtml(domain.domain)}</strong> for you. We'll email you the moment it's live there too (usually within the hour).`
+      ownUrl ? `Your website's address is <a href="${escapeHtml(ownUrl)}"><strong>${escapeHtml(domain.domain)}</strong></a>. We're registering it in your name now; it usually answers within 30 minutes, and we'll email you the moment it does. Until then your site is already live at <a href="${escapeHtml(live)}">${escapeHtml(live)}</a>, which keeps working too.`
+        : live && domain ? `We're hosting it for you on Website Care. It's live now at <a href="${escapeHtml(live)}">${escapeHtml(live)}</a>, and we're registering <strong>${escapeHtml(domain.domain)}</strong> for you. We'll email you the moment it's live there too (usually within the hour).`
         : live ? `We're hosting it for you on Website Care. It's live now at <a href="${escapeHtml(live)}">${escapeHtml(live)}</a>. To use your own web address, reply to this email with it and we'll send the two settings to change.` : `Want us to host it and keep it current? Add <a href="${escapeHtml(publicBaseUrl(env))}/plans.html">Website Care</a> for $49/mo.`
     ];
     return {
@@ -197,8 +201,8 @@ const siteFilesOverrides = {
       subject: `${isTestOrder(context) ? "[TEST] " : ""}Your website is ready`,
       templateKey: "delivery_site_files_v1",
       html: brandedEmailHtml({ preheader: `${business}'s website, ready to download${live ? " and live" : ""}.`, eyebrow: "YOUR WEBSITE", heading: `${business}'s website is ready`, paragraphs,
-        buttons: [{ label: "Download your website (zip)", url: zip, primary: true }, ...(live ? [{ label: "Open your live site", url: live }] : []), { label: "Add your logo and photos", url: own }], footnote: "The download link works for 90 days, so save the zip. Questions? Reply to this email." }),
-      text: [`Your website for ${business} is ready.`, `Download (zip): ${zip}`, ...(live ? [`Live now: ${live}`] : []), `Add your logo and photos (free, ${OWN_DAYS} days): ${own}`, "The download link works for 90 days."].join("\n")
+        buttons: [{ label: "Download your website (zip)", url: zip, primary: true }, ...(ownUrl ? [{ label: "Open your live site", url: ownUrl }, { label: "Open it now on menu-made.com", url: live }] : live ? [{ label: "Open your live site", url: live }] : []), { label: "Add your logo and photos", url: own }], footnote: "The download link works for 90 days, so save the zip. Questions? Reply to this email." }),
+      text: [`Your website for ${business} is ready.`, `Download (zip): ${zip}`, ...(ownUrl ? [`Your site: ${ownUrl} (answers within about 30 minutes; we'll email you)`, `Live now meanwhile: ${live}`] : live ? [`Live now: ${live}`] : []), `Add your logo and photos (free, ${OWN_DAYS} days): ${own}`, "The download link works for 90 days."].join("\n")
     };
   }
 };
