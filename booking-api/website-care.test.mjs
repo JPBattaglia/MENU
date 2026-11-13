@@ -139,6 +139,7 @@ test('end to end: request, AI edit, checks, owner preview, approval, same addres
     assert.equal(f.row(`SELECT status FROM site_change_requests`).status, 'DRAFTED');
     const buyer = f.emails.at(-1);
     assert.deepEqual(buyer.to, ['joe@joespizza.example']); assert.match(buyer.text, /Your website now shows/); assert.match(buyer.text, /api\/site\/joes-pizza\//);
+    assert.match(buyer.text, /Send another website change: https:\/\/menu-made\.com\/api\/site-care\/[^?\s]+\?t=/); assert.match(buyer.html, /Send another website change/);
     assert.equal(f.row(`SELECT COUNT(*) AS n FROM business_events WHERE event_type = 'AI_USAGE'`).n, 1);
     assert.match(await (await call(f, 'https://menu-made.com/api/site/joes-pizza/')).text(), /Fresh pizza, made daily/);
   });
@@ -172,6 +173,7 @@ test('an invented price, an unclear request and a failed rebuild are never draft
       assert.equal(f.row(`SELECT status FROM site_change_requests`).status, 'NOT_APPLIED');
       assert.match(JSON.parse(f.row(`SELECT result_json FROM site_change_requests`).result_json).reasons.join('; '), reason);
       assert.deepEqual(f.emails.map((m) => m.to[0]).sort(), ['info@menu-made.com', 'joe@joespizza.example']);
+      assert.match(f.emails.find((m) => m.to[0] === 'joe@joespizza.example').text, /Send it again: https:\/\/menu-made\.com\/api\/site-care\/[^?\s]+\?t=/);
       assert.ok((await (await call(f, 'https://menu-made.com/api/site/joes-pizza/menu.html')).text()).includes('$15'));
     });
   }
