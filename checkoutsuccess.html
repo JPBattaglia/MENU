@@ -77,6 +77,16 @@
       <p id="formStatus" class="onboarding-status" role="status" aria-live="polite" hidden></p>
     </form>
 
+    <div id="planState" class="onboarding-panel" hidden>
+      <span class="pill">Plan active</span>
+      <h2 id="planHeading">Your plan is active</h2>
+      <p id="planText">There is nothing to fill in here. Your welcome email has the next steps and your plan's links.</p>
+      <div class="hero-actions">
+        <a class="btn primary" href="account.html">Go to your account</a>
+        <a class="btn ghost" href="index.html">Return Home</a>
+      </div>
+    </div>
+
     <div id="completeState" class="onboarding-panel" hidden>
       <span class="pill">Onboarding complete</span>
       <h2>Your project is ready for production</h2>
@@ -229,6 +239,16 @@
       }
       $("loadingState").hidden = true;
       $("errorState").hidden = true;
+
+      if (data.plan_only) {
+        const names = (data.plans || []).join(", ");
+        $("planHeading").textContent = names ? `${names} is active` : "Your plan is active";
+        $("planText").textContent = `There is nothing to fill in here. We emailed ${data.customer?.email || "you"} a welcome with the next steps and your plan's links. Check your spam folder if it isn't there in a few minutes.`;
+        const lead = document.querySelector(".hero .container > p");
+        if (lead) lead.textContent = "Your payment was successful and your plan has started.";
+        $("planState").hidden = false;
+        return;
+      }
 
       extrasMode = Boolean(data.onboarding?.complete && data.onboarding?.extras_open_until);
       if (data.onboarding?.complete && !extrasMode) {

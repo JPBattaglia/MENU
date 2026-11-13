@@ -218,6 +218,18 @@ async function refreshOnboardingState(projectId, orderId, customerId, workflowKe
   return remaining;
 }
 
+async function planOnlyOrder(env, order) {
+  if (!order?.id || !/paid/i.test(String(order.payment_status || ""))) return null;
+  const { results = [] } = await env.DB.prepare(`
+      SELECT f.name, json_extract(oi.metadata_json, '$.billing') AS billing
+      FROM order_items oi LEFT JOIN offers f ON f.id = oi.offer_id
+      WHERE oi.order_id = ?
+    `).bind(order.id).all();
+  if (!results.length || results.some((r) => r.billing !== "RECURRING")) return null;
+  const customer = await env.DB.prepare(`SELECT c.email FROM orders o JOIN customers c ON c.id = o.customer_id WHERE o.id = ?`).bind(order.id).first();
+  return { plans: results.map((r) => r.name).filter(Boolean), email: customer?.email || null };
+}
+
 async function getOnboarding(request, env) {
   try {
     if (!env.DB) {
@@ -277,6 +289,22 @@ async function getOnboarding(request, env) {
           LIMIT 1
         `).bind(orderId).first();
     if (!project) {
+      // A plan-only order (a monthly service with nothing one-time to set up) has no project. Owner, Nov 12, 2026:
+      // its success page said "We couldn't load your project"; it now says the plan is active and what comes next.
+      const planOnly = await planOnlyOrder(env, access.order);
+      if (planOnly) {
+        return jsonResponse({
+          ok: true,
+          plan_only: true,
+          environment: access.environment,
+          order: {
+            id: access.order.id, status: access.order.status, payment_status: access.order.payment_status,
+            total_cents: Number(access.order.total_cents) || 0, currency: access.order.currency || "usd"
+          },
+          plans: planOnly.plans,
+          customer: { email: planOnly.email }
+        });
+      }
       return jsonResponse(
         {
           ok: false,
