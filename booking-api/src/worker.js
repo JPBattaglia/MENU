@@ -2,7 +2,7 @@ import { handleAdminQueue } from "./admin/queue.js";
 import { handlePreviewCreate, handlePreviewView, handlePreviewState, handlePreviewHandoff, handlePreviewCustomize, handlePreviewChoose, handleRepLink, runPreviewReminders } from "./marketing/public-preview.js";
 import { handleSiteForm } from "./producers/site-files/site-form.js";
 import { handleDomainLookup } from "./producers/website/registrar.js";
-import { runDomainPurchases } from "./producers/website/domain-purchase.js";
+import { handleDomainTestBuy, runDomainPurchases } from "./producers/website/domain-purchase.js";
 import { handleDomainRenewDone, handleDomainRenewPay, runDomainRenewals } from "./producers/website/domain-renewal.js";
 import { handleWebsitePreviewCreate, handleWebsitePreviewView, handleWebsitePreviewState, handleWebsitePreviewHandoff, handleWebsitePreviewCustomize, handleWebsitePreviewImage, handleProspectSiteDemo, runWebsitePreviewReminders, rebuildProspectSites } from "./marketing/website-preview.js";
 import { handleOrderCancel } from "./account/cancel.js";
@@ -280,6 +280,8 @@ var worker_default = {
     if (liveSiteMatch && methodAllowed(request, liveSiteMatch[2])) {
       return serveSlug(request, env, liveSiteMatch[1], liveSiteMatch[2]);
     }
+    const domainTestBuy = url.pathname.match(/^\/api\/domain-test-buy\/([a-z0-9.-]{3,253})$/);
+    if (domainTestBuy && (request.method === "GET" || request.method === "POST")) return handleDomainTestBuy(request, env, domainTestBuy[1]);
     const domainRenewMatch = url.pathname.match(/^\/api\/domain-renew\/([a-z0-9.-]{3,253})(\/done)?$/);
     if (domainRenewMatch && request.method === "GET") {
       return domainRenewMatch[2] ? handleDomainRenewDone(request, domainRenewMatch[1]) : handleDomainRenewPay(request, env, domainRenewMatch[1]);
