@@ -10,12 +10,16 @@
 //     POINTED      -> once https://<domain>/ answers, the buyer gets a "your domain is live" email -> ACTIVE
 //     HELD         -> the price rose more than PRICE_SLACK_CENTS since checkout; the owner decides
 //     FAILED       -> Cloudflare refused or the name was taken meanwhile; the owner is alerted (runbook R2)
-//     TEST         -> a sandbox order: nothing is bought
+//     TEST         -> a sandbox order: nothing is bought, unless the owner taps "Buy it for real" in the email he gets
+//                     (owner, Nov 12, 2026: test the real domain path with the rest of the order in Stripe sandbox).
+//                     That one tap moves the row to QUEUED with environment "live", and from there it is a real domain:
+//                     registered on Menu-made's Cloudflare account, pointed, "is live" email, yearly renewal emails.
 // Renewals: registered with auto-renew off (Cloudflare's default), so nothing renews unpaid. domain-renewal.js emails the
 // buyer a pay link (cost + $5) from 45 days before expiry and switches auto-renew on only once paid.
 import { brandedEmailHtml, escapeHtml, sendTransactionalEmail } from "../../lib/email.js";
-import { ownerEmailAddress } from "../../lib/config.js";
-import { nowIso } from "../../lib/http.js";
+import { ownerEmailAddress, publicBaseUrl } from "../../lib/config.js";
+import { nowIso, simplePage } from "../../lib/http.js";
+import { signLinkToken, verifyLinkToken } from "../../lib/links.js";
 import { stripeRequest } from "../../lib/stripe.js";
 import { CheckoutValidationError } from "../../checkout/quote.js";
 import { DOMAIN_MARKUP_CENTS, asDomain, checkDomains, registrarConfig } from "./registrar.js";
@@ -60,7 +64,59 @@ async function queueDomain(env, context, domain, slug, { test = false } = {}) {
       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `).bind(name, context.order_id, context.id, context.business_id, context.customer_id, slug, test ? "sandbox" : "live", test ? "TEST" : "QUEUED",
     Number(domain.price_cents) || null, Number(domain.cost_cents) || null, Number(domain.renewal_cents) || null, t, t).run();
+  if (test) await offerRealTestDomain(env, name).catch((error) => console.error("test domain offer", error?.message));
   return name;
+}
+
+// ---------- a sandbox order's domain, bought for real on the owner's say-so ----------
+
+const TEST_BUY_KIND = "domaintest";
+const testBuyUrl = async (env, domain) =>
+  `${publicBaseUrl(env)}/api/domain-test-buy/${domain}?t=${await signLinkToken(env, { kind: TEST_BUY_KIND, id: domain, ttlDays: 14 })}`;
+
+// Only the owner inbox gets this link, so someone who found the test-mode switch can't have domains bought on
+// Menu-made's Cloudflare card.
+async function offerRealTestDomain(env, domain) {
+  if (!registrarConfig(env)) return;
+  const row = await env.DB.prepare(`SELECT * FROM domain_registrations WHERE domain = ? AND status = 'TEST'`).bind(domain).first();
+  if (!row) return;
+  const url = await testBuyUrl(env, domain);
+  const cost = row.cost_cents ? `about $${(Number(row.cost_cents) / 100).toFixed(2)}` : "Cloudflare's price";
+  await sendTransactionalEmail(env, {
+    to: ownerEmailAddress(env),
+    subject: `[TEST] Buy ${domain} for real?`,
+    html: brandedEmailHtml({
+      eyebrow: "TEST · DOMAIN", heading: `Buy ${escapeHtml(domain)} for real?`,
+      paragraphs: [
+        `A test-mode website order picked <strong>${escapeHtml(domain)}</strong>. Nothing has been bought.`,
+        `If you tap the button, the domain is registered for real on Menu-made's Cloudflare account (${escapeHtml(cost)} charged to the card on that account), pointed at the test site, and the buyer gets the "your domain is live" email. Everything else on the order stays in Stripe test mode.`,
+        "The registrant is the name, address and phone typed on the test checkout. If you don't tap, nothing happens."
+      ],
+      buttons: [{ label: "Buy it for real", url, primary: true }],
+      footnote: "The link works for 14 days and only once."
+    }),
+    text: `A test-mode website order picked ${domain}. Nothing has been bought. To register it for real (${cost} on Menu-made's Cloudflare account), open: ${url}`,
+    idempotencyKey: `domain-test-offer/${domain}/${row.order_id}`, purpose: "AUTOMATION_ALERT", templateKey: "domain_test_buy_offer_v1"
+  });
+}
+
+async function handleDomainTestBuy(request, env, domain) {
+  const url = new URL(request.url);
+  const token = request.method === "POST" ? String((await request.formData().catch(() => null))?.get("t") || "") : url.searchParams.get("t") || "";
+  const ok = await verifyLinkToken(env, token, [TEST_BUY_KIND], domain).catch(() => null);
+  if (!ok || ok.expired) return simplePage(403, "Link not valid", "<p>This link is not valid or has expired.</p>");
+  const row = await env.DB.prepare(`SELECT * FROM domain_registrations WHERE domain = ?`).bind(domain).first();
+  if (!row) return simplePage(404, "Domain not found", "<p>No order has this domain.</p>");
+  if (row.status !== "TEST") return simplePage(200, "Already on its way", `<p>${escapeHtml(domain)} is already being bought (status: ${escapeHtml(row.status)}). You'll get the "is live" email when it answers.</p>`);
+  // GET only shows the button: mail apps open links on their own, and that must never buy anything.
+  if (request.method !== "POST") {
+    return simplePage(200, `Buy ${domain} for real?`, `<p>This registers <strong>${escapeHtml(domain)}</strong> for one year on Menu-made's Cloudflare account and points it at the test site. The rest of the order stays in test mode.</p>
+<form method="post"><input type="hidden" name="t" value="${escapeHtml(token)}"><button type="submit">Buy it for real</button></form>`);
+  }
+  const moved = await env.DB.prepare(`UPDATE domain_registrations SET status = 'QUEUED', environment = 'live', next_check_at = NULL, last_error = NULL, updated_at = ? WHERE domain = ? AND status = 'TEST'`)
+    .bind(nowIso(), domain).run();
+  if (!moved?.meta?.changes) return simplePage(200, "Already on its way", `<p>${escapeHtml(domain)} is already being bought.</p>`);
+  return simplePage(200, "Buying it now", `<p>${escapeHtml(domain)} goes to Cloudflare within a minute or two. When the domain answers (usually 5 to 30 minutes), the buyer address on the order gets the "${escapeHtml(domain)} is live" email.</p>`);
 }
 
 function api(config, path, { method = "GET", body, headers = {}, fetchImpl = fetch } = {}) {
@@ -94,7 +150,9 @@ async function buyerContact(env, row) {
       FROM orders o LEFT JOIN customers c ON c.id = o.customer_id LEFT JOIN businesses b ON b.id = o.business_id WHERE o.id = ?
     `).bind(row.order_id).first();
   if (!order?.session) return null;
-  const session = await stripeRequest(env, row.environment === "sandbox" ? "sandbox" : "live", `/v1/checkout/sessions/${order.session}`).catch(() => null);
+  // The session's own mode, not the row's: a test order's domain bought for real is "live" but its checkout was sandbox.
+  const mode = String(order.session).startsWith("cs_test_") ? "sandbox" : "live";
+  const session = await stripeRequest(env, mode, `/v1/checkout/sessions/${order.session}`).catch(() => null);
   const details = session?.customer_details || {};
   const address = details.address || {};
   const name = String(details.name || [order.first_name, order.last_name].filter(Boolean).join(" ")).trim();
@@ -294,4 +352,4 @@ async function domainForOrder(env, orderId) {
   return env.DB.prepare(`SELECT domain, status FROM domain_registrations WHERE order_id = ? LIMIT 1`).bind(orderId).first().catch(() => null);
 }
 
-export { domainForCheckout, domainForOrder, hostsSite, queueDomain, registryPhone, runDomainPurchases };
+export { domainForCheckout, domainForOrder, handleDomainTestBuy, hostsSite, queueDomain, registryPhone, runDomainPurchases, testBuyUrl };

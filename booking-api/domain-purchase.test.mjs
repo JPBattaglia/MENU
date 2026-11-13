@@ -6,7 +6,7 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { createD1 } from './test-support/d1.mjs';
 
-const { domainForCheckout, hostsSite, queueDomain, registryPhone, runDomainPurchases } = await import('./src/producers/website/domain-purchase.js');
+const { domainForCheckout, handleDomainTestBuy, hostsSite, queueDomain, registryPhone, runDomainPurchases, testBuyUrl } = await import('./src/producers/website/domain-purchase.js');
 const { customHostSlug } = await import('./src/producers/website/domains.js');
 const read = (name) => readFileSync(new URL(`./migrations/${name}`, import.meta.url), 'utf8');
 const T = '2026-11-07T00:00:00.000Z';
@@ -37,7 +37,7 @@ function setup({ cost = '10.11', registerState = 'succeeded', registerStatus = 2
     throw new Error('Unexpected fetch ' + url);
   };
   globalThis.fetch = fake;
-  const env = { DB, CF_REGISTRAR_TOKEN: 'cfat_x', CF_ACCOUNT_ID: 'acct', STRIPE_SECRET_KEY: 'sk_live_x', RESEND_API_KEY: 're_test', OWNER_EMAIL: 'info@menu-made.com' };
+  const env = { DB, CF_REGISTRAR_TOKEN: 'cfat_x', CF_ACCOUNT_ID: 'acct', STRIPE_SECRET_KEY: 'sk_live_x', STRIPE_SECRET_KEY_TEST: 'sk_test_x', RESEND_API_KEY: 're_test', OWNER_EMAIL: 'info@menu-made.com' };
   const context = { id: 'p1', order_id: 'o1', business_id: 'biz', customer_id: 'cust' };
   const domain = { name: 'olivakitchen.com', price_cents: 1511, cost_cents: 1011, renewal_cents: 1511 };
   const row = () => DB.raw.prepare(`SELECT * FROM domain_registrations WHERE domain = 'olivakitchen.com'`).get();
@@ -123,4 +123,33 @@ test('a price jump since checkout holds the domain and tells the owner; test ord
   assert.equal(t.row().status, 'TEST');
   assert.deepEqual(await runDomainPurchases(t.env, { fetchImpl: t.fake }), []);
   assert.equal(t.calls.length, 0);
+});
+
+test('a test order\'s domain: only the owner is offered it, a GET buys nothing, the POST buys it for real once', async () => {
+  const s = setup();
+  s.env.PRODUCTION_RUNNER_SECRET = 'secret';
+  s.DB.raw.prepare(`UPDATE orders SET stripe_checkout_session_id = 'cs_test_abc' WHERE id = 'o1'`).run();
+  await queueDomain(s.env, s.context, s.domain, 'oliva', { test: true });
+  assert.equal(s.row().status, 'TEST');
+  const offer = s.emails.find((e) => /\[TEST\] Buy olivakitchen\.com for real\?/.test(e.subject));
+  assert.ok(offer, 'owner offered the real buy');
+  assert.deepEqual([].concat(offer.to), ['info@menu-made.com']);
+  assert.equal(s.emails.filter((e) => [].concat(e.to).includes('ana@oliva.example')).length, 0, 'the buyer is never offered it');
+  const url = await testBuyUrl(s.env, 'olivakitchen.com');
+  const token = new URL(url).searchParams.get('t');
+  const req = (method, t = token) => new Request(url.split('?')[0] + (method === 'GET' ? `?t=${t}` : ''), method === 'GET' ? {} : { method, body: new URLSearchParams({ t }) });
+
+  assert.equal((await handleDomainTestBuy(req('POST', 'bad.token-value'), s.env, 'olivakitchen.com')).status, 403);
+  assert.equal((await handleDomainTestBuy(req('GET'), s.env, 'olivakitchen.com')).status, 200);
+  assert.equal(s.row().status, 'TEST', 'opening the link buys nothing');
+  assert.deepEqual(await runDomainPurchases(s.env, { fetchImpl: s.fake }), []);
+
+  assert.match(await (await handleDomainTestBuy(req('POST'), s.env, 'olivakitchen.com')).text(), /Buying it now/);
+  assert.equal(s.row().status, 'QUEUED'); assert.equal(s.row().environment, 'live');
+  assert.match(await (await handleDomainTestBuy(req('POST'), s.env, 'olivakitchen.com')).text(), /already/);
+  assert.deepEqual(await runDomainPurchases(s.env, { fetchImpl: s.fake }), [{ domain: 'olivakitchen.com', outcome: 'REGISTERED' }]);
+  assert.equal(s.calls.filter((c) => c.method === 'POST' && c.url.endsWith('/registrar/registrations')).length, 1);
+  // The registrant comes from the sandbox checkout session, read with the sandbox key.
+  const reg = s.calls.find((c) => c.method === 'POST' && c.url.endsWith('/registrar/registrations'));
+  assert.equal(reg.body.contacts.registrant.postal_info.name, 'Ana Rossi');
 });
