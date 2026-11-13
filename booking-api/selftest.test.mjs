@@ -136,7 +136,7 @@ test('self-test walks a 3-page order with a 5-page menu through payment, extra p
   await withFetch(f.fetch, async () => {
     f.request();
     let result;
-    for (let i = 0; i < 8; i++) {
+    for (let i = 0; i < 12; i++) {
       await f.tick();
       await f.deliverWebhooks();
       result = f.row(`SELECT * FROM self_tests WHERE id = 'st1'`);
@@ -204,8 +204,8 @@ test('the deployed worker keeps the daily self-test schedule on (SELFTEST_SCHEDU
 
 // ---------- Holiday Menu (HOLIDAY_MENU_RUN) ----------
 
-const HOLIDAY_READ = { sections: [{ name: 'Holiday Dinner', items: [{ name: 'Prime Rib', description: '', price: '$48' }, { name: 'Roast Turkey', description: '', price: '$36' }] },
-  { name: 'Holiday Desserts', items: [{ name: 'Gingerbread Cake', description: '', price: '$11' }] }], notes: '', unreadable: '' };
+const HOLIDAY_READ = { sections: [{ name: 'Holiday Dinner', items: [{ name: 'Prime Rib', description: '', price: '$48' }, { name: 'Roast Turkey', description: '', price: '$36' }, { name: 'Butternut Ravioli', description: '', price: '$28' }] },
+  { name: 'Holiday Desserts', items: [{ name: 'Gingerbread Cake', description: '', price: '$11' }, { name: 'Peppermint Sundae', description: '', price: '$9' }, { name: 'Eggnog Custard', description: '', price: '$10' }] }], notes: '', unreadable: '' };
 
 function holidaySetup(t, now, options = {}) {
   t.mock.timers.enable({ apis: ['Date'], now: Date.parse(now) });
@@ -214,7 +214,7 @@ function holidaySetup(t, now, options = {}) {
   for (const stmt of migration.split(/;\s*\n/)) if (/^\s*INSERT/m.test(stmt)) f.DB.raw.exec(stmt.replace(/^--.*$/gm, ''));
   const run = async () => {
     let result;
-    for (let i = 0; i < 8; i++) {
+    for (let i = 0; i < 12; i++) {
       await f.tick();
       await f.deliverWebhooks();
       result = f.row(`SELECT * FROM self_tests WHERE id = 'st1'`);
@@ -225,29 +225,48 @@ function holidaySetup(t, now, options = {}) {
   return { ...f, run };
 }
 
-test('holiday self-test: preview, chosen design, $59 checkout, approval, live at its own Christmas address; $30 the next day', async (t) => {
+test('holiday self-test: both holidays at $89, quality checks at delivery, the second menu completes at $0 with no Stripe page; a first-time buyer again the next day', async (t) => {
   const f = holidaySetup(t, '2026-11-20T19:35:00.000Z');
   await withFetch(f.fetch, async () => {
     f.request('HOLIDAY_MENU_RUN');
     const result = await f.run();
     assert.equal(result.status, 'PASSED', `${result.stage}: ${result.error}\n${result.log_json}`);
     const log = JSON.parse(result.log_json).map(l => l.note).filter(Boolean);
-    assert.match(log[0], /Christmas preview opened with 6 holiday designs; Silent Night chosen; order .* placed at \$59/);
+    assert.match(log[0], /Christmas preview opened with 6 holiday designs; Silent Night chosen; order .* placed at \$89 for both holidays/);
     assert.ok(log.some(l => /project carries the holiday \(ends 2026-12-26\)/.test(l)));
-    assert.match(log.at(-1), /live at \/api\/menu\/holiday-self-test-cafe-christmas-[0-9a-f]{8} in Silent Night through 2026-12-26; preview removed/);
-    assert.deepEqual([...f.sessions.values()].map(s => [s.amount_total, s.payment_status]), [[5900, 'paid']], 'one test payment, no extra pages');
+    const delivered = log.find(l => /^Delivered to the buyer/.test(l));
+    assert.match(delivered, /live at \/api\/menu\/holiday-self-test-cafe-christmas-[0-9a-f]{8} in Silent Night through 2026-12-26/);
+    assert.match(delivered, /all 6 items and prices on the page, QR code points at it, print PDF, tri-fold, table tent and TV screen open; preview removed/);
+    assert.ok(log.some(l => /"Send your New Year's Eve menu" email sent; its preview says already paid; order .* completed at \$0 with no Stripe page/.test(l)), log.join('\n'));
+    assert.match(log.at(-1), /New Year's Eve project started with its menu attached, then cancelled; second preview removed/);
+    assert.deepEqual([...f.sessions.values()].map(s => [s.amount_total, s.payment_status]), [[8900, 'paid']], 'one test payment: the second menu opens no Stripe page');
     for (const email of f.emails) assert.deepEqual(email.to, ['delivered@resend.dev'], email.subject);
+    assert.ok(f.emails.some(e => /Your New Year's Eve menu is included/.test(e.subject)));
     assert.equal(f.row(`SELECT status FROM projects WHERE id = ?`, result.project_id).status, 'DELIVERED');
-    assert.equal(f.rows(`SELECT token FROM menu_previews`).length, 0, 'the test preview never counts as a real one');
+    const second = f.row(`SELECT o.status, o.payment_status, o.total_cents, o.stripe_checkout_session_id AS session FROM orders o WHERE o.id = ?`, JSON.parse(result.state_json).second_order_id);
+    assert.deepEqual([second.status, second.payment_status, second.total_cents], ['CANCELLED', 'PAID', 0]);
+    assert.match(second.session, /^cs_test_prepaid[0-9a-f]{32}$/);
+    assert.equal(f.rows(`SELECT token FROM menu_previews`).length, 0, 'the test previews never count as real ones');
     assert.deepEqual([...f.ASSETS.objects.keys()].filter((k) => k.startsWith('menu-previews/')), []);
 
-    // The next day the test inbox already has a holiday menu this season: the second is $30.
+    // The next day the earlier test orders are retired, so the inbox buys both again instead of paying $30.
     f.sql(`DELETE FROM self_tests`);
     t.mock.timers.setTime(Date.parse('2026-11-21T19:35:00.000Z'));
     f.request('HOLIDAY_MENU_RUN');
-    const second = await f.run();
-    assert.equal(second.status, 'PASSED', `${second.stage}: ${second.error}`);
-    assert.equal([...f.sessions.values()].at(-1).amount_total, 3000);
+    const next = await f.run();
+    assert.equal(next.status, 'PASSED', `${next.stage}: ${next.error}`);
+    assert.equal([...f.sessions.values()].at(-1).amount_total, 8900);
+    assert.equal(f.rows(`SELECT id FROM orders WHERE payment_status = 'REFUNDED'`).length, 2, "yesterday's two test orders no longer count as paid");
+  });
+});
+
+test('holiday self-test: a menu page missing an item fails the quality check', async (t) => {
+  const f = holidaySetup(t, '2026-11-20T19:35:00.000Z', { menu: { ...HOLIDAY_READ, sections: [HOLIDAY_READ.sections[0]] } });
+  await withFetch(f.fetch, async () => {
+    f.request('HOLIDAY_MENU_RUN');
+    const result = await f.run();
+    assert.equal(result.status, 'FAILED', result.log_json);
+    assert.match(result.error, /The live menu is missing 3 of 6 items or prices from the uploaded menu: Gingerbread Cake \$11, Peppermint Sundae \$9, Eggnog Custard \$10/);
   });
 });
 
