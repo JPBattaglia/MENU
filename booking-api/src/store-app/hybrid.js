@@ -429,8 +429,12 @@ const HYBRID_LOOK = {
   // safe circle; owner on the first build of it: "put a little more space between the logo and the edges", so the
   // margin went from 5% to 10% a side, and that is the one he then named as the icon to use). The opening clip shows the red and black logo, on purpose. In the app the header logo and loader are
   // unchanged (logo_url).
+  // Superseded Nov 13, 2026 (owner: "change the Nino App icon to this with the same white color background"): his
+  // red-ring, navy-and-blue N disc (3788.jpg). nino-icon-logo.png is that picture squared to 1024 px with its black
+  // corners and outer white band flattened to the band's own colour #dddad5, and icon_bg is that same colour, so the
+  // disc's white band runs straight into the icon's background with no seam. Same 10% / 22% margins as before.
   nino: { label: "Nino", logo_url: `${MM}/assets/own-apps/nino-app-logo.png`, icon_file: "assets/own-apps/nino-icon-logo.png",
-    icon_bg: "#0d0303", icon_pad: 0.1, icon_pad_android: 0.22,
+    icon_bg: "#dddad5", icon_pad: 0.1, icon_pad_android: 0.22,
     intro_url: `${MM}/assets/own-apps/nino-intro-neon.mp4`,
     // Loading animation (owner, Nov 11, 2026: "Use this and just make it rotate slowly"): his NinoLogoAppIcon copy.png
     // (the red and navy mark in its ring, 512 px, see-through background), unaltered, turned by the app once every
