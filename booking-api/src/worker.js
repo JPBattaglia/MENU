@@ -76,7 +76,7 @@ import { handleGoogleMedia, handlePhotoLibrary } from "./producers/google-care/l
 import { handleGoogleCallback, handleGoogleConnect, handleGoogleLocation } from "./google/connect.js";
 import { handleStoreKeys } from "./store-app/keys.js";
 import { handleRestaurantKeys } from "./store-app/restaurant-keys.js";
-import { advanceStoreBuilds, scheduleYearlyRebuilds, handleBuildConfig, handleBuildResult, handleRebuild } from "./store-app/store-build.js";
+import { advanceStoreBuilds, holidayIconRebuilds, scheduleYearlyRebuilds, handleBuildConfig, handleBuildResult, handleRebuild } from "./store-app/store-build.js";
 import { advanceStoreListings, handleListingImage, handleListingImageView, handleListingPage } from "./store-app/store-listing.js";
 import { handleAndroidBundle, handleAndroidKey, handleAndroidPushTest, handleBuildCredentials, handleBundleDownload } from "./store-app/build-credentials.js";
 import { advanceAccessibilitySelfTests } from "./selftest/accessibility-selftest.js";
@@ -525,6 +525,7 @@ const mmWorkerWithBooking = {
       await ensureOwnStoreApps(env).catch((error) => console.error("Own Mobile Apps failed:", error instanceof Error ? error.message : String(error)));
       await advanceStoreApps(env).catch((error) => console.error("Mobile App steps failed:", error instanceof Error ? error.message : String(error)));
       await scheduleYearlyRebuilds(env).catch((error) => console.error("Mobile App yearly rebuilds failed:", error instanceof Error ? error.message : String(error)));
+      await holidayIconRebuilds(env).catch((error) => console.error("Mobile App holiday icon rebuilds failed:", error instanceof Error ? error.message : String(error)));
       await advanceStoreBuilds(env).catch((error) => console.error("Mobile App builds failed:", error instanceof Error ? error.message : String(error)));
       await advanceStoreListings(env).catch((error) => console.error("Mobile App listings failed:", error instanceof Error ? error.message : String(error)));
       await advanceGuestAppPushSelfTests(env, app).catch((error) => console.error("Guest App push self-test failed:", error instanceof Error ? error.message : String(error)));

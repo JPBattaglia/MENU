@@ -27,7 +27,7 @@ import { keysReady, storeScope } from "./restaurant-keys.js";
 import { OWNER, OWNER_BUNDLE_ID } from "./keys.js";
 import { pausedWorkflows } from "../lib/switches.js";
 import { dispatchRefused } from "../lib/dispatch-alert.js";
-import { hybridLookForBundle, hybridUrlForBundle } from "./hybrid.js";
+import { HOLIDAY_ICONS, HYBRID_BUNDLES, hybridLookForBundle, hybridUrlForBundle, pacificDay } from "./hybrid.js";
 
 const BUILD_AUDIENCE = "menu-made-store-build";
 const BUILD_WORKFLOW = "JPBattaglia/MENU/.github/workflows/store-app-build.yml@refs/heads/master";
@@ -285,6 +285,27 @@ async function scheduleYearlyRebuilds(env, now = Date.now(), { force = false } =
   return { queued };
 }
 
+// Holiday icons go back by themselves (owner, Nov 13, 2026: the MΞNU app's Christmas icon through Dec 31, "then
+// back"): from Jan 1 to Jan 7 (Pacific) each 5-minute tick checks once per app and year; an app with a holiday icon
+// that is LIVE is queued for a rebuild, which draws the regular icon again. Not LIVE yet (in review, say) = tried on
+// the next tick. The owner still gets the usual store listing email to approve before anything goes to the stores.
+async function holidayIconRebuilds(env, now = Date.now()) {
+  if (!env.DB) return { queued: 0 };
+  const day = pacificDay(now);
+  if (day.slice(5) > "01-07") return { queued: 0 };
+  let queued = 0;
+  for (const [bundle, key] of HYBRID_BUNDLES) {
+    if (!HOLIDAY_ICONS[key]) continue;
+    const mark = `holiday_icon_rebuild/${key}/${day.slice(0, 4)}`;
+    if (await env.DB.prepare(`SELECT 1 FROM worker_settings WHERE key = ?`).bind(mark).first()) continue;
+    const r = await env.DB.prepare(`UPDATE store_apps SET status = 'READY_TO_BUILD', note = 'Holiday icon back to regular', updated_at = ? WHERE bundle_id = ? AND status = 'LIVE'`).bind(nowIso(), bundle).run();
+    if (!r.meta?.changes) continue;
+    queued += r.meta.changes;
+    await env.DB.prepare(`INSERT INTO worker_settings (key, value, updated_at) VALUES (?, '1', ?) ON CONFLICT(key) DO NOTHING`).bind(mark, nowIso()).run();
+  }
+  return { queued };
+}
+
 // ---------- The owner's "Build again" ----------
 
 async function handleRebuild(request, env, id) {
@@ -305,4 +326,4 @@ async function handleRebuild(request, env, id) {
   return simplePage(200, "Queued", "<p>The build starts within 5 minutes. You'll get an email only if something needs a look.</p>");
 }
 
-export { siteUrlOf, BUILD_AUDIENCE, BUILD_WORKFLOW, REBUILD_KIND, YEARLY_MS, advanceStoreBuilds, scheduleYearlyRebuilds, buildConfigFor, liveVersionOf, nextVersion, rebuildLink, recordBuildResult, buildTarget, handleBuildConfig, handleBuildResult, handleRebuild };
+export { holidayIconRebuilds, siteUrlOf, BUILD_AUDIENCE, BUILD_WORKFLOW, REBUILD_KIND, YEARLY_MS, advanceStoreBuilds, scheduleYearlyRebuilds, buildConfigFor, liveVersionOf, nextVersion, rebuildLink, recordBuildResult, buildTarget, handleBuildConfig, handleBuildResult, handleRebuild };

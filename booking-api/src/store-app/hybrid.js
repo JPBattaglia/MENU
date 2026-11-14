@@ -441,10 +441,29 @@ const HYBRID_LOOK = {
     // loader_spin seconds. It replaces the ring of fire N (nino-loader.webp, kept for the builds that still ask for it).
     loader_url: `${MM}/assets/own-apps/nino-loader-logo.png`, loader_spin: 8 }
 };
-const hybridLookForBundle = (bundleId) => HYBRID_LOOK[HYBRID_BUNDLES.get(String(bundleId || ""))] || null;
+// Holiday app icons (owner, Nov 13, 2026: the MΞNU app icon becomes his Christmas gear, the candy-cane bars in a
+// snowy holly wreath, through Dec 31, then back to the regular gear). A build made inside the window (Pacific
+// dates, month-day) draws the holiday picture; the first build after it draws the regular one again. The worker's
+// tick queues that rebuild on Jan 1 (holidayIconRebuilds in store-build.js), so the icon goes back by itself.
+const HOLIDAY_ICONS = {
+  menumade: { icon_file: "assets/own-apps/menumade-icon-logo-xmas.png", from: "11-13", to: "12-31" }
+};
+const holidayIconOn = (key, now = Date.now()) => {
+  const h = HOLIDAY_ICONS[key];
+  if (!h) return null;
+  const md = pacificDay(now).slice(5);
+  return md >= h.from && md <= h.to ? h : null;
+};
+const hybridLookForBundle = (bundleId, now = Date.now()) => {
+  const key = HYBRID_BUNDLES.get(String(bundleId || ""));
+  const look = HYBRID_LOOK[key];
+  if (!look) return null;
+  const h = holidayIconOn(key, now);
+  return h ? { ...look, icon_file: h.icon_file } : look;
+};
 const hybridUrlForBundle = (bundleId) => hybridUrl(HYBRID_BUNDLES.get(String(bundleId || "")) || "");
 
-export { appPlatform, countAppOpen, pacificDay, tagAppPages, announceNinoDrops, hybridLookForBundle, HYBRID_BUNDLES, HYBRID_KEYS, hybridUrlForBundle, TTL as HYBRID_TTL, handleHybridContent, hybridUrl, menumadeContent, ninoContent };
+export { appPlatform, countAppOpen, pacificDay, HOLIDAY_ICONS, holidayIconOn, tagAppPages, announceNinoDrops, hybridLookForBundle, HYBRID_BUNDLES, HYBRID_KEYS, hybridUrlForBundle, TTL as HYBRID_TTL, handleHybridContent, hybridUrl, menumadeContent, ninoContent };
 
 // Store links for the owner's own apps, for the "Get the app" buttons on menu-made.com and ninobattaglia.com
 // (owner, Nov 10, 2026). A store's link is given only once that store has the app public (store_app_listings:
