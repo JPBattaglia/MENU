@@ -18,3 +18,6 @@ The owner's two store apps (MΞNU and Nino Battaglia) are drawn by `app-shell/ww
   the bundled code instead of breaking.
 - Never break the live files: a syntax error in app-shell/www ships to every phone at the next launch (live.js falls
   back to the bundled copy only after a failed start). Run `node --check` and booking-api/app-live-code.test.mjs.
+- **Zoom is paramount (owner, Nov 14, 2026):** the Nino product photo must always open the full-screen viewer with
+  pinch and double-tap zoom (zoomViewer in hybrid.js), on Android and iPhone. Never remove or break it; the test in
+  booking-api/app-live-code.test.mjs guards it.
