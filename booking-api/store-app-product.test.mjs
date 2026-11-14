@@ -271,10 +271,10 @@ test("owner's own apps: made once by the tick at no charge, owner keys, no buyer
     assert.equal(cfg.body.config.hybrid_url, 'https://menu-made.com/api/app-hybrid/nino');
     // Nino's app icon comes from the repo file (the owner's blue N), and its loading screen spins the same picture.
     assert.equal(cfg.body.config.logo_url, 'https://menu-made.com/assets/own-apps/nino-app-logo.png');
-    // Nov 10, 2026: the icon is the owner's orange and gold disc (NinoLogoRevision_3) on a warm near-black.
+    // Nov 13, 2026: the icon is the owner's red-ring N disc on its own white band colour (#dddad5).
     assert.equal(cfg.body.logo_file, 'assets/own-apps/nino-icon-logo.png');
-    assert.equal(cfg.body.icon_background, '#0d0303');
-    assert.match(cfg.body.icon_svg, /<rect width="512" height="512" fill="#0d0303"\/>/);
+    assert.equal(cfg.body.icon_background, '#dddad5');
+    assert.match(cfg.body.icon_svg, /<rect width="512" height="512" fill="#dddad5"\/>/);
     assert.match(cfg.body.icon_svg, /x="51.2" y="51.2"/, 'a 10% margin around the disc (owner: a little more space)');
     assert.match(cfg.body.android_foreground_svg, /x="112.64" y="112.64"/, "inside Android's safe zone");
     assert.equal(cfg.body.config.intro_url, 'https://menu-made.com/assets/own-apps/nino-intro-neon.mp4');
