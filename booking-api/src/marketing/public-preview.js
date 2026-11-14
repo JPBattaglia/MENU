@@ -36,6 +36,7 @@ import { bytesToBase64 } from "../lib/util.js";
 import { brandedEmailHtml, escapeHtml, sendTransactionalEmail } from "../lib/email.js";
 import { menuColors, readMenuWithClaude } from "../producers/menu-qr/claude-reader.js";
 import { LOGO_MODES, buildDesignedMenuHtml, parseLogoInfo } from "../producers/menu-qr/design.js";
+import { cleanMenu, diffMenus } from "../producers/menu-care/menu-edit.js";
 import { MENU_DESIGNS, designStyle, designsFor, menuDesignFor } from "../producers/menu-qr/menu-designs.js";
 import { HOLIDAY_PRICING, OCCASION_NAMES, holidayDollars, holidayOnSale, holidayQuote, isOccasion, otherOccasion, prepaidCover } from "../checkout/holiday.js";
 import { completePrepaidHoliday } from "../checkout/session.js";
@@ -64,7 +65,7 @@ const PER_EMAIL = 3; // free previews per email per EMAIL_DAYS; the same file ag
 const UPLOAD_MAX_AGE_SECONDS = 2 * 3600;
 const HANDOFF_DAYS = 14;
 const SITE = "https://menu-made.com";
-const MAX_CUSTOMIZE = 15;          // rebuilds per preview (no AI involved, just storage)
+const MAX_CUSTOMIZE = 30;          // rebuilds per preview (no AI involved, just storage); 30 since item editing (Nov 14, 2026)
 const MAX_LOGO_BYTES = 1572864;    // the page carries the logo inline (as the paid menu does), so it stays small
 const MENU_TYPES = new Set(["application/pdf", "image/png", "image/jpeg", "image/webp"]);
 const SCANNER = /bot|crawl|spider|slurp|preview|scanner|proofpoint|mimecast|barracuda|safelinks|urldefense|headless|python|curl|wget|java\/|go-http|facebookexternalhit|slackbot|whatsapp|discord|skypeuripreview|outlook-ios-linkpreview/i;
@@ -104,7 +105,10 @@ function newToken() {
 // The paid product's own page design, plus the generator bar, a watermark on every screen, and no printing.
 // index: which of MENU_DESIGNS is on screen; custom: what Customize set (for the popup's "now using" line).
 // prospect: a private preview built for a prospect email (demo-menu.js), which lasts PROSPECT_DAYS, not PREVIEW_HOURS.
-function publicPreviewPage(menuHtml, token, { index = 0, custom = {}, business = "", prospect = false, occasion = null, both = false, prepaid = false } = {}) {
+function publicPreviewPage(menuHtml, token, { index = 0, custom = {}, business = "", prospect = false, occasion = null, both = false, prepaid = false, menu = null } = {}) {
+  // The menu as read (or as the buyer last edited it), for Customize's "Items and prices"; "<" escaped so no text can
+  // close the script element it sits in.
+  const itemsJson = JSON.stringify({ sections: menu?.sections || [], notes: menu?.notes || "" }).replace(/</g, "\\u003c");
   const list = designsFor(occasion);
   const d = list[index] || list[0];
   const next = list[(list.indexOf(d) + 1) % list.length];
@@ -129,8 +133,11 @@ function publicPreviewPage(menuHtml, token, { index = 0, custom = {}, business =
   <label class="mm-own-colour">Highlight colour <input type="color" name="brand" value="${brand || "#00a7b5"}"></label>
   <label class="mm-own-check"><input type="checkbox" name="use_brand" value="1"${brand ? " checked" : ""}> Use it for lines, borders and accents</label>
   <label>Line under your name <small>(e.g. Dinner Menu, Est. 1998)</small><input name="subtitle" maxlength="60" value="${escapeHtml(custom.subtitle || (isOccasion(occasion) ? `${OCCASION_NAMES[occasion]} Menu` : "Menu"))}"></label>
+  <details class="mm-own-items"><summary>Items and prices <small>(fix anything we read wrong, change a price)</small></summary><div class="mm-items" id="mm-items"></div></details>
+  <input type="hidden" name="menu_json" value="">
   <button type="submit">Update all ${list.length} designs</button>
   </form>
+  <script type="application/json" id="mm-items-data">${itemsJson}</script>
   <div class="mm-own-busy" role="status" aria-live="polite" hidden><span class="mm-spin" aria-hidden="true"></span><p><strong>Updating your menu…</strong></p><p>This takes a few seconds; the page reloads by itself.</p></div>
   </div></dialog>
 </aside>
@@ -158,6 +165,45 @@ function publicPreviewPage(menuHtml, token, { index = 0, custom = {}, business =
     }).catch(function () {});
   });
 })();
+// Items and prices (Nov 14, 2026): an editor drawn from the menu's JSON when the section is opened; on submit the
+// edited menu goes along as menu_json. Not opened = not sent, so the stored menu stays exactly as it is.
+(function () {
+  var box = document.getElementById("mm-items"), src = document.getElementById("mm-items-data"); if (!box || !src) return;
+  var menu = null, form = box.closest("form");
+  function el(t, c, txt) { var n = document.createElement(t); if (c) n.className = c; if (txt) n.textContent = txt; return n; }
+  function input(label, value, max, onIn, area) {
+    var l = el("label", "mm-it-f"); l.appendChild(el("span", null, label));
+    var i = el(area ? "textarea" : "input"); if (!area) i.type = "text"; else i.rows = 2; i.maxLength = max; i.value = value || "";
+    i.addEventListener("input", function () { onIn(i.value); }); l.appendChild(i); return l;
+  }
+  function btn(txt, c, fn) { var b = el("button", c, txt); b.type = "button"; b.addEventListener("click", fn); return b; }
+  function draw() {
+    box.textContent = "";
+    menu.sections.forEach(function (s, si) {
+      var sec = el("div", "mm-it-sec");
+      sec.appendChild(input("Section", s.name, 120, function (v) { s.name = v; }));
+      s.items.forEach(function (it, ii) {
+        var row = el("div", "mm-it-row");
+        var top = el("div", "mm-it-top");
+        top.appendChild(input("Item", it.name, 200, function (v) { it.name = v; }));
+        top.appendChild(input("Price", it.price, 40, function (v) { it.price = v; }));
+        row.appendChild(top);
+        row.appendChild(input("Description", it.description, 600, function (v) { it.description = v; }, true));
+        row.appendChild(btn("Remove item", "mm-it-x", function () { s.items.splice(ii, 1); draw(); }));
+        sec.appendChild(row);
+      });
+      sec.appendChild(btn("Add an item", "mm-it-add", function () { s.items.push({ name: "", description: "", price: "" }); draw(); }));
+      box.appendChild(sec);
+    });
+    box.appendChild(btn("Add a section", "mm-it-add", function () { menu.sections.push({ name: "", items: [{ name: "", description: "", price: "" }] }); draw(); }));
+  }
+  box.parentNode.addEventListener("toggle", function () {
+    if (menu || !box.parentNode.open) return;
+    try { menu = JSON.parse(src.textContent); } catch (e) { menu = { sections: [], notes: "" }; }
+    draw();
+  });
+  form.addEventListener("submit", function () { if (menu) form.elements.menu_json.value = JSON.stringify(menu); });
+})();
 window.addEventListener("pageshow", function () { var b = document.querySelector(".mm-own-box"); if (!b) return; b.querySelector("form").hidden = false; b.querySelector(".mm-own-busy").hidden = true; });</script>`;
   const style = `<style>
   body { padding-bottom: 170px; }
@@ -177,6 +223,11 @@ window.addEventListener("pageshow", function () { var b = document.querySelector
   .mm-own input[type=file]::file-selector-button { margin-right: 12px; padding: 10px 18px; border: 0; border-radius: 8px; background: #00a7b5; color: #fff; font: 700 15px system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; cursor: pointer; } .mm-own input[type=file]::file-selector-button:hover { background: #00bccb; }
   .mm-own input[type=file] { color: #e8f6f7; max-width: 100%; } .mm-own .mm-own-colour, .mm-own .mm-own-check { display: flex; align-items: center; gap: 10px; } .mm-own input[type=color] { width: 52px; height: 36px; border: 0; padding: 0; background: none; }
   .mm-own p { margin: 0; color: #e8f6f7; } .mm-own button { padding: 12px 18px; border: 0; border-radius: 8px; background: #00a7b5; color: #fff; font: 700 15px system-ui, sans-serif; cursor: pointer; }
+  .mm-own-items { border-top: 1px solid #ffffff33; padding-top: 10px; } .mm-own-items summary { cursor: pointer; font-weight: 700; padding: 6px 0; }
+  .mm-items { display: grid; gap: 12px; margin-top: 8px; } .mm-it-sec { display: grid; gap: 8px; padding: 10px; border: 1px solid #ffffff33; border-radius: 10px; }
+  .mm-it-row { display: grid; gap: 6px; padding-top: 8px; border-top: 1px solid #ffffff22; } .mm-it-top { display: grid; grid-template-columns: 1fr 96px; gap: 8px; }
+  .mm-it-f { display: grid; gap: 3px; font-size: 13px; } .mm-it-f input, .mm-it-f textarea { width: 100%; box-sizing: border-box; font: 15px/1.4 system-ui, sans-serif; padding: 8px 10px; border: 1px solid #ffffff4d; border-radius: 8px; background: #0d2a38; color: #e8f6f7; }
+  .mm-own .mm-it-x, .mm-own .mm-it-add { justify-self: start; padding: 8px 12px; background: transparent; box-shadow: inset 0 0 0 1px #ffffff66; font-size: 13px; } .mm-own .mm-it-x { color: #ffb4b4; }
   .mm-own-busy { display: grid; justify-items: center; gap: 10px; padding: 28px 8px 12px; text-align: center; } .mm-own-busy[hidden], .mm-own form[hidden] { display: none; }
   .mm-spin { width: 52px; height: 52px; border: 5px solid #ffffff2e; border-top-color: #00a7b5; border-radius: 50%; animation: mm-spin .9s linear infinite; } @keyframes mm-spin { to { transform: rotate(360deg); } }
   @media (max-width: 600px) { .mm-preview p span { display: none; } .mm-preview a, .mm-gen-own { padding: 10px 12px; font-size: 14px; } }
@@ -219,7 +270,7 @@ async function storeMenuDesigns(env, token, data) {
   const logo = await loadPreviewLogo(env, token, data.custom);
   const occasion = isOccasion(data.occasion) ? data.occasion : null;
   for (const [index, design] of designsFor(occasion).entries()) {
-    const page = publicPreviewPage(renderMenuDesign(data, design.key, logo), token, { index, custom: data.custom || {}, business: data.business, prospect: data.prospect === true, occasion, both: data.both === true, prepaid: data.prepaid === true });
+    const page = publicPreviewPage(renderMenuDesign(data, design.key, logo), token, { index, custom: data.custom || {}, business: data.business, prospect: data.prospect === true, occasion, both: data.both === true, prepaid: data.prepaid === true, menu: data.menu });
     await env.ASSETS.put(`menu-previews/${token}/${design.key}.html`, page, { httpMetadata: { contentType: "text/html; charset=utf-8" } });
   }
   await env.ASSETS.put(`menu-previews/${token}/data.json`, JSON.stringify(data), { httpMetadata: { contentType: "application/json" } });
@@ -498,7 +549,11 @@ async function handlePreviewState(request, env, token, { now = Date.now() } = {}
         { name: "hide_name", type: "checkbox", label: "Hide the name (my logo already shows it)", value: custom.hide_name === true },
         { name: "brand", type: "color", label: "Highlight colour", value: brand || "#00a7b5" },
         { name: "use_brand", type: "checkbox", label: "Use it for lines, borders and accents", value: Boolean(brand) },
-        { name: "subtitle", type: "text", label: "Line under your name", hint: "For example Dinner Menu, Est. 1998", max: 60, value: custom.subtitle || (isOccasion(row.occasion) ? `${OCCASION_NAMES[row.occasion]} Menu` : "Menu") }
+        { name: "subtitle", type: "text", label: "Line under your name", hint: "For example Dinner Menu, Est. 1998", max: 60, value: custom.subtitle || (isOccasion(row.occasion) ? `${OCCASION_NAMES[row.occasion]} Menu` : "Menu") },
+        // Items and prices (Nov 14, 2026), only for app builds that draw this kind of field (they ask with ?edit=1);
+        // an older app would show it as a text box.
+        ...(/[?&]edit=1(&|$)/.test(String(request?.url || "")) ? [{ name: "menu_json", type: "menu", label: "Items and prices",
+          hint: "Fix anything we read wrong, or change a price. Every design updates.", value: { sections: data.menu.sections || [], notes: data.menu.notes || "" } }] : [])
       ]
     }
   });
@@ -547,7 +602,23 @@ async function handlePreviewCustomize(request, env, token, { now = Date.now() } 
     const line = cleanText(form.get("subtitle"), 60);
     custom.subtitle = line && line.toLowerCase() !== "menu" && line.toLowerCase() !== holidayLine.toLowerCase() ? line : "";
   }
-  await storeMenuDesigns(env, token, { ...data, custom, customized: Number(data.customized || 0) + 1 });
+  // Items and prices (owner, Nov 14, 2026: "the edit would be in the customize window"): the buyer fixes what the
+  // reader got wrong, or changes prices, before Make it live. Their menu, so nothing is checked against the file;
+  // the edited menu is what the paid menu is built from (menuPreviewChoice).
+  let menu = data.menu;
+  let edited = data.menu_edited === true;
+  const typed = form.get("menu_json");
+  if (typeof typed === "string" && typed.trim()) {
+    let parsed = null;
+    try { parsed = JSON.parse(typed); } catch { parsed = null; }
+    if (parsed && typeof parsed === "object") {
+      const { menu: next, problems } = cleanMenu(parsed);
+      if (problems.length) return oops(problems[0]);
+      const same = (m) => JSON.stringify({ s: (m.sections || []).map((s) => [s.name, (s.items || []).map((i) => [i.name, i.description || "", i.price || ""])]), n: m.notes || "" });
+      if (diffMenus(data.menu, next).length || same(data.menu) !== same(next)) { menu = { ...data.menu, sections: next.sections, notes: next.notes }; edited = true; }
+    }
+  }
+  await storeMenuDesigns(env, token, { ...data, menu, ...(edited ? { menu_edited: true } : {}), custom, customized: Number(data.customized || 0) + 1 });
   if (app) return json({ ok: true, design: design.key });
   return new Response(null, { status: 303, headers: { Location: designUrl(token, design.key), "Cache-Control": "no-store" } });
 }
@@ -618,7 +689,9 @@ async function menuPreviewChoice(env, orderId) {
   // A holiday preview chosen without a design gets that holiday's first design, not a regular one.
   const design = menuDesignFor(row.design) ? row.design : isOccasion(row.occasion) ? designsFor(row.occasion)[0].key : null;
   if (!custom.subtitle && isOccasion(row.occasion)) custom.subtitle = `${OCCASION_NAMES[row.occasion]} Menu`;
-  return { token: row.token, design, occasion: isOccasion(row.occasion) ? row.occasion : null, custom, logoDataUri: await loadPreviewLogo(env, row.token, custom).catch(() => null) };
+  return { token: row.token, design, occasion: isOccasion(row.occasion) ? row.occasion : null, custom, logoDataUri: await loadPreviewLogo(env, row.token, custom).catch(() => null),
+    // The items and prices as the buyer edited them in Customize (Nov 14, 2026); null = build from the file's read.
+    menu: data.menu_edited === true && data.menu?.sections?.length ? { sections: data.menu.sections, notes: data.menu.notes || "" } : null };
 }
 
 // Checkout prefill for "Make it live": the stored upload, so the buyer isn't asked for the file again.

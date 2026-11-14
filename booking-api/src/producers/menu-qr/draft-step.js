@@ -58,6 +58,10 @@ async function runGenerateMenuDraftStep(targetStep, env) {
     source.menu = read.menu;
     source.extraction = read.extraction;
   }
+  // The design, Customize settings and, when the buyer edited them there, the items and prices from the free
+  // preview (Nov 14, 2026: editing in the Customize window). Their own edit wins over the file's read.
+  const choice = await menuPreviewChoice(env, project.order_id).catch(() => null);
+  if (choice?.menu) source.menu = { ...(source.menu || { unreadable: "" }), sections: choice.menu.sections, notes: choice.menu.notes };
   // The owner's "Request changes" note (owner, Nov 12, 2026: "What good is the request changes if no one ever sees
   // it or does anything about it?"). It is applied to the menu that was read, the way Menu Care applies a
   // customer's change: only what the note asks for, nothing invented. What happened goes on the next approval
@@ -83,7 +87,6 @@ async function runGenerateMenuDraftStep(targetStep, env) {
   const draftVersion = 1 + Number(regeneration?.count || 0);
   // The menu generator (Nov 7, 2026): the design chosen in the free preview, with its logo, colour and line under
   // the name. What the order itself was given (logo, colours) comes first.
-  const choice = await menuPreviewChoice(env, project.order_id).catch(() => null);
   const chosen = choice?.design && choice.design !== "yours" ? choice.design : null;
   const orderLogo = await loadLogoDataUri(getInputValue(preparedPayload.inputs, "logo"), env).catch(() => null);
   const logoDataUri = orderLogo || choice?.logoDataUri || null;

@@ -11,12 +11,11 @@
 import { nowIso } from "../lib/http.js";
 import { sanitizeFilename, sha256Hex } from "../lib/util.js";
 import { buildDesignedMenuHtml, assertMenuRendered } from "../producers/menu-qr/design.js";
-import { describeDiff, diffMenus, parseMenuHtml } from "../producers/menu-care/menu-edit.js";
+import { cleanMenu, describeDiff, diffMenus, parseMenuHtml } from "../producers/menu-care/menu-edit.js";
 import { menuHostingState } from "../producers/menu-qr/hosting-renewal.js";
 import { hostedMenu } from "../producers/google-visibility/sources.js";
 import { currentSession, privateJson } from "./account.js";
 
-const LIMITS = { sections: 60, items: 200, name: 120, item: 200, description: 600, price: 40, notes: 1000 };
 const SAVES_PER_DAY = 60;
 
 async function ownsBusiness(env, customerId, businessId) {
@@ -59,25 +58,6 @@ async function loadEditable(env, businessId) {
   const object = row ? await env.ASSETS.get(row.storage_key) : null;
   if (!object) return null;
   return { row, page: parseMenuHtml(await object.text()) };
-}
-
-const clean = (value, max) => String(value ?? "").replace(/\s+/g, " ").trim().slice(0, max);
-
-// What the editor sends, cut to the page's own limits. Returns { menu, problems }.
-function cleanMenu(body) {
-  const problems = [];
-  const sections = (Array.isArray(body?.sections) ? body.sections : []).slice(0, LIMITS.sections).map((section) => ({
-    name: clean(section?.name, LIMITS.name),
-    items: (Array.isArray(section?.items) ? section.items : []).slice(0, LIMITS.items).map((item) => ({
-      name: clean(item?.name, LIMITS.item),
-      description: clean(item?.description, LIMITS.description),
-      price: clean(item?.price, LIMITS.price),
-      ...(item?.sold_out === true ? { sold_out: true } : {})
-    })).filter((item) => item.name)
-  })).filter((section) => section.items.length);
-  sections.forEach((section, i) => { if (!section.name) section.name = i === 0 ? "Menu" : `Section ${i + 1}`; });
-  if (!sections.length) problems.push("Your menu needs at least one item.");
-  return { menu: { sections, notes: clean(body?.notes, LIMITS.notes), unreadable: "" }, problems };
 }
 
 async function savesToday(env, businessId) {

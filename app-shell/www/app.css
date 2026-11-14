@@ -456,3 +456,14 @@ body.hy-xmas .hy-design-grid img { border: 2px solid #f0c75e; }
 .hy-lightbox-foot .hy-btn { min-height: 0; padding: 10px 14px; font-size: 15px; background: linear-gradient(135deg, #e0313b, #a5141d); color: #fff; border-color: #f0c75e; box-shadow: none; }
 .hy-lightbox-nav { background: none; border: 1px solid #f0c75e; border-radius: 12px; color: #f6d983; font: 700 15px var(--hy-body); padding: 9px 12px; white-space: nowrap; }
 @media (max-width: 420px) { .hy-lightbox-nav span { display: none; } .hy-lightbox-nav { font-size: 20px; padding: 6px 14px; } }
+
+/* Customize: Items and prices (Nov 14, 2026). */
+.hy-items { display: grid; gap: 8px; margin: 6px 0 4px; }
+.hy-items-list { display: grid; gap: 12px; }
+.hy-items-list[hidden] { display: none; }
+.hy-items-sec { display: grid; gap: 8px; padding: 10px; border: 1px solid var(--hy-card-line, rgba(255,255,255,.2)); border-radius: 12px; }
+.hy-items-row { display: grid; gap: 6px; padding-top: 8px; border-top: 1px solid var(--hy-card-line, rgba(255,255,255,.15)); }
+.hy-items-top { display: grid; grid-template-columns: 1fr 96px; gap: 8px; }
+.hy-items-f { display: grid; gap: 3px; font-size: 13px; font-weight: 600; }
+.hy-items-f input, .hy-items-f textarea { width: 100%; box-sizing: border-box; font-size: 16px; }
+.hy-items-x { color: #ffb4b4; justify-self: start; }

@@ -418,7 +418,7 @@
     }
     function load() {
       message(busyScreen(["Opening your designs…"]));
-      fetch(g.state_url + gen.token, { cache: "no-store" }).then(function (r) { return r.json().catch(function () { return {}; }); }).then(function (st) {
+      fetch(g.state_url + gen.token + (g.state_url.indexOf("menu-preview") >= 0 ? "?edit=1" : ""), { cache: "no-store" }).then(function (r) { return r.json().catch(function () { return {}; }); }).then(function (st) {
         if (!document.body.contains(stage)) return;
         if (!st.ok || !Array.isArray(st.designs) || !st.designs.length) {
           if (st.ended) remember(g.key, null);
@@ -453,6 +453,43 @@
         tools.appendChild(button(st.choose_label || "Choose this design", "hy-btn hy-btn-big", function () { openWeb(d.choose_url); }));
       }));
     }
+    // The Customize sheet's "Items and prices": closed until tapped (then only a changed menu is sent); value = the
+    // edited menu as JSON, or "" when it was never opened.
+    function menuItemsEditor(f) {
+      var wrap = el("div", "hy-items"), opened = false, menu = null, list = el("div", "hy-items-list");
+      var toggle = button(f.label + " \u25be", "hy-btn hy-btn-ghost hy-items-toggle", function () {
+        if (opened) { list.hidden = !list.hidden; return; }
+        opened = true; menu = JSON.parse(JSON.stringify(f.value || { sections: [], notes: "" })); draw();
+      });
+      wrap.appendChild(toggle);
+      if (f.hint) wrap.appendChild(el("p", "hy-hint", f.hint));
+      wrap.appendChild(list);
+      function field(label, value, max, onIn, area) {
+        var l = el("label", "hy-items-f"); l.appendChild(el("span", null, label));
+        var i = el(area ? "textarea" : "input", area ? "hy-textarea" : null); if (!area) i.type = "text"; else i.rows = 2; i.maxLength = max; i.value = value || "";
+        i.addEventListener("input", function () { onIn(i.value); }); l.appendChild(i); return l;
+      }
+      function draw() {
+        list.textContent = "";
+        menu.sections.forEach(function (sec, si) {
+          var box = el("div", "hy-items-sec");
+          box.appendChild(field("Section", sec.name, 120, function (v) { sec.name = v; }));
+          sec.items.forEach(function (it, ii) {
+            var row = el("div", "hy-items-row"), top = el("div", "hy-items-top");
+            top.appendChild(field("Item", it.name, 200, function (v) { it.name = v; }));
+            top.appendChild(field("Price", it.price, 40, function (v) { it.price = v; }));
+            row.appendChild(top);
+            row.appendChild(field("Description", it.description, 600, function (v) { it.description = v; }, true));
+            row.appendChild(button("Remove item", "hy-link hy-items-x", function () { sec.items.splice(ii, 1); draw(); }));
+            box.appendChild(row);
+          });
+          box.appendChild(button("Add an item", "hy-link", function () { sec.items.push({ name: "", description: "", price: "" }); draw(); }));
+          list.appendChild(box);
+        });
+        list.appendChild(button("Add a section", "hy-link", function () { menu.sections.push({ name: "", items: [{ name: "", description: "", price: "" }] }); draw(); }));
+      }
+      return { node: wrap, get value() { return opened && menu ? JSON.stringify(menu) : ""; } };
+    }
     // Customize: the app's own form, drawn from what the generator says it holds now; every design is rebuilt.
     function customize() {
       var st = gen.state, c = st.customize, d = st.designs[gen.index % st.designs.length];
@@ -464,6 +501,8 @@
       var inputs = [];
       (c.fields || []).forEach(function (f, n) {
         if (f.group) { box.appendChild(el("h3", "hy-label hy-label-in hy-sheet-group", f.group)); return; }
+        // Items and prices (Nov 14, 2026): the menu as read, edited here before Make it live; sent as menu_json.
+        if (f.type === "menu") { var ed = menuItemsEditor(f); box.appendChild(ed.node); inputs.push({ f: f, input: ed }); return; }
         var id = "hy-c-" + n, input;
         if (f.type === "checkbox") {
           var row = el("label", "hy-check"); input = el("input"); input.type = "checkbox"; input.checked = f.value === true; row.appendChild(input); row.appendChild(el("span", null, f.label)); box.appendChild(row);
