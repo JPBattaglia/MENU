@@ -234,3 +234,32 @@ test('app opens are counted per app, phone type and day, only from the apps them
   assert.match(report.rows.find(([k]) => k === 'Nino app')[1], /^Opened 3 times this week \(iPhone 2, Android 1\)/);
   assert.equal(report.rows.find(([k]) => k === 'MENU-MADE app')[1], 'Not opened this week.');
 });
+
+test('the MΞNU icon is the Christmas gear from Nov 13 to Dec 31 (Pacific), the regular gear otherwise; Nino has none', () => {
+  const at = (iso) => hybrid.hybridLookForBundle('com.menumade.menumade', Date.parse(iso)).icon_file;
+  assert.equal(at('2026-11-14T06:30:00Z'), 'assets/own-apps/menumade-icon-logo-xmas.png');
+  assert.equal(at('2027-01-01T07:30:00Z'), 'assets/own-apps/menumade-icon-logo-xmas.png', 'still Dec 31 in San Francisco');
+  assert.equal(at('2027-01-01T08:30:00Z'), 'assets/own-apps/menumade-icon-logo.png');
+  assert.equal(at('2027-11-12T20:00:00Z'), 'assets/own-apps/menumade-icon-logo.png');
+  assert.equal(hybrid.hybridLookForBundle('com.menumade.ninobattaglia', Date.parse('2026-12-01T20:00:00Z')).icon_file, 'assets/own-apps/nino-icon-logo.png');
+  assert.equal(hybrid.hybridLookForBundle('com.menumade.menumade', Date.parse('2026-12-01T20:00:00Z')).icon_bg, '#012a30');
+});
+
+test('Jan 1: a LIVE app with a holiday icon is queued once for a rebuild (regular icon back); not in December', async () => {
+  const { holidayIconRebuilds } = await import('./src/store-app/store-build.js');
+  const marks = new Set(); const updates = [];
+  const env = { DB: { prepare: (sql) => ({ bind: (...a) => ({
+    first: async () => (/FROM worker_settings/.test(sql) && marks.has(a[0]) ? { 1: 1 } : null),
+    run: async () => {
+      if (/UPDATE store_apps/.test(sql)) { updates.push(a[1]); return { meta: { changes: a[1] === 'com.menumade.menumade' ? 1 : 0 } }; }
+      if (/INSERT INTO worker_settings/.test(sql)) marks.add(a[0]);
+      return { meta: { changes: 1 } };
+    }
+  }) }) } };
+  assert.equal((await holidayIconRebuilds(env, Date.parse('2026-12-20T20:00:00Z'))).queued, 0);
+  assert.equal(updates.length, 0, 'nothing touched before Jan 1');
+  assert.equal((await holidayIconRebuilds(env, Date.parse('2027-01-01T18:00:00Z'))).queued, 1);
+  assert.deepEqual(updates, ['com.menumade.menumade'], 'only the app with a holiday icon');
+  assert.equal((await holidayIconRebuilds(env, Date.parse('2027-01-01T18:05:00Z'))).queued, 0, 'once a year');
+  assert.equal((await holidayIconRebuilds(env, Date.parse('2027-01-09T18:00:00Z'))).queued, 0);
+});
