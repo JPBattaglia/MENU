@@ -743,12 +743,57 @@
     box.appendChild(less); box.appendChild(out); box.appendChild(more); draw();
     return box;
   }
+  // Full-screen picture with pinch to zoom, drag to look around and double-tap to zoom in or out (owner, Nov 13, 2026:
+  // "zooming in to any T-shirt model on android is not working"). The app's page can't be pinch-zoomed (viewport
+  // user-scalable=no, which Android's web view obeys and iPhone's ignores), so the picture zooms itself, the same on both.
+  function zoomViewer(src, alt) {
+    var box = el("div", "hy-zoom"); box.setAttribute("role", "dialog"); box.setAttribute("aria-label", alt || "Picture");
+    var pic = el("img", "hy-zoom-img"); pic.src = src; pic.alt = alt || ""; box.appendChild(pic);
+    var x = button("\u00d7", "hy-zoom-close", close); x.setAttribute("aria-label", "Close"); box.appendChild(x);
+    box.appendChild(el("p", "hy-zoom-hint", "Pinch or double-tap to zoom"));
+    document.body.appendChild(box);
+    var scale = 1, tx = 0, ty = 0, start = null, lastTap = 0;
+    function clamp() {
+      if (scale <= 1) { scale = 1; tx = 0; ty = 0; return; }
+      var w = pic.offsetWidth, h = pic.offsetHeight;
+      var mx = Math.max(0, (w * scale - box.clientWidth) / 2), my = Math.max(0, (h * scale - box.clientHeight) / 2);
+      tx = Math.max(-mx, Math.min(mx, tx)); ty = Math.max(-my, Math.min(my, ty));
+    }
+    function apply() { pic.style.transform = "translate(" + tx + "px," + ty + "px) scale(" + scale + ")"; box.classList.toggle("is-zoomed", scale > 1); }
+    function dist(t) { return Math.hypot(t[0].clientX - t[1].clientX, t[0].clientY - t[1].clientY); }
+    box.addEventListener("touchstart", function (e) {
+      var t = e.touches;
+      if (t.length === 2) start = { d: dist(t), scale: scale, tx: tx, ty: ty, mx: (t[0].clientX + t[1].clientX) / 2, my: (t[0].clientY + t[1].clientY) / 2 };
+      else if (t.length === 1) {
+        var now = Date.now();
+        if (now - lastTap < 300 && e.target === pic) { e.preventDefault(); scale = scale > 1 ? 1 : 2.5; tx = 0; ty = 0; clamp(); pic.style.transition = "transform .2s"; apply(); lastTap = 0; return; }
+        lastTap = now; start = { x: t[0].clientX, y: t[0].clientY, tx: tx, ty: ty };
+      }
+      pic.style.transition = "none";
+    }, { passive: false });
+    box.addEventListener("touchmove", function (e) {
+      var t = e.touches; if (!start) return; e.preventDefault();
+      if (t.length === 2 && start.d) {
+        var cx = box.clientWidth / 2, cy = box.clientHeight / 2;
+        var ns = Math.max(1, Math.min(5, start.scale * dist(t) / start.d)), k = ns / start.scale;
+        var mx = (t[0].clientX + t[1].clientX) / 2, my = (t[0].clientY + t[1].clientY) / 2;
+        scale = ns; tx = (start.mx - cx) * (1 - k) + start.tx * k + (mx - start.mx); ty = (start.my - cy) * (1 - k) + start.ty * k + (my - start.my);
+      } else if (t.length === 1 && start.x != null && scale > 1) { tx = start.tx + t[0].clientX - start.x; ty = start.ty + t[0].clientY - start.y; }
+      clamp(); apply();
+    }, { passive: false });
+    box.addEventListener("touchend", function (e) { if (!e.touches.length) start = null; else if (e.touches.length === 1) start = { x: e.touches[0].clientX, y: e.touches[0].clientY, tx: tx, ty: ty }; });
+    // A tap on the dark area (not the picture) closes it while not zoomed in.
+    box.addEventListener("click", function (e) { if (e.target === box && scale === 1) close(); });
+    function close() { if (box.parentNode) box.parentNode.removeChild(box); document.removeEventListener("backbutton", close); }
+    document.addEventListener("backbutton", close);
+  }
   function productPage(s, p) {
     var bar = el("div", "hy-bar");
     var back = el("button", "hy-icon-btn"); back.type = "button"; back.setAttribute("aria-label", "Back to the shop"); back.appendChild(icon("back"));
     back.addEventListener("click", function () { show("shop"); });
     bar.appendChild(back); bar.appendChild(el("strong", null, p.title)); s.appendChild(bar);
-    var img = el("img", "hy-hero-img"); img.src = p.image; img.alt = p.title + " shirt"; s.appendChild(img);
+    var img = el("img", "hy-hero-img hy-zoomable"); img.src = p.image; img.alt = p.title + " shirt"; s.appendChild(img);
+    img.addEventListener("click", function () { zoomViewer(img.currentSrc || img.src, img.alt); });
     var body = el("div", "hy-pad");
     if (p.early) body.appendChild(el("p", "hy-badge", "App first: on the website in 24 hours"));
     var top = el("div", "hy-plan-top"); top.appendChild(el("h2", null, p.title));
