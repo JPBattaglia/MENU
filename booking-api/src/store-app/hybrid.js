@@ -178,6 +178,9 @@ function menumadeContent(catalog, { offCodes = [], now = Date.now() } = {}) {
     ],
     contact: { email: "info@menu-made.com" },
     links: [
+      // Stage 15 (owner, Nov 14, 2026): owners edit their own menu; opens in the in-app browser, which keeps the
+      // account sign-in. Content only, so every installed app version shows it without a new build.
+      { label: "Edit your menu", text: "Prices, sold out, specials", url: `${MM}/menu-editor.html` },
       { label: "Your account", text: "Orders, plans and billing", url: `${MM}/account.html` },
       { label: "All services", text: "Everything Menu-made does", url: `${MM}/services.html`, screen: "services" },
       { label: "Our work", text: "Sites and menus we've made", url: `${MM}/portfolio.html`, screen: "work" },
