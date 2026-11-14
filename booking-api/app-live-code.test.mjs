@@ -88,3 +88,15 @@ test('a failed or odd download saves nothing', async () => {
   const r2 = run({ remote: { ...GOOD, 'hybrid.js': '<html>not found</html>' } }); r2.timers.find(([ms]) => ms === 2500)[1](); await flush(); await flush();
   assert.ok(!r2.store.has('mm-live-code'));
 });
+
+// Owner, Nov 14, 2026: "The zoom capability is paramount." The Nino product photo must always open the full-screen
+// viewer with pinch and double-tap zoom, on Android (whose web view obeys user-scalable=no) as well as iPhone.
+test('Nino product photo keeps its full-screen pinch and double-tap zoom', () => {
+  const js = readFileSync(new URL('../app-shell/www/hybrid.js', import.meta.url), 'utf8');
+  const css = readFileSync(new URL('../app-shell/www/app.css', import.meta.url), 'utf8');
+  assert.match(js, /function zoomViewer\(src, alt\)/);
+  assert.match(js, /"hy-hero-img hy-zoomable"/);
+  assert.match(js, /img\.addEventListener\("click", function \(\) \{ zoomViewer\(/);
+  assert.match(js, /e\.touches/); assert.match(js, /lastTap < 300/);
+  assert.match(css, /\.hy-zoom \{[^}]*touch-action: none/);
+});
