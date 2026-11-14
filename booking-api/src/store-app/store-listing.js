@@ -309,8 +309,9 @@ const NINO_ABOUT = [
 const OWN_APP_TEXT = {
   "com.menumade.menumade": {
     // Google Play title (owner, Nov 13, 2026: "Change the Menu-Made app label on google to MΞNU like the Apple
-    // version"): the same MΞNU the phone shows under the icon. The App Store name stays MENU-MADE (name).
-    play_title: "M\u039eNU",
+    // version"; Nov 14 after the competitor review: keep MΞNU first but add the words owners search for, since the
+    // title weighs most in Play search). 30 characters, Google's limit. The App Store name stays MENU-MADE (name).
+    play_title: "M\u039eNU \u2013 QR Menu & Website Maker",
     subtitle: "Menu and website generator", keywords: "menu,qr,website,builder,generator,cafe,bar,bakery,food,online menu,business",
     promo: "Turn a photo of your printed menu into a phone menu page or a whole website. Nine designs each, right in the app.",
     description: MENUMADE_ABOUT, play_short: "Turn your printed menu into a phone menu page or a whole website.", play_full: MENUMADE_ABOUT,
