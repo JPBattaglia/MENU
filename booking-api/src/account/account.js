@@ -388,4 +388,4 @@ async function accountSummary(env, customerId) {
   };
 }
 
-export { COOKIE, accountSummary, createSession, handleMe, handleOpen, handleSignIn, handleSignOut, sendSignInLink };
+export { COOKIE, accountSummary, createSession, currentSession, privateJson, handleMe, handleOpen, handleSignIn, handleSignOut, sendSignInLink };

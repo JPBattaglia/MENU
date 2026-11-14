@@ -135,7 +135,9 @@ function buildDesignedMenuHtml({ businessName, brandColors, menu, logoDataUri, s
     items: (section.items || []).slice(0, 200).map((item) => ({
       name: clean(item?.name, 200),
       description: clean(item?.description, 600),
-      price: clean(item?.price, 40)
+      price: clean(item?.price, 40),
+      // Sold out (stage 15, owner's menu editor): the item stays on the page, marked, until the owner takes it back.
+      soldOut: item?.sold_out === true
     })).filter((item) => item.name)
   })).filter((section) => section.items.length);
   const notes = clean(menu.notes, 1000);
@@ -148,8 +150,8 @@ function buildDesignedMenuHtml({ businessName, brandColors, menu, logoDataUri, s
     <section class="menu-section" id="${section.id}" aria-labelledby="${section.id}-h">
       <h2 id="${section.id}-h">${esc(section.name)}</h2>
       <ul>${section.items.map((item) => `
-        <li>
-          <div class="row"><span class="item">${esc(item.name)}</span>${item.price ? `<span class="leader" aria-hidden="true"></span><span class="price">${esc(item.price)}</span>` : ""}</div>
+        <li${item.soldOut ? ' class="sold-out"' : ""}>
+          <div class="row"><span class="item">${esc(item.name)}</span>${item.soldOut ? '<span class="sold-tag">Sold out</span>' : ""}${item.price ? `<span class="leader" aria-hidden="true"></span><span class="price">${esc(item.price)}</span>` : ""}</div>
           ${item.description ? `<p class="desc">${esc(item.description)}</p>` : ""}
         </li>`).join("")}
       </ul>
@@ -191,6 +193,9 @@ ${styleMeta(theme)}
   .leader { flex: 1; border-bottom: 1px dotted #b9b2a6; transform: translateY(-4px); min-width: 16px; }
   .price { font-weight: 650; color: var(--primary); white-space: nowrap; font-variant-numeric: tabular-nums; }
   .desc { margin: 4px 0 0; color: var(--muted); font-size: 15px; }
+  li.sold-out .item, li.sold-out .price, li.sold-out .desc { opacity: .5; }
+  li.sold-out .price { text-decoration: line-through; }
+  .sold-tag { flex: none; padding: 2px 8px; border-radius: 999px; background: var(--accent); color: #fff; font-size: 11px; font-weight: 700; letter-spacing: .5px; text-transform: uppercase; }
   .notes { margin-top: 32px; padding: 16px; border-radius: 10px; background: #fff; border: 1px solid var(--rule); color: var(--muted); font-size: 14px; }
   footer { padding: 24px 20px 36px; text-align: center; color: var(--muted); font-size: 12px; }
   footer a { color: inherit; text-decoration: underline; text-underline-offset: 2px; }${styleCss(theme)}

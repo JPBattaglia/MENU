@@ -76,6 +76,7 @@ import { handleGoogleMedia, handlePhotoLibrary } from "./producers/google-care/l
 import { handleGoogleCallback, handleGoogleConnect, handleGoogleLocation } from "./google/connect.js";
 import { handleStoreKeys } from "./store-app/keys.js";
 import { handleRestaurantKeys } from "./store-app/restaurant-keys.js";
+import { handleMenuEditor } from "./account/menu-editor.js";
 import { advanceStoreBuilds, holidayIconRebuilds, scheduleYearlyRebuilds, handleBuildConfig, handleBuildResult, handleRebuild } from "./store-app/store-build.js";
 import { advanceStoreListings, handleListingImage, handleListingImageView, handleListingPage } from "./store-app/store-listing.js";
 import { handleAndroidBundle, handleAndroidKey, handleAndroidPushTest, handleBuildCredentials, handleBundleDownload } from "./store-app/build-credentials.js";
@@ -296,6 +297,8 @@ var worker_default = {
     if (request.method === "POST" && url.pathname === "/api/account/sign-in") return handleSignIn(request, env);
     if (request.method === "POST" && url.pathname === "/api/account/sign-out") return handleSignOut(request, env);
     if (request.method === "GET" && url.pathname === "/api/account/me") return handleMe(request, env);
+    // The owner's own menu editor (stage 15): read and save the live menu of a business on the signed-in account.
+    if ((request.method === "GET" || request.method === "POST") && url.pathname === "/api/account/menu") return handleMenuEditor(request, env);
     const accountOpen = url.pathname.match(/^\/api\/account\/open\/([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})$/i);
     if (accountOpen && (request.method === "GET" || request.method === "POST")) return handleOpen(request, env, accountOpen[1].toLowerCase());
     // Abandoned-checkout follow-up (stage 9 part 2): the emailed link reopens the same order in a new Stripe session.

@@ -3252,3 +3252,21 @@ html.mm-lightbox-open { overflow: hidden; }
 .mm-get-app-copy p { margin: 0; }
 .mm-get-app-buttons { display: flex; flex-wrap: wrap; gap: 12px; }
 .mm-store-btn { white-space: nowrap; }
+
+/* Owner menu editor (menu-editor.html, stage 15). */
+.mm-edit{max-width:760px}
+.mm-edit [hidden]{display:none!important}
+.mm-edit-bar,.mm-edit-save{display:flex;flex-wrap:wrap;gap:12px;align-items:center;justify-content:space-between;margin:0 0 16px}
+.mm-edit-row{display:flex;flex-wrap:wrap;gap:10px;align-items:flex-end}
+.mm-edit-row>.mm-edit-field{flex:1 1 200px}
+.mm-edit-row>.mm-edit-field:nth-child(2):last-child,.mm-edit-item .mm-edit-row>.mm-edit-field:nth-child(2){flex:0 1 120px}
+.mm-edit-field{display:flex;flex-direction:column;gap:4px;margin:0 0 8px;font-size:13px;font-weight:700;letter-spacing:.3px}
+.mm-edit-field input,.mm-edit-field textarea,.mm-edit textarea,.mm-edit select{width:100%;font:inherit;font-weight:400;font-size:16px;padding:10px 12px;border-radius:10px;border:1px solid rgba(0,214,230,.45);background:rgba(0,0,0,.25);color:#fff}
+.mm-edit-item{padding:12px 0;border-top:1px solid rgba(0,214,230,.25)}
+.mm-edit-item.is-sold-out input,.mm-edit-item.is-sold-out textarea{opacity:.55}
+.mm-edit-tools{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.mm-edit-icon,.mm-edit-remove{min-height:40px;min-width:40px;padding:6px 12px;border-radius:999px;border:1px solid rgba(0,214,230,.45);background:transparent;color:#fff;font:inherit;font-weight:700}
+.mm-edit-remove{color:#ffb4b4;border-color:rgba(255,140,140,.5)}
+.mm-edit-sold{display:inline-flex;gap:6px;align-items:center;margin-right:auto;font-weight:700}
+.mm-edit-sold input{width:20px;height:20px;accent-color:#f0c75e}
+.mm-edit-add{margin-top:8px}

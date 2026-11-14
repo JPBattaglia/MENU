@@ -38,15 +38,18 @@ function parseMenuHtml(html) {
   for (const block of source.split('<section class="menu-section"').slice(1)) {
     const name = strip(/<h2[^>]*>([\s\S]*?)<\/h2>/.exec(block)?.[1]);
     const items = [];
-    for (const li of block.split("<li>").slice(1)) {
+    for (const li of block.split(/<li(?= class="sold-out">|>)/).slice(1)) {
       const chunk = li.split("</li>")[0];
       const itemName = strip(/<span class="item">([\s\S]*?)<\/span>/.exec(chunk)?.[1]);
       if (!itemName) continue;
-      items.push({
+      const item = {
         name: itemName,
         description: strip(/<p class="desc">([\s\S]*?)<\/p>/.exec(chunk)?.[1]),
         price: strip(/<span class="price">([\s\S]*?)<\/span>/.exec(chunk)?.[1])
-      });
+      };
+      // Marked sold out by the owner (stage 15 menu editor); kept so later edits and Menu Care carry it through.
+      if (chunk.startsWith(' class="sold-out">')) item.sold_out = true;
+      items.push(item);
     }
     sections.push({ name, items });
   }
@@ -122,7 +125,8 @@ const MENU_SCHEMA = {
             type: "array",
             items: {
               type: "object",
-              properties: { name: { type: "string" }, description: { type: "string" }, price: { type: "string" } },
+              properties: { name: { type: "string" }, description: { type: "string" }, price: { type: "string" },
+                sold_out: { type: "boolean", description: "Copy through as given; true only if the current menu has it or the request marks the item sold out." } },
               required: ["name", "description", "price"]
             }
           }
