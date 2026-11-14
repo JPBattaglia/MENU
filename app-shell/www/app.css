@@ -139,6 +139,13 @@ body.hybrid {
 .hy-swatches { display: flex; flex-wrap: wrap; gap: 8px; }
 .hy-swatch { width: 40px; height: 40px; padding: 0; border-radius: 20px; border: 2px solid rgba(255,255,255,.55); -webkit-appearance: none; appearance: none; }
 .hy-swatch[aria-pressed=true] { border-color: #fff; box-shadow: 0 0 0 3px var(--hy-accent); }
+/* Color dots right under the product photo (owner, Nov 14, 2026): one swipeable row. */
+.hy-photo-dots { margin: 12px 16px 0; }
+.hy-photo-dots-label { margin: 0 0 6px; font-size: 12px; letter-spacing: .08em; text-transform: uppercase; opacity: .85; }
+.hy-photo-dots-row { display: flex; gap: 10px; overflow-x: auto; padding: 5px 4px 8px; scrollbar-width: none; -webkit-overflow-scrolling: touch; }
+.hy-photo-dots-row::-webkit-scrollbar { display: none; }
+.hy-photo-dots-row .hy-swatch { flex: 0 0 auto; width: 36px; height: 36px; border-radius: 18px; }
+.hy-photo-dots-row .hy-chip { flex: 0 0 auto; white-space: nowrap; }
 /* Buying inside the app (Nov 10, 2026): product, color, size and quantity pickers, the in-app cart and checkout. */
 .hy-pick .hy-label { margin-left: 0; margin-right: 0; margin-top: 20px; }
 .hy-label-value { color: var(--hy-ink); letter-spacing: 0; text-transform: none; }

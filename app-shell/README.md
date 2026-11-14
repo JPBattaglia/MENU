@@ -14,3 +14,5 @@ may print customer data, keys or signing material.
 - `sample/hybrid.json` builds the hybrid screens (`www/hybrid.js`, Nov 8, 2026) unsigned, for a manual check: run the
   workflow with config = app-shell/sample/hybrid.json. The owner's two own apps are hybrid (booking-api/src/store-app/hybrid.js).
 - `www/` holds the app's screens.
+- `www/live.js` (Nov 14, 2026): runs the newest screen code from https://menu-made.com/app-shell/www/, so screen changes
+  merged to master reach installed apps with no store build (see CLAUDE.md, "Site changes must reach the apps").

@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; img-src 'self' https: data:; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; media-src https://menu-made.com; script-src 'self'; connect-src 'self' https:; frame-src https://menu-made.com">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; img-src 'self' https: data:; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; media-src https://menu-made.com; script-src 'self' blob:; connect-src 'self' https:; frame-src https://menu-made.com">
 <title>App</title>
 <link rel="stylesheet" href="app.css">
 </head>
@@ -47,7 +47,7 @@
   <button id="t-menu" data-tab="menu">Menu</button>
   <button id="t-rewards" data-tab="rewards">Rewards</button>
 </nav>
-<script src="hybrid.js"></script>
-<script src="app.js"></script>
+<!-- live.js loads hybrid.js and app.js: the newest copy from menu-made.com, or the bundled one. -->
+<script src="live.js"></script>
 </body>
 </html>
