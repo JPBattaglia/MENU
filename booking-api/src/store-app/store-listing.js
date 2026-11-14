@@ -308,6 +308,9 @@ const NINO_ABOUT = [
 ].join("\n\n");
 const OWN_APP_TEXT = {
   "com.menumade.menumade": {
+    // Google Play title (owner, Nov 13, 2026: "Change the Menu-Made app label on google to MΞNU like the Apple
+    // version"): the same MΞNU the phone shows under the icon. The App Store name stays MENU-MADE (name).
+    play_title: "M\u039eNU",
     subtitle: "Menu and website generator", keywords: "menu,qr,website,builder,generator,cafe,bar,bakery,food,online menu,business",
     promo: "Turn a photo of your printed menu into a phone menu page or a whole website. Nine designs each, right in the app.",
     description: MENUMADE_ABOUT, play_short: "Turn your printed menu into a phone menu page or a whole website.", play_full: MENUMADE_ABOUT,
