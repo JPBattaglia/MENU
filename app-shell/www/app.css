@@ -156,6 +156,13 @@ body.hybrid {
 .hy-cart-line img { flex: none; width: 84px; height: 84px; object-fit: cover; border-radius: 10px; background: #2a2523; }
 .hy-hero-img.is-whole, .hy-cart-line img.is-whole { object-fit: contain; }
 .hy-hero-img.is-sticker { padding: 9%; }
+/* Product picture: tap opens it full screen, where it pinch-zooms on Android and iPhone alike (hybrid.js zoomViewer). */
+.hy-zoomable { cursor: zoom-in; }
+.hy-zoom { position: fixed; inset: 0; z-index: 70; background: #000; display: flex; align-items: center; justify-content: center; overflow: hidden; touch-action: none; }
+.hy-zoom-img { max-width: 100%; max-height: 100%; object-fit: contain; transform-origin: center center; will-change: transform; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; }
+.hy-zoom-close { position: absolute; top: calc(env(safe-area-inset-top) + 10px); right: 12px; width: 44px; height: 44px; border-radius: 999px; border: 0; background: rgba(255,255,255,.18); color: #fff; font: 700 26px/1 system-ui, sans-serif; }
+.hy-zoom-hint { position: absolute; left: 0; right: 0; bottom: calc(env(safe-area-inset-bottom) + 18px); margin: 0; text-align: center; color: rgba(255,255,255,.75); font-size: 14px; transition: opacity .2s; pointer-events: none; }
+.hy-zoom.is-zoomed .hy-zoom-hint { opacity: 0; }
 .hy-cart-line img.is-sticker { padding: 8px; }
 .hy-cart-info { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
 .hy-cart-tools { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: 8px; }
