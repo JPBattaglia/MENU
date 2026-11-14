@@ -186,4 +186,26 @@ async function applyMenuChange(env, { menu, requestText, scope, deps }) {
   return { menu: after, summary, diff, problems, understood: true, usage: result.usage };
 }
 
-export { MenuCareError, applyMenuChange, checkChange, describeDiff, diffMenus, parseMenuHtml };
+// A menu typed by its owner (stage 15: the account menu editor and the preview's Customize window), cut to the
+// page's own limits (design.js buildDesignedMenuHtml).
+const LIMITS = { sections: 60, items: 200, name: 120, item: 200, description: 600, price: 40, notes: 1000 };
+const cleanText = (value, max) => String(value ?? "").replace(/\s+/g, " ").trim().slice(0, max);
+
+// What the editor sends, cut to the page's own limits. Returns { menu, problems }.
+function cleanMenu(body) {
+  const problems = [];
+  const sections = (Array.isArray(body?.sections) ? body.sections : []).slice(0, LIMITS.sections).map((section) => ({
+    name: cleanText(section?.name, LIMITS.name),
+    items: (Array.isArray(section?.items) ? section.items : []).slice(0, LIMITS.items).map((item) => ({
+      name: cleanText(item?.name, LIMITS.item),
+      description: cleanText(item?.description, LIMITS.description),
+      price: cleanText(item?.price, LIMITS.price),
+      ...(item?.sold_out === true ? { sold_out: true } : {})
+    })).filter((item) => item.name)
+  })).filter((section) => section.items.length);
+  sections.forEach((section, i) => { if (!section.name) section.name = i === 0 ? "Menu" : `Section ${i + 1}`; });
+  if (!sections.length) problems.push("Your menu needs at least one item.");
+  return { menu: { sections, notes: cleanText(body?.notes, LIMITS.notes), unreadable: "" }, problems };
+}
+
+export { MenuCareError, applyMenuChange, checkChange, cleanMenu, describeDiff, diffMenus, parseMenuHtml };

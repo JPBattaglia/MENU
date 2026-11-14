@@ -444,3 +444,40 @@ test('the app reads a preview\'s designs, buttons and Customize fields, and its 
   assert.equal(after.customize.left, state.customize.left - 1);
   assert.equal((await f.get('/api/menu-preview/state/' + 'a'.repeat(36))).status, 410);
 });
+
+test('Customize: items and prices edited in the preview reach every design and the paid menu; untouched stays as read', async (t) => {
+  const { f, token, requestId, customize } = await madePreview(t);
+  const menu = JSON.parse(await (await f.env.ASSETS.get(`menu-previews/${token}/data.json`)).text()).menu;
+  assert.ok(menu.sections.length, 'the stub read has items');
+  // The page carries the menu for the editor, and the app gets the field only when it asks for it.
+  const page = await (await f.env.ASSETS.get(`menu-previews/${token}/classic.html`)).text();
+  assert.match(page, /id="mm-items-data"/);
+  assert.match(page, /name="menu_json"/);
+  const plain = await (await f.get(`/api/menu-preview/state/${token}`)).json();
+  assert.ok(!plain.customize.fields.some((x) => x.type === 'menu'), 'older apps never see the field');
+  const withEdit = await (await f.get(`/api/menu-preview/state/${token}?edit=1`)).json();
+  assert.equal(withEdit.customize.fields.at(-1).type, 'menu');
+  // Opened but nothing changed: the menu is not marked as edited.
+  await customize({ design: 'classic', menu_json: JSON.stringify({ sections: menu.sections, notes: menu.notes || '' }) });
+  assert.notEqual(JSON.parse(await (await f.env.ASSETS.get(`menu-previews/${token}/data.json`)).text()).menu_edited, true);
+  // A changed price and a new item.
+  const sections = structuredClone(menu.sections);
+  sections[0].items[0].price = '$99';
+  sections[0].items.push({ name: 'House Lemonade', description: 'Fresh daily', price: '$4' });
+  const res = await customize({ design: 'modern', menu_json: JSON.stringify({ sections, notes: menu.notes || '' }) });
+  assert.equal(res.status, 303);
+  for (const key of ['classic', 'modern', 'diner']) {
+    const html = await (await f.env.ASSETS.get(`menu-previews/${token}/${key}.html`)).text();
+    assert.match(html, /\$99/, key);
+    assert.match(html, /House Lemonade/, key);
+  }
+  // An empty menu is refused.
+  const empty = await customize({ design: 'modern', menu_json: JSON.stringify({ sections: [{ name: 'x', items: [] }] }) });
+  assert.equal(empty.status, 400);
+  // The paid menu is built from the edited items.
+  f.env.DB.raw.exec(`PRAGMA foreign_keys = OFF`);
+  f.env.DB.raw.prepare(`INSERT INTO orders (id, created_at, updated_at, customer_id, status, subtotal_cents, total_cents, payment_status, notes) VALUES ('o9', '2026-11-14', '2026-11-14', 'c1', 'PAID', 0, 0, 'PAID', ?)`).run(`Document ref: ${requestId}`);
+  const choice = await menuPreviewChoice(f.env, 'o9');
+  assert.equal(choice.menu.sections[0].items[0].price, '$99');
+  assert.equal(choice.menu.sections[0].items.at(-1).name, 'House Lemonade');
+});
