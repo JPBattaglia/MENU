@@ -1284,6 +1284,12 @@
     var v = el("video", "hy-intro-video");
     v.muted = true; v.defaultMuted = true; v.playsInline = true; v.preload = "auto";
     v.setAttribute("muted", ""); v.setAttribute("playsinline", ""); v.setAttribute("webkit-playsinline", ""); v.setAttribute("aria-hidden", "true");
+    // Android's web view draws a big grey play symbol on a video before its first frame (owner, Nov 13, 2026: it
+    // flashed for a split second on every start). A see-through poster replaces that symbol, and the clip stays
+    // invisible over the intro's dark background until it is actually playing.
+    v.poster = "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7";
+    v.style.opacity = "0";
+    v.addEventListener("playing", function () { v.style.opacity = "1"; });
     v.src = cfg.intro_url;
     var skip = button("Skip", "hy-intro-skip", function () { end(); });
     wrap.appendChild(v); wrap.appendChild(skip);
