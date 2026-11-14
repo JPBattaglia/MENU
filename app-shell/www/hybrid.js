@@ -833,6 +833,10 @@
     bar.appendChild(back); bar.appendChild(el("strong", null, p.title)); s.appendChild(bar);
     var img = el("img", "hy-hero-img hy-zoomable"); img.src = p.image; img.alt = p.title + " shirt"; s.appendChild(img);
     img.addEventListener("click", function () { zoomViewer(img.currentSrc || img.src, img.alt); });
+    // Owner, Nov 14, 2026 (same day as the website, NinoSite #146): picking a color meant scrolling down to the dots and
+    // back up to see the shirt in it. The color dots now also sit right under the photo, in one swipeable row; both rows
+    // draw from the same choice, so they stay in step with the photo and the cart.
+    var photoDots = el("div", "hy-photo-dots"); photoDots.hidden = true; s.appendChild(photoDots);
     var body = el("div", "hy-pad");
     if (p.early) body.appendChild(el("p", "hy-badge", "App first: on the website in 24 hours"));
     var top = el("div", "hy-plan-top"); top.appendChild(el("h2", null, p.title));
@@ -881,6 +885,24 @@
             b.setAttribute("aria-pressed", String(o.type === option.type)); types.appendChild(b);
           });
           pick.appendChild(types);
+        }
+        while (photoDots.firstChild) photoDots.removeChild(photoDots.firstChild);
+        photoDots.hidden = option.colors.length < 2;
+        if (!photoDots.hidden) {
+          var pl = el("p", "hy-photo-dots-label", "Color: "); pl.appendChild(el("span", "hy-label-value", st.color)); photoDots.appendChild(pl);
+          var prow = el("div", "hy-photo-dots-row"); prow.setAttribute("role", "group"); prow.setAttribute("aria-label", "Color (also in the options below)");
+          var pressed = null;
+          option.colors.forEach(function (c) {
+            var hex = /^#[0-9a-f]{6}$/i.test(c.hex || "");
+            var b = el("button", hex ? "hy-swatch" : "hy-chip"); b.type = "button";
+            if (hex) b.style.background = c.hex; else b.textContent = c.name;
+            b.setAttribute("aria-label", c.name); b.setAttribute("aria-pressed", String(c.name === st.color)); b.title = c.name;
+            if (c.name === st.color) pressed = b;
+            b.addEventListener("click", function () { st.color = c.name; note = ""; render(); });
+            prow.appendChild(b);
+          });
+          photoDots.appendChild(prow);
+          if (pressed) prow.scrollLeft = Math.max(0, pressed.offsetLeft - prow.clientWidth / 2 + pressed.offsetWidth / 2);
         }
         // One color (a sticker's white backing) is not a choice, so it isn't asked.
         if (option.colors.length > 1) {
