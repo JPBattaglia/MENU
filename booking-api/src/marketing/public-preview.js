@@ -74,18 +74,22 @@ const SCANNER = /bot|crawl|spider|slurp|preview|scanner|proofpoint|mimecast|barr
 const json = (data, status = 200) => Response.json(data, { status, headers: { "Cache-Control": "no-store", "Access-Control-Allow-Origin": "*" } });
 const hoursFromNow = (hours, now) => new Date(now + hours * 3600000).toISOString();
 const firstYearCents = () => MENU_PACKAGE_PRICING.setupCents + MENU_PACKAGE_PRICING.hostingFirstYearCents;
+// Menus are sold as free or with MΞNU Plus (owner, Nov 14, 2026): "Make it live" checks out Plus, the menu's first
+// year free with it. 1200 = offerv1_menu_plus (migration 0059); the Start page and checkout use the catalog price.
+const PLUS_MONTH_CENTS = 1200;
+const plusLine = () => `${dollars(PLUS_MONTH_CENTS)}/mo with MΞNU Plus`;
 const dollars = (cents) => `$${(cents / 100).toLocaleString("en-US", { maximumFractionDigits: 2 })}`;
 const cleanText = (value, max) => String(value || "").replace(/[\r\n\x00]/g, " ").trim().slice(0, max);
 // Holiday previews (occasion "christmas" or "newyear") go to the Holiday Menu checkout instead.
 // both: the buyer picked "Both: $89" in the holiday picker (owner, Nov 12, 2026); the Start page ticks the other holiday.
-const startUrl = (token, occasion = null, both = false) => isOccasion(occasion) ? `${SITE}/contact.html?service=holiday&preview=${token}${both ? "&both=1" : ""}` : `${SITE}/contact.html?service=menu&preview=${token}`;
+const startUrl = (token, occasion = null, both = false) => isOccasion(occasion) ? `${SITE}/contact.html?service=holiday&preview=${token}${both ? "&both=1" : ""}` : `${SITE}/contact.html?service=menu&plan=MENU_PLUS&preview=${token}`;
 const holidayPrice = () => holidayDollars(HOLIDAY_PRICING.firstCents);
 const bothPrice = () => holidayDollars(HOLIDAY_PRICING.firstCents + HOLIDAY_PRICING.secondCents);
 // prepaid: this holiday was already covered by an order for both holidays (owner, Nov 12, 2026: the second menu
 // "shouldn't [cost $59] because it's already paid for"), so nothing here names a price.
 // Owner, Nov 12, 2026: not "Make it live: $59" but "a button that says complete dual order or something to that effect".
 const PREPAID_LABEL = "Complete your order: already paid";
-const makeLiveLabel = (occasion, both = false, prepaid = false) => isOccasion(occasion) ? (prepaid ? PREPAID_LABEL : both ? `Make it live: ${bothPrice()} for both holidays` : `Make it live: ${holidayPrice()} for ${OCCASION_NAMES[occasion]}`) : `Make it live: ${dollars(firstYearCents())} for the first year`;
+const makeLiveLabel = (occasion, both = false, prepaid = false) => isOccasion(occasion) ? (prepaid ? PREPAID_LABEL : both ? `Make it live: ${bothPrice()} for both holidays` : `Make it live: ${holidayPrice()} for ${OCCASION_NAMES[occasion]}`) : `Make it live: ${plusLine()}`;
 const homePage = (occasion) => isOccasion(occasion) ? `${SITE}/holiday-menu` : `${SITE}/online-menu`;
 const viewUrl = (token) => `${SITE}/api/menu-preview/view/${token}`;
 const designUrl = (token, key) => `${SITE}/api/menu-preview/view/${token}/${key}`;
@@ -400,12 +404,12 @@ async function handlePreviewCreate(request, env, { now = Date.now() } = {}) {
         `Tap <strong>Generate menu</strong> to see it in ${designCount} ${holiday ? "holiday " : ""}designs, and <strong>Customize</strong> to add your logo and colour.`,
         holiday
           ? `Like it? <a href="${escapeHtml(startUrl(token, occasion, both))}">${prepaid ? "Complete your order: it is already paid for" : `Make it live for ${both ? `${bothPrice()} for both holidays` : holidayPrice()}`}</a>: its own link and QR code, a print-ready PDF and a table tent, live through the holiday. Your menu file is already attached, so checkout takes a minute.`
-          : `Like it? <a href="${escapeHtml(startUrl(token))}">Make it live for ${dollars(firstYearCents())}</a> for the first year. Your menu file is already attached, so checkout takes a minute.`
+          : `Like it? <a href="${escapeHtml(startUrl(token))}">Make it live for ${plusLine()}</a>: any design, the print set and edits whenever you like, and your first year of the menu is free with Plus. Or press <strong>Start free</strong> in the preview to keep the Classic design free. Your menu file is already attached, so checkout takes a minute.`
       ]
     }),
     text: holiday
       ? `Your ${holiday} menu preview: ${url}\nIt ends in ${PREVIEW_HOURS / 24} days and has no QR code.\nMake it live (${prepaid ? "already paid" : both ? `${bothPrice()} for both holidays` : holidayPrice()}): ${startUrl(token, occasion, both)}`
-      : `Your menu preview: ${url}\nIt ends in ${PREVIEW_HOURS / 24} days and has no QR code.\nMake it live (${dollars(firstYearCents())} first year): ${startUrl(token)}`,
+      : `Your menu preview: ${url}\nIt ends in ${PREVIEW_HOURS / 24} days and has no QR code.\nMake it live (${plusLine()}): ${startUrl(token)}\nOr start free in the Classic design from the preview.`,
     idempotencyKey: `menu-preview/${token}`, purpose: "MENU_PREVIEW", templateKey: holiday ? "holiday_menu_preview_v1" : "menu_preview_v1"
   }).catch((error) => console.error("Preview email failed:", error instanceof Error ? error.message : String(error)));
   return json({ ok: true, url, token, seconds, ...(rep ? { start: startUrl(token) } : {}) });
@@ -442,7 +446,7 @@ async function runPreviewReminders(env, { now = Date.now(), force = false } = {}
     const url = viewUrl(row.token);
     const ends = endsText(row.expires_at);
     const n = designsFor(row.occasion).length;
-    const live = isOccasion(row.occasion) ? `${holidayPrice()}, live through ${OCCASION_NAMES[row.occasion]}` : `${dollars(firstYearCents())} for the first year`;
+    const live = isOccasion(row.occasion) ? `${holidayPrice()}, live through ${OCCASION_NAMES[row.occasion]}` : `${plusLine()}, or Start free in the Classic design`;
     const result = await sendTransactionalEmail(env, {
       to: email,
       subject: `Your menu preview ends ${ends}`,

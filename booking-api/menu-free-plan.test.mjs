@@ -99,7 +99,7 @@ test('Start free: the preview offers it, the email confirms it, and a Classic me
   assert.equal((await f.call(`/api/menu-preview/view/${token}`, { headers: { 'User-Agent': PHONE } })).status, 200);
   const choose = await f.call(`/api/menu-preview/choose/${token}/modern`);
   assert.equal(choose.status, 303);
-  assert.match(choose.headers.get('Location'), /contact\.html\?service=menu&preview=/);
+  assert.match(choose.headers.get('Location'), /contact\.html\?service=menu&plan=MENU_PLUS&preview=/);
   assert.equal((await (await f.call(`/api/menu-preview/handoff/${token}`)).json()).ok, true);
   assert.equal((await (await f.call(`/api/menu-preview/state/${token}`)).json()).free.live, true);
 

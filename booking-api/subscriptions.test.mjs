@@ -697,3 +697,21 @@ test('MΞNU Plus (owner, Nov 14, 2026): $12/mo or $120/yr, the menu\'s first yea
     assert.equal(h.one(`SELECT COUNT(*) AS n FROM orders WHERE notes LIKE 'Subscription MENU_PLUS period%'`).n, 0, 'and no empty period order');
   } finally { h.restore(); }
 });
+
+test('menus are free or with MΞNU Plus (owner, Nov 14, 2026): live checkout refuses a regular menu with no plan once Plus is on sale; holiday menus and sandbox are unchanged', async () => {
+  const h = setup();
+  try {
+    h.env.DB.raw.exec(readFileSync(new URL('./migrations/0059_menu_plus.sql', import.meta.url), 'utf8'));
+    h.env.DB.raw.prepare(`UPDATE offers SET is_public = 1 WHERE code IN ('ONLINE_MENU_QR', 'MENU_CARE')`).run();
+    const alone = await h.checkout({ items: [{ key: 'ONLINE_MENU_QR' }], menu_pages: 3, customer: buyer }, true);
+    assert.equal(alone.status, 400);
+    assert.match(alone.body.error, /comes with MΞNU Plus/);
+    assert.equal(h.stripe.sessions.length, 0);
+    const withPlus = await h.checkout({ items: [{ key: 'MENU_PLUS' }, { key: 'ONLINE_MENU_QR' }], interval: 'month', menu_pages: 3, customer: buyer }, true);
+    assert.equal(withPlus.status, 200, JSON.stringify(withPlus.body));
+    const withCare = await h.checkout({ items: [{ key: 'MENU_CARE' }, { key: 'ONLINE_MENU_QR' }], interval: 'month', menu_pages: 3, customer: buyer }, true);
+    assert.equal(withCare.status, 200, JSON.stringify(withCare.body));
+    const sandbox = await h.checkout({ items: [{ key: 'ONLINE_MENU_QR' }], menu_pages: 3, customer: buyer });
+    assert.equal(sandbox.status, 200, 'sandbox self-tests keep the one-time order');
+  } finally { h.restore(); }
+});

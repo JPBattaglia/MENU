@@ -217,7 +217,8 @@ async function handleProspectFollowups(request, env, { now = Date.now() } = {}) 
       url: r.kind === "website" ? `${SITE}/api/website-preview/view/${r.token}/d/bistro/index.html` : r.generator ? generatorUrl(r.token) : `${SITE}/api/menu-preview/${r.token}`, opens: r.open_count })),
     ...previewless.filter((r) => !seen.has(r.id) && seen.add(r.id)).map((r) => ({ kind: "no_preview", id: r.id, name: r.name, city: r.city, email: r.email, website: r.website, gaps_json: r.gaps_json, menu_url: r.menu_url, offer_code: r.offer_code }))
   ].slice(0, 50);
-  return json({ ok: true, prospects, price: dollars(firstYearCents()) });
+  // Menus are free or with MΞNU Plus (owner, Nov 14, 2026); follow-ups quote that, not the old $144 first year.
+  return json({ ok: true, prospects, price: "free in the Classic design, or $12/mo with MΞNU Plus (any design, the print set, its first year free)" });
 }
 
 export { handleProspectDemo, handleMenuPreview, handleProspectFollowups, upgradeProspectMenus, readProspectMenu, PREVIEW_DAYS };

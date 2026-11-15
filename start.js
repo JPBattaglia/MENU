@@ -176,6 +176,9 @@ function orderProblem() {
   if (planIncludes('WEBSITE_CARE') && !siteInOrder() && !hasOwnSite && !TEST_EXTRAS) {
     return { text: 'Website Care looks after a site Menu-Made builds, so it starts with your site. Pick yours free in the site generator and this plan comes with it.', href: 'website-design.html?then=' + encodeURIComponent(thenParams()) + '#try-free', label: 'Pick your site' };
   }
+  if (order.once.has(MENU) && offers && sellable(offer(PLUS)) && !planIncludes(PLUS) && !planIncludes('MENU_CARE')) {
+    return { text: 'Your online menu comes with MΞNU Plus ($12 a month, its first year free) or a plan with Menu Care. Or keep it free: start free from your menu preview.', href: 'online-menu.html#try-free', label: 'Start free instead' };
+  }
   const codes = order.plan === CUSTOM ? [...order.custom, ...order.once] : [order.plan, ...order.once];
   for (const code of codes.filter(Boolean)) {
     if (offers && !sellable(offer(code))) return `${nameOf(code)} opens soon. Remove it to continue, or ask us about it below.`;
@@ -574,6 +577,12 @@ function add(code, { quiet = false } = {}) {
   } else {
     if (order.once.has(code)) return false;
     order.once.add(code);
+    // Menus are sold as free or with MΞNU Plus (owner, Nov 14, 2026), never on their own: a menu with no plan
+    // brings Plus, and its first year is free with it.
+    if (code === MENU && !order.plan && sellable(offer(PLUS))) {
+      order.plan = PLUS;
+      menuNote = 'Your online menu comes with MΞNU Plus, and its first year is free with Plus. Rather we make your changes? Pick Menu Care below.';
+    }
   }
   window.MenuMadeFunnel?.track('service_selected', code);
   render();
