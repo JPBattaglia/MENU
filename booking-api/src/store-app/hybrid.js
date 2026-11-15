@@ -476,7 +476,17 @@ export { appPlatform, countAppOpen, pacificDay, HOLIDAY_ICONS, holidayIconOn, ta
 // (owner, Nov 10, 2026). A store's link is given only once that store has the app public (store_app_listings:
 // Apple's state live, Google's page public), so the buttons appear by themselves on launch day and never point
 // at a page that isn't there. Public data, cached 10 minutes, CORS "*".
-async function appStoreLinks(env, key) {
+// Whether the app is on the App Store, from Apple's public lookup: an update in review leaves the version already on
+// sale public, so the newest version's review state alone is not the answer (owner, Nov 15, 2026). Cached an hour.
+async function appleOnSale(appId, fetchImpl = fetch) {
+  try {
+    const res = await fetchImpl(`https://itunes.apple.com/lookup?id=${appId}&country=us`, { cf: { cacheTtl: 3600, cacheEverything: true } });
+    if (!res.ok) return false;
+    const body = await res.json();
+    return Number(body?.resultCount || 0) > 0 && String(body.results?.[0]?.trackId || "") === String(appId);
+  } catch { return false; }
+}
+export async function appStoreLinks(env, key, { fetchImpl = fetch } = {}) {
   const bundle = [...HYBRID_BUNDLES].find(([, k]) => k === key)?.[0];
   if (!bundle || !env.DB) return { ok: true, apple: null, google: null };
   const row = await env.DB.prepare(`SELECT l.apple_json, l.google_json FROM store_apps a JOIN store_app_listings l ON l.store_app_id = a.id WHERE a.bundle_id = ? AND a.own_app = 1 LIMIT 1`).bind(bundle).first().catch(() => null);
@@ -484,7 +494,7 @@ async function appStoreLinks(env, key) {
   const apple = parse(row?.apple_json), google = parse(row?.google_json);
   return {
     ok: true,
-    apple: apple.live && /^\d+$/.test(String(apple.appId || "")) ? `https://apps.apple.com/app/id${apple.appId}` : null,
+    apple: /^\d+$/.test(String(apple.appId || "")) && (apple.live || apple.public || await appleOnSale(apple.appId, fetchImpl)) ? `https://apps.apple.com/app/id${apple.appId}` : null,
     google: google.live ? `https://play.google.com/store/apps/details?id=${bundle}` : null
   };
 }
