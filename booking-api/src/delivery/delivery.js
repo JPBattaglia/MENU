@@ -76,8 +76,9 @@ async function loadHostedMenu(env, slug, { now = Date.now() } = {}) {
     `).bind(hostedUrl).first();
   // Without Menu Care the menu goes offline 30 days after its first year (owner decision Oct 28, 2026). Nothing is
   // deleted: adding Menu Care brings it back at this same address. Holiday Menus have no hosting year.
+  let state = null;
   if (row?.business_id && !holiday) {
-    const state = await menuHostingState(env, row.business_id).catch(() => ({ live: true }));
+    state = await menuHostingState(env, row.business_id).catch(() => ({ live: true }));
     if (!state.live) {
       return { response: simplePage(200, "This menu isn't available right now",
         `<p>This online menu is currently offline. Please ask a member of staff for a menu.</p><p style="font-size:14px">Is this your business? Reply to any email from Menu-Made, or sign in to <a href="${publicBaseUrl(env)}/account.html">your account</a>, to bring your menu back with Menu Care at this same address and QR code.</p>`) };
@@ -91,8 +92,13 @@ async function loadHostedMenu(env, slug, { now = Date.now() } = {}) {
         : simplePage(404, "Menu not found", "<p>This menu link isn't active.</p>")
     };
   }
-  return { object, row, hostedUrl };
+  return { object, row, hostedUrl, freePlan: state?.reason === "free_plan" };
 }
+
+// Free plan (stage 15, owner Nov 14, 2026): 'a small "Made with MΞNU" badge' on the live menu. Added when the page is
+// served, so the owner's own edits never lose it and it goes away by itself once a paid year or plan covers the menu.
+const MADE_WITH = `<style>.mm-made-with{display:block;width:max-content;margin:28px auto 22px;padding:7px 14px;border-radius:999px;background:#003344;color:#fff;font:600 13px/1.2 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;text-decoration:none;letter-spacing:.02em}.mm-made-with b{color:#00d6e6;font-weight:800}</style><a class="mm-made-with" href="https://menu-made.com/online-menu?ref=badge">Made with <b>MΞNU</b>: get yours free</a>`;
+const withBadge = (html) => html.includes("</body>") ? html.replace(/<\/body>(?![\s\S]*<\/body>)/, () => `${MADE_WITH}\n</body>`) : `${html}${MADE_WITH}`;
 
 // After its holiday a Holiday Menu's address (and QR code) says so, and points to the business's regular menu with
 // us if it has one, otherwise to its website.
@@ -119,7 +125,8 @@ async function handleHostedMenu(request, env, slug) {
   if (found.response) return found.response;
   // Translated menus (stage 15, paid plans only): language links at the top, ?lang=<code> for the translated page.
   const lang = new URL(request.url).searchParams.get("lang");
-  const html = await localizedMenuPage(env, { html: await found.object.text(), businessId: found.row.business_id, lang, hostedUrl: found.hostedUrl });
+  const page = await found.object.text();
+  const html = await localizedMenuPage(env, { html: found.freePlan ? withBadge(page) : page, businessId: found.row.business_id, lang, hostedUrl: found.hostedUrl });
   return new Response(html, {
     status: 200,
     headers: {

@@ -149,6 +149,16 @@
     $('editor').hidden = false;
     draw();
     drawLanguages(out.languages, out.menu_url);
+    drawPlan(out.plan);
+  }
+
+  // MΞNU free plan (Nov 14, 2026): what the free menu includes, and the way to every design.
+  function drawPlan(plan) {
+    const card = $('editFree');
+    card.hidden = !(plan && plan.free);
+    if (card.hidden) return;
+    if (plan.upgrade_url && /^https:\/\/menu-made\.com\//.test(plan.upgrade_url)) $('freeUpgrade').href = plan.upgrade_url;
+    $('freeWelcome').hidden = new URLSearchParams(location.search).get('welcome') !== 'free';
   }
 
   // Translated menus (paid plans only, owner Nov 14, 2026). The live menu gets language links at the top.

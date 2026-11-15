@@ -451,7 +451,25 @@
         two.appendChild(button("Customize", "hy-btn hy-btn-ghost", function () { customize(); }));
         tools.appendChild(two);
         tools.appendChild(button(st.choose_label || "Choose this design", "hy-btn hy-btn-big", function () { openWeb(d.choose_url); }));
+        // MΞNU free plan (Nov 14, 2026): "Start free: Classic design" emails the confirm link; same as the website.
+        if (st.free && st.free.url) tools.appendChild(button(st.free.label, "hy-btn hy-btn-ghost hy-btn-free", function () { startFree(st.free); }));
       }));
+    }
+    function startFree(free) {
+      if (free.live) { openWeb("https://menu-made.com/account.html"); return; }
+      message(busyScreen(["Sending your link…"]));
+      fetch(free.url, { method: "POST", headers: { Accept: "application/json" } }).then(function (r) { return r.json().catch(function () { return {}; }); }).then(function (out) {
+        if (!document.body.contains(stage)) return;
+        var card = el("div", "hy-card");
+        card.appendChild(el("h2", null, out.ok ? "Check your email" : "That didn't work"));
+        card.appendChild(el("p", null, out.message || out.error || "Please try again in a minute."));
+        if (out.ok && !out.live) card.appendChild(el("p", "hy-muted", free.note || ""));
+        card.appendChild(button("Back to your designs", "hy-btn hy-btn-big", function () { draw(); }));
+        message(card);
+      }).catch(function () {
+        if (!document.body.contains(stage)) return;
+        var off = el("div", "hy-card"); off.appendChild(el("p", null, "You need a connection for this.")); off.appendChild(button("Back to your designs", "hy-btn hy-btn-big", function () { draw(); })); message(off);
+      });
     }
     // The Customize sheet's "Items and prices": closed until tapped (then only a changed menu is sent); value = the
     // edited menu as JSON, or "" when it was never opened.

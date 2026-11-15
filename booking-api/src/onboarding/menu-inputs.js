@@ -54,6 +54,25 @@ async function attachCheckoutMenuDocument(projectId, orderId, env) {
   return Number(updated.meta?.changes || 0) > 0;
 }
 
+async function freePlanDestination(env, order) {
+  const viaBusiness = await env.DB.prepare(`
+      SELECT pi.value_text FROM projects p JOIN project_inputs pi ON pi.project_id = p.id AND pi.input_key = 'qr_destination'
+      WHERE p.business_id = ? AND p.workflow_key = 'MENU_QR_V1' AND json_extract(COALESCE(p.metadata_json, '{}'), '$.free_plan') IS NOT NULL
+      ORDER BY p.created_at ASC LIMIT 1
+    `).bind(order.business_id).first();
+  if (viaBusiness?.value_text) return viaBusiness.value_text;
+  const notes = (await env.DB.prepare(`SELECT notes FROM orders WHERE id = ?`).bind(order.id).first())?.notes || "";
+  const token = /Preview ref: ([a-f0-9]{36})(?![a-f0-9])/i.exec(notes)?.[1];
+  if (!token) return null;
+  const viaPreview = await env.DB.prepare(`
+      SELECT pi.value_text FROM menu_previews mp JOIN project_inputs pi ON pi.project_id = mp.free_project_id AND pi.input_key = 'qr_destination'
+      JOIN projects p ON p.id = mp.free_project_id JOIN customers c ON c.id = p.customer_id
+      JOIN orders o ON o.id = ? JOIN customers oc ON oc.id = o.customer_id
+      WHERE mp.token = ? AND lower(c.email) = lower(oc.email)
+    `).bind(order.id, token.toLowerCase()).first();
+  return viaPreview?.value_text || null;
+}
+
 async function createMenuQrInputs(projectId, order, timestamp, env, { occasion = null } = {}) {
   const business = await env.DB.prepare(`
         SELECT name
@@ -71,6 +90,9 @@ async function createMenuQrInputs(projectId, order, timestamp, env, { occasion =
       `).bind(
     order.customer_id
   ).first();
+  // Upgrading from the MΞNU free plan (Nov 14, 2026): the paid menu takes over the free menu's address, so the
+  // QR code the business already printed keeps working. Found through the business, or the preview the order names.
+  const freeDestination = occasion ? null : await freePlanDestination(env, order).catch(() => null);
   const onboardingInputs = [
     {
       key: "business_name",
@@ -113,7 +135,7 @@ async function createMenuQrInputs(projectId, order, timestamp, env, { occasion =
       key: "qr_destination",
       type: "URL",
       required: 1,
-      value: hostedMenuUrl(projectId, business?.name, occasion),
+      value: freeDestination || hostedMenuUrl(projectId, business?.name, occasion),
       status: "VALID"
     },
     {

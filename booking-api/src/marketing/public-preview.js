@@ -47,6 +47,7 @@ import { pausedForSale } from "../lib/switches.js";
 import { signLinkToken, verifyLinkToken } from "../lib/links.js";
 import { ownerEmailAddress } from "../lib/config.js";
 import { simplePage } from "../lib/http.js";
+import { addFreeButton, freeButton } from "./free-menu.js";
 
 const PREVIEW_HOURS = 72;
 const PROSPECT_DAYS = 21;          // prospect-email previews (demo-menu.js), same as the website ones
@@ -491,8 +492,8 @@ async function handlePreviewView(request, env, token, { now = Date.now(), design
   const gone = () => plainPage(410, "This preview has ended", `Free previews last ${PREVIEW_HOURS / 24} days. To get your menu as a phone page with a QR code, see <a href="${escapeHtml(`${SITE}/online-menu`)}">Online Menu + QR</a>.`);
   if (!/^[a-f0-9]{36}$/.test(token) || !env.DB || !env.ASSETS) return gone();
   if (design && !menuDesignFor(design)) return gone();
-  const row = await env.DB.prepare(`SELECT token, status, expires_at, open_count, design, campaign, occasion, email FROM menu_previews WHERE token = ?`).bind(token).first();
-  if (!row || row.status !== "READY" || row.expires_at <= new Date(now).toISOString()) return gone();
+  const row = await env.DB.prepare(`SELECT token, status, created_at, expires_at, open_count, design, campaign, occasion, email, free_project_id FROM menu_previews WHERE token = ?`).bind(token).first();
+  if (!row || row.status !== "READY" || (row.expires_at <= new Date(now).toISOString() && !row.free_project_id)) return gone();
   const agent = request.headers.get("User-Agent") || "";
   const counted = request.method === "GET" && agent && !SCANNER.test(agent);
   // The generator's pages; a preview made before the generator has its one page.
@@ -513,6 +514,8 @@ async function handlePreviewView(request, env, token, { now = Date.now(), design
   if (isOccasion(row.occasion) && page.includes('class="mm-gen-pick"') && (await holidayQuote(env, row.email, row.occasion, { now }).catch(() => null))?.prepaid === true) {
     page = page.replace(/(<a class="mm-gen-pick"[^>]*>)[^<]*(<\/a>)/g, (_, open, close) => `${open}${escapeHtml(PREPAID_LABEL)}${close}`);
   }
+  // Free plan (Nov 14, 2026): "Start free: Classic design" beside Make it live on regular menu previews.
+  if (!isOccasion(row.occasion)) page = addFreeButton(env, page, row, now);
   return new Response(frameAware(page), { status: 200, headers: { "Content-Type": "text/html; charset=utf-8", "Cache-Control": "no-store", "X-Robots-Tag": "noindex, nofollow", "Referrer-Policy": "no-referrer" } });
 }
 
@@ -523,8 +526,8 @@ async function handlePreviewState(request, env, token, { now = Date.now() } = {}
   if (request.method === "OPTIONS") return preflight();
   const gone = () => json({ ok: false, ended: true, error: `This preview has ended. Free previews last ${PREVIEW_HOURS / 24} days.` }, 410);
   if (!/^[a-f0-9]{36}$/.test(token) || !env.DB || !env.ASSETS) return gone();
-  const row = await env.DB.prepare(`SELECT status, expires_at, design, campaign, occasion, email FROM menu_previews WHERE token = ?`).bind(token).first();
-  if (!row || row.status !== "READY" || row.expires_at <= new Date(now).toISOString()) return gone();
+  const row = await env.DB.prepare(`SELECT token, status, created_at, expires_at, design, campaign, occasion, email, free_project_id FROM menu_previews WHERE token = ?`).bind(token).first();
+  if (!row || row.status !== "READY" || (row.expires_at <= new Date(now).toISOString() && !row.free_project_id)) return gone();
   const paidNow = isOccasion(row.occasion) && (await holidayQuote(env, row.email, row.occasion, { now }).catch(() => null))?.prepaid === true;
   const data = parseJsonOrNull(await (await env.ASSETS.get(`menu-previews/${token}/data.json`))?.text());
   if (!data?.menu) return gone();
@@ -539,6 +542,8 @@ async function handlePreviewState(request, env, token, { now = Date.now() } = {}
     designs: list.map((d) => ({ key: d.key, label: d.label, blurb: d.blurb, url: designUrl(token, d.key), choose_url: chooseUrl(token, d.key) })),
     next_label: "Generate menu", choose_label: makeLiveLabel(row.occasion, data?.both === true, paidNow || data?.prepaid === true),
     note: `Free preview: no QR code, ends in ${PREVIEW_HOURS / 24} days.`,
+    // Free plan (Nov 14, 2026): a third button, POSTed by the app; null on holiday previews.
+    free: freeButton(env, row, now),
     customize: {
       url: `${SITE}/api/menu-preview/customize/${token}`, title: "Customize your menu", submit: `Update all ${n} designs`,
       busy: "Updating your menu. This takes a few seconds.", left: Math.max(0, MAX_CUSTOMIZE - Number(data.customized || 0)),
@@ -567,8 +572,8 @@ async function handlePreviewCustomize(request, env, token, { now = Date.now() } 
   const gone = () => app ? json({ ok: false, ended: true, error: "This preview has ended." }, 410) : plainPage(410, "This preview has ended", `<a href="${escapeHtml(`${SITE}/online-menu`)}">Start a new one</a>.`);
   const oops = (text) => app ? json({ ok: false, error: text }, 400) : plainPage(400, "That didn't work", `${escapeHtml(text)} <a href="javascript:history.back()">Go back</a> and try again.`);
   if (!/^[a-f0-9]{36}$/.test(token) || !env.DB || !env.ASSETS) return gone();
-  const row = await env.DB.prepare(`SELECT status, expires_at FROM menu_previews WHERE token = ?`).bind(token).first();
-  if (!row || row.status !== "READY" || row.expires_at <= new Date(now).toISOString()) return gone();
+  const row = await env.DB.prepare(`SELECT status, expires_at, free_project_id FROM menu_previews WHERE token = ?`).bind(token).first();
+  if (!row || row.status !== "READY" || (row.expires_at <= new Date(now).toISOString() && !row.free_project_id)) return gone();
   const data = parseJsonOrNull(await (await env.ASSETS.get(`menu-previews/${token}/data.json`))?.text());
   if (!data?.menu) return gone();
   const holidayLine = isOccasion(data.occasion) ? `${OCCASION_NAMES[data.occasion]} menu` : "";
@@ -624,13 +629,14 @@ async function handlePreviewCustomize(request, env, token, { now = Date.now() } 
 }
 
 // Public previews can go to checkout for HANDOFF_DAYS; prospect previews for as long as they last.
-const withinHandoff = (row, now) => Date.parse(row.created_at) >= now - (row.campaign === "prospect" ? PROSPECT_DAYS + 1 : HANDOFF_DAYS) * 86400000;
+// A preview whose menu went live on the free plan stays open: it is how that business upgrades.
+const withinHandoff = (row, now) => Boolean(row.free_project_id) || Date.parse(row.created_at) >= now - (row.campaign === "prospect" ? PROSPECT_DAYS + 1 : HANDOFF_DAYS) * 86400000;
 
 // "Make it live" on a design: remember the design (the paid menu is built in it), then checkout.
 async function handlePreviewChoose(env, token, key, { now = Date.now(), request = null } = {}) {
   const design = menuDesignFor(key);
   if (!/^[a-f0-9]{36}$/.test(token) || !design || !env.DB) return plainPage(404, "Preview not found", `See <a href="${escapeHtml(`${SITE}/online-menu`)}">Online Menu + QR</a>.`);
-  const row = await env.DB.prepare(`SELECT status, created_at, campaign, occasion, email, business, request_id FROM menu_previews WHERE token = ?`).bind(token).first();
+  const row = await env.DB.prepare(`SELECT status, created_at, campaign, occasion, email, business, request_id, free_project_id FROM menu_previews WHERE token = ?`).bind(token).first();
   if (!row || row.status !== "READY" || !withinHandoff(row, now)) return plainPage(410, "This preview has ended", `See <a href="${escapeHtml(homePage(row?.occasion))}">${isOccasion(row?.occasion) ? "Holiday Menu" : "Online Menu + QR"}</a>.`);
   await env.DB.prepare(`UPDATE menu_previews SET design = ? WHERE token = ?`).bind(design.key, token).run();
   if (isOccasion(row.occasion)) {
@@ -697,7 +703,7 @@ async function menuPreviewChoice(env, orderId) {
 // Checkout prefill for "Make it live": the stored upload, so the buyer isn't asked for the file again.
 async function handlePreviewHandoff(env, token, { now = Date.now() } = {}) {
   if (!/^[a-f0-9]{36}$/.test(token) || !env.DB) return json({ ok: false }, 404);
-  const row = await env.DB.prepare(`SELECT request_id, email, business, status, created_at, campaign, occasion, design FROM menu_previews WHERE token = ?`).bind(token).first();
+  const row = await env.DB.prepare(`SELECT request_id, email, business, status, created_at, campaign, occasion, design, free_project_id FROM menu_previews WHERE token = ?`).bind(token).first();
   if (!row || row.status !== "READY" || !withinHandoff(row, now)) return json({ ok: false }, 404);
   // A prospect preview read from a web page (not a file) has no stored file to attach: checkout asks for one.
   const upload = await env.DB.prepare(`SELECT payload FROM mm_booking_requests WHERE id = ?`).bind(row.request_id).first().catch(() => null);
