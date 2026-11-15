@@ -235,7 +235,7 @@ async function resolveActiveOffer(identifier, env, options = {}) {
 // Stage 9: what the revamped site shows. Every active, non-test offer with both billing intervals,
 // what a plan or bundle includes, and on_sale (is_public). Pages read prices only from here, never
 // hard-coded. Browsers may reuse it for a minute; each request reads only the small offers tables.
-const SITE_HIDDEN = /^(ROUTING_SELFTEST_|M25_)/;
+const SITE_HIDDEN = /^(ROUTING_SELFTEST_|M25_|MENU_FREE$)/;   // MENU_FREE: the free plan is not sold, it starts from a preview
 
 async function getSiteCatalog(env) {
   try {

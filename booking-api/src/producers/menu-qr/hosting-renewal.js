@@ -42,6 +42,21 @@ async function menuCarePrices(env) {
   return { month: price("MONTH") ?? 2900, year: price("YEAR") ?? 29000 };
 }
 
+async function hasFreePlan(env, businessId) {
+  return Boolean(await env.DB.prepare(`
+      SELECT 1 AS ok FROM projects p WHERE p.business_id = ? AND p.workflow_key = 'MENU_QR_V1'
+        AND json_extract(COALESCE(p.metadata_json, '{}'), '$.free_plan') IS NOT NULL LIMIT 1
+    `).bind(businessId).first());
+}
+
+// The free menu's own preview: every design, and "Make it live" upgrades at the same address and QR code.
+async function freePlanUpgradeUrl(env, businessId) {
+  const row = await env.DB.prepare(`
+      SELECT mp.token FROM menu_previews mp JOIN projects p ON p.id = mp.free_project_id WHERE p.business_id = ? ORDER BY mp.free_claimed_at DESC LIMIT 1
+    `).bind(businessId).first().catch(() => null);
+  return row?.token ? `https://menu-made.com/api/menu-preview/view/${row.token}` : "https://menu-made.com/online-menu";
+}
+
 // Is this business's hosted menu still online? Covered while Menu Care is active, during the first year of its
 // newest Online Menu + QR, and for 30 days after whichever of those ended last. A business with neither is left
 // online (nothing to measure against).
@@ -51,6 +66,7 @@ async function menuHostingState(env, businessId, now = new Date()) {
       SELECT p.id, MIN(d.delivered_at) AS first_delivered_at FROM projects p JOIN deliverables d ON d.project_id = p.id
       WHERE p.business_id = ? AND p.workflow_key = 'MENU_QR_V1' AND d.deliverable_type = 'MENU_DRAFT' AND d.status = 'FINAL' AND d.customer_visible = 1
         AND json_extract(COALESCE(p.metadata_json, '{}'), '$.holiday_menu') IS NULL   -- Holiday Menus have no hosting year
+        AND json_extract(COALESCE(p.metadata_json, '{}'), '$.free_plan') IS NULL   -- nor does the free plan
       GROUP BY p.id ORDER BY first_delivered_at DESC LIMIT 1
     `).bind(businessId).first();
   const care = await env.DB.prepare(`
@@ -58,9 +74,13 @@ async function menuHostingState(env, businessId, now = new Date()) {
     `).bind(businessId).first();
   const ends = [qr?.first_delivered_at ? Date.parse(qr.first_delivered_at) + YEAR_DAYS * DAY : null, care?.ended_at ? Date.parse(care.ended_at) : null]
     .filter((t) => Number.isFinite(t));
-  if (!ends.length) return { live: true, reason: "unknown" };
+  // Free plan (stage 15, owner Nov 14, 2026: "Free plan, forever"): a business with a free menu never goes offline.
+  // Its live menu carries the "Made with MΞNU" badge whenever no paid year or Menu Care covers it (reason free_plan).
+  const free = () => hasFreePlan(env, businessId);
+  if (!ends.length) return await free() ? { live: true, reason: "free_plan" } : { live: true, reason: "unknown" };
   const coveredUntil = Math.max(...ends);
   const offlineAt = coveredUntil + GRACE_DAYS * DAY;
+  if (now.getTime() >= offlineAt && await free()) return { live: true, reason: "free_plan" };
   return {
     live: now.getTime() < offlineAt,
     reason: now.getTime() < coveredUntil ? "covered" : now.getTime() < offlineAt ? "grace" : "offline",
@@ -81,6 +101,7 @@ async function loadMenuProject(env, projectId) {
              (SELECT i.metadata_json FROM order_items i WHERE i.order_id = p.order_id LIMIT 1) AS item_metadata
       FROM projects p JOIN businesses b ON b.id = p.business_id JOIN customers c ON c.id = p.customer_id
       WHERE p.id = ? AND p.workflow_key = 'MENU_QR_V1' AND json_extract(COALESCE(p.metadata_json, '{}'), '$.holiday_menu') IS NULL
+        AND json_extract(COALESCE(p.metadata_json, '{}'), '$.free_plan') IS NULL
     `).bind(projectId).first();
   if (!row) return null;
   return { ...row, environment: parseJsonOrNull(row.item_metadata)?.environment === "sandbox" ? "sandbox" : "live" };
@@ -157,6 +178,7 @@ async function remindMenuHostingRenewals(env, { now = new Date(), projectIds = n
       if (!projectIds && project.environment !== "live") { skip("sandbox"); continue; }
       if (!isCustomerEmail(project.email, PURPOSE, env)) { skip("owner address"); continue; }
       if (await hasMenuCare(env, project.business_id)) { skip("has Menu Care"); continue; }
+      if (await hasFreePlan(env, project.business_id)) { skip("free plan: never goes offline"); continue; }
       const daysLeft = (Date.parse(yearEnd(project)) - now.getTime()) / DAY;
       let due;
       if (daysLeft <= -GRACE_DAYS) {
@@ -238,4 +260,4 @@ ${button("month", `${dollars(prices.month)} a month`)}${button("year", `${dollar
   return new Response(null, { status: 303, headers: { Location: result.url, "Cache-Control": "no-store" } });
 }
 
-export { GRACE_DAYS, PURPOSE as MENU_HOSTING_PURPOSE, menuHostingState, remindMenuHostingRenewals, handleMenuHostingRenewal, renewalLink };
+export { GRACE_DAYS, PURPOSE as MENU_HOSTING_PURPOSE, freePlanUpgradeUrl, hasFreePlan, menuHostingState, remindMenuHostingRenewals, handleMenuHostingRenewal, renewalLink };

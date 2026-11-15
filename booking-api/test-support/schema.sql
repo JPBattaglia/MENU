@@ -652,3 +652,23 @@ CREATE TABLE IF NOT EXISTS app_open_devices (
   device TEXT NOT NULL,       -- daily-salted hash, not reversible
   PRIMARY KEY (day, app, device)
 );
+
+-- 0057_menu_translations.sql
+-- Menu translations (stage 15, owner Nov 14, 2026: "maybe that should be something that you only get when you pay
+-- for a plan"). One row per business: the languages its owner picked, the AI translations of every text on its live
+-- menu (keyed by the original text, so an edit only translates what is new) and the owner's own corrections.
+CREATE TABLE IF NOT EXISTS menu_translations (
+  business_id TEXT PRIMARY KEY,
+  languages_json TEXT NOT NULL DEFAULT '[]',   -- ["es", "zh-Hans"], in the owner's order
+  strings_json TEXT NOT NULL DEFAULT '{}',     -- { "es": { "<original text>": "<translation>" } }
+  overrides_json TEXT NOT NULL DEFAULT '{}',   -- same shape: the owner's corrections, which win
+  fill_attempt_at TEXT,                        -- last time missing text was sent for translation
+  updated_at TEXT NOT NULL
+);
+
+-- 0058_menu_free_plan.sql
+-- MΞNU free plan (stage 15 task 2, owner Nov 14, 2026: "Free plan, forever"). A preview that was made live for free
+-- remembers its project, so a second confirm opens the same menu and the preview stays open for upgrading.
+ALTER TABLE menu_previews ADD COLUMN free_project_id TEXT;
+ALTER TABLE menu_previews ADD COLUMN free_claimed_at TEXT;
+CREATE INDEX IF NOT EXISTS menu_previews_free ON menu_previews (free_claimed_at) WHERE free_project_id IS NOT NULL;

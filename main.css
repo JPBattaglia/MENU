@@ -3280,3 +3280,6 @@ html.mm-lightbox-open { overflow: hidden; }
 .mm-langs-row{padding:10px 0;border-top:1px solid rgba(0,214,230,.25);margin:0}
 .mm-langs-fix{margin-top:16px;padding-top:12px;border-top:1px solid rgba(0,214,230,.35)}
 .mm-langs-fix .mm-edit-field span{font-weight:400;opacity:.85}
+/* MΞNU free plan card in the menu editor (stage 15, Nov 14, 2026) */
+.mm-free-card{border-color:rgba(0,214,230,.6)}
+.mm-free-card h2{margin-top:0}

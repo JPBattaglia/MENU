@@ -12,7 +12,7 @@ import { nowIso } from "../lib/http.js";
 import { sanitizeFilename, sha256Hex } from "../lib/util.js";
 import { buildDesignedMenuHtml, assertMenuRendered } from "../producers/menu-qr/design.js";
 import { cleanMenu, describeDiff, diffMenus, parseMenuHtml } from "../producers/menu-care/menu-edit.js";
-import { menuHostingState } from "../producers/menu-qr/hosting-renewal.js";
+import { freePlanUpgradeUrl, menuHostingState } from "../producers/menu-qr/hosting-renewal.js";
 import { hostedMenu } from "../producers/google-visibility/sources.js";
 import { currentSession, privateJson } from "./account.js";
 import { LANGUAGES, MAX_LANGUAGES, cleanLanguages, fillMissing, hasPaidPlan, loadTranslations, pageStrings, saveTranslations } from "../producers/menu-qr/translate.js";
@@ -88,7 +88,7 @@ async function handleMenuEditor(request, env) {
   if (request.method === "GET") {
     return privateJson({ ok: true, business: { id: business.id, name: business.name }, menu_url: menuUrl,
       menu: { sections: live.page.menu.sections, notes: live.page.menu.notes }, updated_at: live.row.delivered_at,
-      languages: await languageState(env, business.id) });
+      languages: await languageState(env, business.id), plan: await planState(env, business.id) });
   }
 
   const state = await menuHostingState(env, business.id).catch(() => ({ live: true }));
@@ -131,6 +131,16 @@ async function handleMenuEditor(request, env) {
   const translations = await loadTranslations(env, business.id).catch(() => null);
   if (translations?.paid && translations.languages.length) await fillMissing(env, business.id, html, translations, { force: true }).catch(() => null);
   return privateJson({ ok: true, menu_url: menuUrl, changes, updated_at: t });
+}
+
+// ---- MΞNU free plan (stage 15 task 2, Nov 14, 2026) ----------------------------------------------------------
+
+// free: the live menu is on the free plan right now (Classic, badge). upgrade_url: the business's own preview, where
+// every design is and "Make it live" upgrades at the same address and QR code.
+async function planState(env, businessId) {
+  const state = await menuHostingState(env, businessId).catch(() => null);
+  if (state?.reason !== "free_plan") return { free: false };
+  return { free: true, upgrade_url: await freePlanUpgradeUrl(env, businessId) };
 }
 
 // ---- Translated menus (stage 15; paid plans only, owner Nov 14, 2026) ---------------------------------------

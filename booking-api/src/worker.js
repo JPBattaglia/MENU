@@ -1,4 +1,5 @@
 import { handleAdminQueue } from "./admin/queue.js";
+import { handleFreeConfirm, handleFreeStart } from "./marketing/free-menu.js";
 import { handlePreviewCreate, handlePreviewView, handlePreviewState, handlePreviewHandoff, handlePreviewCustomize, handlePreviewChoose, handleRepLink, runPreviewReminders } from "./marketing/public-preview.js";
 import { handleSiteForm } from "./producers/site-files/site-form.js";
 import { handleDomainLookup } from "./producers/website/registrar.js";
@@ -191,6 +192,11 @@ var worker_default = {
     // Menu generator (Nov 7, 2026): Customize rebuilds every design; "Make it live" saves the design, then checkout.
     const menuCustomize = url.pathname.match(/^\/api\/menu-preview\/customize\/([a-f0-9]{36})$/);
     if (menuCustomize && (request.method === "POST" || request.method === "OPTIONS")) return handlePreviewCustomize(request, env, menuCustomize[1]);
+    // MΞNU free plan (Nov 14, 2026): "Start free" emails a confirm link; the confirm page makes the menu live.
+    const menuFree = url.pathname.match(/^\/api\/menu-preview\/free\/([a-f0-9]{36})$/);
+    if (menuFree && (request.method === "POST" || request.method === "OPTIONS")) return handleFreeStart(request, env, menuFree[1]);
+    const menuFreeConfirm = url.pathname.match(/^\/api\/menu-free\/confirm\/([a-f0-9]{36})$/);
+    if (menuFreeConfirm && (request.method === "GET" || request.method === "POST")) return handleFreeConfirm(request, env, menuFreeConfirm[1]);
     const menuChoose = url.pathname.match(/^\/api\/menu-preview\/choose\/([a-f0-9]{36})\/([a-z]{2,20})$/);
     if (menuChoose && request.method === "GET") return handlePreviewChoose(env, menuChoose[1], menuChoose[2], { request });
     const previewMatch = url.pathname.match(/^\/api\/menu-preview\/([a-f0-9]{36})$/);
