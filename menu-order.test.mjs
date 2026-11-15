@@ -14,7 +14,7 @@ const OFFERS = [
   { code: 'BUNDLE_GROWTH', name: 'Growth Plan', kind: 'BUNDLE', on_sale: true, prices: { month: 17900, year: 179000 }, includes: ['MENU_CARE', 'REVIEW_REPLIES', 'ACCESSIBILITY_MONITORING', 'GOOGLE_PROFILE_CARE'], requires_setup: null },
   { code: 'BUNDLE_PRO', name: 'Pro Plan', kind: 'BUNDLE', on_sale: false, prices: { month: 27900, year: 279000 }, includes: ['MENU_CARE', 'REVIEW_REPLIES', 'ACCESSIBILITY_MONITORING', 'GOOGLE_PROFILE_CARE', 'SOCIAL_POSTS', 'WEBSITE_CARE'], requires_setup: null },
   { code: 'MENU_CARE', name: 'Menu Care', kind: 'PLAN', on_sale: true, prices: { month: 2900, year: 29000 }, includes: ['MENU_CARE'], requires_setup: null },
-  { code: 'BUNDLE_PREMIUM', name: 'MΞNU Premium', kind: 'BUNDLE', on_sale: true, prices: { month: 7900, year: 79000 }, includes: ['MENU_PLUS', 'MENU_CARE', 'GOOGLE_PROFILE_CARE', 'REVIEW_REPLIES', 'ACCESSIBILITY_MONITORING'], requires_setup: null },
+  { code: 'BUNDLE_PREMIUM', name: 'MΞNU Pro', kind: 'BUNDLE', on_sale: true, prices: { month: 7900, year: 79000 }, includes: ['MENU_PLUS', 'MENU_CARE', 'GOOGLE_PROFILE_CARE', 'REVIEW_REPLIES', 'ACCESSIBILITY_MONITORING'], requires_setup: null },
   { code: 'MENU_PLUS', name: 'MΞNU Plus', kind: 'PLAN', on_sale: true, prices: { month: 1200, year: 12000 }, includes: ['MENU_PLUS'], requires_setup: null },
   { code: 'REVIEW_REPLIES', name: 'Review Replies', kind: 'PLAN', on_sale: true, prices: { month: 4900, year: 49000 }, includes: ['REVIEW_REPLIES'], requires_setup: null },
   { code: 'GOOGLE_PROFILE_CARE', name: 'Google Profile Care', kind: 'PLAN', on_sale: true, prices: { month: 14900, year: 149000 }, includes: ['GOOGLE_PROFILE_CARE'], requires_setup: null },
