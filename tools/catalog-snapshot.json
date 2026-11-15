@@ -4,7 +4,7 @@
       "code": "ACCESSIBILITY_MONITORING",
       "kind": "PLAN",
       "menu_package": null,
-      "on_sale": true,
+      "on_sale": false,
       "price_cents": null,
       "prices": {
         "month": 3900,
@@ -23,7 +23,7 @@
       "code": "BUNDLE_GROWTH",
       "kind": "BUNDLE",
       "menu_package": null,
-      "on_sale": true,
+      "on_sale": false,
       "price_cents": null,
       "prices": {
         "month": 16900,
@@ -31,10 +31,21 @@
       }
     },
     {
-      "code": "BUNDLE_PRO",
+      "code": "BUNDLE_PREMIUM",
       "kind": "BUNDLE",
       "menu_package": null,
       "on_sale": true,
+      "price_cents": null,
+      "prices": {
+        "month": 7900,
+        "year": 79000
+      }
+    },
+    {
+      "code": "BUNDLE_PRO",
+      "kind": "BUNDLE",
+      "menu_package": null,
+      "on_sale": false,
       "price_cents": null,
       "prices": {
         "month": 27900,
@@ -45,7 +56,7 @@
       "code": "BUNDLE_STARTER",
       "kind": "BUNDLE",
       "menu_package": null,
-      "on_sale": true,
+      "on_sale": false,
       "price_cents": null,
       "prices": {
         "month": 7900,
@@ -64,7 +75,7 @@
       "code": "GOOGLE_PROFILE_CARE",
       "kind": "PLAN",
       "menu_package": null,
-      "on_sale": true,
+      "on_sale": false,
       "price_cents": null,
       "prices": {
         "month": 14900,
@@ -75,7 +86,7 @@
       "code": "GOOGLE_VISIBILITY",
       "kind": "ONE_TIME",
       "menu_package": null,
-      "on_sale": true,
+      "on_sale": false,
       "price_cents": 14900,
       "prices": null
     },
@@ -83,7 +94,7 @@
       "code": "GUEST_APP",
       "kind": "PLAN",
       "menu_package": null,
-      "on_sale": true,
+      "on_sale": false,
       "price_cents": null,
       "prices": {
         "month": 2900,
@@ -94,7 +105,7 @@
       "code": "GUEST_APP_SETUP",
       "kind": "ONE_TIME",
       "menu_package": null,
-      "on_sale": true,
+      "on_sale": false,
       "price_cents": 29900,
       "prices": null
     },
@@ -110,11 +121,22 @@
       "code": "MENU_CARE",
       "kind": "PLAN",
       "menu_package": null,
-      "on_sale": true,
+      "on_sale": false,
       "price_cents": null,
       "prices": {
         "month": 2900,
         "year": 29000
+      }
+    },
+    {
+      "code": "MENU_PLUS",
+      "kind": "PLAN",
+      "menu_package": null,
+      "on_sale": true,
+      "price_cents": null,
+      "prices": {
+        "month": 1200,
+        "year": 12000
       }
     },
     {
@@ -167,7 +189,7 @@
       "code": "REVIEW_REPLIES",
       "kind": "PLAN",
       "menu_package": null,
-      "on_sale": true,
+      "on_sale": false,
       "price_cents": null,
       "prices": {
         "month": 4900,
@@ -186,7 +208,7 @@
       "code": "SOCIAL_POSTS",
       "kind": "PLAN",
       "menu_package": null,
-      "on_sale": true,
+      "on_sale": false,
       "price_cents": null,
       "prices": {
         "month": 12900,
