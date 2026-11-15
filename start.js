@@ -239,7 +239,7 @@ function lineFor(code, kind) {
     small.textContent = Catalog.label(o, interval()) + (interval() === 'year' ? ' · billed yearly' : ' · billed monthly');
   } else if (code === MENU) {
     const quote = menuQuote();
-    small.textContent = quote ? `${quote.pages} page${quote.pages === 1 ? '' : 's'} · first-year hosting included${quote.free ? ' · setup free with your yearly plan' : ''}` : 'Enter your page count';
+    small.textContent = quote ? `${quote.pages} page${quote.pages === 1 ? '' : 's'} · first-year hosting included${quote.free ? (planIncludes(PLUS) ? ' · first year free with MΞNU Plus' : ' · setup free with your yearly plan') : ''}` : 'Enter your page count';
   } else if (code === 'GUEST_APP_SETUP') {
     small.textContent = Catalog.label(o, interval()) + ' · one-time app build';
   } else if (code === HOLIDAY && holidayCents !== null) {
