@@ -138,7 +138,7 @@ test('store steps: buyer checklist after approval, reminders, buyer Done -> owne
   assert.equal((await call(f, `https://menu-made.com/api/store-app/${id}/done?t=bad`)).status, 403);
 });
 
-test('site: the Mobile App page is public again (owner, Nov 14, once both own apps were live), paired with the Guest App, prices from the catalog', () => {
+test('site: the Mobile App page is public (owner, Nov 14), prices from the catalog; since the four choices (Nov 15) it stands on its own, without the Guest App', () => {
   const root = new URL('../', import.meta.url);
   const page = readFileSync(new URL('store-app.html', root), 'utf8');
   assert.doesNotMatch(page, /noindex/);
@@ -147,18 +147,18 @@ test('site: the Mobile App page is public again (owner, Nov 14, once both own ap
   assert.match(page, /data-price-for="STORE_APP_CARE" data-price-interval="month"/);
   assert.match(page, /data-plan-cta="STORE_APP_SETUP"/);
   assert.match(page, /isn’t guaranteed/);
-  assert.match(page, /href="services.html#guest-app"/, 'links down to the Guest App');
+  assert.doesNotMatch(page, /GUEST_APP|#guest-app/, 'the Guest App is off sale');
   // Prices are written in from tools/catalog-snapshot.json (Site prices workflow) and refreshed live; never typed in.
   // So every Menu-made amount on the page sits inside a catalog price span.
   const outside = page.replace(/<span class="mm-price"[^>]*>[^<]*<\/span>/g, '');
   assert.doesNotMatch(outside, /\$(999|99\/mo|990)/, 'no Menu-made price outside a catalog price span (Apple and Google fees are theirs)');
-  // Nov 6, 2026 (owner, simpler offers): the two apps are paired on the Apps page and Services; home and plans link there.
-  for (const f of ['apps.html', 'services.html']) {
-    const html = readFileSync(new URL(f, root), 'utf8');
-    assert.match(html, /id="mobile-app"/, `${f} has the apps section`);
-    assert.match(html, /pick=GUEST_APP[\s\S]*data-plan-cta="STORE_APP_SETUP"/, `${f} pairs Guest App and Mobile App`);
-  }
-  for (const f of ['index.html', 'plans.html']) assert.match(readFileSync(new URL(f, root), 'utf8'), /href="apps.html"/, `${f} links to the Apps page`);
+  // Nov 15, 2026 (owner, four choices): Services has a "Your own app" section with the Mobile App only; the old Apps
+  // page sends visitors to it; home and plans link to it.
+  const services = readFileSync(new URL('services.html', root), 'utf8');
+  assert.match(services, /id="mobile-app"[\s\S]*data-plan-cta="STORE_APP_SETUP"/);
+  assert.doesNotMatch(services, /GUEST_APP/);
+  assert.match(readFileSync(new URL('apps.html', root), 'utf8'), /url=store-app\.html/);
+  for (const f of ['index.html', 'plans.html']) assert.match(readFileSync(new URL(f, root), 'utf8'), /href="store-app.html"/, `${f} links to the Mobile App`);
   assert.match(readFileSync(new URL('sitemap.xml', root), 'utf8'), /menu-made\.com\/store-app</);
 });
 

@@ -715,3 +715,28 @@ test('menus are free or with MΞNU Plus (owner, Nov 14, 2026): live checkout ref
     assert.equal(sandbox.status, 200, 'sandbox self-tests keep the one-time order');
   } finally { h.restore(); }
 });
+
+test('four choices (owner, Nov 15, 2026): MΞNU Premium is $79/mo, brings the menu free, grants Plus with Growth\'s services, and the old plans and single services are off sale', async () => {
+  const h = setup();
+  try {
+    for (const m of ['0059_menu_plus.sql', '0060_four_choices.sql']) h.env.DB.raw.exec(readFileSync(new URL(`./migrations/${m}`, import.meta.url), 'utf8'));
+    const body = await (await h.call('/api/catalog')).json();
+    const sale = new Map(body.offers.map((o) => [o.code, o.on_sale]));
+    for (const code of ['MENU_PLUS', 'BUNDLE_PREMIUM']) assert.equal(sale.get(code), true, code);
+    for (const code of ['BUNDLE_STARTER', 'BUNDLE_GROWTH', 'BUNDLE_PRO', 'MENU_CARE', 'REVIEW_REPLIES', 'GOOGLE_PROFILE_CARE', 'SOCIAL_POSTS', 'ACCESSIBILITY_MONITORING', 'GUEST_APP']) assert.equal(sale.get(code), false, code);
+    const done = body.offers.find((o) => o.code === 'BUNDLE_PREMIUM');
+    assert.deepEqual(done.prices, { month: 7900, year: 79000 });
+    const res = await h.checkout({ items: [{ key: 'BUNDLE_PREMIUM' }, { key: 'ONLINE_MENU_QR' }], interval: 'month', menu_pages: 3, customer: buyer });
+    assert.equal(res.status, 200, JSON.stringify(res.body));
+    assert.equal(h.stripe.sessions.at(-1).params.get('line_items[0][price_data][unit_amount]'), '7900', 'the menu is free with it, monthly too');
+    const start = '2026-11-16T18:00:00.000Z';
+    const sub = h.makeSub({ id: 'sub_done', orderId: res.body.order_id, plan: 'BUNDLE_PREMIUM', amount: 7900, start });
+    await h.webhook('checkout.session.completed', { id: h.stripe.sessions.at(-1).id, object: 'checkout.session', mode: 'subscription',
+      subscription: 'sub_done', customer: 'cus_test_1', amount_total: 7900, currency: 'usd', payment_status: 'paid', metadata: { order_id: res.body.order_id } });
+    assert.deepEqual(h.rows(`SELECT entitlement_type FROM entitlements WHERE status = 'ACTIVE' ORDER BY entitlement_type`).map((e) => e.entitlement_type),
+      ['ACCESSIBILITY_MONITORING', 'GOOGLE_PROFILE_CARE', 'MENU_CARE', 'MENU_PLUS', 'REVIEW_REPLIES']);
+    await h.webhook('invoice.paid', h.invoice(sub, { id: 'in_done_1', start, end: addMonths(start, 1), amount: 7900 }));
+    const id = h.one(`SELECT id FROM subscriptions WHERE provider_subscription_id = 'sub_done'`).id;
+    assert.deepEqual(h.jobs(id).map((j) => j.plan).sort(), ['ACCESSIBILITY_MONITORING', 'GOOGLE_PROFILE_CARE', 'MENU_CARE', 'REVIEW_REPLIES'], 'the four services each get their month; Plus does no work');
+  } finally { h.restore(); }
+});

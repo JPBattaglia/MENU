@@ -216,6 +216,6 @@ test('reminder emails say when the menu goes offline', async () => {
     await remindMenuHostingRenewals(h.env);
     assert.match(h.emails[0].text, /Without Menu Care, the menu goes offline 30 days later, on /);
     const path = h.linkIn(h.emails[0]);
-    assert.match(await (await h.call(path)).text(), /Without Menu Care, offline from/);
+    assert.match(await (await h.call(path)).text(), /Without a plan, offline from/);
   } finally { h.restore(); }
 });

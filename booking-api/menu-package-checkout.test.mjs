@@ -132,7 +132,7 @@ test('live and sandbox checkout charge the persisted quote once and retain one m
       assert.equal(stripeParams.get('line_items[0][price_data][currency]'), 'usd');
       assert.equal(stripeParams.get('line_items[0][quantity]'), '1');
       assert.match(stripeParams.get('line_items[0][price_data][product_data][name]'), /5 menu pages \+ first-year hosting/);
-      assert.match(stripeParams.get('line_items[0][price_data][product_data][description]'), /hosting continues with Menu Care/);
+      assert.match(stripeParams.get('line_items[0][price_data][product_data][description]'), /With MΞNU Plus or MΞNU Premium it stays online while the plan does/);
       assert.equal(stripeParams.has('line_items[0][price]'), false);
       assert.equal([...stripeParams.keys()].some(key => key.includes('recurring')), false);
       const orders = f.writes.filter(write => write.sql.includes('INSERT INTO orders'));

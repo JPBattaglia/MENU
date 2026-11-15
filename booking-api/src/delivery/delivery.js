@@ -81,7 +81,7 @@ async function loadHostedMenu(env, slug, { now = Date.now() } = {}) {
     state = await menuHostingState(env, row.business_id).catch(() => ({ live: true }));
     if (!state.live) {
       return { response: simplePage(200, "This menu isn't available right now",
-        `<p>This online menu is currently offline. Please ask a member of staff for a menu.</p><p style="font-size:14px">Is this your business? Reply to any email from Menu-Made, or sign in to <a href="${publicBaseUrl(env)}/account.html">your account</a>, to bring your menu back with Menu Care at this same address and QR code.</p>`) };
+        `<p>This online menu is currently offline. Please ask a member of staff for a menu.</p><p style="font-size:14px">Is this your business? Reply to any email from Menu-Made, or sign in to <a href="${publicBaseUrl(env)}/account.html">your account</a>, to bring your menu back with MΞNU Plus at this same address and QR code.</p>`) };
     }
   }
   const object = row ? await env.ASSETS.get(row.storage_key) : null;

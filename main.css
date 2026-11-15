@@ -3291,3 +3291,5 @@ html.mm-lightbox-open { overflow: hidden; }
 .mm-design-list{display:grid;gap:0}
 .mm-design-row{padding:10px 0;border-top:1px solid rgba(0,214,230,.25);margin:0}
 .mm-design-row small{opacity:.75}
+/* Four choices on the plans page (owner, Nov 15, 2026) */
+.mm-bundles.mm-bundles-4{grid-template-columns:repeat(auto-fit,minmax(220px,1fr))}
