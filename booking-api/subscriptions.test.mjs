@@ -716,7 +716,7 @@ test('menus are free or with MΞNU Plus (owner, Nov 14, 2026): live checkout ref
   } finally { h.restore(); }
 });
 
-test('four choices (owner, Nov 15, 2026): MΞNU Premium is $79/mo, brings the menu free, grants Plus with Growth\'s services, and the old plans and single services are off sale', async () => {
+test('four choices (owner, Nov 15, 2026): MΞNU Pro is $79/mo, brings the menu free, grants Plus with Growth\'s services, and the old plans and single services are off sale', async () => {
   const h = setup();
   try {
     for (const m of ['0059_menu_plus.sql', '0060_four_choices.sql']) h.env.DB.raw.exec(readFileSync(new URL(`./migrations/${m}`, import.meta.url), 'utf8'));

@@ -28,7 +28,7 @@ const PORTAL_CONFIGS = {
   SWITCH_PRO: "bpc_1UZZz8Hw7f6jhUv8Yh2uw6ce",
   SWITCH_WEBSITE: "bpc_1UZZp4Hw7f6jhUv88dahB8lC",
   SWITCH_GUEST_APP: "bpc_1UZZpDHw7f6jhUv8Zj6szLc6",
-  // Four choices (owner, Nov 15, 2026): MΞNU Plus and MΞNU Premium switch between each other, monthly or yearly.
+  // Four choices (owner, Nov 15, 2026): MΞNU Plus and MΞNU Pro switch between each other, monthly or yearly.
   SWITCH_MENU_PLANS: "bpc_1Uc5sbHw7f6jhUv8Q8blOA7r"
 };
 const OPEN_PLANS = new Set(["REVIEW_REPLIES", "GOOGLE_PROFILE_CARE", "ACCESSIBILITY_MONITORING", "SOCIAL_POSTS"]);
