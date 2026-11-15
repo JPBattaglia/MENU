@@ -151,3 +151,53 @@ test('holiday previews have no free option, and the free plan has its limits', a
   assert.equal(refused.status, 429);
   assert.match(await refused.text(), /3 businesses per email address/);
 });
+
+test('free menus keep the print set and other designs for paid plans; MΞNU Plus unlocks them on the same menu', async (t) => {
+  const f = setup(t);
+  const token = await f.preview();
+  await f.call(`/api/menu-preview/free/${token}`, { method: 'POST' });
+  const done = await f.confirm();
+  const cookie = done.headers.get('Set-Cookie').split(';')[0];
+  const [project] = f.sql(`SELECT id, business_id, customer_id FROM projects`);
+  const url = f.sql(`SELECT value_text FROM project_inputs WHERE project_id = ? AND input_key = 'qr_destination'`, project.id)[0].value_text;
+  const path = new URL(url).pathname;
+  assert.match(await (await f.call(`${path}/print.pdf`)).text(), /Comes with MΞNU Plus/);
+  assert.match(await (await f.call(`${path}/tv`)).text(), /Comes with MΞNU Plus/);
+  const post = (p, body) => f.call(p, { method: 'POST', headers: { Cookie: cookie, 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+  const locked = await post('/api/account/menu/design', { business: project.business_id, design: 'modern' });
+  assert.equal(locked.status, 402);
+
+  // Get MΞNU Plus from the editor: a live Stripe checkout for this business.
+  f.env.STRIPE_SECRET_KEY = 'sk_live_placeholder';
+  f.env.DB.raw.exec(readFileSync(new URL('./migrations/0059_menu_plus.sql', import.meta.url), 'utf8'));
+  const stripeCalls = [];
+  const before = globalThis.fetch;
+  globalThis.fetch = async (input, init) => {
+    if (String(input).startsWith('https://api.stripe.com/v1/checkout/sessions')) { stripeCalls.push(new URLSearchParams(init.body)); return Response.json({ id: 'cs_live_1', url: 'https://checkout.stripe.com/c/pay/cs_live_1' }); }
+    return before(input, init);
+  };
+  const plus = await post('/api/account/menu/plus', { business: project.business_id, interval: 'month' });
+  const plusOut = await plus.json();
+  assert.equal(plus.status, 200, JSON.stringify(plusOut));
+  assert.equal(plusOut.url, 'https://checkout.stripe.com/c/pay/cs_live_1');
+  assert.equal(stripeCalls[0].get('line_items[0][price]'), 'price_1Ubv1wHw7f6jhUv88ldXfPwZ');
+  assert.equal(f.sql(`SELECT business_id FROM orders ORDER BY created_at DESC LIMIT 1`)[0].business_id, project.business_id, 'bound to this business');
+
+  // Once Plus is active: no badge, the print set opens, any design.
+  const t0 = new Date().toISOString();
+  f.sql(`INSERT INTO subscriptions (id, customer_id, business_id, offer_id, offer_version_id, provider_subscription_id, provider_customer_id, status, billing_interval, amount_cents, started_at, created_at, updated_at) VALUES ('subp', ?, ?, 'offer_menu_plus', 'offerv1_menu_plus', 'sub_p', 'cus_p', 'ACTIVE', 'MONTH', 1200, ?, ?, ?)`, project.customer_id, project.business_id, t0, t0, t0);
+  f.sql(`INSERT INTO entitlements (id, customer_id, business_id, subscription_id, entitlement_type, status, starts_at, created_at, updated_at) VALUES ('entp', ?, ?, 'subp', 'MENU_PLUS', 'ACTIVE', ?, ?, ?)`, project.customer_id, project.business_id, t0, t0, t0);
+  assert.equal((await menuHostingState(f.env, project.business_id)).reason, 'menu_care');
+  const menu = await (await f.call(path)).text();
+  assert.doesNotMatch(menu, /mm-made-with/);
+  assert.doesNotMatch(await (await f.call(`${path}/tv`)).text(), /Comes with MΞNU Plus/);
+  const editor = await (await f.call(`/api/account/menu?business=${project.business_id}`, { headers: { Cookie: cookie } })).json();
+  assert.equal(editor.plan.free, false);
+  assert.ok(editor.designs.some((d) => d.key === 'modern'));
+  const switched = await post('/api/account/menu/design', { business: project.business_id, design: 'modern' });
+  assert.equal(switched.status, 200, await switched.clone().text());
+  const after = await (await f.call(path)).text();
+  assert.notEqual(after, menu, 'the live page is now in Modern');
+  assert.match(after, /Garlic Bread/);
+  assert.equal((await post('/api/account/menu/plus', { business: project.business_id, interval: 'month' })).status, 409, 'already covered');
+});

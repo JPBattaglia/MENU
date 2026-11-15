@@ -98,6 +98,9 @@ async function loadHostedMenu(env, slug, { now = Date.now() } = {}) {
 // Free plan (stage 15, owner Nov 14, 2026): 'a small "Made with MΞNU" badge' on the live menu. Added when the page is
 // served, so the owner's own edits never lose it and it goes away by itself once a paid year or plan covers the menu.
 const MADE_WITH = `<style>.mm-made-with{display:block;width:max-content;margin:28px auto 22px;padding:7px 14px;border-radius:999px;background:#003344;color:#fff;font:600 13px/1.2 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;text-decoration:none;letter-spacing:.02em}.mm-made-with b{color:#00d6e6;font-weight:800}</style><a class="mm-made-with" href="https://menu-made.com/online-menu?ref=badge">Made with <b>MΞNU</b>: get yours free</a>`;
+// The print set and the TV menu are paid (owner, Nov 14, 2026: "Paid unlocks ... the print set").
+const paidOnlyPage = (found) => simplePage(200, "Comes with MΞNU Plus",
+  `<p>The print menu, tri-fold, table tent and TV menu come with MΞNU Plus or any paid plan. <a href="${escapeHtml2(found.hostedUrl)}">Open the online menu</a>.</p><p style="font-size:14px">Is this your business? Sign in to <a href="https://menu-made.com/account.html">your account</a> to add MΞNU Plus.</p>`);
 const withBadge = (html) => html.includes("</body>") ? html.replace(/<\/body>(?![\s\S]*<\/body>)/, () => `${MADE_WITH}\n</body>`) : `${html}${MADE_WITH}`;
 
 // After its holiday a Holiday Menu's address (and QR code) says so, and points to the business's regular menu with
@@ -183,6 +186,7 @@ async function handleHostedMenuPdf(request, env, slug, format = "print.pdf") {
   if (!env.DB || !env.ASSETS) return simplePage(503, "Temporarily unavailable", "<p>Please try again in a minute.</p>");
   const found = await loadHostedMenu(env, slug);
   if (found.response) return found.response;
+  if (found.freePlan) return paidOnlyPage(found);
   const pdfHeaders = {
     "Content-Type": "application/pdf",
     "Content-Disposition": `inline; filename="${slug}-${spec.file}.pdf"`,
@@ -255,6 +259,7 @@ async function handleHostedMenuTv(request, env, slug) {
   if (!env.DB || !env.ASSETS) return simplePage(503, "Temporarily unavailable", "<p>Please try again in a minute.</p>");
   const found = await loadHostedMenu(env, slug);
   if (found.response) return found.response;
+  if (found.freePlan) return paidOnlyPage(found);
   const parsed = await parseHosted(found);
   if (!parsed) {
     return simplePage(200, "Menu screen not available", `<p>This menu can't be shown as a TV screen automatically. <a href="${found.hostedUrl}">Open the online menu</a>.</p>`);

@@ -134,7 +134,7 @@ test('a business that already has Menu Care is told it is covered instead of bei
     h.sql(`INSERT INTO entitlements (id, customer_id, business_id, order_item_id, entitlement_type, status, starts_at, created_at, updated_at) VALUES ('e', 'cust', 'biz', 'item', 'MENU_CARE', 'ACTIVE', ?, ?, ?)`, '2026-01-01', '2026-01-01', '2026-01-01');
     const token = new URL('https://menu-made.com' + path).searchParams.get('t');
     const post = await h.call(path.split('?')[0], { method: 'POST', body: new URLSearchParams({ t: token, interval: 'month' }) });
-    assert.match(await post.text(), /already has Menu Care/);
+    assert.match(await post.text(), /already has a plan that keeps its menu online \(MΞNU Plus or Menu Care\)/);
     assert.equal(h.stripe.sessions.length, 0);
   } finally { h.restore(); }
 });

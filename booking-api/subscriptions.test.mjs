@@ -668,3 +668,32 @@ test('Growth at $169 (owner, Nov 6, 2026): new checkouts use the new price; subs
     void year;
   } finally { h.restore(); }
 });
+
+test('MΞNU Plus (owner, Nov 14, 2026): $12/mo or $120/yr, the menu\'s first year is free with it monthly too, and it does no work each period', async () => {
+  const h = setup();
+  try {
+    h.env.DB.raw.exec(readFileSync(new URL('./migrations/0059_menu_plus.sql', import.meta.url), 'utf8'));
+    const versions = h.rows(`SELECT v.billing_interval, v.price_cents, v.stripe_price_id FROM offers o JOIN offer_versions v ON v.offer_id = o.id WHERE o.code = 'MENU_PLUS' ORDER BY v.version_number`);
+    assert.deepEqual(versions.map((v) => [v.billing_interval, v.price_cents]), [['MONTH', 1200], ['YEAR', 12000]]);
+    assert.ok(versions.every((v) => /^price_/.test(v.stripe_price_id)));
+    const res = await h.checkout({ items: [{ key: 'MENU_PLUS' }, { key: 'ONLINE_MENU_QR' }], interval: 'month', menu_pages: 3, customer: buyer });
+    assert.equal(res.status, 200, JSON.stringify(res.body));
+    const p = h.stripe.sessions.at(-1).params;
+    assert.equal(p.get('line_items[0][price_data][unit_amount]'), '1200', 'only Plus is charged');
+    assert.equal(p.get('line_items[0][price_data][recurring][interval]'), 'month');
+    assert.equal(p.get('line_items[1][quantity]'), null);
+    const menuLine = h.one(`SELECT i.metadata_json FROM order_items i JOIN offers o ON o.id = i.offer_id WHERE i.order_id = ? AND o.code = 'ONLINE_MENU_QR'`, res.body.order_id);
+    assert.equal(JSON.parse(menuLine.metadata_json).setup_waived_cents, 14400, 'the menu is still made, free');
+
+    const start = '2026-11-15T18:00:00.000Z';
+    const sub = h.makeSub({ id: 'sub_plus', orderId: res.body.order_id, plan: 'MENU_PLUS', amount: 1200, start });
+    const done = await h.webhook('checkout.session.completed', { id: h.stripe.sessions.at(-1).id, object: 'checkout.session', mode: 'subscription',
+      subscription: 'sub_plus', customer: 'cus_test_1', amount_total: 1200, currency: 'usd', payment_status: 'paid', metadata: { order_id: res.body.order_id } });
+    assert.equal(done.status, 200, JSON.stringify(done.body));
+    assert.deepEqual(h.rows(`SELECT entitlement_type, status FROM entitlements`).map((e) => [e.entitlement_type, e.status]), [['MENU_PLUS', 'ACTIVE']]);
+    const paid = await h.webhook('invoice.paid', h.invoice(sub, { id: 'in_plus_1', start, end: addMonths(start, 1), amount: 1200 }));
+    assert.equal(paid.status, 200, JSON.stringify(paid.body));
+    assert.equal(h.jobs(h.one(`SELECT id FROM subscriptions WHERE provider_subscription_id = 'sub_plus'`).id).length, 0, 'no period work');
+    assert.equal(h.one(`SELECT COUNT(*) AS n FROM orders WHERE notes LIKE 'Subscription MENU_PLUS period%'`).n, 0, 'and no empty period order');
+  } finally { h.restore(); }
+});

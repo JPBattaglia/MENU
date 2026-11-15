@@ -11,6 +11,8 @@
 import { nowIso } from "../lib/http.js";
 import { sanitizeFilename, sha256Hex } from "../lib/util.js";
 import { buildDesignedMenuHtml, assertMenuRendered } from "../producers/menu-qr/design.js";
+import { MENU_DESIGNS, designStyle, menuDesignFor } from "../producers/menu-qr/menu-designs.js";
+import { createCheckout } from "../checkout/session.js";
 import { cleanMenu, describeDiff, diffMenus, parseMenuHtml } from "../producers/menu-care/menu-edit.js";
 import { freePlanUpgradeUrl, menuHostingState } from "../producers/menu-qr/hosting-renewal.js";
 import { hostedMenu } from "../producers/google-visibility/sources.js";
@@ -70,6 +72,33 @@ async function savesToday(env, businessId) {
   return Number(row?.n || 0);
 }
 
+// Files a new FINAL menu page for the business (same address and QR code); used by a save and a design change.
+async function publishMenu(env, business, session, live, { menu, style, changes, kind = "self_edit" }) {
+  const p = live.page;
+  const html = buildDesignedMenuHtml({ businessName: p.businessName || business.name, brandColors: [p.primary, p.accent].filter(Boolean).join(", "),
+    menu, logoDataUri: p.logoDataUri, style, subtitle: p.subtitle, logo: p.logo, hideName: p.hideName });
+  assertMenuRendered(html, menu);
+  const project = await menuQrProject(env, business.id) || { id: live.row.project_id, customer_id: live.row.customer_id };
+  const bytes = new TextEncoder().encode(html);
+  const checksum = await sha256Hex(bytes);
+  const assetId = crypto.randomUUID();
+  const t = nowIso();
+  const storageKey = ["customers", project.customer_id, "projects", project.id, "deliverables", "self-edit", `${assetId}.html`].join("/");
+  const top = await env.DB.prepare(`SELECT MAX(version) AS v FROM deliverables WHERE project_id = ? AND deliverable_type = 'MENU_DRAFT'`).bind(project.id).first();
+  await env.ASSETS.put(storageKey, bytes, { httpMetadata: { contentType: "text/html; charset=utf-8" } });
+  await env.DB.prepare(`
+      INSERT INTO assets (id, business_id, customer_id, project_id, asset_type, storage_provider, storage_key, original_filename, mime_type,
+        size_bytes, checksum, status, uploaded_at, validated_at, approved_for_use, is_customer_supplied, rights_confirmed, metadata_json)
+      VALUES (?, ?, ?, ?, 'DELIVERABLE', 'R2', ?, ?, 'text/html', ?, ?, 'VALID', ?, ?, 1, 1, 1, ?)
+    `).bind(assetId, business.id, project.customer_id, project.id, storageKey, `${sanitizeFilename(business.name || "menu")}-menu.html`, bytes.byteLength, checksum, t, t,
+    JSON.stringify({ generated_by: "OWNER_MENU_EDITOR", self_edit: { customer_id: session.customer_id, kind, changes: changes.slice(0, 50) } })).run();
+  await env.DB.prepare(`
+      INSERT INTO deliverables (id, project_id, asset_id, deliverable_type, version, status, customer_visible, delivered_at, created_at)
+      VALUES (?, ?, ?, 'MENU_DRAFT', ?, 'FINAL', 1, ?, ?)
+    `).bind(crypto.randomUUID(), project.id, assetId, Number(top?.v || 0) + 1, t, t).run();
+  return { html, t };
+}
+
 async function handleMenuEditor(request, env) {
   if (!env.DB || !env.ASSETS) return privateJson({ ok: false, error: "Temporarily unavailable. Try again in a minute." }, 503);
   const session = await currentSession(request, env);
@@ -88,7 +117,8 @@ async function handleMenuEditor(request, env) {
   if (request.method === "GET") {
     return privateJson({ ok: true, business: { id: business.id, name: business.name }, menu_url: menuUrl,
       menu: { sections: live.page.menu.sections, notes: live.page.menu.notes }, updated_at: live.row.delivered_at,
-      languages: await languageState(env, business.id), plan: await planState(env, business.id) });
+      languages: await languageState(env, business.id), plan: await planState(env, business.id),
+      designs: MENU_DESIGNS.filter((d) => !d.occasion).map(({ key, label, blurb }) => ({ key, label, blurb })) });
   }
 
   const state = await menuHostingState(env, business.id).catch(() => ({ live: true }));
@@ -105,28 +135,7 @@ async function handleMenuEditor(request, env) {
   }
   if (!changes.length) return privateJson({ ok: true, menu_url: menuUrl, changes: [], unchanged: true });
 
-  const p = live.page;
-  const html = buildDesignedMenuHtml({ businessName: p.businessName || business.name, brandColors: [p.primary, p.accent].filter(Boolean).join(", "),
-    menu, logoDataUri: p.logoDataUri, style: p.style, subtitle: p.subtitle, logo: p.logo, hideName: p.hideName });
-  assertMenuRendered(html, menu);
-  const project = await menuQrProject(env, business.id) || { id: live.row.project_id, customer_id: live.row.customer_id };
-  const bytes = new TextEncoder().encode(html);
-  const checksum = await sha256Hex(bytes);
-  const assetId = crypto.randomUUID();
-  const t = nowIso();
-  const storageKey = ["customers", project.customer_id, "projects", project.id, "deliverables", "self-edit", `${assetId}.html`].join("/");
-  const top = await env.DB.prepare(`SELECT MAX(version) AS v FROM deliverables WHERE project_id = ? AND deliverable_type = 'MENU_DRAFT'`).bind(project.id).first();
-  await env.ASSETS.put(storageKey, bytes, { httpMetadata: { contentType: "text/html; charset=utf-8" } });
-  await env.DB.prepare(`
-      INSERT INTO assets (id, business_id, customer_id, project_id, asset_type, storage_provider, storage_key, original_filename, mime_type,
-        size_bytes, checksum, status, uploaded_at, validated_at, approved_for_use, is_customer_supplied, rights_confirmed, metadata_json)
-      VALUES (?, ?, ?, ?, 'DELIVERABLE', 'R2', ?, ?, 'text/html', ?, ?, 'VALID', ?, ?, 1, 1, 1, ?)
-    `).bind(assetId, business.id, project.customer_id, project.id, storageKey, `${sanitizeFilename(business.name || "menu")}-menu.html`, bytes.byteLength, checksum, t, t,
-    JSON.stringify({ generated_by: "OWNER_MENU_EDITOR", self_edit: { customer_id: session.customer_id, changes: changes.slice(0, 50) } })).run();
-  await env.DB.prepare(`
-      INSERT INTO deliverables (id, project_id, asset_id, deliverable_type, version, status, customer_visible, delivered_at, created_at)
-      VALUES (?, ?, ?, 'MENU_DRAFT', ?, 'FINAL', 1, ?, ?)
-    `).bind(crypto.randomUUID(), project.id, assetId, Number(top?.v || 0) + 1, t, t).run();
+  const { html, t } = await publishMenu(env, business, session, live, { menu, style: live.page.style, changes });
   // Translated menus: what this edit added is translated now, so guests never see it in English first.
   const translations = await loadTranslations(env, business.id).catch(() => null);
   if (translations?.paid && translations.languages.length) await fillMissing(env, business.id, html, translations, { force: true }).catch(() => null);
@@ -141,6 +150,58 @@ async function planState(env, businessId) {
   const state = await menuHostingState(env, businessId).catch(() => null);
   if (state?.reason !== "free_plan") return { free: false };
   return { free: true, upgrade_url: await freePlanUpgradeUrl(env, businessId) };
+}
+
+const readBody = async (request) => { try { return await request.json(); } catch { return null; } };
+
+// POST /api/account/menu/design { business, design } (Nov 14, 2026): any design for a paid menu ("Paid unlocks the
+// other designs"); the free plan stays Classic. Same address and QR code; the print set follows the live page.
+async function handleMenuDesign(request, env) {
+  if (!env.DB || !env.ASSETS) return privateJson({ ok: false, error: "Temporarily unavailable. Try again in a minute." }, 503);
+  const session = await currentSession(request, env);
+  if (!session) return privateJson({ ok: false, signed_in: false, error: "Sign in to edit your menu." }, 401);
+  const body = await readBody(request);
+  const business = await ownsBusiness(env, session.customer_id, body?.business);
+  if (!business) return privateJson({ ok: false, error: "That business isn't on your account." }, 404);
+  const design = menuDesignFor(String(body?.design || ""));
+  if (!design || design.occasion) return privateJson({ ok: false, error: "Pick one of the designs." }, 400);
+  const plan = await planState(env, business.id);
+  if (plan.free) return privateJson({ ok: false, needs_plan: true, error: "Other designs come with MΞNU Plus. Add it below.", upgrade_url: plan.upgrade_url }, 402);
+  const state = await menuHostingState(env, business.id).catch(() => ({ live: true }));
+  if (state && state.live === false) return privateJson({ ok: false, error: "This menu is offline. Bring it back from your account first." }, 409);
+  if (await savesToday(env, business.id) >= SAVES_PER_DAY) return privateJson({ ok: false, error: "That's a lot of saves today. Try again tomorrow." }, 429);
+  const live = await loadEditable(env, business.id).catch(() => null);
+  if (!live) return privateJson({ ok: false, error: "There's no live menu for this business yet." }, 404);
+  await publishMenu(env, business, session, live, { menu: live.page.menu, style: designStyle(design.key, live.page.menu), changes: [`Design: ${design.label}`], kind: "design" });
+  return privateJson({ ok: true, design: design.key, label: design.label, menu_url: await hostedMenu(env, business.id).catch(() => null) });
+}
+
+// POST /api/account/menu/plus { business, interval }: MΞNU Plus for a menu that is already live (the free plan, or a
+// paid first year), checked out for this business. Answers { ok, url } (Stripe Checkout).
+async function handleMenuPlus(request, env) {
+  if (!env.DB) return privateJson({ ok: false, error: "Temporarily unavailable. Try again in a minute." }, 503);
+  const session = await currentSession(request, env);
+  if (!session) return privateJson({ ok: false, signed_in: false, error: "Sign in first." }, 401);
+  const body = await readBody(request);
+  const business = await ownsBusiness(env, session.customer_id, body?.business);
+  if (!business) return privateJson({ ok: false, error: "That business isn't on your account." }, 404);
+  const covered = await env.DB.prepare(`SELECT 1 AS ok FROM entitlements WHERE business_id = ? AND entitlement_type IN ('MENU_PLUS', 'MENU_CARE') AND status = 'ACTIVE' LIMIT 1`).bind(business.id).first();
+  if (covered) return privateJson({ ok: false, error: "This menu already has MΞNU Plus or Menu Care." }, 409);
+  const customer = await env.DB.prepare(`SELECT email, first_name, last_name, phone FROM customers WHERE id = ?`).bind(session.customer_id).first();
+  const interval = body?.interval === "year" ? "year" : "month";
+  const response = await createCheckout(new Request("https://menu-made.com/api/create-checkout", {
+    method: "POST", headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ items: [{ key: "MENU_PLUS", interval }], interval,
+      customer: { email: customer?.email || "", name: [customer?.first_name, customer?.last_name].filter(Boolean).join(" ") || business.name, business: business.name, phone: customer?.phone || "",
+        notes: `MΞNU Plus for the live menu of business ${business.id}` },
+      tracking: { source: "account", medium: "menu_editor" } })
+  }), env, "live");
+  const result = await response.json().catch(() => null);
+  if (!result?.ok || !result.url) return privateJson({ ok: false, error: result?.error || "Checkout didn't open. Try again in a minute." }, 502);
+  // Bind the plan to this business, whatever other business shares its name.
+  const t = nowIso();
+  await env.DB.prepare(`UPDATE orders SET business_id = ?, updated_at = ? WHERE id = ?`).bind(business.id, t, result.order_id).run();
+  return privateJson({ ok: true, url: result.url });
 }
 
 // ---- Translated menus (stage 15; paid plans only, owner Nov 14, 2026) ---------------------------------------
@@ -218,4 +279,4 @@ async function handleMenuTranslations(request, env) {
   return privateJson({ ok: true, lang, pairs, link: ctx.menuUrl ? `${ctx.menuUrl}?lang=${lang}` : null });
 }
 
-export { cleanMenu, handleMenuEditor, handleMenuLanguages, handleMenuTranslations, ownsBusiness };
+export { cleanMenu, handleMenuDesign, handleMenuEditor, handleMenuLanguages, handleMenuPlus, handleMenuTranslations, ownsBusiness };
