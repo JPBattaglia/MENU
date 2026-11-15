@@ -442,6 +442,9 @@ async function advanceStoreListings(env, now = Date.now(), deps = {}) {
             : "Apple kept answering that it is still processing the app's pictures for an hour. Open the version in App Store Connect to see whether a screenshot failed, then approve again." };
         result.google = before.google.ok ? before.google : { ok: true, held: true };
       }
+      // An update going to review doesn't take the app off the App Store: the version already on sale stays public
+      // (owner, Nov 15, 2026: the site showed "App Store: coming soon" while 1.0.2 was live and 1.0.3 in review).
+      if (before.apple.live || before.apple.public) result.apple = { ...result.apple, public: true };
       const errors = [["Apple", result.apple], ["Google", result.google]].filter(([, r]) => !r.ok).map(([who, r]) => `${who} (${r.step}): ${r.message}`);
       if (errors.length) {
         // Neither store is retried by itself: the owner fixes the cause and approves again (same link).
