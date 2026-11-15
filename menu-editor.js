@@ -150,6 +150,7 @@
     draw();
     drawLanguages(out.languages, out.menu_url);
     drawPlan(out.plan);
+    drawDesigns(out.designs, out.plan);
   }
 
   // MΞNU free plan (Nov 14, 2026): what the free menu includes, and the way to every design.
@@ -159,6 +160,48 @@
     if (card.hidden) return;
     if (plan.upgrade_url && /^https:\/\/menu-made\.com\//.test(plan.upgrade_url)) $('freeUpgrade').href = plan.upgrade_url;
     $('freeWelcome').hidden = new URLSearchParams(location.search).get('welcome') !== 'free';
+  }
+
+  // Any design for a paid menu (Nov 14, 2026); the free plan stays Classic.
+  function drawDesigns(list, plan) {
+    const card = $('editDesign');
+    card.hidden = !Array.isArray(list) || !list.length || Boolean(plan && plan.free);
+    if (card.hidden) return;
+    const box = $('designList');
+    box.replaceChildren();
+    for (const d of list) {
+      const row = el('div', 'mm-edit-bar mm-design-row');
+      const text = el('div');
+      text.append(el('strong', null, d.label), el('small', null, ` ${d.blurb}`));
+      row.append(text, button('Use this design', 'btn secondary', () => useDesign(d)));
+      box.append(row);
+    }
+  }
+  async function useDesign(d) {
+    if (dirty && !confirm('You have unsaved changes. Switch design anyway? Save first to keep them.')) return;
+    const status = $('designStatus');
+    status.textContent = `Switching to ${d.label}…`;
+    try {
+      const res = await fetch(`${API}/api/account/menu/design`, { method: 'POST', credentials: 'include', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ business, design: d.key }) });
+      const out = await res.json().catch(() => ({}));
+      status.textContent = res.ok && out.ok ? `Your live menu is now in ${out.label}.` : (out.error || 'That didn’t work. Try again.');
+    } catch {
+      status.textContent = 'No connection. Try again.';
+    }
+  }
+  async function startPlus(interval) {
+    const status = $('plusStatus');
+    status.textContent = 'Opening checkout…';
+    document.querySelectorAll('[data-plus]').forEach((b) => { b.disabled = true; });
+    try {
+      const res = await fetch(`${API}/api/account/menu/plus`, { method: 'POST', credentials: 'include', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ business, interval }) });
+      const out = await res.json().catch(() => ({}));
+      if (res.ok && out.ok && /^https:\/\/checkout\.stripe\.com\//.test(out.url)) { location.href = out.url; return; }
+      status.textContent = out.error || 'Checkout didn’t open. Try again.';
+    } catch {
+      status.textContent = 'No connection. Try again.';
+    }
+    document.querySelectorAll('[data-plus]').forEach((b) => { b.disabled = false; });
   }
 
   // Translated menus (paid plans only, owner Nov 14, 2026). The live menu gets language links at the top.
@@ -284,6 +327,7 @@
     $('saveTop').addEventListener('click', save);
     $('saveBottom').addEventListener('click', save);
     $('langsSave').addEventListener('click', saveLanguages);
+    document.querySelectorAll('[data-plus]').forEach((b) => b.addEventListener('click', () => startPlus(b.dataset.plus)));
     $('fixSave').addEventListener('click', saveFix);
     $('addSection').addEventListener('click', () => {
       menu.sections.push({ name: '', items: [{ name: '', description: '', price: '' }] });

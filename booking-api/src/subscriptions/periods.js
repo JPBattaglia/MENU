@@ -30,6 +30,8 @@ function serviceMonthsDue(periodStart, periodEnd, now = new Date()) {
   return out;
 }
 
+const NO_PERIOD_WORK = new Set(["MENU_PLUS_V1", "MENU_PLUS"]);
+
 async function createPeriodJobs(env, subscription, periodStart, periodEnd, { invoiceId = null, amountCents = 0, trigger = "INVOICE_PAID" } = {}) {
   if (!PRODUCING.has(subscription.status)) {
     return { created: 0, skipped: `subscription ${subscription.status}` };
@@ -40,6 +42,7 @@ async function createPeriodJobs(env, subscription, periodStart, periodEnd, { inv
       WHERE subscription_id = ? AND status = 'ACTIVE' ORDER BY entitlement_type
     `).bind(subscription.id).all()).results || [];
   if (entitlements.length === 0) return { created: 0, skipped: "no active entitlements" };
+  if (entitlements.every((e) => NO_PERIOD_WORK.has(e.entitlement_type))) return { created: 0, skipped: "no period work (MΞNU Plus)" };
 
   const now = nowIso();
   const orderId = await stableId("period-order", subscription.id, periodKey);
@@ -56,6 +59,8 @@ async function createPeriodJobs(env, subscription, periodStart, periodEnd, { inv
   for (const entitlement of entitlements) {
     const meta = parseJsonOrNull(entitlement.metadata_json) || {};
     const workflowKey = meta.workflow_key;
+    // MΞNU Plus (Nov 14, 2026) does no work each period: its entitlement is what keeps the menu online and paid.
+    if (NO_PERIOD_WORK.has(workflowKey) || NO_PERIOD_WORK.has(entitlement.entitlement_type)) continue;
     const offer = await env.DB.prepare(`SELECT category FROM offers WHERE id = ?`).bind(meta.offer_id).first();
     if (!workflowKey || !offer) throw new Error(`Entitlement ${entitlement.id} has no offer or workflow`);
     const definition = await loadWorkflowDefinition(workflowKey, 1, env);

@@ -124,12 +124,14 @@ async function buildSubscriptionCart(itemsInput, data, env, environment) {
       // Every plan starts with the menu (owner, Nov 8, 2026): with a yearly plan that includes Menu Care, the Online
       // Menu + QR setup and first-year hosting ($144) are free; extra menu pages are still charged. A free line is
       // left off the Stripe checkout but stays on the order, so the menu is still made.
-      if (plan?.interval === "YEAR" && plan.includes.includes("MENU_CARE")) {
+      // MΞNU Plus (owner, Nov 14, 2026: Plus "replaces the $59 first year") makes it free monthly or yearly.
+      const plus = Boolean(plan?.includes.includes("MENU_PLUS"));
+      if ((plan?.interval === "YEAR" && plan.includes.includes("MENU_CARE")) || plus) {
         for (const item of normalizedItems) {
           if (!item.menuPackage) continue;
           const waived = Math.min(item.priceCents, MENU_PACKAGE_PRICING.setupCents + MENU_PACKAGE_PRICING.hostingFirstYearCents);
           item.priceCents -= waived;
-          item.menuPackage = { ...item.menuPackage, waived_cents: waived, waived_reason: "yearly plan", total_cents: item.priceCents };
+          item.menuPackage = { ...item.menuPackage, waived_cents: waived, waived_reason: plus ? "MΞNU Plus" : "yearly plan", total_cents: item.priceCents };
           item.extraMetadata = { ...(item.extraMetadata || {}), setup_waived_cents: waived };
         }
       }

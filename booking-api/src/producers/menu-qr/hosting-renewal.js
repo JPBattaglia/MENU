@@ -29,18 +29,24 @@ const formatDate = (iso) => new Date(iso).toLocaleDateString("en-US", { month: "
 
 async function hasMenuCare(env, businessId) {
   return Boolean(await env.DB.prepare(`
-      SELECT 1 FROM entitlements WHERE business_id = ? AND entitlement_type = 'MENU_CARE' AND status = 'ACTIVE' LIMIT 1
+      SELECT 1 FROM entitlements WHERE business_id = ? AND entitlement_type IN ('MENU_CARE', 'MENU_PLUS') AND status = 'ACTIVE' LIMIT 1
     `).bind(businessId).first());
 }
 
-async function menuCarePrices(env) {
+async function planPrices(env, code, fallback) {
+  const t = new Date().toISOString();
   const rows = (await env.DB.prepare(`
       SELECT v.billing_interval, v.price_cents FROM offers o JOIN offer_versions v ON v.offer_id = o.id
-      WHERE o.code = 'MENU_CARE' AND v.status = 'ACTIVE'
-    `).all()).results || [];
+      WHERE o.code = ? AND o.status = 'ACTIVE' AND v.status = 'ACTIVE' AND (v.effective_to IS NULL OR v.effective_to > ?)
+      ORDER BY v.version_number DESC
+    `).bind(code, t).all()).results || [];
   const price = (interval) => rows.find((r) => r.billing_interval === interval)?.price_cents;
-  return { month: price("MONTH") ?? 2900, year: price("YEAR") ?? 29000 };
+  const month = price("MONTH"), year = price("YEAR");
+  return month || year ? { month: month ?? fallback.month, year: year ?? fallback.year, onSale: true } : { ...fallback, onSale: false };
 }
+const menuCarePrices = (env) => planPrices(env, "MENU_CARE", { month: 2900, year: 29000 });
+// MΞNU Plus (owner, Nov 14, 2026) "replaces ... Menu Care as hosting": the renewal offers Plus first.
+const plusPrices = (env) => planPrices(env, "MENU_PLUS", { month: 1200, year: 12000 });
 
 async function hasFreePlan(env, businessId) {
   return Boolean(await env.DB.prepare(`
@@ -70,7 +76,7 @@ async function menuHostingState(env, businessId, now = new Date()) {
       GROUP BY p.id ORDER BY first_delivered_at DESC LIMIT 1
     `).bind(businessId).first();
   const care = await env.DB.prepare(`
-      SELECT MAX(COALESCE(ends_at, updated_at)) AS ended_at FROM entitlements WHERE business_id = ? AND entitlement_type = 'MENU_CARE'
+      SELECT MAX(COALESCE(ends_at, updated_at)) AS ended_at FROM entitlements WHERE business_id = ? AND entitlement_type IN ('MENU_CARE', 'MENU_PLUS')
     `).bind(businessId).first();
   const ends = [qr?.first_delivered_at ? Date.parse(qr.first_delivered_at) + YEAR_DAYS * DAY : null, care?.ended_at ? Date.parse(care.ended_at) : null]
     .filter((t) => Number.isFinite(t));
@@ -121,15 +127,20 @@ async function sendReminder(env, project, reminder) {
   const offline = new Date(Date.parse(ends) + GRACE_DAYS * DAY).toISOString();
   const link = await renewalLink(env, project.id);
   const prices = await menuCarePrices(env);
+  const plus = await plusPrices(env);
   const menuUrl = hostedMenuUrl(project.id, project.business_name);
   const greeting = project.first_name ? `Hi ${project.first_name},` : "Hi,";
   const isOffline = reminder.key === "offline";
   const lead = isOffline
     ? `${project.business_name}'s online menu is offline: its first year of hosting ended on ${formatDate(ends)}, and without Menu Care it went offline 30 days later. Guests who scan your QR code now see that the menu isn't available.`
     : `The first year of hosting for ${project.business_name}'s online menu ends on ${formatDate(ends)}. Without Menu Care, the menu goes offline 30 days later, on ${formatDate(offline)}.`;
-  const offer = isOffline
-    ? `Add Menu Care and it comes back right away at the same address and QR code, nothing to reprint, with unlimited menu updates: ${dollars(prices.month)}/month or ${dollars(prices.year)}/year.`
-    : `Menu Care keeps it online at the same address and QR code, so nothing you've printed changes, and adds unlimited menu updates: ${dollars(prices.month)}/month or ${dollars(prices.year)}/year.`;
+  const offer = plus.onSale
+    ? (isOffline
+      ? `Add MΞNU Plus and it comes back right away at the same address and QR code, nothing to reprint: ${dollars(plus.month)}/month or ${dollars(plus.year)}/year, and you edit it yourself any time. Rather we make the changes for you? Menu Care is ${dollars(prices.month)}/month.`
+      : `MΞNU Plus keeps it online at the same address and QR code, so nothing you've printed changes: ${dollars(plus.month)}/month or ${dollars(plus.year)}/year, and you edit it yourself any time. Rather we make the changes for you? Menu Care is ${dollars(prices.month)}/month.`)
+    : isOffline
+      ? `Add Menu Care and it comes back right away at the same address and QR code, nothing to reprint, with unlimited menu updates: ${dollars(prices.month)}/month or ${dollars(prices.year)}/year.`
+      : `Menu Care keeps it online at the same address and QR code, so nothing you've printed changes, and adds unlimited menu updates: ${dollars(prices.month)}/month or ${dollars(prices.year)}/year.`;
   return sendTransactionalEmail(env, {
     to: project.email,
     subject: isOffline ? `${project.business_name}'s online menu is offline` : reminder.key === "d7" ? `Your online menu's first year ends ${formatDate(ends)}` : `Keep ${project.business_name}'s online menu going`,
@@ -139,10 +150,10 @@ async function sendReminder(env, project, reminder) {
       heading: isOffline ? "Bring your menu back online" : "Keep your menu online",
       paragraphs: [escapeHtml(greeting), escapeHtml(lead), escapeHtml(offer)],
       rows: isOffline ? [["Your menu", menuUrl], ["Offline since", formatDate(offline)]] : [["Your menu", menuUrl], ["First year ends", formatDate(ends)], ["Goes offline", formatDate(offline)]],
-      buttons: [{ label: "Add Menu Care", url: link, primary: true }],
+      buttons: [{ label: plus.onSale ? "Keep my menu online" : "Add Menu Care", url: link, primary: true }],
       footnote: "Cancel any time from your account. Questions? Reply to this email."
     }),
-    text: `${greeting}\n\n${lead}\n\n${offer}\n\nYour menu: ${menuUrl}\n\nAdd Menu Care: ${link}\n\nCancel any time from your account. Questions? Reply to this email.`,
+    text: `${greeting}\n\n${lead}\n\n${offer}\n\nYour menu: ${menuUrl}\n\n${plus.onSale ? "Keep my menu online" : "Add Menu Care"}: ${link}\n\nCancel any time from your account. Questions? Reply to this email.`,
     idempotencyKey: `menu-hosting/${project.id}/${reminder.key}`,
     purpose: PURPOSE,
     templateKey: `menu_hosting_renewal_${reminder.key}_v1`,
@@ -221,23 +232,27 @@ async function handleMenuHostingRenewal(request, env, projectId) {
   const project = await loadMenuProject(env, projectId);
   if (!project) return page(404, "Menu not found", "<p>We couldn't find this menu.</p>");
   if (await hasMenuCare(env, project.business_id)) {
-    return page(200, "Your menu is covered", `<p>${escapeHtml(project.business_name)} already has Menu Care, so your menu stays online and you can send changes any time.</p><p><a class="btn" href="/account.html">Your account</a></p>`);
+    return page(200, "Your menu is covered", `<p>${escapeHtml(project.business_name)} already has a plan that keeps its menu online (MΞNU Plus or Menu Care).</p><p><a class="btn" href="/account.html">Your account</a></p>`);
   }
   const prices = await menuCarePrices(env);
+  const plus = await plusPrices(env);
   if (request.method !== "POST") {
-    const button = (interval, label) => `<form method="post" style="display:inline"><input type="hidden" name="t" value="${escapeHtml(token)}"><input type="hidden" name="interval" value="${interval}"><button type="submit">${escapeHtml(label)}</button></form>`;
+    const button = (interval, label, plan = "MENU_CARE") => `<form method="post" style="display:inline"><input type="hidden" name="t" value="${escapeHtml(token)}"><input type="hidden" name="interval" value="${interval}"><input type="hidden" name="plan" value="${plan}"><button type="submit">${escapeHtml(label)}</button></form>`;
+    const plusBlock = plus.onSale ? `<h2 style="font-size:18px;margin:18px 0 6px">MΞNU Plus</h2><p>Keeps <strong>${escapeHtml(project.business_name)}</strong>'s menu online at the same address and QR code. Edit it yourself any time from your account, in any design, with the print set and translations.</p>
+${button("month", `${dollars(plus.month)} a month`, "MENU_PLUS")}${button("year", `${dollars(plus.year)} a year (2 months free)`, "MENU_PLUS")}<h2 style="font-size:18px;margin:22px 0 6px">Or Menu Care: we make the changes</h2>` : "";
     return page(200, "Keep your menu online",
-      `<p>Menu Care keeps <strong>${escapeHtml(project.business_name)}</strong>'s menu online at the same address and QR code, with unlimited updates. Cancel any time.</p>
+      `${plusBlock}<p>Menu Care keeps <strong>${escapeHtml(project.business_name)}</strong>'s menu online at the same address and QR code, and we make every change you send. Cancel any time.</p>
 <dl><dt>Your menu</dt><dd>${escapeHtml(hostedMenuUrl(project.id, project.business_name))}</dd>${project.first_delivered_at ? `<dt>First year ends</dt><dd>${escapeHtml(formatDate(yearEnd(project)))}</dd><dt>Without Menu Care, offline from</dt><dd>${escapeHtml(formatDate(new Date(Date.parse(yearEnd(project)) + GRACE_DAYS * DAY).toISOString()))}</dd>` : ""}</dl>
 ${button("month", `${dollars(prices.month)} a month`)}${button("year", `${dollars(prices.year)} a year (2 months free)`)}
 <p>Payment is handled by Stripe.</p>`);
   }
   const interval = form?.get("interval") === "year" ? "year" : "month";
+  const planCode = form?.get("plan") === "MENU_PLUS" && plus.onSale ? "MENU_PLUS" : "MENU_CARE";
   const response = await createCheckout(new Request(`${publicBaseUrl(env)}/api/create-checkout`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
-      items: [{ key: "MENU_CARE", interval }],
+      items: [{ key: planCode, interval }],
       interval,
       customer: {
         email: project.email,

@@ -14,6 +14,7 @@ const OFFERS = [
   { code: 'BUNDLE_GROWTH', name: 'Growth Plan', kind: 'BUNDLE', on_sale: true, prices: { month: 17900, year: 179000 }, includes: ['MENU_CARE', 'REVIEW_REPLIES', 'ACCESSIBILITY_MONITORING', 'GOOGLE_PROFILE_CARE'], requires_setup: null },
   { code: 'BUNDLE_PRO', name: 'Pro Plan', kind: 'BUNDLE', on_sale: false, prices: { month: 27900, year: 279000 }, includes: ['MENU_CARE', 'REVIEW_REPLIES', 'ACCESSIBILITY_MONITORING', 'GOOGLE_PROFILE_CARE', 'SOCIAL_POSTS', 'WEBSITE_CARE'], requires_setup: null },
   { code: 'MENU_CARE', name: 'Menu Care', kind: 'PLAN', on_sale: true, prices: { month: 2900, year: 29000 }, includes: ['MENU_CARE'], requires_setup: null },
+  { code: 'MENU_PLUS', name: 'MΞNU Plus', kind: 'PLAN', on_sale: true, prices: { month: 1200, year: 12000 }, includes: ['MENU_PLUS'], requires_setup: null },
   { code: 'REVIEW_REPLIES', name: 'Review Replies', kind: 'PLAN', on_sale: true, prices: { month: 4900, year: 49000 }, includes: ['REVIEW_REPLIES'], requires_setup: null },
   { code: 'GOOGLE_PROFILE_CARE', name: 'Google Profile Care', kind: 'PLAN', on_sale: true, prices: { month: 14900, year: 149000 }, includes: ['GOOGLE_PROFILE_CARE'], requires_setup: null },
   { code: 'SOCIAL_POSTS', name: 'Social Posts', kind: 'PLAN', on_sale: true, prices: { month: 12900, year: 129000 }, includes: ['SOCIAL_POSTS'], requires_setup: null },
@@ -227,13 +228,26 @@ test('each plan starts from its foundation (owner, Nov 8, 2026): Menu Care bring
 
   // Menu Care added to a single service: the two become your own plan; taking it off goes back.
   const single = await page('?plan=REVIEW_REPLIES&add=menu');
-  await single.get('menuAddon').fire('click', { target: { closest: () => ({}) } });
+  await single.get('menuAddon').fire('click', { target: { closest: (sel) => sel === '[data-menu-care-add]' ? {} : null } });
   const s = JSON.parse(vm.runInNewContext('JSON.stringify(order)', single.context));
   assert.equal(s.plan, 'CUSTOM_PLAN');
   assert.deepEqual(s.custom, ['MENU_CARE', 'REVIEW_REPLIES']);
-  await single.get('menuAddon').fire('click', { target: { closest: () => ({}) } });
+  await single.get('menuAddon').fire('click', { target: { closest: (sel) => sel === '[data-menu-care-add]' ? {} : null } });
   const back = JSON.parse(vm.runInNewContext('JSON.stringify(order)', single.context));
   assert.equal(back.plan, 'REVIEW_REPLIES', 'taking Menu Care off leaves the one service');
+
+  // MΞNU Plus (owner, Nov 14, 2026): brings the menu, and the menu's first year is free with it, monthly too.
+  const plus = await page('?plan=MENU_PLUS&interval=month');
+  assert.deepEqual(plus.state(), { plan: 'MENU_PLUS', once: ['ONLINE_MENU_QR'] });
+  assert.equal(plus.get('cartTotal').textContent, '$12.00', 'only Plus today');
+  assert.equal(plus.get('menuSetupAmount').textContent, 'Free with MΞNU Plus');
+  assert.match(plus.get('menuPlanNote').textContent + plus.get('menuAddonNote').textContent, /first year is free with Plus/);
+  // Plus offered on a menu on its own, and Menu Care in its place swaps the plan.
+  const menuOnly = await page('?service=menu');
+  await menuOnly.get('menuAddon').fire('click', { target: { closest: (sel) => sel === '[data-plus-add]' ? {} : null } });
+  assert.deepEqual(menuOnly.state(), { plan: 'MENU_PLUS', once: ['ONLINE_MENU_QR'] });
+  await menuOnly.get('menuAddon').fire('click', { target: { closest: (sel) => sel === '[data-menu-care-add]' ? {} : null } });
+  assert.equal(menuOnly.state().plan, 'MENU_CARE');
 
   const wc = await page('?plan=WEBSITE_CARE');
   assert.equal(wc.get('checkoutBtn').disabled, true, 'Website Care without a site cannot check out');

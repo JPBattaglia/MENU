@@ -24,7 +24,8 @@ const NINO = "https://ninobattaglia.com";
 const NINO_API = "https://nino-printful-commerce-api.ijpbattaglia.workers.dev";
 const EARLY_SECONDS = 86400;
 const HYBRID_KEYS = new Set(["menumade", "nino"]);
-const PLAN_ORDER = ["BUNDLE_STARTER", "BUNDLE_GROWTH", "BUNDLE_PRO"];
+// MΞNU Plus first (Nov 14, 2026), as on the plans page.
+const PLAN_ORDER = ["MENU_PLUS", "BUNDLE_STARTER", "BUNDLE_GROWTH", "BUNDLE_PRO"];
 
 const clean = (value, max) => String(value ?? "").replace(/\s+/g, " ").trim().slice(0, max);
 const httpsUrl = (value, base) => {
@@ -165,7 +166,7 @@ function menumadeContent(catalog, { offCodes = [], now = Date.now() } = {}) {
     // Kept for app builds from before Nov 10, 2026 (their Preview tab reads these).
     preview: { create_url: `${MM}/api/menu-preview/create`, upload_url: `${MM}/api/inquiry`, more_url: `${MM}/online-menu.html` },
     plans,
-    plans_note: "On a yearly plan the menu setup and first-year hosting are free.",
+    plans_note: "With MΞNU Plus, or any yearly plan, your menu's setup and first year are free.",
     services,
     // Work we've made (the Account tab's own gallery; the pictures are the ones on menu-made.com/portfolio.html).
     work: [

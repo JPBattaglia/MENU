@@ -148,7 +148,8 @@
       "annual": { "price": "price_1UZS5GHw7f6jhUv8g3LN6Vex", "amount": 279000 },
       "note": "Owner: Menu Care comes out of Starter, Growth and Pro (an add-on now; the bundles section's includes are updated, prices are the launch ones). Pro $279 so it stays below the same services as Your own plan ($292)." },
     { "date": "2026-11-08", "offer": "BUNDLE_STARTER,BUNDLE_GROWTH,BUNDLE_PRO", "migration": "0049_plans_include_the_menu.sql",
-      "note": "Owner, later Nov 8: reversed the add-on. Every plan includes Menu Care again and starts with the menu: Online Menu + QR is added at checkout, and its $144 setup is free with yearly billing. Prices stay $79 / $169 / $279." }
+      "note": "Owner, later Nov 8: reversed the add-on. Every plan includes Menu Care again and starts with the menu: Online Menu + QR is added at checkout, and its $144 setup is free with yearly billing. Prices stay $79 / $169 / $279." },
+    {"date": "2026-11-15", "offer": "MENU_PLUS", "migration": "0059_menu_plus.sql", "product": "prod_VdBOOOXzWHurOM", "monthly": {"price": "price_1Ubv1wHw7f6jhUv88ldXfPwZ", "amount": 1200}, "annual": {"price": "price_1Ubv1xHw7f6jhUv8xdua2159", "amount": 12000}, "note": "Owner, Nov 14, 2026 (stage 15 task 3): new plan MΞNU Plus, $12/mo or $120/yr. Keeps the menu online (like Menu Care), takes the free plan's badge off, unlocks any design, the print set and translations; the Online Menu + QR first year is free with it (monthly too). No period work (periods.js skips MENU_PLUS). Menu Care ($29) stays as 'we make the changes for you'."}
   ],
   "portal_configurations": {
     "note": "Owner, Nov 8, 2026: limit plan switches. Live billing-page configurations the worker picks per subscription (src/subscriptions/portal.js). A plan never switches to one that drops what it keeps online (menu, site, app). The default bpc_1UVOqcHw7f6jhUv83wtzyORj (also behind the Stripe login page) allows no switching; your own plan uses it.",
