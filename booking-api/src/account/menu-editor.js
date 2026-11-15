@@ -15,6 +15,7 @@ import { cleanMenu, describeDiff, diffMenus, parseMenuHtml } from "../producers/
 import { menuHostingState } from "../producers/menu-qr/hosting-renewal.js";
 import { hostedMenu } from "../producers/google-visibility/sources.js";
 import { currentSession, privateJson } from "./account.js";
+import { LANGUAGES, MAX_LANGUAGES, cleanLanguages, fillMissing, hasPaidPlan, loadTranslations, pageStrings, saveTranslations } from "../producers/menu-qr/translate.js";
 
 const SAVES_PER_DAY = 60;
 
@@ -86,7 +87,8 @@ async function handleMenuEditor(request, env) {
 
   if (request.method === "GET") {
     return privateJson({ ok: true, business: { id: business.id, name: business.name }, menu_url: menuUrl,
-      menu: { sections: live.page.menu.sections, notes: live.page.menu.notes }, updated_at: live.row.delivered_at });
+      menu: { sections: live.page.menu.sections, notes: live.page.menu.notes }, updated_at: live.row.delivered_at,
+      languages: await languageState(env, business.id) });
   }
 
   const state = await menuHostingState(env, business.id).catch(() => ({ live: true }));
@@ -125,7 +127,85 @@ async function handleMenuEditor(request, env) {
       INSERT INTO deliverables (id, project_id, asset_id, deliverable_type, version, status, customer_visible, delivered_at, created_at)
       VALUES (?, ?, ?, 'MENU_DRAFT', ?, 'FINAL', 1, ?, ?)
     `).bind(crypto.randomUUID(), project.id, assetId, Number(top?.v || 0) + 1, t, t).run();
+  // Translated menus: what this edit added is translated now, so guests never see it in English first.
+  const translations = await loadTranslations(env, business.id).catch(() => null);
+  if (translations?.paid && translations.languages.length) await fillMissing(env, business.id, html, translations, { force: true }).catch(() => null);
   return privateJson({ ok: true, menu_url: menuUrl, changes, updated_at: t });
 }
 
-export { cleanMenu, handleMenuEditor, ownsBusiness };
+// ---- Translated menus (stage 15; paid plans only, owner Nov 14, 2026) ---------------------------------------
+
+async function languageState(env, businessId) {
+  const [row, paid] = await Promise.all([loadTranslations(env, businessId).catch(() => null), hasPaidPlan(env, businessId).catch(() => false)]);
+  return { paid, max: MAX_LANGUAGES, chosen: row?.languages || [], available: LANGUAGES.map(({ code, name, english }) => ({ code, name, english })) };
+}
+
+async function languageContext(request, env, body) {
+  if (!env.DB || !env.ASSETS) return { error: privateJson({ ok: false, error: "Temporarily unavailable. Try again in a minute." }, 503) };
+  const session = await currentSession(request, env);
+  if (!session) return { error: privateJson({ ok: false, signed_in: false, error: "Sign in to edit your menu." }, 401) };
+  const url = new URL(request.url);
+  const business = await ownsBusiness(env, session.customer_id, body ? body.business : url.searchParams.get("business"));
+  if (!business) return { error: privateJson({ ok: false, error: "That business isn't on your account." }, 404) };
+  if (!await hasPaidPlan(env, business.id)) {
+    return { error: privateJson({ ok: false, needs_plan: true, error: "Translated menus come with any paid plan. See Plans to add one." }, 402) };
+  }
+  const live = await loadEditable(env, business.id).catch(() => null);
+  if (!live) return { error: privateJson({ ok: false, error: "There's no live menu for this business yet." }, 404) };
+  const object = await env.ASSETS.get(live.row.storage_key);
+  const html = object ? await object.text() : "";
+  const row = await loadTranslations(env, business.id).catch(() => null) || { languages: [], strings: {}, overrides: {}, fillAttemptAt: null, paid: true };
+  return { business, html, row, menuUrl: await hostedMenu(env, business.id).catch(() => null) };
+}
+
+const readJson = async (request) => { try { return await request.json(); } catch { return null; } };
+
+// POST /api/account/menu/languages { business, languages: ["es", "zh-Hans"] } -> picks the languages and translates
+// the menu into each new one at once.
+async function handleMenuLanguages(request, env) {
+  const body = await readJson(request);
+  if (!body) return privateJson({ ok: false, error: "That didn't come through. Try again." }, 400);
+  const ctx = await languageContext(request, env, body);
+  if (ctx.error) return ctx.error;
+  const { business, html, row } = ctx;
+  row.languages = cleanLanguages(body.languages);
+  await saveTranslations(env, business.id, row);
+  const filled = await fillMissing(env, business.id, html, row, { force: true }).catch(() => row);
+  const total = pageStrings(html).length;
+  const done = Object.fromEntries(row.languages.map((code) => [code, Object.keys({ ...(filled.strings?.[code] || {}), ...(filled.overrides?.[code] || {}) }).length >= total]));
+  return privateJson({ ok: true, chosen: row.languages, translated: done,
+    links: Object.fromEntries(row.languages.map((code) => [code, ctx.menuUrl ? `${ctx.menuUrl}?lang=${code}` : null])) });
+}
+
+// GET  /api/account/menu/translations?business=<id>&lang=es -> { pairs: [{ source, text, own }] }
+// POST /api/account/menu/translations { business, lang, edits: { "<original>": "<fixed>" } }: the owner's fixes
+// (an empty one goes back to the automatic translation).
+async function handleMenuTranslations(request, env) {
+  const body = request.method === "POST" ? await readJson(request) : null;
+  if (request.method === "POST" && !body) return privateJson({ ok: false, error: "That didn't come through. Try again." }, 400);
+  const ctx = await languageContext(request, env, body);
+  if (ctx.error) return ctx.error;
+  const { business, html, row } = ctx;
+  const lang = body ? body.lang : new URL(request.url).searchParams.get("lang");
+  if (!row.languages.includes(lang)) return privateJson({ ok: false, error: "Pick that language first." }, 400);
+  const texts = pageStrings(html);
+  if (request.method === "POST") {
+    const own = { ...(row.overrides?.[lang] || {}) };
+    for (const [source, value] of Object.entries(body.edits && typeof body.edits === "object" ? body.edits : {})) {
+      if (!texts.includes(source)) continue;
+      const text = String(value ?? "").replace(/\s+/g, " ").trim().slice(0, 700);
+      if (text && text !== row.strings?.[lang]?.[source]) own[source] = text; else delete own[source];
+    }
+    row.overrides = { ...(row.overrides || {}), [lang]: own };
+    await saveTranslations(env, business.id, row);
+  } else {
+    await fillMissing(env, business.id, html, row, { only: lang, force: true }).catch(() => null);
+  }
+  const pairs = texts.map((source) => {
+    const own = row.overrides?.[lang]?.[source];
+    return { source, text: own ?? row.strings?.[lang]?.[source] ?? "", own: own !== undefined };
+  });
+  return privateJson({ ok: true, lang, pairs, link: ctx.menuUrl ? `${ctx.menuUrl}?lang=${lang}` : null });
+}
+
+export { cleanMenu, handleMenuEditor, handleMenuLanguages, handleMenuTranslations, ownsBusiness };

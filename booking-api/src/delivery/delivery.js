@@ -9,6 +9,7 @@ import { qrPng } from "../producers/menu-qr/qr-image.js";
 import { buildTvMenuHtml, qrModulesToSvg } from "../producers/menu-qr/tv-menu.js";
 import { renderMenuPdf } from "../producers/menu-qr/browser-pdf.js";
 import { parseMenuHtml } from "../producers/menu-care/menu-edit.js";
+import { localizedMenuPage } from "../producers/menu-qr/translate.js";
 import QRCode from "qrcode/lib/browser.js";
 
 async function handleDeliveryDownload(request, env, deliverableId) {
@@ -116,7 +117,10 @@ async function handleHostedMenu(request, env, slug) {
   if (!env.DB || !env.ASSETS) return simplePage(503, "Temporarily unavailable", "<p>Please try again in a minute.</p>");
   const found = await loadHostedMenu(env, slug);
   if (found.response) return found.response;
-  return new Response(found.object.body, {
+  // Translated menus (stage 15, paid plans only): language links at the top, ?lang=<code> for the translated page.
+  const lang = new URL(request.url).searchParams.get("lang");
+  const html = await localizedMenuPage(env, { html: await found.object.text(), businessId: found.row.business_id, lang, hostedUrl: found.hostedUrl });
+  return new Response(html, {
     status: 200,
     headers: {
       "Content-Type": "text/html; charset=utf-8",

@@ -23,7 +23,7 @@
     b.addEventListener('click', onClick);
     return b;
   }
-  function field(labelText, value, onInput, { area = false, max = 200, placeholder = '' } = {}) {
+  function field(labelText, value, onInput, { area = false, max = 200, placeholder = '', quiet = false } = {}) {
     const wrap = el('label', 'mm-edit-field');
     wrap.append(el('span', null, labelText));
     const input = el(area ? 'textarea' : 'input');
@@ -32,7 +32,7 @@
     input.maxLength = max;
     input.value = value || '';
     input.placeholder = placeholder;
-    input.addEventListener('input', () => { onInput(input.value); changed(); });
+    input.addEventListener('input', () => { onInput(input.value); if (!quiet) changed(); });
     wrap.append(input);
     return wrap;
   }
@@ -148,12 +148,133 @@
     $('editStatus').textContent = '';
     $('editor').hidden = false;
     draw();
+    drawLanguages(out.languages, out.menu_url);
+  }
+
+  // Translated menus (paid plans only, owner Nov 14, 2026). The live menu gets language links at the top.
+  let langs = null;
+  let menuUrl = null;
+  function drawLanguages(state, url) {
+    langs = state || null;
+    menuUrl = url && /^https:\/\/menu-made\.com\//.test(url) ? url : null;
+    const card = $('editLangs');
+    if (!langs) { card.hidden = true; return; }
+    card.hidden = false;
+    $('langsPaid').hidden = !langs.paid;
+    $('langsLocked').hidden = langs.paid;
+    $('langsFix').hidden = true;
+    if (!langs.paid) return;
+    $('langsLegend').textContent = `Pick up to ${langs.max}`;
+    const list = $('langsList');
+    list.replaceChildren();
+    for (const l of langs.available) {
+      const row = el('label', 'mm-edit-sold mm-langs-option');
+      const tick = el('input');
+      tick.type = 'checkbox';
+      tick.value = l.code;
+      tick.checked = langs.chosen.includes(l.code);
+      tick.addEventListener('change', () => {
+        const picked = list.querySelectorAll('input:checked').length;
+        if (picked > langs.max) { tick.checked = false; $('langsStatus').textContent = `Up to ${langs.max} languages.`; }
+      });
+      const name = el('span', null, l.name);
+      name.lang = l.code;
+      row.append(tick, document.createTextNode(' '), name, el('small', null, l.name === l.english ? '' : ` ${l.english}`));
+      list.append(row);
+    }
+    drawChosen();
+  }
+  function drawChosen() {
+    const box = $('langsChosen');
+    box.replaceChildren();
+    for (const code of langs.chosen) {
+      const l = langs.available.find((x) => x.code === code);
+      if (!l) continue;
+      const row = el('div', 'mm-edit-bar mm-langs-row');
+      row.append(el('strong', null, l.english));
+      const tools = el('div', 'mm-edit-tools');
+      if (menuUrl) {
+        const see = el('a', 'cta-pill', 'See it');
+        see.href = `${menuUrl}?lang=${encodeURIComponent(code)}`;
+        see.target = '_blank';
+        see.rel = 'noopener';
+        tools.append(see);
+      }
+      tools.append(button('Check the wording', 'btn secondary', () => openFix(code)));
+      row.append(tools);
+      box.append(row);
+    }
+  }
+  async function saveLanguages() {
+    const status = $('langsStatus');
+    const chosen = Array.from($('langsList').querySelectorAll('input:checked')).map((i) => i.value);
+    status.textContent = chosen.length ? 'Translating your menu… this takes up to a minute.' : 'Saving…';
+    $('langsSave').disabled = true;
+    try {
+      const res = await fetch(`${API}/api/account/menu/languages`, {
+        method: 'POST', credentials: 'include', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ business, languages: chosen })
+      });
+      const out = await res.json().catch(() => ({}));
+      if (!res.ok || !out.ok) { status.textContent = out.error || 'That didn’t save. Try again.'; return; }
+      langs.chosen = out.chosen;
+      const behind = out.chosen.filter((c) => !out.translated[c]);
+      status.textContent = !out.chosen.length ? 'Saved. Your menu shows in English only.'
+        : behind.length ? 'Saved. Some text is still being translated; it shows in English until it is.'
+          : 'Saved. Your live menu now has a language switch at the top.';
+      drawChosen();
+      $('langsFix').hidden = true;
+    } catch {
+      status.textContent = 'No connection. Press Save languages again.';
+    } finally {
+      $('langsSave').disabled = false;
+    }
+  }
+  let fixing = null;
+  async function openFix(code) {
+    const l = langs.available.find((x) => x.code === code);
+    fixing = { code, pairs: [] };
+    $('langsFix').hidden = false;
+    $('fixTitle').textContent = `Check the wording: ${l ? l.english : code}`;
+    $('fixStatus').textContent = 'Loading…';
+    $('fixList').replaceChildren();
+    const res = await fetch(`${API}/api/account/menu/translations?business=${encodeURIComponent(business)}&lang=${encodeURIComponent(code)}`, { credentials: 'include' }).catch(() => null);
+    const out = res ? await res.json().catch(() => ({})) : {};
+    if (!res || !res.ok || !out.ok) { $('fixStatus').textContent = out.error || 'That couldn’t load. Try again.'; return; }
+    fixing.pairs = out.pairs;
+    $('fixStatus').textContent = '';
+    for (const p of out.pairs) {
+      const wrap = field(p.source, p.text, (v) => { p.text = v; p.changed = true; }, { max: 700, area: p.source.length > 60, quiet: true });
+      const input = wrap.querySelector('input, textarea');
+      input.lang = code;
+      $('fixList').append(wrap);
+    }
+    $('langsFix').scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+  async function saveFix() {
+    if (!fixing) return;
+    const edits = Object.fromEntries(fixing.pairs.filter((p) => p.changed).map((p) => [p.source, p.text]));
+    const status = $('fixStatus');
+    if (!Object.keys(edits).length) { status.textContent = 'Nothing changed.'; return; }
+    status.textContent = 'Saving…';
+    try {
+      const res = await fetch(`${API}/api/account/menu/translations`, {
+        method: 'POST', credentials: 'include', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ business, lang: fixing.code, edits })
+      });
+      const out = await res.json().catch(() => ({}));
+      if (!res.ok || !out.ok) { status.textContent = out.error || 'That didn’t save. Try again.'; return; }
+      fixing.pairs.forEach((p) => { p.changed = false; });
+      status.textContent = 'Saved. Your live menu shows your wording.';
+    } catch {
+      status.textContent = 'No connection. Press Save wording again.';
+    }
   }
 
   async function start() {
     $('editNotes').addEventListener('input', changed);
     $('saveTop').addEventListener('click', save);
     $('saveBottom').addEventListener('click', save);
+    $('langsSave').addEventListener('click', saveLanguages);
+    $('fixSave').addEventListener('click', saveFix);
     $('addSection').addEventListener('click', () => {
       menu.sections.push({ name: '', items: [{ name: '', description: '', price: '' }] });
       changed(); draw();
