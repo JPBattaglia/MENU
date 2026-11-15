@@ -676,13 +676,14 @@
     plans: function (s) {
       s.appendChild(header("Plans", "Every plan starts with your menu"));
       var toggle = el("div", "hy-toggle"); toggle.setAttribute("role", "group"); toggle.setAttribute("aria-label", "Billing");
-      [["month", "Monthly"], ["year", "Yearly, menu setup free"]].forEach(function (o) {
+      [["month", "Monthly"], ["year", "Yearly, 2 months free"]].forEach(function (o) {
         var b = button(o[1], "hy-toggle-btn", function () { interval = o[0]; show("plans", { keep: true }); });
         b.setAttribute("aria-pressed", String(interval === o[0])); toggle.appendChild(b);
       });
       s.appendChild(toggle);
       if (!data.plans.length) s.appendChild(el("div", "hy-card", "Plans will show here soon."));
-      if (!chosenPlan && data.plans.length) chosenPlan = data.plans[Math.min(1, data.plans.length - 1)].code;
+      // Growth is "Most popular" on the plans page; MΞNU Plus now lists first (site #279), so pick it by code.
+      if (!chosenPlan && data.plans.length) chosenPlan = (data.plans.filter(function (p) { return p.code === "BUNDLE_GROWTH"; })[0] || data.plans[Math.min(1, data.plans.length - 1)]).code;
       data.plans.forEach(function (plan) {
         var b = el("button", "hy-plan"); b.type = "button"; b.setAttribute("aria-pressed", String(chosenPlan === plan.code));
         var top = el("span", "hy-plan-top"); top.appendChild(el("strong", null, plan.name));
