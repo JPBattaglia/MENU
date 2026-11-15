@@ -14,6 +14,7 @@ const OFFERS = [
   { code: 'BUNDLE_GROWTH', name: 'Growth Plan', kind: 'BUNDLE', on_sale: true, prices: { month: 17900, year: 179000 }, includes: ['MENU_CARE', 'REVIEW_REPLIES', 'ACCESSIBILITY_MONITORING', 'GOOGLE_PROFILE_CARE'], requires_setup: null },
   { code: 'BUNDLE_PRO', name: 'Pro Plan', kind: 'BUNDLE', on_sale: false, prices: { month: 27900, year: 279000 }, includes: ['MENU_CARE', 'REVIEW_REPLIES', 'ACCESSIBILITY_MONITORING', 'GOOGLE_PROFILE_CARE', 'SOCIAL_POSTS', 'WEBSITE_CARE'], requires_setup: null },
   { code: 'MENU_CARE', name: 'Menu Care', kind: 'PLAN', on_sale: true, prices: { month: 2900, year: 29000 }, includes: ['MENU_CARE'], requires_setup: null },
+  { code: 'BUNDLE_PREMIUM', name: 'MΞNU Premium', kind: 'BUNDLE', on_sale: true, prices: { month: 7900, year: 79000 }, includes: ['MENU_PLUS', 'MENU_CARE', 'GOOGLE_PROFILE_CARE', 'REVIEW_REPLIES', 'ACCESSIBILITY_MONITORING'], requires_setup: null },
   { code: 'MENU_PLUS', name: 'MΞNU Plus', kind: 'PLAN', on_sale: true, prices: { month: 1200, year: 12000 }, includes: ['MENU_PLUS'], requires_setup: null },
   { code: 'REVIEW_REPLIES', name: 'Review Replies', kind: 'PLAN', on_sale: true, prices: { month: 4900, year: 49000 }, includes: ['REVIEW_REPLIES'], requires_setup: null },
   { code: 'GOOGLE_PROFILE_CARE', name: 'Google Profile Care', kind: 'PLAN', on_sale: true, prices: { month: 14900, year: 149000 }, includes: ['GOOGLE_PROFILE_CARE'], requires_setup: null },
@@ -123,15 +124,15 @@ test('a plan link selects that plan with its interval and shows today and the re
 });
 
 test('one plan per order: choosing another plan replaces it and says so', async () => {
-  const p = await page('?plan=BUNDLE_STARTER&have=menu');
-  await p.buttons.get('REVIEW_REPLIES').fire('click');
-  assert.deepEqual(p.state(), { plan: 'REVIEW_REPLIES', once: [] });
+  const p = await page('?plan=MENU_PLUS&have=menu');
+  await p.buttons.get('BUNDLE_PREMIUM').fire('click');
+  assert.deepEqual(p.state(), { plan: 'BUNDLE_PREMIUM', once: [] });
   assert.match(p.get('status').textContent, /one plan at a time/);
 });
 
 test('Guest App brings its setup, and removing the plan removes the setup', async () => {
-  const p = await page();
-  await p.buttons.get('GUEST_APP').fire('click');
+  // Guest App has no card since the four choices (Nov 15, 2026); an old link still adds it with its setup.
+  const p = await page('?plan=GUEST_APP');
   assert.deepEqual(p.state(), { plan: 'GUEST_APP', once: ['GUEST_APP_SETUP'] });
   assert.equal(p.get('cartTotal').textContent, '$328.00');
   await p.get('cartItems').fire('click', { target: { dataset: { remove: 'GUEST_APP' } } });
@@ -154,8 +155,7 @@ test('websites start in the site generator: old Website Package links and Your W
 test('an offer that is not on sale cannot be bought live, but can in test mode', async () => {
   const p = await page('?plan=BUNDLE_PRO');
   assert.deepEqual(p.state(), { plan: null, once: [] });
-  assert.equal(p.buttons.get('BUNDLE_PRO').textContent, 'Opening soon');
-  assert.equal(p.buttons.get('BUNDLE_PRO').disabled, true);
+  assert.match(p.get('status').textContent, /opens soon/);
   const t = await page('?plan=BUNDLE_PRO&checkout=test&have=menu');
   assert.deepEqual(t.state(), { plan: 'BUNDLE_PRO', once: [] });
   t.fill();
@@ -183,13 +183,12 @@ test('menu page count is priced from the catalog package and invalid counts bloc
 });
 
 test('checkout sends the plan with its interval, one-time items, and the short briefs', async () => {
-  const p = await page('?plan=BUNDLE_STARTER&interval=year&have=menu');
-  await p.buttons.get('GOOGLE_VISIBILITY').fire('click');
+  const p = await page('?plan=BUNDLE_PREMIUM&interval=year&have=menu&add=GOOGLE_VISIBILITY');
   p.fill();
   await p.get('checkoutBtn').fire('click');
   assert.equal(p.sent.length, 1);
   assert.equal(p.sent[0].url, '/api/create-checkout');
-  assert.deepEqual(p.sent[0].body.items, [{ key: 'BUNDLE_STARTER', qty: 1, interval: 'year' }, { key: 'GOOGLE_VISIBILITY', qty: 1 }]);
+  assert.deepEqual(p.sent[0].body.items, [{ key: 'BUNDLE_PREMIUM', qty: 1, interval: 'year' }, { key: 'GOOGLE_VISIBILITY', qty: 1 }]);
   assert.equal(p.sent[0].body.interval, 'year');
   assert.match(p.sent[0].body.customer.notes, /^Google: existing profile/);
 });
@@ -297,8 +296,8 @@ test('a menu upload is sent once even when checkout is retried', async () => {
 });
 
 test('if prices cannot load, nothing can be bought and the buyer is told', async () => {
-  const p = await page('?plan=BUNDLE_STARTER', { catalogFails: true });
+  const p = await page('?plan=BUNDLE_PREMIUM', { catalogFails: true });
   assert.deepEqual(p.state(), { plan: null, once: [] });
   assert.match(p.get('status').textContent, /Prices could not be loaded/);
-  assert.equal(p.buttons.get('BUNDLE_STARTER').disabled, true);
+  assert.equal(p.buttons.get('BUNDLE_PREMIUM').disabled, true);
 });

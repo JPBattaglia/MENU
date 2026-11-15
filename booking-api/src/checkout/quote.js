@@ -71,7 +71,7 @@ function appendCheckoutLineItem(params, item, index, environment, { autoTax = fa
       params.append(`${prefix}[price_data][product_data][description]`, `Your ${OCCASION_NAMES[item.holiday.occasion]} menu online with its own link and QR code, a print-ready PDF and a table tent, live through ${item.holiday.ends_on}. Up to ${HOLIDAY_PRICING.includedPages} pages; $20 per extra page. You approve it before it goes live. No hosting fee; nothing renews.${item.holiday.both_other ? ` Includes your ${OCCASION_NAMES[item.holiday.both_other]} menu too: we email you a link to send it when it's ready.` : item.holiday.prepaid ? " Already covered by your order for both holidays." : ""}`);
     }
     if (item.menuPackage) {
-      params.append(`${prefix}[price_data][product_data][description]`, "$129 setup includes up to 3 pages and two revisions; $20 per additional page; $15 first-year hosting. After the first year, hosting continues with Menu Care; without it the menu goes offline 30 days later.");
+      params.append(`${prefix}[price_data][product_data][description]`, "$129 setup includes up to 3 pages and two revisions; $20 per additional page; $15 first-year hosting. With MΞNU Plus or MΞNU Premium it stays online while the plan does.");
     }
   } else {
     params.append(`${prefix}[price]`, item.stripePriceId);

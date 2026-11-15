@@ -47,6 +47,8 @@ async function planPrices(env, code, fallback) {
 const menuCarePrices = (env) => planPrices(env, "MENU_CARE", { month: 2900, year: 29000 });
 // MΞNU Plus (owner, Nov 14, 2026) "replaces ... Menu Care as hosting": the renewal offers Plus first.
 const plusPrices = (env) => planPrices(env, "MENU_PLUS", { month: 1200, year: 12000 });
+// Four choices (owner, Nov 15, 2026): "we make the changes for you" is MΞNU Premium, no longer Menu Care alone.
+const donePrices = (env) => planPrices(env, "BUNDLE_PREMIUM", { month: 7900, year: 79000 });
 
 async function hasFreePlan(env, businessId) {
   return Boolean(await env.DB.prepare(`
@@ -139,6 +141,8 @@ async function sendReminder(env, project, reminder) {
   const link = await renewalLink(env, project.id);
   const prices = await menuCarePrices(env);
   const plus = await plusPrices(env);
+  const done = await donePrices(env);
+  const careLine = done.onSale ? `Rather we do the work for you? MΞNU Premium is ${dollars(done.month)}/month.` : `Rather we make the changes for you? Menu Care is ${dollars(prices.month)}/month.`;
   const menuUrl = hostedMenuUrl(project.id, project.business_name);
   const greeting = project.first_name ? `Hi ${project.first_name},` : "Hi,";
   const isOffline = reminder.key === "offline";
@@ -147,8 +151,8 @@ async function sendReminder(env, project, reminder) {
     : `The first year of hosting for ${project.business_name}'s online menu ends on ${formatDate(ends)}. Without Menu Care, the menu goes offline 30 days later, on ${formatDate(offline)}.`;
   const offer = plus.onSale
     ? (isOffline
-      ? `Add MΞNU Plus and it comes back right away at the same address and QR code, nothing to reprint: ${dollars(plus.month)}/month or ${dollars(plus.year)}/year, and you edit it yourself any time. Rather we make the changes for you? Menu Care is ${dollars(prices.month)}/month.`
-      : `MΞNU Plus keeps it online at the same address and QR code, so nothing you've printed changes: ${dollars(plus.month)}/month or ${dollars(plus.year)}/year, and you edit it yourself any time. Rather we make the changes for you? Menu Care is ${dollars(prices.month)}/month.`)
+      ? `Add MΞNU Plus and it comes back right away at the same address and QR code, nothing to reprint: ${dollars(plus.month)}/month or ${dollars(plus.year)}/year, and you edit it yourself any time. ${careLine}`
+      : `MΞNU Plus keeps it online at the same address and QR code, so nothing you've printed changes: ${dollars(plus.month)}/month or ${dollars(plus.year)}/year, and you edit it yourself any time. ${careLine}`)
     : isOffline
       ? `Add Menu Care and it comes back right away at the same address and QR code, nothing to reprint, with unlimited menu updates: ${dollars(prices.month)}/month or ${dollars(prices.year)}/year.`
       : `Menu Care keeps it online at the same address and QR code, so nothing you've printed changes, and adds unlimited menu updates: ${dollars(prices.month)}/month or ${dollars(prices.year)}/year.`;
@@ -247,18 +251,19 @@ async function handleMenuHostingRenewal(request, env, projectId) {
   }
   const prices = await menuCarePrices(env);
   const plus = await plusPrices(env);
+  const done = await donePrices(env);
   if (request.method !== "POST") {
     const button = (interval, label, plan = "MENU_CARE") => `<form method="post" style="display:inline"><input type="hidden" name="t" value="${escapeHtml(token)}"><input type="hidden" name="interval" value="${interval}"><input type="hidden" name="plan" value="${plan}"><button type="submit">${escapeHtml(label)}</button></form>`;
     const plusBlock = plus.onSale ? `<h2 style="font-size:18px;margin:18px 0 6px">MΞNU Plus</h2><p>Keeps <strong>${escapeHtml(project.business_name)}</strong>'s menu online at the same address and QR code. Edit it yourself any time from your account, in any design, with the print set and translations.</p>
-${button("month", `${dollars(plus.month)} a month`, "MENU_PLUS")}${button("year", `${dollars(plus.year)} a year (2 months free)`, "MENU_PLUS")}<h2 style="font-size:18px;margin:22px 0 6px">Or Menu Care: we make the changes</h2>` : "";
+${button("month", `${dollars(plus.month)} a month`, "MENU_PLUS")}${button("year", `${dollars(plus.year)} a year (2 months free)`, "MENU_PLUS")}<h2 style="font-size:18px;margin:22px 0 6px">${done.onSale ? "Or MΞNU Premium: we do the work" : "Or Menu Care: we make the changes"}</h2>` : "";
     return page(200, "Keep your menu online",
-      `${plusBlock}<p>Menu Care keeps <strong>${escapeHtml(project.business_name)}</strong>'s menu online at the same address and QR code, and we make every change you send. Cancel any time.</p>
-<dl><dt>Your menu</dt><dd>${escapeHtml(hostedMenuUrl(project.id, project.business_name))}</dd>${project.first_delivered_at ? `<dt>First year ends</dt><dd>${escapeHtml(formatDate(yearEnd(project)))}</dd><dt>Without Menu Care, offline from</dt><dd>${escapeHtml(formatDate(new Date(Date.parse(yearEnd(project)) + GRACE_DAYS * DAY).toISOString()))}</dd>` : ""}</dl>
-${button("month", `${dollars(prices.month)} a month`)}${button("year", `${dollars(prices.year)} a year (2 months free)`)}
+      `${plusBlock}<p>${done.onSale ? `MΞNU Premium keeps <strong>${escapeHtml(project.business_name)}</strong>'s menu online at the same address and QR code with everything in Plus, and we make every change you send, keep your Google profile current and reply to your reviews.` : `Menu Care keeps <strong>${escapeHtml(project.business_name)}</strong>'s menu online at the same address and QR code, and we make every change you send.`} Cancel any time.</p>
+<dl><dt>Your menu</dt><dd>${escapeHtml(hostedMenuUrl(project.id, project.business_name))}</dd>${project.first_delivered_at ? `<dt>First year ends</dt><dd>${escapeHtml(formatDate(yearEnd(project)))}</dd><dt>Without a plan, offline from</dt><dd>${escapeHtml(formatDate(new Date(Date.parse(yearEnd(project)) + GRACE_DAYS * DAY).toISOString()))}</dd>` : ""}</dl>
+${done.onSale ? `${button("month", `${dollars(done.month)} a month`, "BUNDLE_PREMIUM")}${button("year", `${dollars(done.year)} a year (2 months free)`, "BUNDLE_PREMIUM")}` : `${button("month", `${dollars(prices.month)} a month`)}${button("year", `${dollars(prices.year)} a year (2 months free)`)}`}
 <p>Payment is handled by Stripe.</p>`);
   }
   const interval = form?.get("interval") === "year" ? "year" : "month";
-  const planCode = form?.get("plan") === "MENU_PLUS" && plus.onSale ? "MENU_PLUS" : "MENU_CARE";
+  const planCode = form?.get("plan") === "MENU_PLUS" && plus.onSale ? "MENU_PLUS" : form?.get("plan") === "BUNDLE_PREMIUM" && done.onSale ? "BUNDLE_PREMIUM" : "MENU_CARE";
   const response = await createCheckout(new Request(`${publicBaseUrl(env)}/api/create-checkout`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },

@@ -365,7 +365,9 @@ function renderMenuAddon() {
   button.textContent = on ? 'Added' : 'Add';
   button.setAttribute('aria-pressed', String(on));
   button.disabled = checkoutInFlight;
-  panel.querySelector('[data-care-row]').classList.toggle('is-selected', on);
+  const careRow = panel.querySelector('[data-care-row]');
+  careRow.classList.toggle('is-selected', on);
+  careRow.hidden = !sellable(offer('MENU_CARE')) && !on;
   $('menuAddonNote').textContent = on ? (menuNote || (order.plan === CUSTOM ? `Your plan: ${order.custom.map(nameOf).join(', ')}, ${planLabel(CUSTOM)}.` : '')) : '';
 }
 function currentServices() {
@@ -521,8 +523,12 @@ function renderSiteAddons() {
     button.textContent = on ? 'Added' : 'Add';
     button.setAttribute('aria-pressed', String(on));
     button.disabled = checkoutInFlight || !sellable(offer(code));
+    // Four choices (owner, Nov 15, 2026): what is no longer sold (Pro, single services) isn't shown.
+    row.hidden = !sellable(offer(code));
   });
-  panel.querySelectorAll('.site-addon-own input').forEach(box => { box.checked = extras.includes(box.value); box.disabled = checkoutInFlight || !sellable(offer(box.value)); });
+  panel.querySelectorAll('.site-addon-own input').forEach(box => { box.checked = extras.includes(box.value); box.disabled = checkoutInFlight || !sellable(offer(box.value)); box.closest('label').hidden = !sellable(offer(box.value)) && !extras.includes(box.value); });
+  const own = panel.querySelector('.site-addon-own');
+  if (own) own.hidden = ![...own.querySelectorAll('input')].some(box => sellable(offer(box.value)) || extras.includes(box.value));
   const note = $('siteAddonNote');
   if (order.plan === CUSTOM && order.custom.includes('WEBSITE_CARE')) {
     const q = customQuote();

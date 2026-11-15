@@ -24,8 +24,9 @@ const NINO = "https://ninobattaglia.com";
 const NINO_API = "https://nino-printful-commerce-api.ijpbattaglia.workers.dev";
 const EARLY_SECONDS = 86400;
 const HYBRID_KEYS = new Set(["menumade", "nino"]);
-// MΞNU Plus first (Nov 14, 2026), as on the plans page.
-const PLAN_ORDER = ["MENU_PLUS", "BUNDLE_STARTER", "BUNDLE_GROWTH", "BUNDLE_PRO"];
+// Four choices (owner, Nov 15, 2026), as on the plans page: MΞNU Plus, then MΞNU Premium. Older plans stay listed
+// here only so an app still showing them can map them; the catalog marks them off sale, and off-sale plans are dropped.
+const PLAN_ORDER = ["MENU_PLUS", "BUNDLE_PREMIUM", "BUNDLE_STARTER", "BUNDLE_GROWTH", "BUNDLE_PRO"];
 
 const clean = (value, max) => String(value ?? "").replace(/\s+/g, " ").trim().slice(0, max);
 const httpsUrl = (value, base) => {
