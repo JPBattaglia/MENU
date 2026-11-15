@@ -7,6 +7,16 @@
   var today = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Los_Angeles' }).format(new Date());
   if (today > '2026-12-31' || today < '2026-11-01') return;
   var christmas = today <= '2026-12-25';
+  // Not for visitors who came from a paid ad (Nov 15, 2026): they searched for a QR / online menu, and a full-screen
+  // Christmas offer covered the page they clicked for before they saw it. The holiday strip at the top still shows.
+  // Remembered for the rest of that visit (sessionStorage), so the Home page doesn't pop it either.
+  try {
+    var q = new URLSearchParams(location.search);
+    if (q.get('gclid') || q.get('gbraid') || q.get('wbraid') || q.get('utm_campaign') || q.get('utm_medium') === 'cpc') {
+      sessionStorage.setItem('mm-ad-visit', '1');
+    }
+    if (sessionStorage.getItem('mm-ad-visit') === '1') return;
+  } catch (e) { /* storage blocked: fall through and show it as before */ }
 
   function build() {
     var wrap = document.createElement('div');
