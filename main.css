@@ -3270,3 +3270,13 @@ html.mm-lightbox-open { overflow: hidden; }
 .mm-edit-sold{display:inline-flex;gap:6px;align-items:center;margin-right:auto;font-weight:700}
 .mm-edit-sold input{width:20px;height:20px;accent-color:#f0c75e}
 .mm-edit-add{margin-top:8px}
+/* Translated menus in the menu editor (stage 15, Nov 14, 2026) */
+.mm-langs-card h2{margin-top:0}
+.mm-langs-pick{border:0;margin:0 0 8px;padding:0}
+.mm-langs-pick legend{font-weight:700;margin-bottom:8px}
+#langsList{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:10px 16px}
+.mm-langs-option{margin:0}
+.mm-langs-option small{opacity:.7;font-weight:400}
+.mm-langs-row{padding:10px 0;border-top:1px solid rgba(0,214,230,.25);margin:0}
+.mm-langs-fix{margin-top:16px;padding-top:12px;border-top:1px solid rgba(0,214,230,.35)}
+.mm-langs-fix .mm-edit-field span{font-weight:400;opacity:.85}
