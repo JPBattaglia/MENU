@@ -55,6 +55,14 @@ async function hasFreePlan(env, businessId) {
     `).bind(businessId).first());
 }
 
+async function hasWaivedMenu(env, businessId) {
+  return Boolean(await env.DB.prepare(`
+      SELECT 1 AS ok FROM projects p WHERE p.business_id = ? AND p.workflow_key = 'MENU_QR_V1'
+        AND json_extract(COALESCE(p.metadata_json, '{}'), '$.holiday_menu') IS NULL
+        AND COALESCE(json_extract((SELECT oi.metadata_json FROM order_items oi WHERE oi.id = p.order_item_id), '$.setup_waived_cents'), 0) > 0 LIMIT 1
+    `).bind(businessId).first());
+}
+
 // The free menu's own preview: every design, and "Make it live" upgrades at the same address and QR code.
 async function freePlanUpgradeUrl(env, businessId) {
   const row = await env.DB.prepare(`
@@ -73,6 +81,7 @@ async function menuHostingState(env, businessId, now = new Date()) {
       WHERE p.business_id = ? AND p.workflow_key = 'MENU_QR_V1' AND d.deliverable_type = 'MENU_DRAFT' AND d.status = 'FINAL' AND d.customer_visible = 1
         AND json_extract(COALESCE(p.metadata_json, '{}'), '$.holiday_menu') IS NULL   -- Holiday Menus have no hosting year
         AND json_extract(COALESCE(p.metadata_json, '{}'), '$.free_plan') IS NULL   -- nor does the free plan
+        AND COALESCE(json_extract((SELECT oi.metadata_json FROM order_items oi WHERE oi.id = p.order_item_id), '$.setup_waived_cents'), 0) = 0   -- nor a menu whose first year came free with a plan
       GROUP BY p.id ORDER BY first_delivered_at DESC LIMIT 1
     `).bind(businessId).first();
   const care = await env.DB.prepare(`
@@ -82,7 +91,9 @@ async function menuHostingState(env, businessId, now = new Date()) {
     .filter((t) => Number.isFinite(t));
   // Free plan (stage 15, owner Nov 14, 2026: "Free plan, forever"): a business with a free menu never goes offline.
   // Its live menu carries the "Made with MΞNU" badge whenever no paid year or Menu Care covers it (reason free_plan).
-  const free = () => hasFreePlan(env, businessId);
+  // A menu whose first year came free with MΞNU Plus or a yearly plan (owner, Nov 14, 2026: "Yes" to closing the
+  // pay-$12-and-cancel loophole) is covered only while the plan is, then drops to the free plan instead of offline.
+  const free = async () => await hasFreePlan(env, businessId) || await hasWaivedMenu(env, businessId);
   if (!ends.length) return await free() ? { live: true, reason: "free_plan" } : { live: true, reason: "unknown" };
   const coveredUntil = Math.max(...ends);
   const offlineAt = coveredUntil + GRACE_DAYS * DAY;
@@ -189,7 +200,7 @@ async function remindMenuHostingRenewals(env, { now = new Date(), projectIds = n
       if (!projectIds && project.environment !== "live") { skip("sandbox"); continue; }
       if (!isCustomerEmail(project.email, PURPOSE, env)) { skip("owner address"); continue; }
       if (await hasMenuCare(env, project.business_id)) { skip("has Menu Care"); continue; }
-      if (await hasFreePlan(env, project.business_id)) { skip("free plan: never goes offline"); continue; }
+      if (await hasFreePlan(env, project.business_id) || await hasWaivedMenu(env, project.business_id)) { skip("free plan: never goes offline"); continue; }
       const daysLeft = (Date.parse(yearEnd(project)) - now.getTime()) / DAY;
       let due;
       if (daysLeft <= -GRACE_DAYS) {

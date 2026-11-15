@@ -56,7 +56,7 @@ test('an upload becomes a watermarked, unprintable phone preview with no QR, and
   assert.equal(page.headers.get('X-Robots-Tag'), 'noindex, nofollow');
   const html = await page.text();
   assert.match(html, /Garlic Bread/);
-  assert.match(html, /Make it live: \$144 for the first year/, 'the price keeps its dollar sign');
+  assert.match(html, /Make it live: \$12\/mo with MΞNU Plus/, 'the price keeps its dollar sign');
   // "Your printed menu" (last of the designs since Nov 10, 2026) keeps the menu's own colours.
   const yours = await (await f.get(`${new URL(out.url).pathname}/yours`)).text();
   assert.match(yours, /--primary: #a8322d/, "the menu's own colour, not black and white; the cream paper colour is skipped");
@@ -190,7 +190,7 @@ test('rep mode: a valid rep link skips the public limits, a forged one does not,
     assert.equal(out.ok, true, JSON.stringify(out));
     assert.equal(out.reused, undefined, 'each visit gets its own preview');
     assert.ok(Number.isInteger(out.seconds));
-    assert.match(out.start, /contact\.html\?service=menu&preview=/);
+    assert.match(out.start, /contact\.html\?service=menu&plan=MENU_PLUS&preview=/);
   }
   assert.equal(f.env.DB.raw.prepare(`SELECT COUNT(*) AS n FROM menu_previews WHERE campaign = 'rep'`).get().n, PER_NETWORK_DAY + 2);
   const forged = await f.create({ request_id: await f.upload({ email: 'x@cafe.example' }), email: 'x@cafe.example', business: 'Forged', rep: rep.slice(0, -2) + 'xx' });
@@ -295,7 +295,7 @@ test('"Make it live" saves the design and opens checkout; the paid menu finds th
   await customize({ design: 'bistro', brand: '#7a1f2b', use_brand: '1', subtitle: 'Since 1998' });
   const res = await f.get(`/api/menu-preview/choose/${token}/bistro`);
   assert.equal(res.status, 303);
-  assert.equal(res.headers.get('location'), `https://menu-made.com/contact.html?service=menu&preview=${token}`);
+  assert.equal(res.headers.get('location'), `https://menu-made.com/contact.html?service=menu&plan=MENU_PLUS&preview=${token}`);
   assert.equal(f.env.DB.raw.prepare(`SELECT design FROM menu_previews`).get().design, 'bistro');
   assert.equal((await f.get(`/api/menu-preview/choose/${token}/nosuch`)).status, 404);
 
@@ -431,7 +431,7 @@ test('the app reads a preview\'s designs, buttons and Customize fields, and its 
   assert.deepEqual([state.designs[0].key, state.designs.at(-1).key, state.design], ['classic', 'yours', 'classic'], 'Classic leads; Your printed menu is last');
   assert.match(state.designs[0].url, new RegExp(`/api/menu-preview/view/${token}/classic$`));
   assert.equal(state.next_label, 'Generate menu');
-  assert.match(state.choose_label, /^Make it live: \$144/);
+  assert.match(state.choose_label, /^Make it live: \$12\/mo with MΞNU Plus/);
   assert.deepEqual(state.customize.fields.map((x) => x.name), ['logo', 'logo_bg', 'business_name', 'hide_name', 'brand', 'use_brand', 'subtitle']);
   const form = new FormData();
   form.set('design', 'diner'); form.set('subtitle', 'Dinner Menu'); form.set('business_name', 'Sample Cafe');

@@ -59,10 +59,11 @@ function menumadeContent(catalog, { offCodes = [], now = Date.now() } = {}) {
   // Services (the Account tab's own list, so "All services" no longer opens the website): everything on sale that
   // isn't a bundle or one of Nino's design services, with its price from the same catalog.
   const dollars = (cents) => `$${(Number(cents) / 100).toLocaleString("en-US", { maximumFractionDigits: 2 })}`;
-  const menuPrice = dollars(MENU_PACKAGE_PRICING.setupCents + MENU_PACKAGE_PRICING.hostingFirstYearCents);
+  // Menus are free or with MΞNU Plus (owner, Nov 14, 2026); Plus's price comes from the same catalog.
+  const plusPrice = `${dollars(offers.find((o) => o && o.code === "MENU_PLUS")?.prices?.month || 1200)}/mo`;
   const services = offers.filter((o) => o && o.on_sale && o.kind !== "BUNDLE" && !PLAN_ORDER.includes(o.code) && !offCodes.includes(o.code) && !/^NINO_/.test(String(o.code || "")) && o.name)
-    // Online Menu + QR is sold as setup plus the first year's hosting, the price "Make it live" shows.
-    .map((o) => ({ name: clean(o.name, 60), text: clean(o.short_description, 220), price: o.code === "ONLINE_MENU_QR" ? `${menuPrice} first year` : o.prices?.month ? `${dollars(o.prices.month)}/mo` : o.price_cents ? dollars(o.price_cents) : "" }))
+    // Menus are free or with MΞNU Plus (owner, Nov 14, 2026), as on the site; "Make it live" checks out Plus.
+    .map((o) => ({ name: clean(o.name, 60), text: clean(o.short_description, 220), price: o.code === "ONLINE_MENU_QR" ? `Free, or ${plusPrice} with MΞNU Plus` : o.prices?.month ? `${dollars(o.prices.month)}/mo` : o.price_cents ? dollars(o.price_cents) : "" }))
     .filter((x) => x.price).slice(0, 20);
   const occasions = offCodes.includes("HOLIDAY_MENU") || !byCode.get("HOLIDAY_MENU")?.on_sale ? [] : ["christmas", "newyear"].filter((o) => holidayOnSale(o, now)).map((o) => ({ key: o, label: OCCASION_NAMES[o] }));
   const holidayPrice = dollars(HOLIDAY_PRICING.firstCents);
@@ -148,7 +149,8 @@ function menumadeContent(catalog, { offCodes = [], now = Date.now() } = {}) {
         buttons: [
           { label: "Generate menu", text: "Shows your menu in the next of nine designs. Tap it as often as you like." },
           { label: "Customize", text: "Adds your logo, your colour and your name the way you want it, on every design." },
-          { label: "Make it live", text: `Orders the design on screen: your menu online with its QR code, ${menuPrice} for the first year.` }
+          { label: "Make it live", text: `Orders the design on screen with MΞNU Plus (${plusPrice}): your menu online with its QR code, the print set and edits whenever you like, its first year free.` },
+          { label: "Start free", text: "Puts your menu online free in the Classic design, with its own link and QR code. We email you a link to confirm." }
         ] },
       { key: "site", title: "Website generator", count: 9, text: "The same menu becomes a whole website: home, menu, about and contact pages.",
         create_url: `${MM}/api/website-preview/create`, state_url: `${MM}/api/website-preview/state/`, start: "Build my website preview", city: true,

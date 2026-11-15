@@ -164,8 +164,15 @@ test('an offer that is not on sale cannot be bought live, but can in test mode',
 });
 
 test('menu page count is priced from the catalog package and invalid counts block checkout', async () => {
-  const p = await page('?service=menu');
-  for (const [pages, total] of [['1', '$144.00'], ['3', '$144.00'], ['4', '$164.00'], ['50', '$1,084.00']]) {
+  // Menus come with MΞNU Plus (first year free) or a plan (Nov 14, 2026), so the package is priced here with
+  // Menu Care monthly ($29 + the menu); with Plus only pages past 3 are charged.
+  const plus = await page('?service=menu');
+  for (const [pages, total] of [['1', '$12.00'], ['4', '$32.00']]) {
+    plus.get('menuPages').value = pages; await plus.get('menuPages').fire('input');
+    assert.equal(plus.get('cartTotal').textContent, total);
+  }
+  const p = await page('?plan=MENU_CARE&interval=month');
+  for (const [pages, total] of [['1', '$173.00'], ['3', '$173.00'], ['4', '$193.00'], ['50', '$1,113.00']]) {
     p.get('menuPages').value = pages; await p.get('menuPages').fire('input');
     assert.equal(p.get('cartTotal').textContent, total);
   }
@@ -242,10 +249,14 @@ test('each plan starts from its foundation (owner, Nov 8, 2026): Menu Care bring
   assert.equal(plus.get('cartTotal').textContent, '$12.00', 'only Plus today');
   assert.equal(plus.get('menuSetupAmount').textContent, 'Free with MΞNU Plus');
   assert.match(plus.get('menuPlanNote').textContent + plus.get('menuAddonNote').textContent, /first year is free with Plus/);
-  // Plus offered on a menu on its own, and Menu Care in its place swaps the plan.
+  // A menu on its own brings Plus (Nov 14, 2026: menus are free or with Plus, never on their own); taking Plus off
+  // blocks checkout with the way to start free; Menu Care in its place swaps the plan.
   const menuOnly = await page('?service=menu');
-  await menuOnly.get('menuAddon').fire('click', { target: { closest: (sel) => sel === '[data-plus-add]' ? {} : null } });
   assert.deepEqual(menuOnly.state(), { plan: 'MENU_PLUS', once: ['ONLINE_MENU_QR'] });
+  await menuOnly.get('menuAddon').fire('click', { target: { closest: (sel) => sel === '[data-plus-add]' ? {} : null } });
+  assert.deepEqual(menuOnly.state(), { plan: null, once: ['ONLINE_MENU_QR'] });
+  assert.match(menuOnly.get('orderProblem').textContent, /comes with MΞNU Plus/);
+  assert.equal(menuOnly.get('checkoutBtn').disabled, true);
   await menuOnly.get('menuAddon').fire('click', { target: { closest: (sel) => sel === '[data-menu-care-add]' ? {} : null } });
   assert.equal(menuOnly.state().plan, 'MENU_CARE');
 

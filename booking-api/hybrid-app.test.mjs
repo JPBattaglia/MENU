@@ -54,14 +54,14 @@ test('menumade: the three plans with live prices, described by their included se
   assert.equal(c.plans[0].checkout_year, 'https://menu-made.com/contact.html?plan=BUNDLE_STARTER&interval=year');
   assert.equal(c.preview.upload_url, 'https://menu-made.com/api/inquiry');
   // Nov 10, 2026: the generators run inside the app, and the chooser says what each one's three buttons do.
-  assert.deepEqual(c.generators.map((g) => [g.key, g.buttons.map((b) => b.label)]), [['menu', ['Generate menu', 'Customize', 'Make it live']], ['site', ['Generate site', 'Customize', 'Choose this site']]]);
+  assert.deepEqual(c.generators.map((g) => [g.key, g.buttons.map((b) => b.label)]), [['menu', ['Generate menu', 'Customize', 'Make it live', 'Start free']], ['site', ['Generate site', 'Customize', 'Choose this site']]]);
   assert.equal(c.generators[0].state_url, 'https://menu-made.com/api/menu-preview/state/');
   assert.equal(c.generators[1].create_url, 'https://menu-made.com/api/website-preview/create');
-  assert.match(c.generators[0].buttons[2].text, /\$\d+ for the first year/);
+  assert.match(c.generators[0].buttons[2].text, /with MΞNU Plus \(\$\d+\/mo\)/);
   assert.deepEqual(c.services.map((v) => [v.name, v.price]), [['Menu Care', '$29/mo'], ['Review Replies', '$49/mo'], ['Accessibility Monitoring', '$39/mo']], 'services with prices; bundles are the plans');
   const off = hybrid.menumadeContent({ ok: true, offers: [{ code: 'STORE_APP_SETUP', name: 'Mobile App Setup', kind: 'ONE_TIME', on_sale: true, price_cents: 99900 }, { code: 'ONLINE_MENU_QR', name: 'Online Menu + QR', kind: 'ONE_TIME', on_sale: true, price_cents: 12900 }] }, { offCodes: ['STORE_APP_SETUP', 'STORE_APP_CARE'] });
   assert.deepEqual(off.services.map((v) => v.name), ['Online Menu + QR'], 'a service switched off for sale is not listed');
-  assert.match(off.services[0].price, /^\$\d+ first year$/);
+  assert.match(off.services[0].price, /^Free, or \$\d+\/mo with MΞNU Plus$/);
   assert.ok(c.work.length >= 4 && c.work.every((w) => /^https:\/\/menu-made\.com\/assets\/work\//.test(w.image)));
   assert.match(c.hero.image, /^https:\/\/menu-made\.com\//);
 });

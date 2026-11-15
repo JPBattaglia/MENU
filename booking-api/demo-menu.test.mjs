@@ -61,7 +61,7 @@ test('a menu-file prospect gets the menu generator built from its own menu, reus
   assert.equal(page.status, 200);
   assert.equal(page.headers.get('X-Robots-Tag'), 'noindex, nofollow');
   const html = await page.text();
-  for (const words of ['Garlic Bread', '$9', 'Soup of the Day', `Design 1 of ${MENU_DESIGNS.length}`, 'Generate menu', 'Customize', 'Make it live: $144 for the first year', 'A private preview made for you by Menu-made', 'ends in 21 days', 'noindex,nofollow']) assert.ok(html.includes(words), words);
+  for (const words of ['Garlic Bread', '$9', 'Soup of the Day', `Design 1 of ${MENU_DESIGNS.length}`, 'Generate menu', 'Customize', 'Make it live: $12/mo with MΞNU Plus', 'A private preview made for you by Menu-made', 'ends in 21 days', 'noindex,nofollow']) assert.ok(html.includes(words), words);
   // Every design is there, each pointing to the next.
   for (const d of MENU_DESIGNS) assert.equal((await f.get(`/api/menu-preview/view/${token}/${d.key}`)).status, 200, d.key);
   const row = f.env.DB.raw.prepare(`SELECT campaign, email, expires_at FROM menu_previews WHERE token = ?`).get(token);
@@ -80,7 +80,7 @@ test('Make it live on a prospect preview opens checkout with the menu file from 
   const token = url.split('/').pop();
   const choose = await f.get(`/api/menu-preview/choose/${token}/bistro`);
   assert.equal(choose.status, 303);
-  assert.equal(choose.headers.get('Location'), `https://menu-made.com/contact.html?service=menu&preview=${token}`);
+  assert.equal(choose.headers.get('Location'), `https://menu-made.com/contact.html?service=menu&plan=MENU_PLUS&preview=${token}`);
   const handoff = await (await f.get(`/api/menu-preview/handoff/${token}`)).json();
   assert.equal(handoff.ok, true);
   assert.equal(handoff.business, 'Sample Cafe');
@@ -143,7 +143,7 @@ test('follow-ups list sent prospects who opened their preview 3+ days ago, once 
   assert.equal(list.prospects.length, 1);
   assert.equal(list.prospects[0].kind, 'opened');
   assert.equal(list.prospects[0].url, url);
-  assert.equal(list.price, '$144');
+  assert.match(list.price, /free in the Classic design, or \$12\/mo with MΞNU Plus/);
   assert.equal((await (await f.post('/api/system/prospects/followups', { mark: ['node/1'] })).json()).changed, 1);
   list = await (await f.post('/api/system/prospects/followups', {})).json();
   assert.deepEqual(list.prospects, [], 'one follow-up per prospect');
