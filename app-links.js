@@ -14,7 +14,22 @@
     if (inApp) return;
     const foot = document.querySelector('footer');
     if (!window.fetch) return;
+    // Nov 15, 2026 (owner: "It should be both or it should recognize the system being used and offer based off
+    // of that"): iPhones and iPads see the App Store, Android sees Google Play, computers see both. A store whose
+    // app is not public yet (Apple review) shows as "Coming soon" instead of a link, so iPhone visitors are never
+    // sent to Google Play.
+    const ua = navigator.userAgent || '';
+    const ios = /iPhone|iPad|iPod/i.test(ua) || (/Macintosh/.test(ua) && navigator.maxTouchPoints > 1);
+    const android = !ios && /Android/i.test(ua);
+    const soon = (text, big) => {
+      const s = document.createElement('span');
+      s.textContent = text === 'App Store' ? 'App Store: coming soon' : 'Google Play: coming soon';
+      s.className = big ? 'btn mm-store-btn mm-store-soon' : 'mm-store-soon';
+      s.style.cssText = big ? 'opacity:.75;cursor:default' : 'display:inline-block;padding:10px 18px;border-radius:999px;border:1px dashed #2ad1e0;opacity:.8';
+      return s;
+    };
     const button = (url, text, big) => {
+      if (!url) return soon(text, big);
       const a = document.createElement('a');
       a.href = url; a.target = '_blank'; a.rel = 'noopener';
       if (big) {
@@ -29,7 +44,11 @@
     };
     fetch('https://menu-made.com/api/app-links/menumade').then(r => r.ok ? r.json() : null).then(links => {
       if (!links || (!links.apple && !links.google)) return;
-      const stores = [[links.apple, 'App Store'], [links.google, 'Google Play']].filter(([url]) => url);
+      let stores = [[links.apple, 'App Store'], [links.google, 'Google Play']];
+      if (ios) stores = stores.slice(0, 1);
+      else if (android) stores = stores.slice(1);
+      else stores = stores.filter(([url]) => url).length ? stores : [];
+      if (!stores.some(([url]) => url) && !ios) return;
       for (const section of document.querySelectorAll('[data-app-section]')) {
         const slot = section.querySelector('[data-app-buttons]');
         if (!slot) continue;
