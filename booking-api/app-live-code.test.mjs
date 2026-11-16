@@ -109,3 +109,14 @@ test('every picture in the Nino app zooms', () => {
   assert.match(js, /"hy-hero-img hy-work-full hy-zoomable"/);
   assert.match(js, /big\.addEventListener\("click", function \(\) \{ zoomViewer\(/);
 });
+
+test('menu-made.com lets the apps read the live screen files (CORS), or no phone ever gets an update', () => {
+  // Owner, Nov 16, 2026: the how-to videos never showed in the app. The apps run from capacitor://localhost and
+  // https://localhost, so live.js's fetch of https://menu-made.com/app-shell/www/* is cross-origin; without
+  // Access-Control-Allow-Origin the phone blocks it and keeps the bundled screens forever.
+  const headers = readFileSync(new URL('../_headers', import.meta.url), 'utf8');
+  const block = /^\/app-shell\/www\/\*\s*\n((?:[ \t]+.+\n?)+)/m.exec(headers);
+  assert.ok(block, '_headers has a rule for /app-shell/www/*');
+  assert.match(block[1], /Access-Control-Allow-Origin:\s*\*/);
+  assert.match(LIVE, /BASE = "https:\/\/menu-made\.com\/app-shell\/www\/"/, 'the rule covers the address live.js reads');
+});
