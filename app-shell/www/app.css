@@ -474,3 +474,15 @@ body.hy-xmas .hy-design-grid img { border: 2px solid #f0c75e; }
 .hy-items-f { display: grid; gap: 3px; font-size: 13px; font-weight: 600; }
 .hy-items-f input, .hy-items-f textarea { width: 100%; box-sizing: border-box; font-size: 16px; }
 .hy-items-x { color: #ffb4b4; justify-self: start; }
+
+/* How-to video beside each generator (owner, Nov 15, 2026): same files as menu-made.com; one Full screen button that
+   always works (iPhone player, browser full screen, or filling the screen with Close). */
+.hy-howto { margin: 14px 0 4px; }
+.hy-howto-frame { position: relative; border-radius: 12px; overflow: hidden; border: 2px solid var(--hy-accent); background: #000; }
+.hy-howto video { display: block; width: 100%; aspect-ratio: 16 / 9; height: auto; background: #000; }
+.hy-howto figcaption { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-top: 8px; color: var(--hy-muted); font-size: 14px; }
+.hy-howto-full { display: inline-flex; align-items: center; gap: 6px; flex: none; padding: 8px 12px; border: 1px solid var(--hy-ghost-line); border-radius: var(--hy-btn-radius); background: transparent; color: var(--hy-ghost-ink); font: 600 14px/1 var(--hy-body); cursor: pointer; }
+.hy-howto-close { position: absolute; top: calc(10px + env(safe-area-inset-top)); right: calc(10px + env(safe-area-inset-right)); z-index: 2; padding: 10px 16px; border: 0; border-radius: var(--hy-btn-radius); background: var(--hy-btn); color: var(--hy-btn-ink); font: 700 15px/1 var(--hy-body); }
+.hy-howto-frame.is-filling { position: fixed; inset: 0; z-index: 1000; border: 0; border-radius: 0; display: flex; align-items: center; justify-content: center; }
+.hy-howto-frame.is-filling video { width: 100%; height: 100%; aspect-ratio: auto; object-fit: contain; }
+.hy-howto-frame:fullscreen video { width: 100%; height: 100%; aspect-ratio: auto; object-fit: contain; }

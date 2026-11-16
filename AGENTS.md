@@ -21,3 +21,14 @@ The owner's two store apps (MΞNU and Nino Battaglia) are drawn by `app-shell/ww
 - **Zoom is paramount (owner, Nov 14, 2026):** the Nino product photo must always open the full-screen viewer with
   pinch and double-tap zoom (zoomViewer in hybrid.js), on Android and iPhone. Never remove or break it; the test in
   booking-api/app-live-code.test.mjs guards it.
+
+## How-to videos follow the generators (owner, Nov 15, 2026)
+The videos beside the free generators (online-menu.html, website-design.html, holiday-menu.html) and in the MΞNU app's
+Preview tab are made by `tools/howto-videos/record.mjs`. Any change a visitor can see in a generator (its form, the
+preview bar's buttons, the Customize window, the menu editor's languages) means re-running it in the same task:
+
+    node --no-warnings --import ./tools/howto-videos/stand-ins/register.mjs tools/howto-videos/record.mjs [menu|website|holiday]
+
+It records the repo's own pages and worker against a throwaway local database (nothing is counted, emailed or charged)
+and writes assets/video/*.mp4 and *-poster.jpg. Then bump the `?v=` on the three pages and HOWTO_VIDEO_VERSION in
+booking-api/src/store-app/hybrid.js together (booking-api/hybrid-app.test.mjs checks they match), and watch the result.

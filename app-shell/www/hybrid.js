@@ -20,7 +20,8 @@
     back: "M15 18l-6-6 6-6",
     bell: "M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9 M10.3 21a1.94 1.94 0 0 0 3.4 0",
     ideas: "M9 18h6 M10 22h4 M12 2a7 7 0 0 0-4 12.7c.6.5 1 1.2 1 2.3h6c0-1.1.4-1.8 1-2.3A7 7 0 0 0 12 2z",
-    up: "M12 19V5 M5 12l7-7 7 7"
+    up: "M12 19V5 M5 12l7-7 7 7",
+    expand: "M4 9V4h5 M20 9V4h-5 M4 15v5h5 M20 15v5h-5"
   };
   var LABELS = { home: "Home", preview: "Preview", plans: "Plans", account: "Account", shop: "Shop", work: "Work", rewards: "Rewards", cart: "Cart", ideas: "Ideas" };
 
@@ -235,6 +236,44 @@
     }).catch(function () { return ""; });
   }
 
+  // The generator's how-to video (owner, Nov 15, 2026: the site's instruction videos belong in the app too). The same
+  // file as menu-made.com, from the feed's g.video. One Full screen button that always works, as try-video.js does on
+  // the site: the iPhone player first (webkitEnterFullscreen), then the browser's full screen, then the video filling
+  // the whole screen with a Close button (Android's web view often refuses real full screen).
+  function howToVideo(g) {
+    var v = g && g.video;
+    if (!v || !/^https:\/\//.test(v.src || "")) return null;
+    var fig = el("figure", "hy-howto");
+    var frame = el("div", "hy-howto-frame");
+    var video = el("video"); video.controls = true; video.preload = "none"; video.setAttribute("playsinline", "");
+    video.setAttribute("controlslist", "nofullscreen"); video.setAttribute("aria-label", v.label || "How it works");
+    if (/^https:\/\//.test(v.poster || "")) video.poster = v.poster;
+    var src = el("source"); src.src = v.src; src.type = "video/mp4"; video.appendChild(src);
+    frame.appendChild(video);
+    var full = button("Full screen", "hy-howto-full");
+    full.insertBefore(icon("expand", 18), full.firstChild);
+    full.setAttribute("aria-label", "Watch full screen");
+    var close = button("Close", "hy-howto-close"); close.hidden = true;
+    function fill(on) {
+      frame.classList.toggle("is-filling", on); close.hidden = !on;
+      document.body.classList.toggle("hy-sheet-open", on);
+      if (!on) { try { video.pause(); } catch (e) {} }
+    }
+    full.addEventListener("click", function () {
+      try { if (video.paused) video.play().catch(function () {}); } catch (e) {}
+      if (video.webkitEnterFullscreen && /iP(hone|ad|od)/.test(navigator.userAgent)) { try { video.webkitEnterFullscreen(); return; } catch (e) {} }
+      var ask = frame.requestFullscreen ? frame.requestFullscreen() : frame.webkitRequestFullscreen ? Promise.resolve(frame.webkitRequestFullscreen()) : Promise.reject();
+      Promise.resolve(ask).then(function () { if (!(document.fullscreenElement || document.webkitFullscreenElement)) fill(true); }).catch(function () { fill(true); });
+    });
+    close.addEventListener("click", function () { fill(false); });
+    document.addEventListener("keydown", function (ev) { if (ev.key === "Escape" && frame.classList.contains("is-filling")) fill(false); });
+    frame.appendChild(close);
+    fig.appendChild(frame);
+    var cap = el("figcaption"); cap.appendChild(el("span", null, v.caption || "Watch how it works.")); cap.appendChild(full);
+    fig.appendChild(cap);
+    return fig;
+  }
+
   // Preview tab, first page: pick a generator. Each card says what its three buttons do, so the screen that follows
   // makes sense the first time.
   function chooser(s) {
@@ -243,6 +282,7 @@
       var card = el("div", "hy-card hy-gen" + (inSeason(g) ? " hy-gen-holiday" : ""));
       var top = el("div", "hy-plan-top"); top.appendChild(el("h2", null, g.title)); top.appendChild(el("span", "hy-pill", g.count + " designs")); card.appendChild(top);
       card.appendChild(el("p", null, g.text));
+      var vid = howToVideo(g); if (vid) card.appendChild(vid);
       card.appendChild(el("h3", "hy-label hy-label-in", "The three buttons you'll see"));
       var list = el("ul", "hy-keys");
       (g.buttons || []).forEach(function (b) { var li = el("li"); li.appendChild(el("span", "hy-key", b.label)); li.appendChild(el("span", "hy-muted", b.text)); list.appendChild(li); });
@@ -322,6 +362,7 @@
     var me = t.store.get("me") || {};
     var form = el("form", "hy-card hy-form"); form.noValidate = true;
     form.appendChild(el("p", null, g.form_text ? g.form_text : g.key === "menu" ? "Upload the menu you have now. You'll see it as a phone menu in " + g.count + " designs." : "Upload the menu you have now. You'll see a whole website built from it, in " + g.count + " designs."));
+    var how = howToVideo(g); if (how) form.appendChild(how);
     function field(id, label, type, value, extra) {
       var l = el("label", null, label); l.setAttribute("for", id); form.appendChild(l);
       var i = el("input"); i.id = id; i.type = type; i.value = value || ""; for (var k in extra || {}) i.setAttribute(k, extra[k]); form.appendChild(i);
@@ -342,7 +383,7 @@
     var biz = field("hy-biz", "Business name", "text", me.business, { autocomplete: "organization", maxlength: "120" });
     var email = field("hy-email", "Email (we send you the link too)", "email", me.email, { autocomplete: "email", inputmode: "email", maxlength: "150" });
     var city = g.city ? field("hy-city", "City (optional: we look up your phone, address and hours)", "text", me.city, { autocomplete: "address-level2", maxlength: "80" }) : null;
-    form.appendChild(el("p", "hy-file-label", (g.file_label || "Your menu") + ": a PDF or a photo, up to 5 MB"));
+    form.appendChild(el("p", "hy-file-label", (g.file_label || "Your menu") + ": a PDF up to 20 MB, or a photo up to 5 MB"));
     var pick = el("input"); pick.type = "file"; pick.accept = "application/pdf,image/png,image/jpeg,image/webp"; pick.hidden = true; pick.id = "hy-file";
     var cam = el("input"); cam.type = "file"; cam.accept = "image/*"; cam.setAttribute("capture", "environment"); cam.hidden = true;
     var chosen = null; var fileName = el("p", "hy-muted", "No file chosen yet.");
@@ -363,7 +404,8 @@
       if (!b) { say("Add your business name."); biz.focus(); return; }
       if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e)) { say("Add an email address we can send the link to."); email.focus(); return; }
       if (!chosen) { say("Choose your menu file or take a photo."); return; }
-      if (!/^(application\/pdf|image\/(png|jpeg|webp))$/.test(chosen.type) || !chosen.size || chosen.size > 5 * 1024 * 1024) { say("Previews work from a PDF or a photo (PNG, JPEG or WebP) up to 5 MB."); return; }
+      // As on the site (Nov 12, 2026): a PDF up to 20 MB, a photo up to 5 MB.
+      if (!/^(application\/pdf|image\/(png|jpeg|webp))$/.test(chosen.type) || !chosen.size || chosen.size > (chosen.type === "application/pdf" ? 20 : 5) * 1024 * 1024) { say("Previews work from a PDF up to 20 MB, or a photo (PNG, JPEG or WebP) up to 5 MB."); return; }
       t.store.set("me", { business: b, email: e, city: c });
       // The wait takes the whole screen: the gear turning and what is happening now. It stays if the buyer looks at
       // another tab and comes back.
