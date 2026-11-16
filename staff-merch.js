@@ -159,11 +159,26 @@
   }
 
   // ---- Nino designs on shirts (optional) ----
+  // Designs built on other companies' brands, logos or characters are not offered on menu-made.com
+  // (owner, Nov 15, 2026, Google Ads appeal: menu-made.com must not sell or imply ties to other brands).
+  // They stay on ninobattaglia.com. Matched by title, case-insensitive.
+  const BRAND_DESIGNS = ['nostalgic television', 'dr. doom', 'capitalism molotovs', 'capitalism', 'kill all humans', 'nerd',
+    'joker', 'skater brown', 'beretta 500', 'pb 500', 'weyland corp', 'protected', 'love molotov', 'alice reaching for love',
+    'supermom', 'thulsa doom', 'light cycle', 'the bear', 'spacex', 'fifty something', 'north beach sf', 'funny guy',
+    'wanted: willie the kid', 'chemical lab assistant', 'make america skate again', 'trumpster', 'bad guys gen x', 'zig zag',
+    'skynet', 'xenomorph', 'jack', 'ghost in the machine', 'sin', 'rio', 'where\'s the food', 'shelby cobra', 'sex wax',
+    'neil blender tribute', 'pink freud', 'motogp', 'honda moto', 'teller-morrow motor oil', 'sons of a', 'felix the rider',
+    'hell\'s angel', 'prez dogs', 'logo', 'dead inside', 'honda/norton mashup', 'acme moto', 'cryptocoin zero', 'cbgb',
+    'apple byte', 'bat mask', 'bat hang', 'stink, stank, stunk', 'booger', 'frank', 'monster mash', 'g carlin', 'grinch'];
+  const brandDesign = (p) => {
+    const t = decode(p.title).toLowerCase().replace(/[’‘]/g, "'").trim();
+    return BRAND_DESIGNS.some((b) => t === b || t.startsWith(b + ' ') || t.startsWith(b + ' —') || (b.length > 5 && t.includes(b)));
+  };
   async function loadDesigns() {
     try {
       const res = await fetch(NINO_API + '/api/products', { headers: { Accept: 'application/json' } });
       const data = await res.json();
-      state.designs = (data.products || []).filter((p) => p.variants?.some((v) => v.available));
+      state.designs = (data.products || []).filter((p) => p.variants?.some((v) => v.available) && !brandDesign(p));
       renderDesigns();
     } catch { $('designGrid').innerHTML = '<p>The designs could not be loaded. Please refresh the page in a minute.</p>'; }
   }
