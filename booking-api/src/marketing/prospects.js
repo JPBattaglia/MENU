@@ -102,7 +102,7 @@ async function handleProspectBatch(request, env) {
   }
   const limit = Math.max(1, Math.min(50, Number(body?.limit) || 25));
   const rows = (await env.DB.prepare(`
-      SELECT id, name, kind, cuisine, city, website, email, gaps_json, menu_url, offer_code, score, opened_on,
+      SELECT id, name, kind, cuisine, city, website, email, email_source, gaps_json, menu_url, offer_code, score, opened_on,
         (opened_on IS NOT NULL AND opened_on >= ?1) AS t_open,
         (offer_code = 'ONLINE_MENU_QR' AND menu_url IS NOT NULL AND (gaps_json LIKE '%menu_pdf%' OR gaps_json LIKE '%menu_image%')) AS t_menu
       FROM prospects p
@@ -127,6 +127,31 @@ async function handleProspectBatch(request, env) {
     if (batch.length >= limit) break;
   }
   return json({ ok: true, prospects: batch });
+}
+
+// ---------- Drafts handed back to the auto-sender (owner, Nov 16, 2026) ----------
+// drafts.mjs removes the prospect drafts the owner never sent from his iCloud Drafts and reports them here, so each
+// business is emailed by the auto-sender instead, never more than twice in all:
+//   POST /api/system/prospects/release { first: [ids], followup: [ids], holiday: [ids] }  -> { changed }
+//   first     DRAFTED -> NEW (the auto-sender's next batch can take it)
+//   followup  follow-up mark cleared on a SENT prospect (the auto-sender sends it, if the preview was opened)
+//   holiday   holiday mark cleared; a NEW business it had moved to DRAFTED goes back to NEW, and the follow-up mark the
+//             holiday mark set at the same moment is cleared too. No separate holiday emails are sent any more.
+async function handleProspectRelease(request, env) {
+  const auth = await verifyRenderer(request, env, { audience: DRAFTS_AUDIENCE, workflow: DRAFTS_WORKFLOW, events: ["schedule", "workflow_dispatch"] });
+  if (!auth.ok) return json({ ok: false, error: auth.error }, auth.status);
+  const body = await request.json().catch(() => ({}));
+  const ids = (k) => (Array.isArray(body?.[k]) ? [...new Set(body[k].filter((id) => typeof id === "string"))].slice(0, 200) : []);
+  const t = nowIso(); const statements = [];
+  for (const id of ids("first")) statements.push(env.DB.prepare(`UPDATE prospects SET status = 'NEW', drafted_at = NULL, updated_at = ? WHERE id = ? AND status = 'DRAFTED' AND holiday_drafted_at IS NULL`).bind(t, id));
+  for (const id of ids("followup")) statements.push(env.DB.prepare(`UPDATE prospects SET followup_drafted_at = NULL, updated_at = ? WHERE id = ? AND status = 'SENT' AND followup_drafted_at IS NOT NULL`).bind(t, id));
+  for (const id of ids("holiday")) statements.push(env.DB.prepare(`UPDATE prospects SET
+      followup_drafted_at = CASE WHEN followup_drafted_at = holiday_drafted_at THEN NULL ELSE followup_drafted_at END,
+      status = CASE WHEN status = 'DRAFTED' THEN 'NEW' ELSE status END, drafted_at = CASE WHEN status = 'DRAFTED' THEN NULL ELSE drafted_at END,
+      holiday_drafted_at = NULL, updated_at = ? WHERE id = ? AND holiday_drafted_at IS NOT NULL`).bind(t, id));
+  let changed = 0;
+  for (let k = 0; k < statements.length; k += 90) for (const r of await env.DB.batch(statements.slice(k, k + 90))) changed += r?.meta?.changes || 0;
+  return json({ ok: true, changed });
 }
 
 // ---------- New openings (owner, Nov 8, 2026) ----------
@@ -260,4 +285,4 @@ async function handleSendPlan(request, env, { now = Date.now() } = {}) {
 }
 
 export { sendPlan, handleSendPlan, businessDays, sendCap };
-export { AUDIENCE as PROSPECTS_AUDIENCE, WORKFLOW as PROSPECTS_WORKFLOW, DRAFTS_AUDIENCE, DRAFTS_WORKFLOW, handleProspects, handleProspectBatch, handleProspectStatus, handleProspectLookup, prospectRow, NEW_OPENING_DAYS };
+export { AUDIENCE as PROSPECTS_AUDIENCE, WORKFLOW as PROSPECTS_WORKFLOW, DRAFTS_AUDIENCE, DRAFTS_WORKFLOW, handleProspects, handleProspectRelease, handleProspectBatch, handleProspectStatus, handleProspectLookup, prospectRow, NEW_OPENING_DAYS };

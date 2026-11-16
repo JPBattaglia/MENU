@@ -39,7 +39,7 @@ import { handleSwitches } from "./lib/switches.js";
 import { dailyCoverageReport, handleCoverage } from "./selftest/coverage.js";
 import { handleSiteCheckResult } from "./selftest/site-check.js";
 import { handleD1Usage } from "./selftest/d1-usage.js";
-import { handleProspects, handleProspectBatch, handleProspectStatus, handleProspectLookup, handleSendPlan } from "./marketing/prospects.js";
+import { handleProspects, handleProspectBatch, handleProspectStatus, handleProspectRelease, handleProspectLookup, handleSendPlan } from "./marketing/prospects.js";
 import { handleProspectDemo, handleMenuPreview, upgradeProspectMenus, handleProspectFollowups } from "./marketing/demo-menu.js";
 import { handleHolidayOutreach } from "./marketing/holiday-outreach.js";
 import { handleWeeklyNumbers } from "./marketing/weekly-numbers.js";
@@ -157,6 +157,7 @@ var worker_default = {
     if (url.pathname === "/api/system/prospects/send-plan" && request.method === "POST") return handleSendPlan(request, env);
     // Marketing plan v4: private phone-menu previews for prospect emails, and the day-3 follow-up list.
     if (url.pathname === "/api/system/prospects/demo" && request.method === "POST") return handleProspectDemo(request, env);
+    if (url.pathname === "/api/system/prospects/release" && request.method === "POST") return handleProspectRelease(request, env);
     if (url.pathname === "/api/system/prospects/followups" && request.method === "POST") return handleProspectFollowups(request, env);
     if (url.pathname === "/api/system/prospects/holiday" && request.method === "POST") return handleHolidayOutreach(request, env);
     if (url.pathname === "/api/system/weekly-numbers" && request.method === "POST") return handleWeeklyNumbers(request, env);
