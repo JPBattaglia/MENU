@@ -1,5 +1,5 @@
-// The Menu-made prospect email: one gap, one offer, the same branding as the customer emails. Used by drafts.mjs.
-// build(prospect) -> { subject, html, text }. The logo is attached inline as cid:logo@menu-made.
+// The Menu-made prospect email: one gap, one link, plain text (Nov 16, 2026). Used by send.mjs.
+// build(prospect) -> { subject, text, html: null }.
 //
 // Nov 10, 2026 (owner): every example in these emails is the current generator, never the old one-design rendering.
 // A prospect's own preview is the menu generator (all MENU_DESIGNS) or the site generator (all website DESIGNS); with
@@ -15,22 +15,13 @@ const SITE_COUNT = SITE_DESIGNS.length;
 // that follows is counted against the outreach (funnel.js keeps the labels through checkout).
 const WEBSITE = "https://menu-made.com/website-design?utm_source=outreach&utm_medium=email&utm_campaign=demo-website";
 const ONLINE_MENU = "https://menu-made.com/online-menu?utm_source=outreach&utm_medium=email&utm_campaign=demo-menu";
-// Dark mode: the logo is transparent and the email declares a dark colour scheme, so mail apps keep its colours.
-// Copy revised Nov 1, 2026 (owner): plain wording, accurate to each offer as services.html describes it.
+// Menus are free or MΞNU Plus (owner, Nov 14, 2026); the website is $299 one time (Nov 6). The old $144 copy is gone.
 const OFFERS = {
-  // Price corrected Nov 3, 2026: $129 setup + $15 first-year hosting = $144 (checkout/quote.js), up to 3 pages.
-  ONLINE_MENU_QR: { name: "Online Menu + QR", url: ONLINE_MENU, sample: [`Try it free with your menu`, `${ONLINE_MENU}#try-free`],
-    offer: "Menu-made can turn the menu you already have into a clean, mobile-friendly menu page that Google can read, along with a printable QR code for your tables and front window. It's $144 for the first year, which covers up to 3 menu pages, hosting and two rounds of changes.",
-    how: `Upload your current menu as a PDF or photos and you'll see it as a phone menu in ${MENU_COUNT} designs, free, before you decide. Pick the one you like and we build it, check it, and email you the link and QR code.` },
-  // Nov 6, 2026 (owner): Conversion Fix is folded into the Website Package, which is the site generator ($299 for the
-  // whole site, Website Care $49 a month to host it). Links go to the website page's free generator.
-  WEBSITE_PACKAGE: { name: "Your Website", url: WEBSITE, sample: [`Try it free with your menu`, `${WEBSITE}#try-free`],
-    offer: `Menu-made makes phone-friendly websites for food and drink businesses, with your menu, hours, map, photos and contact details, in ${SITE_COUNT} designs to choose from. It's $299 one time for the whole site, or add Website Care at $49 a month and we host it on your own domain and look after it.`,
-    how: `You can see your business as a website before checking out: upload your menu and you'll see it in all ${SITE_COUNT} designs in a few seconds, then customize the one you like with your logo, photos and colours.` }
+  ONLINE_MENU_QR: { name: "Online Menu + QR", url: ONLINE_MENU },
+  WEBSITE_PACKAGE: { name: "Your Website", url: WEBSITE }
 };
 OFFERS.CONVERSION_FIX = OFFERS.WEBSITE_PACKAGE; // prospects stored before Nov 6 still say CONVERSION_FIX
-const FOOTER = "You're receiving this one-time note because your business is listed publicly online. Reply \"no thanks\" and we won't contact you again. Menu-made, 706 Kearny St, San Francisco, CA 94108.";
-const esc = (s) => String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+const FOOTER = "I found your business through its public listing. Reply \"no thanks\" and I won't write again. Menu-made, 706 Kearny St, San Francisco, CA 94108.";
 
 // New openings (owner, Nov 8, 2026): a business that registered its location with the city in the last 120 days gets
 // a congratulations line ahead of what we noticed. Its subject stays the finding.
@@ -49,100 +40,108 @@ function findingOnly(p) {
   const name = p.name;
   const site = String(p.website || "").replace(/^https?:\/\//, "").replace(/^www\./, "").replace(/\/$/, "");
   if (gaps.includes("menu_pdf")) return [`${name}'s menu opens as a PDF`,
-    `I came across ${site} and noticed your menu opens as a PDF. PDFs are difficult to read on phone screens, and Google can't read the dishes inside them, so people nearby searching for food you serve may never find you.`];
+    `I came across ${site} and noticed your menu opens as a PDF. That's hard to read on a phone, and Google can't see the dishes inside it, so people searching nearby may not find you.`];
   if (gaps.includes("menu_image")) return [`${name}'s menu is posted as images`,
-    `I came across ${site} and noticed your menu is posted as images. They're difficult to read on phone screens, and Google can't read the text inside them, so people nearby searching for food you serve may never find you.`];
+    `I came across ${site} and noticed your menu is posted as images. They're hard to read on a phone, and Google can't see the dishes in them, so people searching nearby may not find you.`];
   if (gaps.includes("menu_missing")) return [`Guests can't find ${name}'s menu online`,
-    `I came across ${site} and couldn't find your menu. It's the first thing most guests look for when deciding where to eat, and when it's missing, many of them choose somewhere else.`];
+    `I came across ${site} and couldn't find your menu. It's the first thing most guests look for, and when it's missing many of them go somewhere else.`];
   if (gaps.includes("no_website")) return [`A website for ${name}`,
-    `I couldn't find a website for ${name}. Most guests look a place up on their phone before visiting, and without a site, all they see is what other people have posted.`];
+    `I couldn't find a website for ${name}. Most guests look a place up before visiting, and without a site all they see is what other people posted.`];
   if (gaps.includes("site_down")) return [`${name}'s website isn't loading`,
     `I tried to visit ${site} and it didn't load. Anyone tapping your website link on Google or Yelp right now lands on an error page.`];
   if (gaps.includes("no_phone_layout")) return [`${name}'s website on phone screens`,
-    `I opened ${site} on my phone and it shows the full desktop page, shrunk down. Most of your visitors are on phones, and small text and tiny buttons send many of them back to their search results.`];
+    `I opened ${site} on my phone and it shows the full desktop page, shrunk down. Most visitors are on phones, and tiny text sends many of them back to their search results.`];
   return [`A fresh website for ${name}`,
     `I came across ${site} and wanted to show you what ${name} could look like as a modern, phone-friendly website.`];
 }
 
-// demoUrl (marketing plan v4): the prospect's own menu as a private phone page, or (Nov 5, 2026) their business as a
-// private website preview (demoKind "website"), built by the worker. With it, the email leads with the preview.
+// Nov 16, 2026 (owner: "Emails are getting no response"; 127 sent, 0 replies): the emails are now short plain-text
+// notes from JP, not designed newsletters. Each one names the business, says what was noticed, gives ONE link (their
+// own preview when there is one), leads with what's free, and ends on a question that's easy to answer. No logo, no
+// buttons, no prices on menus beyond "free" (menus are free or MΞNU Plus since Nov 14). Plain text reads as a person
+// writing and is far less likely to land in Promotions or junk. Subjects are fixed per preview kind so the follow-up
+// threads under the first email as "Re:".
 const WEBSITE_PRICE = "$299";
 const builtFrom = (p) => (p.website ? "what's on your current site" : "your public listing");
-
-const MENU_DEMO_LINE = `So you can see the difference, I went ahead and turned the menu on your site into a phone menu, in ${MENU_COUNT} different designs. Tap Generate menu to flip through them and Customize to add your logo and colours. It's private: only you have the link, and it stays up for three weeks.`;
-const MENU_BUTTON = `See your menu in ${MENU_COUNT} designs`;
+const SIGNATURE = "JP Battaglia\nMenu-made, San Francisco\n(415) 937-0669";
+const menuSubject = (p) => `${p.name}'s menu on a phone`;
+const siteSubject = (p) => `A website for ${p.name}`;
+const FREE_LINE = "Keeping it live is free: your own link and QR code, and you change prices or mark items sold out yourself. No card needed.";
 
 export function build(p, demoUrl = null, demoKind = "menu") {
+  const [, observed] = finding(p);
   if (demoUrl && demoKind === "website") {
-    const offer = OFFERS.WEBSITE_PACKAGE;
-    const [subject, observed] = finding(p);
-    const paras = ["Hi there,", observed,
-      `So you can see the difference, I went ahead and built ${p.name} a phone-friendly website from ${builtFrom(p)}, in ${SITE_COUNT} different designs. Tap Generate site to flip through them and Customize to add your logo, photos and colours. It's private: only you have the link, and it stays up for three weeks.`,
-      offer.offer, "If you'd like it live, tap Choose this site on the design you like. If not, no problem at all."];
-    return render(p, subject, paras, [[`See your website in ${SITE_COUNT} designs`, demoUrl, true], [`See ${offer.name}`, offer.url, false]]);
+    return render(p, siteSubject(p), ["Hi there,", observed,
+      `So I built ${p.name} a phone-friendly website from ${builtFrom(p)}. Have a look, there are ${SITE_COUNT} designs to flip through:`,
+      demoUrl,
+      `Seeing it is free. If you'd like one live, it's ${WEBSITE_PRICE} one time and the site is yours to keep.`,
+      "Worth a look?"]);
   }
   const offer = OFFERS[p.offer_code];
   if (!offer) return null;
-  const [subject, observed] = finding(p);
-  const demo = demoUrl && p.offer_code === "ONLINE_MENU_QR";
-  const paras = demo
-    ? ["Hi there,", observed, MENU_DEMO_LINE, offer.offer, "If you'd like it live, tap Make it live on the design you like. If not, no problem at all."]
-    : ["Hi there,", observed, offer.offer, offer.how, "If it would help, the details and the free preview are below. If not, no problem at all."];
-  const buttons = demo
-    ? [[MENU_BUTTON, demoUrl, true], [`See ${offer.name}`, offer.url, false]]
-    : [[`See ${offer.name}`, offer.url, true], [offer.sample[0], offer.sample[1], false]];
-  return render(p, subject, paras, buttons);
-}
-
-// Day-3 follow-up (marketing plan v4): only for owners who opened their preview and haven't replied.
-export function buildFollowup(p, price = "$144") {
-  if (p.demo_kind === "website") {
-    const offer = OFFERS.WEBSITE_PACKAGE;
-    const paras = ["Hi there,",
-      `Following up on the website preview I built for ${p.name} last week, in ${SITE_COUNT} designs. If you'd like one of them live, it's ${WEBSITE_PRICE} one time for the whole site, or add Website Care at $49 a month and we host it on your own web address.`,
-      "Tap Choose this site on the design you like; after checkout there's one short form, already filled in from the preview, and we take it from there. Happy to answer anything first, just reply here.",
-      "Your preview is still at the link below for a little while longer."];
-    return render(p, `Your ${p.name} website preview`, paras, [[`See your website in ${SITE_COUNT} designs`, p.url, true], [`See ${offer.name}`, offer.url, false]]);
+  const [subject] = finding(p);
+  if (demoUrl && p.offer_code === "ONLINE_MENU_QR") {
+    return render(p, menuSubject(p), ["Hi there,", observed,
+      "So I turned it into a phone menu for you. Here it is:",
+      demoUrl,
+      FREE_LINE,
+      "Want me to switch it on for you?"]);
   }
-  const subject = `Your ${p.name} phone menu`;
-  const paras = ["Hi there,",
-    `Following up on the phone version of your menu I sent over last week, in ${MENU_COUNT} designs. If you'd like one of them live, with a printable QR code for your tables and front window, it's ${price} for the first year, hosting included.`,
-    "Tap Make it live on the design you like and we'll take it from there. Happy to answer anything first, just reply here.",
-    "Your preview is still at the link below for a little while longer."];
-  const buttons = [[MENU_BUTTON, p.url, true], ["See Online Menu + QR", ONLINE_MENU, false]];
-  return render(p, subject, paras, buttons);
+  if (p.offer_code === "ONLINE_MENU_QR") {
+    return render(p, subject, ["Hi there,", observed,
+      "If you upload the menu you have (a PDF or photos), you'll see it as a phone menu in a few seconds:",
+      `${ONLINE_MENU}#try-free`,
+      FREE_LINE,
+      "Want me to set it up for you instead? Just reply with the menu attached."]);
+  }
+  return render(p, subject, ["Hi there,", observed,
+    "Upload your menu and you'll see your business as a phone-friendly website in a few seconds, free:",
+    `${WEBSITE}#try-free`,
+    `If you like one of the ${SITE_COUNT} designs, it's ${WEBSITE_PRICE} one time and the site is yours to keep.`,
+    "Worth a look?"]);
 }
 
-// Day-3 follow-up for prospects emailed before previews existed (Nov 5, 2026). With demoUrl, the follow-up carries
-// their menu built as a phone page, or their business as a website; otherwise a short reminder of the first email's offer.
-export function buildFirstFollowup(p, demoUrl = null, price = "$144", demoKind = "menu") {
+// Follow-up (marketing plan v4): only for owners who opened their preview and haven't replied. One per business, ever.
+export function buildFollowup(p) {
+  if (p.demo_kind === "website") {
+    return render(p, `Re: ${siteSubject(p)}`, ["Hi again,",
+      `Following up on the website I built for ${p.name}. It's still here for a little while longer:`,
+      p.url,
+      `If one of the designs works for you, it's ${WEBSITE_PRICE} one time and yours to keep, and I can host it on your own web address too. Anything you'd want changed first?`]);
+  }
+  return render(p, `Re: ${menuSubject(p)}`, ["Hi again,",
+    `Following up on the phone menu I made for ${p.name}. It's still here for a little while longer:`,
+    p.url,
+    "Tap Start free to keep it live in the Classic design at no cost. If you'd like any of the other designs plus a print-ready PDF, table tent and TV menu, that's MΞNU Plus at $12 a month.",
+    "Anything you'd want changed first?"]);
+}
+
+// Follow-up for prospects emailed before previews existed (Nov 5, 2026). With demoUrl it carries their preview.
+export function buildFirstFollowup(p, demoUrl = null, _price = null, demoKind = "menu") {
   if (demoUrl && demoKind === "website") {
-    const offer = OFFERS.WEBSITE_PACKAGE;
-    const paras = ["Hi there,",
-      `Following up on my note from earlier this week. Rather than describe it, I went ahead and built a phone-friendly website for ${p.name} from ${builtFrom(p)}, in ${SITE_COUNT} different designs, so you can see the difference. Tap Generate site to flip through them. It's private: only you have the link, and it stays up for three weeks.`,
-      offer.offer, "Happy to answer anything first, just reply here."];
-    return render(p, `A website preview for ${p.name}`, paras, [[`See your website in ${SITE_COUNT} designs`, demoUrl, true], [`See ${offer.name}`, offer.url, false]]);
+    return render(p, siteSubject(p), ["Hi there,",
+      `I wrote a little while ago about ${p.name}'s website. Rather than describe it, I built you one from ${builtFrom(p)}:`,
+      demoUrl,
+      `Seeing it is free. If you'd like one live, it's ${WEBSITE_PRICE} one time and yours to keep. Worth a look?`]);
   }
   const offer = OFFERS[p.offer_code];
   if (!offer) return null;
   if (demoUrl && p.offer_code === "ONLINE_MENU_QR") {
-    const paras = ["Hi there,",
-      `Following up on my note from earlier this week about your menu. Rather than describe it, I went ahead and turned the menu on your site into a phone menu, in ${MENU_COUNT} different designs, so you can see the difference. Tap Generate menu to flip through them. It's private: only you have the link, and it stays up for three weeks.`,
-      `If you'd like one live, with a printable QR code for your tables and front window, it's ${price} for the first year, hosting included. Tap Make it live on the design you like and we'll take it from there.`,
-      "Happy to answer anything first, just reply here."];
-    return render(p, `Your ${p.name} menu as a phone page`, paras, [[MENU_BUTTON, demoUrl, true], ["See Online Menu + QR", ONLINE_MENU, false]]);
+    return render(p, menuSubject(p), ["Hi there,",
+      `I wrote a little while ago about ${p.name}'s menu. Rather than describe it, I turned it into a phone menu for you:`,
+      demoUrl,
+      FREE_LINE,
+      "Want me to switch it on for you?"]);
   }
   const [subject] = finding(p);
-  const paras = ["Hi there,",
-    `Following up on my note from earlier this week. ${offer.offer}`,
-    offer.how,
-    "Happy to answer anything first, just reply here. If it's not a fit, no problem at all."];
-  return render(p, `Re: ${subject}`, paras, [[`See ${offer.name}`, offer.url, true], [offer.sample[0], offer.sample[1], false]]);
+  return render(p, `Re: ${subject}`, ["Hi there,",
+    p.offer_code === "ONLINE_MENU_QR"
+      ? `Following up on my note about ${p.name}'s menu. You can see yours as a phone menu, free, in a few seconds here:`
+      : `Following up on my note about ${p.name}'s website. You can see your business as a website, free, in a few seconds here:`,
+    p.offer_code === "ONLINE_MENU_QR" ? `${ONLINE_MENU}#try-free` : `${WEBSITE}#try-free`,
+    "If it's not a fit, no problem at all."]);
 }
 
-// Owner (Nov 9, 2026): no white in Menu-made emails. Same colours as the customer emails (booking-api lib/email.js
-// MAIL): dark blue #003344 card, #00222d header, footer and page, white text, cyan highlights.
-const MAIL = { page: "#00222d", card: "#003344", bar: "#00222d", line: "#0a6f80", text: "#ffffff", soft: "#d9f3f6", cyan: "#00d6e6", link: "#5ff2ff", ink: "#012f34" };
 
 // Holiday Menu (owner, Nov 10, 2026): one holiday email per business through the season, to new prospects and to
 // those already emailed (never to anyone who replied, opted out or bounced). demoUrl: their regular menu shown in the
@@ -157,7 +156,7 @@ export function holidaySeasonNow(now = Date.now()) {
   const year = new Date(now).getUTCFullYear();
   return now >= Date.parse(`${year}-11-01T00:00:00-07:00`) && now <= Date.parse(`${year}-12-20T23:59:59-08:00`);
 }
-const holidayNote = () => `One more thing for this time of year: if you're doing a Christmas or New Year's Eve menu, we can put that online too, with its own QR code, print PDF, tri-fold, table tent and TV screen. It's ${usd(HOLIDAY_PRICING.firstCents)} per holiday, or ${usd(HOLIDAY_PRICING.firstCents + HOLIDAY_PRICING.secondCents)} for both, and you can see your menu in the holiday designs free before you decide.`;
+const holidayNote = () => `Doing a Christmas or New Year's Eve menu? I can put that online too, with its own QR code, from ${usd(HOLIDAY_PRICING.firstCents)}. Just reply.`;
 
 export function buildHoliday(p, demoUrl = null) {
   const one = usd(HOLIDAY_PRICING.firstCents);
@@ -177,32 +176,11 @@ export function buildHoliday(p, demoUrl = null) {
   return render(p, subject, paras, buttons, HOLIDAY_FOOTER);
 }
 
-// The head declares "light dark", not "dark" alone, the same as the customer emails (booking-api lib/email.js
-// MAIL_HEAD): Apple Mail repaints a dark-only email with light backgrounds and dark text (owner saw it on a prospect
-// draft Nov 12, 2026; the customer emails were fixed Nov 9 and this template was missed).
-function render(p, subject, paras, buttons, footer = FOOTER) {
-  if (p?.holiday_note && footer !== HOLIDAY_FOOTER) {
-    paras = [...paras, holidayNote()];
-    buttons = [...buttons, ["See holiday menus", HOLIDAY, false]];
-  }
-  const pHtml = paras.map((x) => `<p style="margin:0 0 16px;font-size:16px;line-height:1.6;color:${MAIL.text};">${esc(x)}</p>`).join("");
-  const bHtml = buttons.map(([l, u, prim]) => `<tr><td style="padding:0 0 12px;"><a href="${esc(u)}" style="display:inline-block;${prim
-    ? `background-color:${MAIL.cyan};color:${MAIL.ink};padding:13px 22px;`
-    : `background-color:${MAIL.bar};color:${MAIL.text};padding:12px 21px;border:1px solid ${MAIL.cyan};`}text-decoration:none;font-size:15px;font-weight:bold;border-radius:6px;">${esc(l)}</a></td></tr>`).join("");
-  const html = `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="color-scheme" content="light dark"><meta name="supported-color-schemes" content="light dark"><style>:root{color-scheme:light dark;supported-color-schemes:light dark;}a{color:${MAIL.link};}</style><title>${esc(subject)}</title></head>
-<body style="margin:0;padding:0;background-color:${MAIL.page};font-family:Arial,Helvetica,sans-serif;">
-<table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="background-color:${MAIL.page};"><tr><td align="center" style="padding:28px 12px;">
-<table role="presentation" width="600" cellspacing="0" cellpadding="0" border="0" style="width:100%;max-width:600px;background-color:${MAIL.card};border:1px solid ${MAIL.line};">
-<tr><td bgcolor="${MAIL.bar}" style="background-color:${MAIL.bar};padding:28px 32px;border-bottom:4px solid ${MAIL.cyan};"><a href="https://menu-made.com" style="text-decoration:none;"><img src="cid:logo@menu-made" width="220" alt="MENU-MADE" style="display:block;width:220px;max-width:100%;height:auto;border:0;"></a></td></tr>
-<tr><td bgcolor="${MAIL.card}" style="padding:32px;background-color:${MAIL.card};">
-<p style="margin:0 0 12px;font-size:12px;font-weight:bold;letter-spacing:1px;color:${MAIL.link};">FOR ${esc(p.name.toUpperCase())}</p>
-${pHtml}
-<table role="presentation" cellspacing="0" cellpadding="0" border="0">${bHtml}</table>
-<p style="margin:16px 0 0;font-size:16px;line-height:1.6;color:${MAIL.text};">JP Battaglia<br>Menu-made, San Francisco</p>
-</td></tr>
-<tr><td bgcolor="${MAIL.bar}" style="padding:24px 32px;background-color:${MAIL.bar};"><p style="margin:0 0 10px;font-size:14px;line-height:1.6;color:${MAIL.soft};"><a href="https://menu-made.com" style="color:${MAIL.link};">menu-made.com</a> &nbsp;&middot;&nbsp; <a href="mailto:info@menu-made.com" style="color:${MAIL.link};">info@menu-made.com</a></p>
-<p style="margin:0;font-size:12px;line-height:1.5;color:${MAIL.soft};">${esc(footer)}</p></td></tr>
-</table></td></tr></table></body></html>`;
-  const text = `${paras.join("\n\n")}\n\n${buttons.map(([l, u]) => `${l}: ${u}`).join("\n")}\n\nJP Battaglia\nMenu-made, San Francisco\nhttps://menu-made.com\n\n${footer}`;
-  return { subject, html, text };
+// Plain text only (Nov 16, 2026). In the holiday season one P.S. offers the Holiday Menu, answered by reply, so the
+// email still has a single link. The footer keeps the opt-out and the mailing address.
+function render(p, subject, paras, buttons = null, footer = FOOTER) {
+  if (buttons) paras = [...paras, ...buttons.map(([l, u]) => `${l}: ${u}`)];
+  if (p?.holiday_note && footer !== HOLIDAY_FOOTER) paras = [...paras, `P.S. ${holidayNote()}`];
+  const text = `${paras.join("\n\n")}\n\n${SIGNATURE}\n\n--\n${footer}`;
+  return { subject, text, html: null };
 }

@@ -212,3 +212,48 @@ test('a new opening is looked up on the web once, then served from the database'
   assert.equal(f.rows()[0].looked_up_at, row.looked_up_at);
   assert.equal((await ask({ ...body, id: 'node/5' })).status, 400, 'only registry openings are looked up');
 });
+
+// Nov 16, 2026 (owner: "Emails are getting no response", then "Do all"): unsent iCloud drafts go back to the auto-sender.
+test('release: unsent drafts go back to the auto-sender, never past two emails per business', async () => {
+  const f = await setup();
+  await f.post({ prospects: [CAFE, { ...CAFE, id: 'node/201', email: 'a@two.example' }, { ...CAFE, id: 'node/202', email: 'b@three.example' }, { ...CAFE, id: 'node/203', email: 'c@four.example' }] });
+  const t = '2026-11-16T15:45:00.000Z';
+  f.env.DB.raw.prepare(`UPDATE prospects SET status = 'DRAFTED', drafted_at = ? WHERE id = 'node/101'`).run(t);
+  f.env.DB.raw.prepare(`UPDATE prospects SET status = 'SENT', sent_at = '2026-11-02T04:00:00Z', followup_drafted_at = ? WHERE id = 'node/201'`).run(t);
+  // A holiday draft to someone already emailed once: its mark also set the follow-up mark at the same moment.
+  f.env.DB.raw.prepare(`UPDATE prospects SET status = 'SENT', sent_at = '2026-11-02T04:00:00Z', holiday_drafted_at = ?, followup_drafted_at = ? WHERE id = 'node/202'`).run(t, t);
+  // A holiday draft to a new business moved it to DRAFTED.
+  f.env.DB.raw.prepare(`UPDATE prospects SET status = 'DRAFTED', holiday_drafted_at = ?, followup_drafted_at = ? WHERE id = 'node/203'`).run(t, t);
+  const drafts = { ...f.good, aud: 'menu-made-prospect-drafts', job_workflow_ref: 'JPBattaglia/MENU/.github/workflows/prospect-drafts.yml@refs/heads/master' };
+  const req = new Request('https://menu-made.com/api/system/prospects/release', { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${await f.sign(drafts)}` },
+    body: JSON.stringify({ first: ['node/101'], followup: ['node/201'], holiday: ['node/202', 'node/203'] }) });
+  assert.equal((await (await worker.fetch(req, f.env, { waitUntil() {} })).json()).changed, 4);
+  const rows = Object.fromEntries(f.rows().map((r) => [r.id, r]));
+  assert.equal(rows['node/101'].status, 'NEW'); assert.equal(rows['node/101'].drafted_at, null);
+  assert.equal(rows['node/201'].status, 'SENT'); assert.equal(rows['node/201'].followup_drafted_at, null);
+  assert.equal(rows['node/202'].status, 'SENT'); assert.equal(rows['node/202'].holiday_drafted_at, null); assert.equal(rows['node/202'].followup_drafted_at, null);
+  assert.equal(rows['node/203'].status, 'NEW'); assert.equal(rows['node/203'].followup_drafted_at, null);
+  const outsider = { ...drafts, job_workflow_ref: 'Someone/Else/.github/workflows/x.yml@refs/heads/main' };
+  const bad = new Request('https://menu-made.com/api/system/prospects/release', { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${await f.sign(outsider)}` }, body: '{}' });
+  assert.notEqual((await worker.fetch(bad, f.env, { waitUntil() {} })).status, 200);
+});
+
+test('prospect emails are short plain-text notes: one link, free first, a question, the opt-out and address', async () => {
+  const { build, buildFollowup, buildFirstFollowup } = await import('../tools/prospects/email.mjs');
+  const p = { name: 'Sample Cafe', website: 'https://samplecafe.example/', gaps_json: '["menu_pdf"]', offer_code: 'ONLINE_MENU_QR' };
+  const all = [build(p, 'https://menu-made.com/api/menu-preview/abc'), build(p), build({ ...p, gaps_json: '["no_phone_layout"]', offer_code: 'WEBSITE_PACKAGE' }, 'https://menu-made.com/x', 'website'),
+    buildFollowup({ ...p, url: 'https://menu-made.com/api/menu-preview/abc' }), buildFollowup({ ...p, demo_kind: 'website', url: 'https://menu-made.com/x' }), buildFirstFollowup(p, 'https://menu-made.com/api/menu-preview/abc'), buildFirstFollowup(p)];
+  for (const e of all) {
+    assert.equal(e.html, null, 'plain text only');
+    assert.equal((e.text.match(/https?:\/\//g) || []).length, 1, `one link: ${e.subject}`);
+    assert.match(e.text, /\?/, 'ends on a question or an easy reply');
+    assert.match(e.text, /no thanks/); assert.match(e.text, /706 Kearny St/);
+    assert.doesNotMatch(e.text, /\$144|restaurant|[Pp]ay |→/);
+    assert.ok(e.text.split(/\s+/).length < 170, `short: ${e.subject}`);
+  }
+  assert.equal(all[0].subject, "Sample Cafe's menu on a phone");
+  assert.equal(all[3].subject, "Re: Sample Cafe's menu on a phone", 'the follow-up threads under the first email');
+  assert.match(all[0].text, /free/i);
+  const holiday = build({ ...p, holiday_note: true }, 'https://menu-made.com/api/menu-preview/abc');
+  assert.match(holiday.text, /P\.S\. .*Christmas.*Just reply\./); assert.equal((holiday.text.match(/https?:\/\//g) || []).length, 1);
+});

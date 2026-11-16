@@ -11,6 +11,18 @@ async function open(page, url) {
   try { const r = await page.goto(url, { waitUntil: "domcontentloaded", timeout: 25000 }); await page.waitForTimeout(2500); return r; } catch { return null; }
 }
 
+async function showsEmail(page, email) {
+  const has = async () => (await page.content().catch(() => "")).toLowerCase().replace(/&#64;|&#x40;|\[at\]|\(at\)/g, "@").includes(email);
+  if (await has()) return true;
+  const start = page.url();
+  const contact = await page.evaluate(() => [...document.querySelectorAll("a[href]")].map((a) => ({ href: a.href, text: (a.innerText || "").trim().toLowerCase() }))
+    .find((l) => /contact|about|find us|visit/.test(l.text + " " + l.href.toLowerCase()))?.href || null).catch(() => null);
+  if (!contact || !sameSite(contact, start)) return false;
+  const found = (await open(page, contact)) ? await has() : false;
+  await open(page, start);
+  return found;
+}
+
 export async function verify(browser, p) {
   const email = String(p.email || "").toLowerCase();
   const domain = email.split("@")[1] || "";
@@ -28,6 +40,10 @@ export async function verify(browser, p) {
       return listed.includes("site_down") && (!res || [404, 410, 500, 502, 504].includes(res.status())) ? { gaps: ["site_down"], offer_code: "WEBSITE_PACKAGE", email } : null;
     }
     if (PLATFORMS.test(host(page.url()))) return null;
+    // Nov 16, 2026: addresses taken from OpenStreetMap bounced twice as often as ones found on the business's own
+    // site (5 of 48 vs 4 of 79). An OSM address on a business-domain mailbox is used only when the site itself still
+    // shows it, on the home page or its contact page.
+    if (p.email_source === "osm" && !FREE_MAIL.test(email) && !(await showsEmail(page, email))) return null;
     const home = await page.evaluate(() => {
       const vw = document.documentElement.clientWidth;
       const links = [...document.querySelectorAll("a[href]")].map((a) => ({ href: a.href, text: (a.innerText || a.getAttribute("aria-label") || "").trim().toLowerCase() }));

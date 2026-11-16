@@ -6,12 +6,11 @@
 // 1. Reply sync from the Zoho inbox: bounces -> BOUNCED; replies -> REPLIED, or OPTED_OUT for no thanks /
 //    unsubscribe; every new reply is forwarded to info@menu-made.com (Reply-To = the prospect) so JP answers from
 //    his normal inbox. Forwarded messages get the $MMForwarded keyword so they are forwarded once.
-// 2. The day's allowance from the worker's warm-up plan (send-plan: 3 a day at first, rising to 30 a day).
+// 2. The day's allowance from the worker's warm-up plan (send-plan: 3 a day at first, rising to 50 a day).
 // 3. Day-3 follow-ups of earlier auto-sent prospects first, then new prospects, each checked exactly like the
 //    drafts (mail server exists, gaps re-checked in a phone-size browser, menu preview built when possible).
 //
 // The repository is public: the log shows counts only.
-import { readFileSync } from "node:fs";
 import { resolveMx } from "node:dns/promises";
 import { ImapFlow } from "imapflow";
 import nodemailer from "nodemailer";
@@ -27,7 +26,6 @@ const FORWARD_TO = "info@menu-made.com";
 const PASS = process.env.ZOHO_APP_PASSWORD;
 const DRY = process.env.PREVIEW === "1" || process.env.PREVIEW === "true";
 const OPT_OUT = /\b(no thanks|no thank you|unsubscribe|remove me|take me off|stop emailing|not interested|do not (contact|email))\b/i;
-const logo = readFileSync(new URL("./assets/email-logo.png", import.meta.url));
 
 if (!PASS) { console.log("Auto-sending is not connected yet (ZOHO_APP_PASSWORD secret). Nothing sent."); process.exit(0); }
 
@@ -47,10 +45,9 @@ const imap = new ImapFlow({ host: "imap.zoho.com", port: 993, secure: true, logg
 await smtp.verify();
 await imap.connect();
 
-// Prospect mail: the Menu-made design, an unsubscribe header, and the logo inline.
+// Prospect mail: plain text from JP (Nov 16, 2026: the designed emails got no replies) with an unsubscribe header.
 const mail = (p, email, extra = {}) => ({
-  from: FROM, to: p.email, subject: email.subject, text: email.text, html: email.html,
-  attachments: [{ filename: "menu-made.png", content: logo, cid: "logo@menu-made", contentDisposition: "inline" }],
+  from: FROM, to: p.email, subject: email.subject, text: email.text,
   list: { unsubscribe: { url: `mailto:${USER}?subject=unsubscribe`, comment: "Unsubscribe" } },
   headers: { "X-Menu-Made-Prospect": p.id, ...extra }
 });
@@ -110,8 +107,12 @@ const plan = await api("send-plan", {});
 console.log(`Warm-up business day ${plan.day}: ${plan.cap} a day, ${plan.sent_today} already sent today, ${plan.left} left.`);
 let left = DRY ? 0 : plan.left;
 
-// 3a. Follow-ups of earlier auto-sent prospects.
-const { prospects: due = [], price } = await api("followups", { via: "getmenumade" });
+// 3a. Follow-ups: the auto-sent prospects, and (Nov 16, 2026) those the owner sent from iCloud, whose follow-ups used
+// to be left in his Drafts. One follow-up per business, ever, so nobody gets more than two emails.
+const mine = await api("followups", { via: "getmenumade" });
+const his = await api("followups", {});
+const due = [...(mine.prospects || []), ...(his.prospects || [])];
+const price = mine.price;
 const followed = [];
 let built = 0;
 for (const row of due) {

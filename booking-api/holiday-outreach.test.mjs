@@ -92,7 +92,7 @@ test('the holiday email: plain, priced from the catalog code, with their preview
   assert.match(sent.text, /\$59 per holiday, or \$89 for both/);
   assert.match(sent.text, /See your menu in the holiday designs: https:\/\/menu-made\.com\/api\/menu-preview\/view\/abc/);
   assert.doesNotMatch(sent.text, /one-time note/, 'not "one-time": some already had an email');
-  assert.doesNotMatch(sent.html, /restaurant|[Pp]ay /, 'business, not restaurant; checkout, not pay');
+  assert.doesNotMatch(sent.text, /restaurant|[Pp]ay /, 'business, not restaurant; checkout, not pay');
   const fresh = buildHoliday({ name: 'Harbor Kitchen', contacted: false });
   assert.equal(fresh.subject, "Harbor Kitchen's holiday menu, online");
   assert.match(fresh.text, /See holiday menus: https:\/\/menu-made\.com\/holiday-menu\?utm_source=outreach&utm_medium=email&utm_campaign=holiday-menu/);

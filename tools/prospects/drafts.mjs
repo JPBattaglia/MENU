@@ -1,37 +1,23 @@
-// Marketing (Nov 1, 2026, owner choice): the week's prospect emails as drafts in info@menu-made.com (iCloud Mail).
-// Run by .github/workflows/prospect-drafts.yml with imapflow and nodemailer installed. The owner opens Apple Mail,
-// reviews each draft in Drafts and taps Send; nothing is sent by this job.
+// Marketing: the iCloud side of prospect outreach (info@menu-made.com). Run by .github/workflows/prospect-drafts.yml.
 //
+// Nov 16, 2026 (owner: "Emails are getting no response", then "Do all"): this job no longer writes drafts. Every
+// prospect email, first and follow-up, now goes out by itself from jp@getmenumade.com (send.mjs), so nothing piles up
+// in the owner's Drafts. What's left here:
 // 1. Status sync, so nobody is emailed twice: addresses in Sent from the last 45 days -> SENT; replies in the inbox
-//    from the last 45 days -> REPLIED, or OPTED_OUT when they say no thanks / unsubscribe / remove / stop.
-// 2. The week's batch (default 25) from the private database, each built by email.mjs with the logo inline, appended
-//    to Drafts (\Draft flag), then marked DRAFTED.
+//    from the last 45 days -> REPLIED, or OPTED_OUT when they say no thanks / unsubscribe / remove / stop; bounces.
+// 2. Clean-up: prospect drafts this job made earlier and the owner never sent are removed from Drafts, and the worker
+//    is told (prospects/release) so those businesses go back to the auto-sender: a first email, a follow-up, or
+//    nothing for a holiday draft to someone already emailed (two emails per business at most).
 //
 // Secrets: ICLOUD_USER (the Apple ID email used for iCloud Mail), ICLOUD_APP_PASSWORD (an app-specific password).
 // The repository is public: the log shows counts only.
-import { readFileSync } from "node:fs";
 import { isAutoReply } from "./auto-reply.mjs";
-import { resolveMx } from "node:dns/promises";
 import { ImapFlow } from "imapflow";
-import MailComposer from "nodemailer/lib/mail-composer/index.js";
-import { build, buildFollowup, buildFirstFollowup, buildHoliday, holidaySeasonNow } from "./email.mjs";
-import { verify } from "./verify.mjs";
-import { makePreview } from "./preview.mjs";
-import { chromium } from "playwright";
 
 const API = "https://menu-made.com/api/system/prospects";
-const FROM = { name: "JP Battaglia", address: "info@menu-made.com" };
-const LIMIT = Number(process.env.BATCH_SIZE || 25);
-// PREVIEW=1: browser checks only (no iCloud Mail): confirmed gaps are saved on the prospect, the rest are SKIPPED.
+// PREVIEW=1: sync and list the clean-up, but delete nothing.
 const PREVIEW = process.env.PREVIEW === "1" || process.env.PREVIEW === "true";
-// REFRESH=1: rebuild the drafts still in Drafts (after a design or wording change). Sent emails are never touched.
-const REFRESH = process.env.REFRESH === "1" || process.env.REFRESH === "true";
-// SYNC_ONLY=1: record sent mail, replies, opt-outs and bounces; add no drafts.
-// FOLLOWUPS_ONLY=1 (Thursday run): after the sync, add only the day-3 follow-up drafts (marketing plan v4).
-const FOLLOWUPS_ONLY = process.env.FOLLOWUPS_ONLY === "1" || process.env.FOLLOWUPS_ONLY === "true";
-const SYNC_ONLY = process.env.SYNC_ONLY === "1" || process.env.SYNC_ONLY === "true";
 const OPT_OUT = /\b(no thanks|no thank you|unsubscribe|remove me|take me off|stop emailing|not interested|do not (contact|email))\b/i;
-const logo = readFileSync(new URL("./assets/email-logo.png", import.meta.url));
 
 async function token() {
   const { ACTIONS_ID_TOKEN_REQUEST_URL: u, ACTIONS_ID_TOKEN_REQUEST_TOKEN: t } = process.env;
@@ -43,39 +29,10 @@ async function api(path, body) {
   if (!res.ok) throw new Error(`${path}: ${res.status} ${out.error || ""}`);
   return out;
 }
-const raw = (mail) => new Promise((resolve, reject) => new MailComposer(mail).compile().build((e, m) => (e ? reject(e) : resolve(m))));
-
-// Day-3 follow-ups (marketing plan v4): sent prospects who opened their menu preview 3+ days ago and haven't replied,
-// plus (Nov 5, 2026) prospects emailed before previews existed: their menu preview is built now when their menu is a
-// file, otherwise they get a short follow-up about their offer. One draft each, ever; the worker records it.
-async function addFollowups() {
-  const { prospects: due = [], price } = await api("followups", {});
-  const done = [];
-  let built = 0;
-  for (const row of due) {
-    // In the holiday season the follow-up closes with the Holiday Menu offer as well.
-    const p = { ...row, holiday_note: holidaySeasonNow() };
-    let email;
-    if (p.kind === "no_preview") {
-      const preview = await makePreview(api, p);
-      if (preview) built++;
-      email = buildFirstFollowup({ ...p, offer_code: preview?.offer_code || p.offer_code }, preview?.url || null, price, preview?.kind);
-    } else email = buildFollowup(p, price);
-    if (!email) continue;
-    const message = await raw({ from: FROM, to: p.email, subject: email.subject, text: email.text, html: email.html,
-      attachments: [{ filename: "menu-made.png", content: logo, cid: "logo@menu-made", contentDisposition: "inline" }],
-      headers: { "X-Menu-Made-Prospect": p.id, "X-Menu-Made-Followup": "1" } });
-    await client.append(draftsBox, message, ["\\Draft", "\\Seen"]);
-    done.push(p.id);
-  }
-  if (done.length) await api("followups", { mark: done });
-  console.log(`Follow-up drafts added: ${done.length} (${built} with a preview built for the follow-up)`);
-}
-
-const client = PREVIEW ? null : new ImapFlow({ host: "imap.mail.me.com", port: 993, secure: true, logger: false,
+const client = new ImapFlow({ host: "imap.mail.me.com", port: 993, secure: true, logger: false,
   auth: { user: process.env.ICLOUD_USER, pass: process.env.ICLOUD_APP_PASSWORD } });
 let draftsBox = null, sentBox = null, sentBoxes = [], inboxBoxes = ["INBOX"];
-if (!PREVIEW) {
+{
   await client.connect();
   const boxes = await client.list();
   const special = (use, fallback) => boxes.find((b) => b.specialUse === use)?.path || boxes.find((b) => fallback.test(b.path))?.path;
@@ -103,7 +60,7 @@ for (const sentBox of sentBoxes) {
   } finally { lock.release(); }
 }
 let replies = 0, optOuts = 0, bounces = 0;
-if (!PREVIEW) for (const inboxBox of inboxBoxes) {
+for (const inboxBox of inboxBoxes) {
   const lock = await client.getMailboxLock(inboxBox);
   try {
     let n = 0;
@@ -139,133 +96,20 @@ for (let k = 0; k < updates.length; k += 400) {
   console.log(`Status sync: ${r.changed} prospect rows updated (delivery failures found: ${bounces})`);
 }
 
-if (SYNC_ONLY) { await client.logout(); console.log("Sync only: no drafts added."); process.exit(0); }
-if (FOLLOWUPS_ONLY) { await addFollowups(); await client.logout(); process.exit(0); }
-if (REFRESH) {
-  const lock = await client.getMailboxLock(draftsBox);
-  const old = [], oldHoliday = [];
-  try {
-    // An empty Drafts folder answers "1:*" with "Invalid message number" (Nov 10, 2026): nothing to rebuild.
-    if (client.mailbox?.exists) for await (const m of client.fetch("1:*", { uid: true, headers: ["x-menu-made-prospect", "x-menu-made-holiday", "x-menu-made-followup"] })) {
-      const headers = m.headers?.toString() || "";
-      const id = /x-menu-made-prospect:\s*(\S+)/i.exec(headers)?.[1];
-      // Holiday drafts are rebuilt as holiday emails; follow-up drafts stay as they are (their preview details
-      // aren't in the batch list, and rebuilding one as a first email would be the wrong email).
-      if (!id || /x-menu-made-followup:/i.test(headers)) continue;
-      (/x-menu-made-holiday:/i.test(headers) ? oldHoliday : old).push({ uid: m.uid, id });
-    }
-  } finally { lock.release(); }
-  const { prospects: rows } = await api("batch", { ids: [...new Set(old.map((o) => o.id))] });
-  let rebuilt = 0;
-  for (const p of rows) {
-    // Keep each draft's own preview (reused when it's still running, rebuilt with today's generator otherwise).
-    const preview = await makePreview(api, p).catch(() => null);
-    const email = build({ ...p, offer_code: preview?.offer_code || p.offer_code }, preview?.url || null, preview?.kind);
-    if (!email) continue;
-    const message = await raw({ from: FROM, to: p.email, subject: email.subject, text: email.text, html: email.html,
-      attachments: [{ filename: "menu-made.png", content: logo, cid: "logo@menu-made", contentDisposition: "inline" }],
-      headers: { "X-Menu-Made-Prospect": p.id } });
-    await client.append(draftsBox, message, ["\\Draft", "\\Seen"]);
-    const uids = old.filter((o) => o.id === p.id).map((o) => o.uid);
-    const l2 = await client.getMailboxLock(draftsBox);
-    try { await client.messageDelete(uids.join(","), { uid: true }); } finally { l2.release(); }
-    rebuilt++;
+// 2. Clean-up of unsent prospect drafts (see the top of this file).
+const lock = await client.getMailboxLock(draftsBox);
+const found = { first: [], followup: [], holiday: [] }; const uids = [];
+try {
+  // An empty Drafts folder answers "1:*" with "Invalid message number" (Nov 10, 2026).
+  if (client.mailbox?.exists) for await (const m of client.fetch("1:*", { uid: true, headers: ["x-menu-made-prospect", "x-menu-made-holiday", "x-menu-made-followup"] })) {
+    const headers = m.headers?.toString() || "";
+    const id = /x-menu-made-prospect:\s*(\S+)/i.exec(headers)?.[1];
+    if (!id) continue; // only drafts this job made; the owner's own drafts are never touched
+    found[/x-menu-made-holiday:/i.test(headers) ? "holiday" : /x-menu-made-followup:/i.test(headers) ? "followup" : "first"].push(id);
+    uids.push(m.uid);
   }
-  // Holiday drafts (owner, Nov 12, 2026: the drafts showed the wrong colours): the same holiday email, built again
-  // with today's template; the preview link made for it is reused.
-  let holidayRebuilt = 0;
-  if (oldHoliday.length) {
-    const { prospects: hrows = [] } = await api("holiday", { ids: [...new Set(oldHoliday.map((o) => o.id))] });
-    for (const p of hrows) {
-      const demo = await api("holiday", { id: p.id }).catch(() => null);
-      const email = buildHoliday(p, demo?.ok ? demo.url : null);
-      const message = await raw({ from: FROM, to: p.email, subject: email.subject, text: email.text, html: email.html,
-        attachments: [{ filename: "menu-made.png", content: logo, cid: "logo@menu-made", contentDisposition: "inline" }],
-        headers: { "X-Menu-Made-Prospect": p.id, "X-Menu-Made-Holiday": "1" } });
-      await client.append(draftsBox, message, ["\\Draft", "\\Seen"]);
-      const uids = oldHoliday.filter((o) => o.id === p.id).map((o) => o.uid);
-      const l3 = await client.getMailboxLock(draftsBox);
-      try { await client.messageDelete(uids.join(","), { uid: true }); } finally { l3.release(); }
-      holidayRebuilt++;
-    }
-  }
-  await client.logout();
-  console.log(`Refreshed ${rebuilt} drafts still in Drafts (${old.length} found); ${holidayRebuilt} holiday drafts rebuilt (${oldHoliday.length} found).`);
-  process.exit(0);
-}
-
-// Holiday Menu (owner, Nov 10, 2026): through the holiday season (Nov 1 to Dec 20) this run's drafts are holiday
-// emails, one per business ever: prospects already emailed first, then new ones. Each carries the menu from their site
-// in the holiday designs when it can be read (built by the worker, booking-api/src/marketing/holiday-outreach.js).
-const holiday = await api("holiday", { limit: LIMIT }).catch((e) => { console.log(`Holiday list unavailable: ${e.message}`); return null; });
-if (holiday?.season && !PREVIEW) {
-  const done = [];
-  let previews = 0, noMail = 0;
-  for (const p of holiday.prospects || []) {
-    const mx = await resolveMx(String(p.email).split("@")[1]).catch(() => []);
-    if (!mx.length) { noMail++; continue; }
-    const demo = await api("holiday", { id: p.id }).catch(() => null);
-    if (demo?.ok) previews++;
-    const email = buildHoliday(p, demo?.ok ? demo.url : null);
-    const message = await raw({ from: FROM, to: p.email, subject: email.subject, text: email.text, html: email.html,
-      attachments: [{ filename: "menu-made.png", content: logo, cid: "logo@menu-made", contentDisposition: "inline" }],
-      headers: { "X-Menu-Made-Prospect": p.id, "X-Menu-Made-Holiday": "1" } });
-    await client.append(draftsBox, message, ["\\Draft", "\\Seen"]);
-    done.push(p.id);
-  }
-  if (done.length) await api("holiday", { mark: done });
-  await addFollowups();
-  await client.logout();
-  console.log(`Holiday season: ${done.length} holiday drafts added (${previews} with their menu in the holiday designs); ${noMail} skipped for having no mail server. Regular first emails resume after Dec 20.`);
-  process.exit(0);
-}
-
-// Once the getmenumade.com sender has warmed up (send.mjs), it sends the new prospects itself and the iCloud drafts
-// stop (owner, Nov 5, 2026); follow-ups for prospects the owner sent from iCloud still arrive here as drafts.
-const plan = await api("send-plan", {}).catch(() => null);
-if (plan?.warmup_done && !PREVIEW) {
-  await addFollowups(); await client.logout();
-  console.log("New prospects now go out automatically from jp@getmenumade.com; only follow-up drafts were added.");
-  process.exit(0);
-}
-
-// 2. This week's drafts. Every claim is re-checked in a phone-size browser first (verify.mjs); a prospect whose gaps
-// don't hold up is SKIPPED and never emailed. Candidates are taken three times over so the week still gets LIMIT.
-const { prospects } = await api("batch", { limit: Math.min(50, LIMIT * 3) });
-const browser = await chromium.launch();
-const drafted = [], skipped = [];
-let previews = 0;
-for (const candidate of prospects) {
-  if (drafted.length >= LIMIT) break;
-  // The address's domain must accept mail at all (no mail server = a sure bounce).
-  const mx = await resolveMx(String(candidate.email).split("@")[1]).catch(() => []);
-  if (!mx.length) { skipped.push({ id: candidate.id, status: "SKIPPED" }); continue; }
-  const checked = await verify(browser, candidate).catch(() => null);
-  if (!checked) { skipped.push({ id: candidate.id, status: "SKIPPED" }); continue; }
-  const p = { ...candidate, gaps_json: JSON.stringify(checked.gaps), offer_code: checked.offer_code, email: checked.email };
-  if (PREVIEW) { drafted.push({ id: p.id, status: "NEW", gaps: checked.gaps, offer_code: checked.offer_code }); continue; }
-  const confirmed = { gaps: checked.gaps, offer_code: checked.offer_code };
-  // Marketing plan v4: each prospect's own menu (as a phone page) or business (as a website) is built first.
-  // Any failure just means the email goes out without the preview.
-  await api("status", { updates: [{ id: p.id, status: "NEW", ...confirmed }] }).catch(() => null);
-  const preview = await makePreview(api, p, checked.gaps);
-  if (preview) { previews++; p.offer_code = preview.offer_code; confirmed.offer_code = preview.offer_code; }
-  const demoUrl = preview?.url || null;
-  const email = build(p, demoUrl, preview?.kind);
-  if (!email) continue;
-  const message = await raw({ from: FROM, to: p.email, subject: email.subject, text: email.text, html: email.html,
-    attachments: [{ filename: "menu-made.png", content: logo, cid: "logo@menu-made", contentDisposition: "inline" }],
-    headers: { "X-Menu-Made-Prospect": p.id } });
-  await client.append(draftsBox, message, ["\\Draft", "\\Seen"]);
-  drafted.push({ id: p.id, status: "DRAFTED", ...confirmed });
-}
-await browser.close();
-if (PREVIEW) {
-  if (drafted.length || skipped.length) await api("status", { updates: [...drafted, ...skipped] });
-  console.log(`Preview: ${drafted.length} prospects confirmed in a browser, ${skipped.length} skipped. Nothing was drafted or sent.`);
-  process.exit(0);
-}
-if (drafted.length || skipped.length) await api("status", { updates: [...drafted, ...skipped] });
-await addFollowups();
+  if (uids.length && !PREVIEW) await client.messageDelete(uids.join(","), { uid: true });
+} finally { lock.release(); }
+const released = uids.length && !PREVIEW ? await api("release", found) : { changed: 0 };
 await client.logout();
-console.log(`Drafts added to iCloud Mail: ${drafted.length} (asked for ${LIMIT}), ${previews} with a menu or website preview; ${skipped.length} candidates skipped because their gaps didn't hold up in a browser.`);
+console.log(`Unsent prospect drafts removed from Drafts: ${uids.length} (${found.first.length} first, ${found.followup.length} follow-up, ${found.holiday.length} holiday); ${released.changed} businesses handed to the auto-sender.`);
