@@ -118,7 +118,14 @@ async function checkEmailHealth(env, fetcher, now = Date.now()) {
       if (!got) continue;
       if (got.restricted) { restricted = true; break; }
       read += 1;
-      if (["bounced", "complained"].includes(got.data?.last_event)) bounced.push(`${row.template_key} ${got.data.last_event}`);
+      if (["bounced", "complained"].includes(got.data?.last_event)) {
+        // Nov 16, 2026: a bounce to a domain with no mail server (jp@menu-made.ocm in a sandbox test) is a mistyped
+        // address, not a sending problem; it's noted, not failed.
+        const domain = String(row.recipient || "").split("@")[1] || "";
+        const mx = got.data.last_event === "bounced" && domain ? await dnsLookup(fetcher, domain, "MX").catch(() => null) : null;
+        if (Array.isArray(mx) && !mx.length) { notes.push(`${row.template_key} went to a mistyped address (${domain} has no mail server)`); continue; }
+        bounced.push(`${row.template_key} ${got.data.last_event}`);
+      }
     }
     if (bounced.length) problems.push(`Sending: ${bounced.length} of the latest customer emails ${bounced.length === 1 ? "was" : "were"} not accepted (${bounced.join(", ")})`);
     else if (read) notes.push(`latest ${read} customer emails delivered (no bounces or spam reports)`);

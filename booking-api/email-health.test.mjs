@@ -85,7 +85,7 @@ test('a record Resend reports as not verified fails', async () => {
 });
 
 test('render problems, send failures and bounces fail', async () => {
-  const s = setup({ emails: { em_b: 'bounced' } });
+  const s = setup({ dns: { ...healthyDns(), 'example.com MX': ['10 mx.example.com.'] }, emails: { em_b: 'bounced' } });
   s.comm('delivery_menu_qr_v1', 'delivered@resend.dev', 'SENT', 'em_x', { lint: ['undefined'] });
   s.comm('merch_shipped_v1', 'buyer@example.com', 'FAILED', null, {}, '2026-11-01T20:00:00.000Z');
   s.comm('delivery_website_v1', 'owner@example.com', 'SENT', 'em_b');
@@ -94,6 +94,15 @@ test('render problems, send failures and bounces fail', async () => {
   assert.match(r.error, /Templates: delivery_menu_qr_v1 \(undefined\)/);
   assert.match(r.error, /1 email failed to send/);
   assert.match(r.error, /delivery_website_v1 bounced/);
+});
+
+// Nov 16, 2026: sandbox previews sent to jp@menu-made.ocm / .con bounced and failed the daily check.
+test('a bounce to a domain with no mail server is a mistyped address: noted, not failed', async () => {
+  const s = setup({ emails: { em_t: 'bounced' } });
+  s.comm('menu_preview_reminder_v1', 'jp@menu-made.ocm', 'SENT', 'em_t');
+  const r = await s.run();
+  assert.equal(r.status, 'PASSED', r.error);
+  assert.ok(r.notes.some((n) => /menu_preview_reminder_v1 went to a mistyped address \(menu-made.ocm has no mail server\)/.test(n)));
 });
 
 test('a send-only Resend key falls back to DNS without failing', async () => {
