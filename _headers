@@ -1,0 +1,6 @@
+# Cloudflare static-asset headers (owner, Nov 16, 2026).
+# The store apps run from capacitor://localhost (iPhone) and https://localhost (Android), so their live-update check
+# (app-shell/www/live.js) reads these files cross-origin. Without this header the phone blocks the download and the
+# apps never get screen changes. Read-only public files, so any origin may read them.
+/app-shell/www/*
+  Access-Control-Allow-Origin: *
