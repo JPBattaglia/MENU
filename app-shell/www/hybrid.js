@@ -801,6 +801,16 @@
     box.appendChild(less); box.appendChild(out); box.appendChild(more); draw();
     return box;
   }
+  // Every picture in the Nino app zooms (owner, Nov 15, 2026: "Need to be able to zoom all images in the Nino app and
+  // site"): a tap on any picture that isn't itself a button or link (those open their design or piece, whose picture
+  // then zooms) opens the same full-screen viewer as the product photo. Bars, logos, loaders and icons are left out.
+  document.addEventListener("click", function (ev) {
+    var t = ev.target;
+    if (!data || data.kind !== "shop" || !t || t.tagName !== "IMG" || t.classList.contains("hy-zoomable")) return;
+    if (t.closest("button, a, [role=button], .hy-bar, .hy-zoom, .hy-loader, .hy-inline-loader, .hy-sheet, .hy-intro, nav")) return;
+    if ((t.naturalWidth || 0) < 120 || (t.getBoundingClientRect().width || 0) < 40) return;
+    zoomViewer(t.currentSrc || t.src, t.alt);
+  });
   // Full-screen picture with pinch to zoom, drag to look around and double-tap to zoom in or out (owner, Nov 13, 2026:
   // "zooming in to any T-shirt model on android is not working"). The app's page can't be pinch-zoomed (viewport
   // user-scalable=no, which Android's web view obeys and iPhone's ignores), so the picture zooms itself, the same on both.
@@ -1022,7 +1032,8 @@
         var back = el("button", "hy-icon-btn"); back.type = "button"; back.setAttribute("aria-label", "Back to Work"); back.appendChild(icon("back"));
         back.addEventListener("click", function () { show("work"); });
         bar.appendChild(back); bar.appendChild(el("strong", null, w.title)); s.appendChild(bar);
-        var big = el("img", "hy-hero-img hy-work-full"); big.src = w.full || w.image; big.alt = w.title; s.appendChild(big);
+        var big = el("img", "hy-hero-img hy-work-full hy-zoomable"); big.src = w.full || w.image; big.alt = w.title; s.appendChild(big);
+        big.addEventListener("click", function () { zoomViewer(big.currentSrc || big.src, big.alt); });
         var about = el("div", "hy-pad"); about.appendChild(el("p", "hy-eyebrow", w.category || "")); about.appendChild(el("h2", null, w.title));
         var ask = button("Start a project like this", "hy-btn"); ask.addEventListener("click", function () { openWeb(data.links.services); });
         about.appendChild(ask); s.appendChild(about);

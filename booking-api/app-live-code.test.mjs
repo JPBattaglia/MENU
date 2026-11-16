@@ -100,3 +100,12 @@ test('Nino product photo keeps its full-screen pinch and double-tap zoom', () =>
   assert.match(js, /e\.touches/); assert.match(js, /lastTap < 300/);
   assert.match(css, /\.hy-zoom \{[^}]*touch-action: none/);
 });
+
+// Owner, Nov 15, 2026: "Need to be able to zoom all images in the Nino app and site." Every picture in the Nino app
+// that isn't a button or link opens the same viewer, and the Work piece's big picture does too.
+test('every picture in the Nino app zooms', () => {
+  const js = readFileSync(new URL('../app-shell/www/hybrid.js', import.meta.url), 'utf8');
+  assert.match(js, /document\.addEventListener\("click", function \(ev\) \{[\s\S]{0,200}data\.kind !== "shop"[\s\S]{0,400}zoomViewer\(t\.currentSrc \|\| t\.src, t\.alt\)/);
+  assert.match(js, /"hy-hero-img hy-work-full hy-zoomable"/);
+  assert.match(js, /big\.addEventListener\("click", function \(\) \{ zoomViewer\(/);
+});
