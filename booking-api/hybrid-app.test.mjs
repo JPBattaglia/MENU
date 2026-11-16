@@ -66,6 +66,28 @@ test('menumade: the three plans with live prices, described by their included se
   assert.match(c.hero.image, /^https:\/\/menu-made\.com\//);
 });
 
+test('the how-to videos: every generator carries the same video as its menu-made.com page, and the app draws it', () => {
+  // Owner, Nov 15, 2026: "Why are the instruction videos in the menu site not on the menu app?"
+  const c = hybrid.menumadeContent({ ok: true, offers: [{ code: 'HOLIDAY_MENU', name: 'Holiday Menu', on_sale: true, price_cents: 5900 }] }, { now: Date.parse('2026-11-20T20:00:00Z') });
+  const gens = [...c.generators, ...(c.seasonal || [])];
+  assert.deepEqual(gens.map((g) => g.key), ['menu', 'site', 'holiday']);
+  const pages = { menu: 'online-menu.html', site: 'website-design.html', holiday: 'holiday-menu.html' };
+  for (const g of gens) {
+    assert.match(g.video?.src || '', /^https:\/\/menu-made\.com\/assets\/video\/[a-z-]+\.mp4\?v=\d+$/, g.key);
+    assert.match(g.video.poster, /^https:\/\/menu-made\.com\/assets\/video\/[a-z-]+-poster\.jpg\?v=\d+$/, g.key);
+    const file = new URL(g.video.src).pathname.slice(1);
+    assert.ok(existsSync(new URL(`../${file}`, import.meta.url)), `${file} is in the repo`);
+    const page = readFileSync(new URL(`../${pages[g.key]}`, import.meta.url), 'utf8');
+    const versioned = file + new URL(g.video.src).search;
+    assert.ok(page.includes(`src="${versioned}"`), `${pages[g.key]} plays the same file and version as the app (${versioned})`);
+  }
+  const screens = readFileSync(new URL('../app-shell/www/hybrid.js', import.meta.url), 'utf8');
+  assert.match(screens, /function howToVideo\(g\)/);
+  assert.match(screens, /webkitEnterFullscreen/, 'iPhone full screen');
+  assert.match(screens, /is-filling/, 'fill-the-screen fallback for Android');
+  assert.ok((screens.match(/howToVideo\(g\)/g) || []).length >= 3, 'defined, and shown on the chooser and the form');
+});
+
 test('the route answers public JSON with CORS, refuses unknown apps, and says unavailable when the source fails', async () => {
   const req = (key, method = 'GET') => new Request(`https://menu-made.com/api/app-hybrid/${key}`, { method });
   const ok = await hybrid.handleHybridContent(req('nino'), {}, 'nino', { cacheStore: null, fetchImpl: async () => Response.json(NINO_CATALOG) });

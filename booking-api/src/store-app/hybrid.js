@@ -19,6 +19,8 @@ import { queuePush } from "../producers/guest-app/engage.js";
 
 const TTL = 300;
 const MM = "https://menu-made.com";
+// Bumped whenever tools/howto-videos re-records the how-to videos, so phones fetch the new files.
+const HOWTO_VIDEO_VERSION = "20261115";
 const NINO = "https://ninobattaglia.com";
 // Nino's shop API (NinoSite commerce-api): rewards card, ideas board and the last week's new designs (fans.mjs).
 const NINO_API = "https://nino-printful-commerce-api.ijpbattaglia.workers.dev";
@@ -70,6 +72,10 @@ function menumadeContent(catalog, { offCodes = [], now = Date.now() } = {}) {
   const holidayPrice = dollars(HOLIDAY_PRICING.firstCents);
   const first = occasions[0]?.key;
   const which = occasions.map((o) => o.label).join(" or ");
+  // The how-to video beside each generator on menu-made.com (owner, Nov 15, 2026: "Why are the instruction videos in
+  // the menu site not on the menu app?"). Same files as the site; tools/howto-videos re-records them.
+  const howTo = (name, label) => ({ src: `${MM}/assets/video/${name}.mp4?v=${HOWTO_VIDEO_VERSION}`, poster: `${MM}/assets/video/${name}-poster.jpg?v=${HOWTO_VIDEO_VERSION}`,
+    label: `${label} (captioned, no sound)`, caption: "Watch how it works: captioned, no sound." });
   const holidayGenerators = occasions.length ? [{
     key: "holiday", noun: "holiday menu", title: "Holiday menu generator", count: 6, badge: `${holidayPrice} per holiday`,
     text: `A ${which} menu with its own link and QR code, apart from your regular menu.`,
@@ -110,11 +116,12 @@ function menumadeContent(catalog, { offCodes = [], now = Date.now() } = {}) {
         name, note, alt: `${name} design: ${alt}`, image: `${MM}/assets/holiday/${file}.webp`, large: `${MM}/assets/holiday/${file}-large.webp` })) }))
     },
     form_text: "Upload your holiday menu. You'll see it as a phone menu in six holiday designs.",
+    video: howTo("holiday-menu-generator", "How to use the holiday menu generator, step by step"),
     create_url: `${MM}/api/menu-preview/create`, state_url: `${MM}/api/menu-preview/state/`, start: "Make my holiday menu preview",
     busy: ["Reading your holiday menu…", "Finding the courses, dishes and prices…", "Drawing your menu in six holiday designs…"], wait: "This takes about a minute. Keep the app open.",
     buttons: [
       { label: "Generate menu", text: "Shows your menu in the next of six holiday designs. Tap it as often as you like." },
-      { label: "Customize", text: "Adds your logo, your colour and the line under your name, on every design." },
+      { label: "Customize", text: "Adds your logo, your colour and the line under your name, on every design. Items and prices lets you fix a dish or change a price." },
       { label: "Make it live", text: `Orders the design on screen: ${holidayPrice} for one holiday, live through the day after it. A second holiday menu this season is ${dollars(HOLIDAY_PRICING.secondCents)}. Nothing renews.` }
     ]
   }] : [];
@@ -146,15 +153,17 @@ function menumadeContent(catalog, { offCodes = [], now = Date.now() } = {}) {
     generators: [
       { key: "menu", title: "Menu generator", count: 9, text: "Your printed menu becomes a phone menu page with a QR code.",
         create_url: `${MM}/api/menu-preview/create`, state_url: `${MM}/api/menu-preview/state/`, start: "Make my menu preview",
+        video: howTo("menu-generator", "How to use the menu generator, step by step"),
         busy: ["Reading your menu…", "Finding the sections, dishes and prices…", "Drawing your menu in nine designs…"], wait: "This takes about a minute. Keep the app open.",
         buttons: [
           { label: "Generate menu", text: "Shows your menu in the next of nine designs. Tap it as often as you like." },
-          { label: "Customize", text: "Adds your logo, your colour and your name the way you want it, on every design." },
+          { label: "Customize", text: "Adds your logo, your colour and your name the way you want it, on every design. Items and prices lets you fix a dish or change a price." },
           { label: "Make it live", text: `Orders the design on screen with MΞNU Plus (${plusPrice}): your menu online with its QR code, the print set and edits whenever you like, its first year free.` },
           { label: "Start free", text: "Puts your menu online free in the Classic design, with its own link and QR code. We email you a link to confirm." }
         ] },
       { key: "site", title: "Website generator", count: 9, text: "The same menu becomes a whole website: home, menu, about and contact pages.",
         create_url: `${MM}/api/website-preview/create`, state_url: `${MM}/api/website-preview/state/`, start: "Build my website preview", city: true,
+        video: howTo("website-generator", "How to use the website generator, step by step"),
         busy: ["Reading your menu…", "Writing your pages…", "Building your website in nine designs…"], wait: "This takes a minute or two. Keep the app open.",
         buttons: [
           { label: "Generate site", text: "Shows your website in the next of nine designs. Tap it as often as you like." },
