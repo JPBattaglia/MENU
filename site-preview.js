@@ -67,6 +67,9 @@
     const file = $('site_file').files[0];
     if (!business) { say('Add your business name.', true); $('site_business').focus(); return; }
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { say('Add an email address we can send the link to.', true); $('site_email').focus(); return; }
+    // A likely typo (gmial.com, .con) is pointed out once; tapping again sends it as typed (Nov 16, 2026).
+    const typo = !rep && window.MenuMadeDocuments?.emailTypo?.(email);
+    if (typo && form.dataset.typoWarned !== email) { form.dataset.typoWarned = email; say(`Did you mean <strong>${esc(typo)}</strong>? Fix the email, or tap again to use it as typed.`, true); $('site_email').focus(); return; }
     if (!file) { say('Choose your menu file (a PDF or a photo).', true); $('site_file').focus(); return; }
     if (!/\.(pdf|png|jpe?g|webp)$/i.test(file.name)) { say('Previews work from a PDF or a photo (PNG, JPEG or WebP).', true); return; }
     busy = true; button.disabled = true; button.textContent = 'Sending your menu…';

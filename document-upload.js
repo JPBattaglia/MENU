@@ -70,7 +70,21 @@
     }
     return result;
   }
-  window.MenuMadeDocuments = Object.freeze({ validate, fingerprint, send });
+  // Nov 16, 2026: two preview emails bounced to jp@menu-made.ocm and .con. Common slips in the part after @ are caught
+  // before upload: emailTypo(email) returns the likely intended address, or null when nothing looks mistyped.
+  const DOMAIN_FIX = { gmial: 'gmail', gmal: 'gmail', gamil: 'gmail', gmai: 'gmail', gnail: 'gmail', gmaill: 'gmail', gmail1: 'gmail',
+    yaho: 'yahoo', yahooo: 'yahoo', yhoo: 'yahoo', hotmial: 'hotmail', hotmal: 'hotmail', hotmai: 'hotmail', homail: 'hotmail',
+    iclod: 'icloud', icoud: 'icloud', iclould: 'icloud', outlok: 'outlook', outloo: 'outlook', outlool: 'outlook' };
+  const TLD_FIX = { con: 'com', ocm: 'com', cmo: 'com', comm: 'com', coom: 'com', vom: 'com', xom: 'com', cpm: 'com',
+    nte: 'net', nett: 'net', ogr: 'org', rog: 'org', edi: 'edu' };
+  function emailTypo(email) {
+    const m = /^([^\s@]+)@([^\s@]+)\.([a-z]+)$/i.exec(String(email || '').trim());
+    if (!m) return null;
+    const [, user, name, tld] = m; const lower = name.toLowerCase(); const t = tld.toLowerCase();
+    const fixedName = DOMAIN_FIX[lower] || lower; const fixedTld = TLD_FIX[t] || t;
+    return fixedName === lower && fixedTld === t ? null : `${user}@${fixedName}.${fixedTld}`;
+  }
+  window.MenuMadeDocuments = Object.freeze({ validate, fingerprint, send, emailTypo });
   document.querySelectorAll('#lead_document, #bookingDocument').forEach(input => {
     input.addEventListener('change', () => {
       try { validate(input.files[0]); input.setCustomValidity(''); }
