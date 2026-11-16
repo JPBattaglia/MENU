@@ -31,6 +31,9 @@ const REPORT_HOUR_UTC = 22;
 // Offer code -> the self-test kinds that prove it (each: what it covers for that offer).
 const OFFER_TESTS = {
   ONLINE_MENU_QR: [["MENU_QR_EXTRA_PAGES", "checkout with PDF upload, extra pages, approval, hosted menu"], ["MENU_HOSTING_RENEWAL", "year-one reminder and the 30-day grace"]],
+  // Four choices (owner, Nov 15, 2026): the two menu plans, bought the buyer's way from a menu preview.
+  MENU_PLUS: [["MENU_PLUS_RUN", "preview, Make it live, $12/mo checkout with the menu free, ACTIVE with MENU_PLUS and no period work, approval, live menu with no badge, print set and TV, cancel falls back to the free plan"]],
+  BUNDLE_PREMIUM: [["MENU_PRO_RUN", "preview, Make it live, $79/mo checkout with the menu free, ACTIVE with Plus and its four services, first-month jobs, approval, live menu with no badge, print set and TV, cancel falls back to the free plan"]],
   HOLIDAY_MENU: [["HOLIDAY_MENU_RUN", "holiday preview and its six designs, checkout at the holiday price, approval, live at its own holiday address in the chosen design"]],
   MENU_CARE: [["MENU_CARE_EDIT", "change request, AI edit, approval, hosted menu updated"]],
   REVIEW_REPLIES: [["REVIEW_REPLIES_RUN", "Google reviews read, replies drafted, routed and sent to Google"]],
