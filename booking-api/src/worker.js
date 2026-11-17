@@ -49,6 +49,7 @@ import { advanceMoneyPathsSelfTests } from "./selftest/money-paths.js";
 import { advanceEmailHealthSelfTests } from "./selftest/email-health.js";
 import { advanceStoreApps, handleStoreAppDone } from "./store-app/store-flow.js";
 import { ensureOwnStoreApps, sendOwnAppPushLinks } from "./store-app/own-apps.js";
+import { handleOwnerNotify } from "./store-app/owner-notify.js";
 import { advanceGuestAppPushSelfTests } from "./selftest/guest-app-push-selftest.js";
 import { advanceStoreAppSelfTests } from "./selftest/store-app-selftest.js";
 import { customHostSlug, runDomainWatch } from "./producers/website/domains.js";
@@ -142,6 +143,7 @@ var worker_default = {
     if (url.pathname === "/api/store-build/android-bundle" && request.method === "POST") return handleAndroidBundle(request, env);
     const bundleMatch = url.pathname.match(/^\/api\/store-build\/bundle\/(\d{1,9})$/);
     if (bundleMatch && request.method === "GET") return handleBundleDownload(request, env, bundleMatch[1]);
+    if (url.pathname === "/api/owner/notify" && (request.method === "GET" || request.method === "POST")) return handleOwnerNotify(request, env);
     if (url.pathname === "/api/store-keys/owner" && (request.method === "GET" || request.method === "POST")) return handleStoreKeys(request, env);
     if (url.pathname === "/api/store-keys/google" && (request.method === "GET" || request.method === "POST")) return handleGoogleKeys(request, env);
     const restaurantKeysMatch = url.pathname.match(/^\/api\/store-keys\/app\/([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})$/i);

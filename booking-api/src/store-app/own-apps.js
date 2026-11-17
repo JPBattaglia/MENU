@@ -223,4 +223,4 @@ async function sendOwnAppPushLinks(env) {
   return { sent: apps.length };
 }
 
-export { OWN_APPS, createOwnApp, ensureOwnStoreApps, sendOwnAppPushLinks };
+export { OWN_APPS, PUSH_LABELS, createOwnApp, ensureOwnStoreApps, sendOwnAppPushLinks };
