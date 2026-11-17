@@ -47,7 +47,7 @@
     biz.replaceChildren();
     for (const b of me.businesses || []) {
       const hosting = b.menu_hosting;
-      const links = [b.menu && { label: 'Your online menu', url: b.menu }, b.menu && !(hosting && hosting.status === 'OFFLINE') && { label: 'Edit your menu', url: `https://menu-made.com/menu-editor.html?business=${encodeURIComponent(b.id)}` }, hosting && { label: hosting.status === 'OFFLINE' ? 'Bring your menu back with MΞNU Plus' : 'Keep your menu online with MΞNU Plus', url: hosting.renew_url }, b.website && { label: 'Your website', url: b.website }, b.app && { label: 'Your Guest App', url: b.app }].filter(Boolean);
+      const links = [b.menu && { label: 'Your online menu', url: b.menu }, b.menu && !(hosting && hosting.status === 'OFFLINE') && { label: 'Edit your menu', url: `https://menu-made.com/menu-editor.html?business=${encodeURIComponent(b.id)}` }, hosting && { label: hosting.status === 'OFFLINE' ? 'Bring your menu back with MΞNU Plus' : 'Keep your menu online with MΞNU Plus', url: hosting.renew_url }, b.website && { label: 'Your website', url: b.website }, b.app && !b.app_push && { label: 'Your Guest App', url: b.app }, b.app_push && { label: 'Send a notification to app users', url: b.app_push }].filter(Boolean);
       const lines = hosting ? [hosting.status === 'OFFLINE' ? `Your online menu is offline (since ${day(hosting.offline_at)}).` : `Your online menu goes offline on ${day(hosting.offline_at)} unless you add MΞNU Plus.`] : [];
       // MΞNU free plan (Nov 14, 2026): the free menu says so and offers every design.
       if (b.free_plan) {

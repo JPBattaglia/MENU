@@ -12,6 +12,8 @@
 // Content is the Guest App content (business_type shop / services, see guest-app/build.js); changes afterwards go
 // through the normal update link in the monthly email. The logo is fetched once from the business's own website.
 import { ownerEmailAddress } from "../lib/config.js";
+import { brandedEmailHtml, sendTransactionalEmail } from "../lib/email.js";
+import { DAILY_PUSH_LIMIT, pushLink } from "../producers/guest-app/engage.js";
 import { nowIso } from "../lib/http.js";
 import { sha256Hex } from "../lib/util.js";
 import { refreshOnboardingState } from "../onboarding/onboarding.js";
@@ -192,4 +194,33 @@ async function ensureOwnStoreApps(env, { now = new Date(), force = false, fetchI
   return { created };
 }
 
-export { OWN_APPS, createOwnApp, ensureOwnStoreApps };
+// Owner, Nov 17, 2026: "How do I send notifications to either app?" Own apps have no plan, so no plan email ever carried
+// the "Send a notification" link. Emailed once to the owner inbox (links last 400 days); the account page shows them too.
+const PUSH_LINKS_KEY = "own_app_push_links_sent";
+const PUSH_LABELS = { "com.menumade.menumade": "MΞNU app", "com.menumade.ninobattaglia": "Nino app" };
+async function sendOwnAppPushLinks(env) {
+  if (!env.DB) return { skipped: "no_db" };
+  if (await env.DB.prepare(`SELECT 1 AS ok FROM worker_settings WHERE key = ?`).bind(PUSH_LINKS_KEY).first()) return { skipped: "sent" };
+  const apps = ((await env.DB.prepare(`SELECT g.id, s.bundle_id FROM store_apps s JOIN guest_apps g ON g.project_id = s.project_id WHERE s.own_app = 1 ORDER BY s.bundle_id`).all()).results || [])
+    .filter((a) => PUSH_LABELS[a.bundle_id]);
+  if (!apps.length) return { skipped: "no_apps" };
+  const buttons = [];
+  for (const a of apps) buttons.push({ label: `Send a notification: ${PUSH_LABELS[a.bundle_id]}`, url: await pushLink(env, a.id), primary: true });
+  const paragraphs = [
+    "Each button opens a page where you type a title and a short message and press Send. It reaches every iPhone and Android phone with notifications on in that app, within a few minutes.",
+    `Each app can send ${DAILY_PUSH_LIMIT} a day. For the Nino app, the automatic new-design notification counts as one of them.`,
+    "Keep this email: the buttons work for about a year. They're also on your account page at menu-made.com/account, under each business."
+  ];
+  const sent = await sendTransactionalEmail(env, {
+    to: ownerEmailAddress(env),
+    subject: "Send notifications to your MΞNU and Nino apps",
+    html: brandedEmailHtml({ preheader: "Your buttons for app notifications.", eyebrow: "YOUR APPS", heading: "Send a notification", paragraphs, buttons }),
+    text: [`Send a notification (${DAILY_PUSH_LIMIT} a day per app):`, ...buttons.map((b) => `${b.label}: ${b.url}`)].join("\n"),
+    idempotencyKey: "own-app-push-links/v1", purpose: "OWNER_ACTION", templateKey: "own_app_push_links_v1"
+  }).catch((error) => ({ ok: false, error }));
+  if (!sent?.ok) return { skipped: "send_failed" };
+  await env.DB.prepare(`INSERT INTO worker_settings (key, value, updated_at) VALUES (?, ?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated_at = excluded.updated_at`).bind(PUSH_LINKS_KEY, "1", nowIso()).run();
+  return { sent: apps.length };
+}
+
+export { OWN_APPS, createOwnApp, ensureOwnStoreApps, sendOwnAppPushLinks };

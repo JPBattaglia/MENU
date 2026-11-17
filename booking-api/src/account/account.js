@@ -328,7 +328,11 @@ async function accountSummary(env, customerId) {
         menuHosting = { status: state.reason === "offline" ? "OFFLINE" : "ENDING", offline_at: state.offlineAt, renew_url: await renewalLink(env, state.menuQrProjectId) };
       }
     }
-    businessList.push({ id: business.id, name: business.name, menu: menu || null, menu_hosting: menuHosting, free_plan: freePlan, website: website || null, app: app?.slug ? appUrl(env, app.slug) : null });
+    // The owner's own store apps (MΞNU and Nino, own-apps.js) have no plan, so their notification page is linked here
+    // (owner, Nov 17, 2026: he had no way to reach it).
+    const ownApp = await env.DB.prepare(`SELECT g.id FROM store_apps s JOIN guest_apps g ON g.project_id = s.project_id WHERE s.business_id = ? AND s.own_app = 1 LIMIT 1`).bind(business.id).first().catch(() => null);
+    const appPush = ownApp?.id ? await appPushLink(env, ownApp.id) : null;
+    businessList.push({ id: business.id, name: business.name, menu: menu || null, menu_hosting: menuHosting, free_plan: freePlan, website: website || null, app: app?.slug ? appUrl(env, app.slug) : null, app_push: appPush });
   }
 
   const subs = (await env.DB.prepare(`

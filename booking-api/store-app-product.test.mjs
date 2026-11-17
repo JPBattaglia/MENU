@@ -313,3 +313,30 @@ test('the Mobile App approval and delivery emails never call it a Guest App', as
   assert.match(owner.subject, /Mobile App/);
   assert.match(presenterFor('GUEST_APP_SETUP_V1').ownerLabel(context), /Guest App/, 'the Guest App product keeps its own wording');
 });
+
+test('own apps: one owner email with a working "Send a notification" button for each app, and the account page shows them', async () => {
+  const f = setup();
+  for (const m of ['0040_own_store_apps.sql', '0026_store_app_builds.sql', '0021_guest_app_engagement.sql', '0023_native_push.sql']) f.DB.raw.exec(read(m));
+  const own = await import('./src/store-app/own-apps.js');
+  const LOGO = Uint8Array.from(atob('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg=='), (c) => c.charCodeAt(0));
+  assert.deepEqual(await own.sendOwnAppPushLinks(f.env), { skipped: 'no_apps' });
+  await own.ensureOwnStoreApps(f.env, { force: true, fetchImpl: async () => new Response(LOGO) });
+  emails.length = 0;
+  assert.deepEqual(await own.sendOwnAppPushLinks(f.env), { sent: 2 });
+  assert.deepEqual(await own.sendOwnAppPushLinks(f.env), { skipped: 'sent' }, 'only once');
+  assert.equal(emails.length, 1);
+  assert.equal(emails[0].to[0] ?? emails[0].to, 'info@menu-made.com');
+  const urls = [...emails[0].text.matchAll(/https:\/\/menu-made\.com\/api\/app-push\/\S+/g)].map((m) => m[0]);
+  assert.equal(urls.length, 2);
+  assert.match(emails[0].text, /MΞNU app/);
+  assert.match(emails[0].text, /Nino app/);
+  for (const url of urls) {
+    const res = await call(f, url);
+    assert.equal(res.status, 200, 'the Mobile App Care on an own app keeps the page open');
+    assert.match(await res.text(), /Send a notification/);
+  }
+  const { accountSummary } = await import('./src/account/account.js');
+  const customer = f.row(`SELECT id FROM customers WHERE email = 'info@menu-made.com'`);
+  const summary = await accountSummary(f.env, customer.id);
+  assert.equal(summary.businesses.filter((b) => /\/api\/app-push\//.test(b.app_push || '')).length, 2);
+});
