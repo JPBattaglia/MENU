@@ -340,3 +340,35 @@ test('own apps: one owner email with a working "Send a notification" button for 
   const summary = await accountSummary(f.env, customer.id);
   assert.equal(summary.businesses.filter((b) => /\/api\/app-push\//.test(b.app_push || '')).length, 2);
 });
+
+test('owner Notifications page: sign-in link goes only to the owner inbox, opens both apps\' send pages, expires', async () => {
+  const f = setup();
+  for (const m of ['0040_own_store_apps.sql', '0026_store_app_builds.sql', '0021_guest_app_engagement.sql', '0023_native_push.sql']) f.DB.raw.exec(read(m));
+  const own = await import('./src/store-app/own-apps.js');
+  const LOGO = Uint8Array.from(atob('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg=='), (c) => c.charCodeAt(0));
+  await own.ensureOwnStoreApps(f.env, { force: true, fetchImpl: async () => new Response(LOGO) });
+  const start = await call(f, 'https://menu-made.com/api/owner/notify');
+  assert.equal(start.status, 200);
+  const startHtml = await start.text();
+  assert.match(startHtml, /Email me a sign-in link/);
+  assert.doesNotMatch(startHtml, /name="email"/, 'no address field: the link only goes to the owner');
+  assert.doesNotMatch(startHtml, /app-push/, 'nothing to send without signing in');
+  emails.length = 0;
+  const sent = await call(f, 'https://menu-made.com/api/owner/notify', { method: 'POST' });
+  assert.equal(sent.status, 200);
+  assert.equal(emails.length, 1);
+  assert.equal(emails[0].to[0] ?? emails[0].to, 'info@menu-made.com');
+  const link = emails[0].text.match(/https:\/\/menu-made\.com\/api\/owner\/notify\?t=\S+/)[0];
+  const page = await call(f, link);
+  assert.equal(page.status, 200);
+  const html = await page.text();
+  const pushUrls = [...html.matchAll(/href="(https:\/\/menu-made\.com\/api\/app-push\/[^"]+)"/g)].map((m) => m[1].replace(/&amp;/g, '&'));
+  assert.equal(pushUrls.length, 2);
+  assert.match(html, /MΞNU app/); assert.match(html, /Nino app/);
+  for (const u of pushUrls) assert.equal((await call(f, u)).status, 200);
+  const forged = await call(f, link.slice(0, -3) + 'abc');
+  assert.equal(forged.status, 403);
+  const realNow = Date.now;
+  Date.now = () => realNow() + 2 * 3600 * 1000;
+  try { assert.equal((await call(f, link)).status, 403, 'expires after an hour'); } finally { Date.now = realNow; }
+});
