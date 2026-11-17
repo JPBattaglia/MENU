@@ -353,6 +353,21 @@
     return all.length ? card : null;
   }
 
+  // Common slips after the @, the same list as the site's document-upload.js (MENU #297): returns the likely intended
+  // address, or null when nothing looks mistyped.
+  var DOMAIN_FIX = { gmial: "gmail", gmal: "gmail", gamil: "gmail", gmai: "gmail", gnail: "gmail", gmaill: "gmail", gmail1: "gmail",
+    yaho: "yahoo", yahooo: "yahoo", yhoo: "yahoo", hotmial: "hotmail", hotmal: "hotmail", hotmai: "hotmail", homail: "hotmail",
+    iclod: "icloud", icoud: "icloud", iclould: "icloud", outlok: "outlook", outloo: "outlook", outlool: "outlook" };
+  var TLD_FIX = { con: "com", ocm: "com", cmo: "com", comm: "com", coom: "com", vom: "com", xom: "com", cpm: "com",
+    nte: "net", nett: "net", ogr: "org", rog: "org", edi: "edu" };
+  function emailTypo(address) {
+    var m = /^([^\s@]+)@([^\s@]+)\.([a-z]+)$/i.exec(String(address || "").trim());
+    if (!m) return null;
+    var name = m[2].toLowerCase(), tld = m[3].toLowerCase();
+    var fixedName = DOMAIN_FIX.hasOwnProperty(name) ? DOMAIN_FIX[name] : name, fixedTld = TLD_FIX.hasOwnProperty(tld) ? TLD_FIX[tld] : tld;
+    return fixedName === name && fixedTld === tld ? null : m[1] + "@" + fixedName + "." + fixedTld;
+  }
+
   // The generator's form: business, email and the menu file; then the wait; then the designs.
   function genForm(s, g) {
     var bar = el("div", "hy-bar");
@@ -403,6 +418,10 @@
       var b = biz.value.trim(), e = email.value.trim(), c = city ? city.value.trim() : "";
       if (!b) { say("Add your business name."); biz.focus(); return; }
       if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e)) { say("Add an email address we can send the link to."); email.focus(); return; }
+      // As on the site (MENU #297, Nov 16, 2026): a likely typo after the @ (gmial.com, .con) is pointed out once;
+      // tapping again sends the address as typed.
+      var typo = emailTypo(e);
+      if (typo && form.getAttribute("data-typo-warned") !== e) { form.setAttribute("data-typo-warned", e); say("Did you mean " + typo + "? Fix the email, or tap again to use it as typed."); email.focus(); return; }
       if (!chosen) { say("Choose your menu file or take a photo."); return; }
       // As on the site (Nov 12, 2026): a PDF up to 20 MB, a photo up to 5 MB.
       if (!/^(application\/pdf|image\/(png|jpeg|webp))$/.test(chosen.type) || !chosen.size || chosen.size > (chosen.type === "application/pdf" ? 20 : 5) * 1024 * 1024) { say("Previews work from a PDF up to 20 MB, or a photo (PNG, JPEG or WebP) up to 5 MB."); return; }
