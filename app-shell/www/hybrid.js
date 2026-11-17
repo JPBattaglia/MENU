@@ -66,11 +66,13 @@
     var token = String(tok && tok.value || "");
     if (platform === "ios") token = token.toLowerCase();
     if (!(platform === "ios" ? /^[0-9a-f]{64,200}$/ : /^[A-Za-z0-9_:-]{100,4096}$/).test(token)) return;
-    var sent = t.store.get("push-sent") || {};
+    // "push-sent-v2" (Nov 17, 2026): every phone checks in once more, so real phones show as active and Google's
+    // pre-launch test phones (which never open the app again) can be told apart and cleared.
+    var sent = t.store.get("push-sent-v2") || {};
     push.state = "on"; pushChanged();
     if (sent.token === token && Date.now() - (sent.at || 0) < 7 * 86400000) return;
     t.api("push/native", { platform: platform, token: token, bundle_id: cfg.app_id, environment: cfg.push_environment || "production" })
-      .then(function (r) { if (r.ok) t.store.set("push-sent", { token: token, at: Date.now() }); }).catch(function () {});
+      .then(function (r) { if (r.ok) t.store.set("push-sent-v2", { token: token, at: Date.now() }); }).catch(function () {});
   }
   function startPush() {
     push.plugin = t.pushPlugin();
