@@ -8,6 +8,7 @@
 // code, and the print PDF, tri-fold, table tent and TV menu follow because they are built from the live page.
 // No owner approval: the business is editing its own menu. Prices are not checked against anything (they are the
 // business's own); the page check still makes sure everything typed is on the page.
+import { syncMenuEverywhere } from "../producers/menu-qr/menu-sync.js";
 import { menuStats } from "../marketing/menu-stats.js";
 import { nowIso } from "../lib/http.js";
 import { sanitizeFilename, sha256Hex } from "../lib/util.js";
@@ -100,6 +101,14 @@ async function publishMenu(env, business, session, live, { menu, style, changes,
   return { html, t };
 }
 
+// What else a save reached: "updated", "failed", or null when the business has no hosted website / no Google.
+function alsoUpdated(synced) {
+  const site = synced.website;
+  const website = site.done ? (site.unchanged ? null : "updated") : ["no_site", "not_generator"].includes(site.reason) ? null : "failed";
+  const google = synced.google.done ? "updated" : synced.google.reason === "no_google" ? null : "failed";
+  return { website, google };
+}
+
 async function handleMenuEditor(request, env) {
   if (!env.DB || !env.ASSETS) return privateJson({ ok: false, error: "Temporarily unavailable. Try again in a minute." }, 503);
   const session = await currentSession(request, env);
@@ -142,7 +151,9 @@ async function handleMenuEditor(request, env) {
   // Translated menus: what this edit added is translated now, so guests never see it in English first.
   const translations = await loadTranslations(env, business.id).catch(() => null);
   if (translations?.paid && translations.languages.length) await fillMissing(env, business.id, html, translations, { force: true }).catch(() => null);
-  return privateJson({ ok: true, menu_url: menuUrl, changes, updated_at: t });
+  // Stage 15 (Nov 17, 2026): the same edit updates their Menu-made-hosted website and their Google profile's menu.
+  const synced = await syncMenuEverywhere(env, business, menu).catch(() => null);
+  return privateJson({ ok: true, menu_url: menuUrl, changes, updated_at: t, also: synced ? alsoUpdated(synced) : null });
 }
 
 // ---- MΞNU free plan (stage 15 task 2, Nov 14, 2026) ----------------------------------------------------------

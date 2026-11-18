@@ -202,5 +202,10 @@ async function accessTokenFor(env, connection, fetchImpl = fetch) {
   }
 }
 
-export { GoogleApiError, listAccounts, listProfiles, getLocation, listReviews, getReview, putReviewReply, createLocalPost, createMedia, fetchDailyMetrics, formatAddress, v4LocationPath, accessTokenFor,
+// Replaces the profile's food menu (v4 updateFoodMenus; stage 15, Nov 17, 2026). menus is the FoodMenus resource body.
+async function updateFoodMenus(accessToken, locationPath, menus, fetchImpl = fetch) {
+  return googleWrite(accessToken, `${V4_BASE}/${locationPath}/foodMenus`, "PATCH", { name: `${locationPath}/foodMenus`, ...menus }, fetchImpl);
+}
+
+export { updateFoodMenus, GoogleApiError, listAccounts, listProfiles, getLocation, listReviews, getReview, putReviewReply, createLocalPost, createMedia, fetchDailyMetrics, formatAddress, v4LocationPath, accessTokenFor,
   getLocationForAudit, patchLocation, getAttributes, availableAttributes, setUriAttribute, listMedia };
