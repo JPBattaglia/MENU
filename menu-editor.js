@@ -146,7 +146,10 @@
       const out = await res.json().catch(() => ({}));
       if (!res.ok || !out.ok) { status.textContent = out.error || 'That didn’t save. Try again.'; return; }
       dirty = false;
-      status.textContent = out.unchanged ? 'Nothing changed.' : `Saved. Your live menu is updated${out.changes && out.changes.length ? `: ${out.changes.slice(0, 4).join('; ')}${out.changes.length > 4 ? '…' : ''}` : ''}.`;
+      const also = out.also || {};
+      const more = [also.website === 'updated' ? 'your website' : '', also.google === 'updated' ? 'your Google profile' : ''].filter(Boolean);
+      const failed = [also.website === 'failed' ? 'your website' : '', also.google === 'failed' ? 'your Google profile' : ''].filter(Boolean);
+      status.textContent = out.unchanged ? 'Nothing changed.' : `Saved. Your live menu is updated${more.length ? `, and so is ${more.join(' and ')}` : ''}${out.changes && out.changes.length ? `: ${out.changes.slice(0, 4).join('; ')}${out.changes.length > 4 ? '…' : ''}` : ''}.${failed.length ? ` We couldn't update ${failed.join(' or ')} this time; press Save again in a minute.` : ''}`;
     } catch {
       status.textContent = 'No connection. Your changes are still here; press Save again.';
     } finally {

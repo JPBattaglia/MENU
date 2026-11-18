@@ -63,6 +63,7 @@ const OFFER_TESTS = {
 const SYSTEMS = [
   ["Approval routing", "ROUTING_APPROVAL", "automatic vs owner-approved delivery, owner queue"],
   ["Customer accounts", "ACCOUNT_SIGNIN", "emailed sign-in link, account page, sign-out"],
+  ["MΞNU free plan and menu editor", "FREE_MENU_RUN", "Start free, confirm link, live Classic menu with badge and QR, editor save (price, diet marks, sold out) on the live page, QR visit counted in the owner's numbers"],
   ["Unfinished-checkout email", "ABANDONED_CHECKOUT", "reminder email and resumed checkout"],
   ["Custom domains", "CUSTOM_DOMAIN_SETUP", "Cloudflare for SaaS settings, token, fallback origin"],
   ["Google connection", "GOOGLE_API_HEALTH", "OAuth token refresh and the three Google APIs"],
