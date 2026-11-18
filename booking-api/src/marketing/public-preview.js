@@ -138,7 +138,7 @@ function publicPreviewPage(menuHtml, token, { index = 0, custom = {}, business =
   <label class="mm-own-colour">Highlight colour <input type="color" name="brand" value="${brand || "#00a7b5"}"></label>
   <label class="mm-own-check"><input type="checkbox" name="use_brand" value="1"${brand ? " checked" : ""}> Use it for lines, borders and accents</label>
   <label>Line under your name <small>(e.g. Dinner Menu, Est. 1998)</small><input name="subtitle" maxlength="60" value="${escapeHtml(custom.subtitle || (isOccasion(occasion) ? `${OCCASION_NAMES[occasion]} Menu` : "Menu"))}"></label>
-  <details class="mm-own-items"><summary>Items and prices <small>(fix anything we read wrong, change a price)</small></summary><div class="mm-items" id="mm-items"></div></details>
+  <details class="mm-own-items"><summary>Items, prices and diet marks <small>(fix anything we read wrong, change a price, mark vegan, gluten-free and more)</small></summary><div class="mm-items" id="mm-items"></div></details>
   <input type="hidden" name="menu_json" value="">
   <button type="submit">Update all ${list.length} designs</button>
   </form>
@@ -182,6 +182,21 @@ function publicPreviewPage(menuHtml, token, { index = 0, custom = {}, business =
     i.addEventListener("input", function () { onIn(i.value); }); l.appendChild(i); return l;
   }
   function btn(txt, c, fn) { var b = el("button", c, txt); b.type = "button"; b.addEventListener("click", fn); return b; }
+  // Diet and allergen marks (owner, Nov 18, 2026: none in Customize): the same marks as the account menu editor,
+  // shown beside the item with a key on every design (producers/menu-qr/dietary.js).
+  var MARKS = [["V", "Vegetarian"], ["VG", "Vegan"], ["GF", "Gluten-free"], ["DF", "Dairy-free"], ["N", "Contains nuts"], ["HOT", "Spicy"]];
+  function marks(it) {
+    var wrap = el("fieldset", "mm-it-marks"); wrap.appendChild(el("legend", null, "Diet and allergen marks"));
+    MARKS.forEach(function (m) {
+      var l = el("label", "mm-it-mark"), b = el("input"); b.type = "checkbox"; b.checked = (it.tags || []).indexOf(m[0]) >= 0;
+      b.addEventListener("change", function () {
+        var on = (it.tags || []).filter(function (c) { return c !== m[0]; }); if (b.checked) on.push(m[0]);
+        it.tags = MARKS.map(function (x) { return x[0]; }).filter(function (c) { return on.indexOf(c) >= 0; });
+      });
+      l.appendChild(b); l.appendChild(document.createTextNode(" " + m[1])); wrap.appendChild(l);
+    });
+    return wrap;
+  }
   function draw() {
     box.textContent = "";
     menu.sections.forEach(function (s, si) {
@@ -194,6 +209,7 @@ function publicPreviewPage(menuHtml, token, { index = 0, custom = {}, business =
         top.appendChild(input("Price", it.price, 40, function (v) { it.price = v; }));
         row.appendChild(top);
         row.appendChild(input("Description", it.description, 600, function (v) { it.description = v; }, true));
+        row.appendChild(marks(it));
         row.appendChild(btn("Remove item", "mm-it-x", function () { s.items.splice(ii, 1); draw(); }));
         sec.appendChild(row);
       });
@@ -229,6 +245,7 @@ window.addEventListener("pageshow", function () { var b = document.querySelector
   .mm-own input[type=file] { color: #e8f6f7; max-width: 100%; } .mm-own .mm-own-colour, .mm-own .mm-own-check { display: flex; align-items: center; gap: 10px; } .mm-own input[type=color] { width: 52px; height: 36px; border: 0; padding: 0; background: none; }
   .mm-own p { margin: 0; color: #e8f6f7; } .mm-own button { padding: 12px 18px; border: 0; border-radius: 8px; background: #00a7b5; color: #fff; font: 700 15px system-ui, sans-serif; cursor: pointer; }
   .mm-own-items { border-top: 1px solid #ffffff33; padding-top: 10px; } .mm-own-items summary { cursor: pointer; font-weight: 700; padding: 6px 0; }
+  .mm-it-marks { display: flex; flex-wrap: wrap; gap: 6px 14px; margin: 0; padding: 6px 0 0; border: 0; } .mm-it-marks legend { padding: 0 0 4px; font-size: 13px; opacity: .85; } .mm-it-mark { display: inline-flex; align-items: center; gap: 5px; font-size: 13px; }
   .mm-items { display: grid; gap: 12px; margin-top: 8px; } .mm-it-sec { display: grid; gap: 8px; padding: 10px; border: 1px solid #ffffff33; border-radius: 10px; }
   .mm-it-row { display: grid; gap: 6px; padding-top: 8px; border-top: 1px solid #ffffff22; } .mm-it-top { display: grid; grid-template-columns: 1fr 96px; gap: 8px; }
   .mm-it-f { display: grid; gap: 3px; font-size: 13px; } .mm-it-f input, .mm-it-f textarea { width: 100%; box-sizing: border-box; font: 15px/1.4 system-ui, sans-serif; padding: 8px 10px; border: 1px solid #ffffff4d; border-radius: 8px; background: #0d2a38; color: #e8f6f7; }
@@ -592,8 +609,8 @@ async function handlePreviewState(request, env, token, { now = Date.now() } = {}
         { name: "subtitle", type: "text", label: "Line under your name", hint: "For example Dinner Menu, Est. 1998", max: 60, value: custom.subtitle || (isOccasion(row.occasion) ? `${OCCASION_NAMES[row.occasion]} Menu` : "Menu") },
         // Items and prices (Nov 14, 2026), only for app builds that draw this kind of field (they ask with ?edit=1);
         // an older app would show it as a text box.
-        ...(/[?&]edit=1(&|$)/.test(String(request?.url || "")) ? [{ name: "menu_json", type: "menu", label: "Items and prices",
-          hint: "Fix anything we read wrong, or change a price. Every design updates.", value: { sections: data.menu.sections || [], notes: data.menu.notes || "" } }] : [])
+        ...(/[?&]edit=1(&|$)/.test(String(request?.url || "")) ? [{ name: "menu_json", type: "menu", label: "Items, prices and diet marks",
+          hint: "Fix anything we read wrong, change a price, or mark items vegan, gluten-free and more. Every design updates.", value: { sections: data.menu.sections || [], notes: data.menu.notes || "" } }] : [])
       ]
     }
   });
