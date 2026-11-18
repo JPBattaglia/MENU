@@ -15,6 +15,7 @@
 // from the database to show one.
 // Why a typed code and not a scanned QR: on iPhone the camera opens Safari, not the home-screen app, and the two keep
 // separate storage, so a scanned QR would collect points on a different card.
+import { handleStatsPhoneLink } from "../../marketing/menu-stats.js";
 import { escapeHtml } from "../../lib/email.js";
 import { nowIso, parseJsonOrNull, simplePage } from "../../lib/http.js";
 import { signLinkToken, verifyLinkToken } from "../../lib/links.js";
@@ -157,11 +158,13 @@ async function handleAppApi(request, env, slug, path) {
   // register its phone for native push (src/store-app/native-push.js); the counter code is what protects a visit, the
   // Origin check only stops other websites posting for a guest.
   const native = NATIVE_ORIGINS.has(origin);
-  if (origin !== new URL(request.url).origin && !(native && (path === "loyalty" || path === "push/native"))) return json({ ok: false, error: "Not allowed" }, 403);
+  if (origin !== new URL(request.url).origin && !(native && (path === "loyalty" || path === "push/native" || path === "menu-stats/link"))) return json({ ok: false, error: "Not allowed" }, 403);
   const body = await readJson(request);
   if (!body) return json({ ok: false, error: "Bad request" }, 400);
   if (native) {
-    const response = path === "push/native" ? await registerNativeDevice(env, app, body) : await loyaltyAction(env, app, body);
+    // menu-stats/link (stage 15, Nov 17, 2026): the MΞNU app asks for a business owner's weekly numbers on this phone.
+    const response = path === "push/native" ? await registerNativeDevice(env, app, body)
+      : path === "menu-stats/link" ? await handleStatsPhoneLink(env, app, body) : await loyaltyAction(env, app, body);
     for (const [k, v] of Object.entries(nativeCors(origin))) response.headers.set(k, v);
     return response;
   }
@@ -176,17 +179,21 @@ async function handleAppApi(request, env, slug, path) {
 
 // ---- sending ----
 // Queues a notification for every phone subscribed to the app. Returns { ok, id } or { ok: false, reason }.
-async function queuePush(env, appId, { title, body, source = "MANUAL", status = "QUEUED" }) {
+// target (stage 15, Nov 17, 2026): a customer id; then only the native phones that customer linked get it (no web push),
+// and it doesn't count toward the app's daily limit (that limit is for messages to everyone).
+async function queuePush(env, appId, { title, body, source = "MANUAL", status = "QUEUED", target = null }) {
   const cleanTitle = String(title || "").replace(/\s+/g, " ").trim().slice(0, 50);
   const cleanBody = String(body || "").replace(/\s+/g, " ").trim().slice(0, 160);
   if (!cleanTitle || !cleanBody) return { ok: false, reason: "empty" };
   if (status === "QUEUED" && await automationOff(env, "PUSH")) return { ok: false, reason: "paused" }; // owner switch
   const since = new Date(Date.now() - 86400_000).toISOString();
-  const sent = await env.DB.prepare(`SELECT COUNT(*) AS n FROM push_messages WHERE app_id = ? AND created_at > ?`).bind(appId, since).first();
-  if ((sent?.n || 0) >= DAILY_PUSH_LIMIT) return { ok: false, reason: "limit" };
+  if (!target) {
+    const sent = await env.DB.prepare(`SELECT COUNT(*) AS n FROM push_messages WHERE app_id = ? AND created_at > ? AND target_customer_id IS NULL`).bind(appId, since).first();
+    if ((sent?.n || 0) >= DAILY_PUSH_LIMIT) return { ok: false, reason: "limit" };
+  }
   const id = crypto.randomUUID();
   const t = nowIso();
-  await env.DB.prepare(`INSERT INTO push_messages (id, app_id, title, body, source, status, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`).bind(id, appId, cleanTitle, cleanBody, source, status, t, t).run();
+  await env.DB.prepare(`INSERT INTO push_messages (id, app_id, title, body, source, status, created_at, updated_at, target_customer_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`).bind(id, appId, cleanTitle, cleanBody, source, status, t, t, target || null).run();
   // Mobile App phones (native push) get the same message through the GitHub sender. Never blocks the web push.
   if (status === "QUEUED") {
     await queueNativePush(env, id, appId).catch((error) => console.error("Native push queue failed:", error instanceof Error ? error.message : String(error)));
@@ -197,7 +204,8 @@ async function queuePush(env, appId, { title, body, source = "MANUAL", status = 
 // Sends one message to up to `max` subscriptions after its cursor. Returns how many it tried.
 async function sendPushMessage(env, message, { max = SENDS_PER_TICK, fetchImpl = fetch, keys = null } = {}) {
   const vapid = keys || await vapidKeys(env);
-  const subs = (await env.DB.prepare(`SELECT id, endpoint, p256dh, auth, failures FROM push_subscriptions WHERE app_id = ? AND status = 'ACTIVE' AND id > ? ORDER BY id LIMIT ?`)
+  // A message for one owner's phones (target_customer_id) goes only to native phones (native-push.js), never to web push.
+  const subs = message.target_customer_id ? [] : (await env.DB.prepare(`SELECT id, endpoint, p256dh, auth, failures FROM push_subscriptions WHERE app_id = ? AND status = 'ACTIVE' AND id > ? ORDER BY id LIMIT ?`)
     .bind(message.app_id, message.cursor || "", max).all()).results || [];
   const payload = JSON.stringify({ title: message.title, body: message.body, url: "./", tag: message.id });
   const t = nowIso();

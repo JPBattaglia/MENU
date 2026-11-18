@@ -167,10 +167,13 @@ async function claimNext(env) {
     `).all()).results || [];
   for (const job of jobs) {
     if (job.status === "SENDING" && (job.claimed_at || "") >= staleClaim) continue; // another run has it
-    const devices = (await env.DB.prepare(`
-        SELECT id, token, bundle_id, environment FROM native_push_devices WHERE app_id = ? AND platform = 'IOS' AND status = 'ACTIVE' AND id > ? ORDER BY id LIMIT ?
-      `).bind(job.app_id, job.cursor || "", BATCH_SIZE).all()).results || [];
-    const message = await env.DB.prepare(`SELECT id, title, body FROM push_messages WHERE id = ?`).bind(job.message_id).first();
+    const message = await env.DB.prepare(`SELECT id, title, body, target_customer_id FROM push_messages WHERE id = ?`).bind(job.message_id).first();
+    // A message for one owner (target_customer_id, stage 15) reaches only the phones that owner linked.
+    const target = message?.target_customer_id || null;
+    const devices = message ? (await env.DB.prepare(`
+        SELECT id, token, bundle_id, environment FROM native_push_devices WHERE app_id = ? AND platform = 'IOS' AND status = 'ACTIVE' AND id > ?
+          AND (? IS NULL OR customer_id = ?) ORDER BY id LIMIT ?
+      `).bind(job.app_id, job.cursor || "", target, target, BATCH_SIZE).all()).results || [] : [];
     if (!devices.length || !message) {
       await env.DB.prepare(`UPDATE native_push_jobs SET status = 'SENT', claim_id = NULL, updated_at = ?, finished_at = ? WHERE id = ?`).bind(t, t, job.id).run();
       continue;
@@ -276,10 +279,12 @@ async function sendAndroidPushes(env, { fetchImpl = fetch } = {}) {
   for (const job of jobs) {
     if (budget <= 0) break;
     const t = nowIso();
-    const message = await env.DB.prepare(`SELECT id, title, body FROM push_messages WHERE id = ?`).bind(job.message_id).first();
+    const message = await env.DB.prepare(`SELECT id, title, body, target_customer_id FROM push_messages WHERE id = ?`).bind(job.message_id).first();
+    const target = message?.target_customer_id || null;
     const devices = message ? (await env.DB.prepare(`
-        SELECT id, token, failures FROM native_push_devices WHERE app_id = ? AND platform = 'ANDROID' AND status = 'ACTIVE' AND id > ? ORDER BY id LIMIT ?
-      `).bind(job.app_id, job.cursor || "", budget).all()).results || [] : [];
+        SELECT id, token, failures FROM native_push_devices WHERE app_id = ? AND platform = 'ANDROID' AND status = 'ACTIVE' AND id > ?
+          AND (? IS NULL OR customer_id = ?) ORDER BY id LIMIT ?
+      `).bind(job.app_id, job.cursor || "", target, target, budget).all()).results || [] : [];
     if (!devices.length) {
       await env.DB.prepare(`UPDATE android_push_jobs SET status = 'SENT', updated_at = ?, finished_at = ? WHERE id = ?`).bind(t, t, job.id).run();
       continue;

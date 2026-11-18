@@ -11,6 +11,7 @@ import { renderMenuPdf } from "../producers/menu-qr/browser-pdf.js";
 import { parseMenuHtml } from "../producers/menu-care/menu-edit.js";
 import { localizedMenuPage } from "../producers/menu-qr/translate.js";
 import QRCode from "qrcode/lib/browser.js";
+import { countMenuView, qrScanUrl } from "../marketing/menu-stats.js";
 
 async function handleDeliveryDownload(request, env, deliverableId) {
   const url = new URL(request.url);
@@ -126,6 +127,8 @@ async function handleHostedMenu(request, env, slug) {
   if (!env.DB || !env.ASSETS) return simplePage(503, "Temporarily unavailable", "<p>Please try again in a minute.</p>");
   const found = await loadHostedMenu(env, slug);
   if (found.response) return found.response;
+  // Owner stats (stage 15, Nov 17, 2026): one view, and a QR scan when the code's ?s=qr came with it.
+  await countMenuView(env, found.row.business_id, request);
   // Translated menus (stage 15, paid plans only): language links at the top, ?lang=<code> for the translated page.
   const lang = new URL(request.url).searchParams.get("lang");
   const page = await found.object.text();
@@ -157,7 +160,8 @@ const PRINT_FORMATS = {
 //     9.5pt or more; a longer menu keeps the drawn layout (which can use the flap) or is refused as too long.
 async function buildPrintFormat(env, format, { pageHtml, parsed, qrUrl }) {
   const spec = PRINT_FORMATS[format];
-  const qrModules = QRCode.create(qrUrl, { errorCorrectionLevel: "M" }).modules;
+  // The printed code opens the menu with ?s=qr (owner stats); the address printed under it stays the plain one.
+  const qrModules = QRCode.create(qrScanUrl(qrUrl, env), { errorCorrectionLevel: "M" }).modules;
   const input = parsed ? { ...parsed, qrModules, qrUrl } : null;
   let browser = true;
   if (format === "tri-fold.pdf") {
@@ -239,7 +243,7 @@ async function handleDraftFormat(request, env, projectId, format) {
     const page = Number(here.searchParams.get("p")) || 1;
     // The approval link's own query (its signature) is kept; only the screen number changes.
     const pageHref = (n) => { const to = new URL(here); to.searchParams.set("p", String(n)); return to.pathname + to.search; };
-    const screen = buildTvMenuHtml({ ...parsed, qrSvg: qrModulesToSvg(QRCode.create(qrUrl, { errorCorrectionLevel: "M" }).modules), page, pageHref });
+    const screen = buildTvMenuHtml({ ...parsed, qrSvg: qrModulesToSvg(QRCode.create(qrScanUrl(qrUrl, env), { errorCorrectionLevel: "M" }).modules), page, pageHref });
     return new Response(screen.html, { status: 200, headers: { "Content-Type": "text/html; charset=utf-8", "Cache-Control": "no-store", "X-Robots-Tag": "noindex, nofollow",
       ...(screen.pages > 1 ? { "Refresh": `12; url=${pageHref(screen.page % screen.pages + 1)}` } : {}),
       "X-Content-Type-Options": "nosniff", "Content-Security-Policy": "default-src 'none'; img-src data:; style-src 'unsafe-inline'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'" } });
@@ -265,7 +269,7 @@ async function handleHostedMenuTv(request, env, slug) {
     return simplePage(200, "Menu screen not available", `<p>This menu can't be shown as a TV screen automatically. <a href="${found.hostedUrl}">Open the online menu</a>.</p>`);
   }
   const page = Number(new URL(request.url).searchParams.get("p")) || 1;
-  const qrSvg = qrModulesToSvg(QRCode.create(found.hostedUrl, { errorCorrectionLevel: "M" }).modules);
+  const qrSvg = qrModulesToSvg(QRCode.create(qrScanUrl(found.hostedUrl, env), { errorCorrectionLevel: "M" }).modules);
   const tvUrl = `${found.hostedUrl}/tv`;
   const screen = buildTvMenuHtml({ ...parsed, qrSvg, page, pageHref: (n) => `${tvUrl}?p=${n}` });
   const refresh = screen.pages > 1 ? `12; url=${tvUrl}?p=${screen.page % screen.pages + 1}` : `300; url=${tvUrl}`;
@@ -283,12 +287,12 @@ async function handleHostedMenuTv(request, env, slug) {
 
 // The live menu's QR code in forms anyone can use (owner, Nov 12, 2026): qr.png (an image that opens, prints and
 // pastes anywhere, and shows in the delivery email) and qr.pdf (one letter page, ready to print). Made from the menu's
-// own address on request; the code never changes, so the answer can be cached for a day.
+// own address on request (with ?s=qr since Nov 17, 2026, so scans count in the owner's stats); cached for a day.
 async function handleHostedMenuQr(request, env, slug, kind) {
   if (!env.DB || !env.ASSETS) return simplePage(503, "Temporarily unavailable", "<p>Please try again in a minute.</p>");
   const found = await loadHostedMenu(env, slug);
   if (found.response) return found.response;
-  const modules = QRCode.create(found.hostedUrl, { errorCorrectionLevel: "M" }).modules;
+  const modules = QRCode.create(qrScanUrl(found.hostedUrl, env), { errorCorrectionLevel: "M" }).modules;
   const download = new URL(request.url).searchParams.get("download") === "1" ? "attachment" : "inline";
   if (kind === "png") {
     const bytes = await qrPng(modules);

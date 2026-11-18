@@ -3272,6 +3272,14 @@ html.mm-lightbox-open { overflow: hidden; }
 .mm-edit-remove{color:#ffb4b4;border-color:rgba(255,140,140,.5)}
 .mm-edit-sold{display:inline-flex;gap:6px;align-items:center;margin-right:auto;font-weight:700}
 .mm-edit-sold input{width:20px;height:20px;accent-color:#f0c75e}
+.mm-stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px;margin:8px 0 14px}
+.mm-stat{display:flex;flex-direction:column;gap:2px;padding:12px 14px;border:1px solid rgba(0,214,230,.35);border-radius:10px;background:rgba(0,214,230,.06)}
+.mm-stat strong{font-size:28px;line-height:1.1;color:#00d6e6}
+.mm-stat span{font-weight:700}
+.mm-stat small{opacity:.75}
+.mm-stats-days{display:flex;gap:6px;align-items:flex-end;height:70px;margin:0 0 8px}
+.mm-stats-day{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;height:100%;gap:4px;font-size:11px;opacity:.85}
+.mm-stats-day i{display:block;width:100%;max-width:28px;min-height:2px;border-radius:4px 4px 0 0;background:#00d6e6}
 .mm-edit-marks{display:flex;flex-wrap:wrap;gap:6px 14px;align-items:center;margin:4px 0 8px;font-size:14px}
 .mm-edit-marks-label{font-weight:700;margin-right:2px}
 .mm-edit-mark{display:inline-flex;gap:5px;align-items:center;cursor:pointer}

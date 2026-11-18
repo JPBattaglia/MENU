@@ -672,3 +672,12 @@ CREATE TABLE IF NOT EXISTS menu_translations (
 ALTER TABLE menu_previews ADD COLUMN free_project_id TEXT;
 ALTER TABLE menu_previews ADD COLUMN free_claimed_at TEXT;
 CREATE INDEX IF NOT EXISTS menu_previews_free ON menu_previews (free_claimed_at) WHERE free_project_id IS NOT NULL;
+
+-- 0062_menu_stats.sql (the push table columns are added by the migration itself in tests that load 0021 / 0023)
+CREATE TABLE IF NOT EXISTS menu_stats_daily (
+  business_id TEXT NOT NULL,
+  day TEXT NOT NULL,
+  views INTEGER NOT NULL DEFAULT 0,
+  qr_scans INTEGER NOT NULL DEFAULT 0,
+  PRIMARY KEY (business_id, day)
+);

@@ -43,6 +43,7 @@ import { handleProspects, handleProspectBatch, handleProspectStatus, handleProsp
 import { handleProspectDemo, handleMenuPreview, upgradeProspectMenus, handleProspectFollowups } from "./marketing/demo-menu.js";
 import { handleHolidayOutreach } from "./marketing/holiday-outreach.js";
 import { handleWeeklyNumbers } from "./marketing/weekly-numbers.js";
+import { handleMenuStatsOff, handleStatsPhoneConfirm, runWeeklyMenuStats } from "./marketing/menu-stats.js";
 import { kickProspectJobs } from "./marketing/prospect-kick.js";
 import { countingDb, saveTickCount } from "./lib/query-count.js";
 import { advanceMoneyPathsSelfTests } from "./selftest/money-paths.js";
@@ -144,6 +145,9 @@ var worker_default = {
     const bundleMatch = url.pathname.match(/^\/api\/store-build\/bundle\/(\d{1,9})$/);
     if (bundleMatch && request.method === "GET") return handleBundleDownload(request, env, bundleMatch[1]);
     if (url.pathname === "/api/owner/notify" && (request.method === "GET" || request.method === "POST")) return handleOwnerNotify(request, env);
+    // Owner stats (stage 15, Nov 17, 2026): stop the weekly menu emails; confirm a phone for the weekly push.
+    if (url.pathname === "/api/menu-stats/off" && (request.method === "GET" || request.method === "POST")) return handleMenuStatsOff(request, env);
+    if (url.pathname === "/api/menu-stats/phone" && (request.method === "GET" || request.method === "POST")) return handleStatsPhoneConfirm(request, env);
     if (url.pathname === "/api/store-keys/owner" && (request.method === "GET" || request.method === "POST")) return handleStoreKeys(request, env);
     if (url.pathname === "/api/store-keys/google" && (request.method === "GET" || request.method === "POST")) return handleGoogleKeys(request, env);
     const restaurantKeysMatch = url.pathname.match(/^\/api\/store-keys\/app\/([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})$/i);
@@ -511,6 +515,8 @@ const mmWorkerWithBooking = {
       await runDomainRenewals(env).catch((error) => console.error("Domain renewals failed:", error instanceof Error ? error.message : String(error)));
       // Menu previews: one reminder about 2 days in when no order came from it (hourly, 9 am to 7 pm Pacific).
       await runPreviewReminders(env).catch((error) => console.error("Preview reminders failed:", error instanceof Error ? error.message : String(error)));
+      // Owner stats: Monday morning, each live menu's numbers by email and to linked phones in the MΞNU app.
+      await runWeeklyMenuStats(env).catch((error) => console.error("Weekly menu stats failed:", error instanceof Error ? error.message : String(error)));
       // Logos waiting on Nino for 4+ days: one owner alert each (hourly, on the :15 tick).
       // Nino's app: a push when a new design enters its 24-hour early access (hourly, on the :25 tick).
       if (new Date().getUTCMinutes() >= 25 && new Date().getUTCMinutes() < 30) await announceNinoDrops(env).catch((error) => console.error("Nino app drops failed:", error instanceof Error ? error.message : String(error)));

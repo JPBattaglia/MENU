@@ -36,7 +36,7 @@ test('only real push services are allowed as endpoints', () => {
 
 function setup() {
   const DB = createD1(); const ASSETS = createR2();
-  DB.raw.exec(read('0009_website_package.sql')); DB.raw.exec(read('0012_guest_app.sql')); DB.raw.exec(read('0021_guest_app_engagement.sql')); DB.raw.exec(read('0021_guest_app_engagement.sql'));
+  DB.raw.exec(read('0009_website_package.sql')); DB.raw.exec(read('0012_guest_app.sql')); DB.raw.exec(read('0021_guest_app_engagement.sql')); DB.raw.exec(read('0021_guest_app_engagement.sql')); DB.raw.exec(read('0062_menu_stats.sql'));
   const sql = (q, ...a) => DB.raw.prepare(q).run(...a);
   const t = '2026-10-01T00:00:00.000Z';
   sql(`INSERT INTO customers (id, created_at, updated_at, email, first_name, last_name) VALUES ('cust', ?, ?, 'joe@joespizza.example', 'Joe', 'Rossi')`, t, t);

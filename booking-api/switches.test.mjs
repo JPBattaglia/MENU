@@ -14,6 +14,7 @@ const { signLinkToken } = await import('./src/lib/links.js');
 function setup() {
   const DB = createD1();
   DB.raw.exec(readFileSync(new URL('./migrations/0021_guest_app_engagement.sql', import.meta.url), 'utf8'));
+  DB.raw.exec(readFileSync(new URL('./migrations/0062_menu_stats.sql', import.meta.url), 'utf8'));
   DB.raw.exec('PRAGMA foreign_keys = OFF');
   const env = { DB, PRODUCTION_RUNNER_SECRET: 'runner-secret' };
   const sql = (q, ...a) => DB.raw.prepare(q).run(...a);

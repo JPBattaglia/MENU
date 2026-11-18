@@ -30,7 +30,7 @@ const FCM_B = `fB:${'b'.repeat(140)}`;
 async function setup() {
   google.tokenCache.clear();
   const DB = createD1(); const ASSETS = createR2();
-  for (const m of ['0009_website_package.sql', '0012_guest_app.sql', '0021_guest_app_engagement.sql', '0022_store_credentials.sql', '0023_native_push.sql', '0024_android.sql']) DB.raw.exec(read(m));
+  for (const m of ['0009_website_package.sql', '0012_guest_app.sql', '0021_guest_app_engagement.sql', '0062_menu_stats.sql', '0022_store_credentials.sql', '0023_native_push.sql', '0063_push_owner_link.sql', '0024_android.sql']) DB.raw.exec(read(m));
   const sql = (q, ...a) => DB.raw.prepare(q).run(...a);
   const t = '2026-10-01T00:00:00.000Z';
   sql(`INSERT INTO businesses (id, created_at, updated_at, name) VALUES ('biz', ?, ?, 'Sample Cafe')`, t, t);
