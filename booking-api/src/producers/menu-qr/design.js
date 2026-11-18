@@ -1,3 +1,4 @@
+import { markLabel, normalizeTags } from "./dietary.js";
 import { bytesToBase64, escapeHtml2 } from "../../lib/util.js";
 import { luminance, mix, styleCss, styleMeta, toStyle } from "./style.js";
 
@@ -137,10 +138,19 @@ function buildDesignedMenuHtml({ businessName, brandColors, menu, logoDataUri, s
       description: clean(item?.description, 600),
       price: clean(item?.price, 40),
       // Sold out (stage 15, owner's menu editor): the item stays on the page, marked, until the owner takes it back.
-      soldOut: item?.sold_out === true
+      soldOut: item?.sold_out === true,
+      // Diet and allergen marks (stage 15, Nov 17, 2026): read with the menu or ticked by the owner in the editor.
+      tags: normalizeTags(item?.tags)
     })).filter((item) => item.name)
   })).filter((section) => section.items.length);
   const notes = clean(menu.notes, 1000);
+  const usedTags = normalizeTags(sections.flatMap((section) => section.items.flatMap((item) => item.tags)));
+  const tagHtml = (tags) => tags.length
+    ? `<span class="tags" data-tags="${tags.join(" ")}">${tags.map((code) => `<abbr title="${esc(markLabel(code))}">${code}</abbr>`).join("")}</span>`
+    : "";
+  const tagKey = usedTags.length
+    ? `<p class="tag-key">${usedTags.map((code) => `<span class="key-item"><abbr>${code}</abbr> <span class="key-label">${esc(markLabel(code))}</span></span>`).join("")}<span class="key-note">Ask staff about allergies before you order.</span></p>`
+    : "";
   const name = esc(businessName || "Menu");
   const line = esc(clean(subtitle, 60) || "Menu");
   const nav = sections.length > 1
@@ -151,7 +161,7 @@ function buildDesignedMenuHtml({ businessName, brandColors, menu, logoDataUri, s
       <h2 id="${section.id}-h">${esc(section.name)}</h2>
       <ul>${section.items.map((item) => `
         <li${item.soldOut ? ' class="sold-out"' : ""}>
-          <div class="row"><span class="item">${esc(item.name)}</span>${item.soldOut ? '<span class="sold-tag">Sold out</span>' : ""}${item.price ? `<span class="leader" aria-hidden="true"></span><span class="price">${esc(item.price)}</span>` : ""}</div>
+          <div class="row"><span class="item">${esc(item.name)}</span>${tagHtml(item.tags)}${item.soldOut ? '<span class="sold-tag">Sold out</span>' : ""}${item.price ? `<span class="leader" aria-hidden="true"></span><span class="price">${esc(item.price)}</span>` : ""}</div>
           ${item.description ? `<p class="desc">${esc(item.description)}</p>` : ""}
         </li>`).join("")}
       </ul>
@@ -196,6 +206,10 @@ ${styleMeta(theme)}
   li.sold-out .item, li.sold-out .price, li.sold-out .desc { opacity: .5; }
   li.sold-out .price { text-decoration: line-through; }
   .sold-tag { flex: none; padding: 2px 8px; border-radius: 999px; background: var(--accent); color: #fff; font-size: 11px; font-weight: 700; letter-spacing: .5px; text-transform: uppercase; }
+  .tags { flex: none; display: inline-flex; gap: 3px; margin-left: 4px; }
+  .tags abbr, .tag-key abbr { display: inline-block; min-width: 20px; padding: 1px 5px; border: 1px solid var(--accent); border-radius: 6px; color: var(--primary); font: 700 10px/1.4 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; letter-spacing: .3px; text-align: center; text-decoration: none; cursor: help; }
+  .tag-key { display: flex; flex-wrap: wrap; gap: 6px 14px; margin-top: 28px; color: var(--muted); font-size: 13px; }
+  .tag-key .key-note { flex-basis: 100%; font-size: 12px; }
   .notes { margin-top: 32px; padding: 16px; border-radius: 10px; background: #fff; border: 1px solid var(--rule); color: var(--muted); font-size: 14px; }
   footer { padding: 24px 20px 36px; text-align: center; color: var(--muted); font-size: 12px; }
   footer a { color: inherit; text-decoration: underline; text-underline-offset: 2px; }${styleCss(theme)}
@@ -211,6 +225,7 @@ ${styleMeta(theme)}
   <main>
     <section class="menu-content" aria-label="${name} menu">${body}
     </section>
+    ${tagKey}
     ${notes ? `<p class="notes">${esc(notes)}</p>` : ""}
   </main>
   <footer>Menu by <a href="https://menu-made.com/">MENU-MADE</a></footer>

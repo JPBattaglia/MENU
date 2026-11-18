@@ -1,4 +1,5 @@
 import { bytesToBase64 } from "../../lib/util.js";
+import { tagMenu } from "./dietary.js";
 
 // Reads an uploaded menu PDF or photo with Claude and returns the menu as clean, structured text.
 var ANTHROPIC_MESSAGES_ENDPOINT = "https://api.anthropic.com/v1/messages";
@@ -24,7 +25,12 @@ var MENU_EXTRACTION_TOOL = {
                 properties: {
                   name: { type: "string" },
                   description: { type: "string", description: "Description as printed; empty if none." },
-                  price: { type: "string", description: "Price exactly as printed, e.g. $12 or 12 / 18. Empty if none." }
+                  price: { type: "string", description: "Price exactly as printed, e.g. $12 or 12 / 18. Empty if none." },
+                  tags: {
+                    type: "array",
+                    items: { type: "string", enum: ["V", "VG", "GF", "DF", "N", "HOT"] },
+                    description: "Diet and allergen marks the menu itself gives this item: V vegetarian, VG vegan, GF gluten-free, DF dairy-free, N contains nuts, HOT spicy. Use the menu's own letters, symbols (a leaf, a chili) and key, or words in the item such as 'vegan' or 'gluten-free'. Never guess from ingredients. Empty if the menu marks nothing."
+                  }
                 },
                 required: ["name", "description", "price"]
               }
@@ -105,7 +111,7 @@ async function readMenuWithClaude(contentBlock, env) {
         role: "user",
         content: [
           contentBlock,
-          { type: "text", text: "This is a restaurant or food business menu. Respond only by calling the record_menu tool once, with the whole menu. Read every page: a menu often runs over several pages, and a section can continue on the next page without repeating its heading, so keep those items in the same section and don't stop until the last item on the last page. Copy names, descriptions and prices exactly as printed; never invent, correct, translate or round anything. Keep the menu's own section order. Skip decorative text, logos, navigation and page numbers. Also fill in style with how the printed menu looks: its colours, kinds of typeface, capitals and layout." }
+          { type: "text", text: "This is a restaurant or food business menu. Respond only by calling the record_menu tool once, with the whole menu. Read every page: a menu often runs over several pages, and a section can continue on the next page without repeating its heading, so keep those items in the same section and don't stop until the last item on the last page. Copy names, descriptions and prices exactly as printed; never invent, correct, translate or round anything. Put the diet and allergen marks the menu gives each item (its letters, symbols and key) in tags, and leave those marks out of the name; never add a mark the menu doesn't give. Keep the menu's own section order. Skip decorative text, logos, navigation and page numbers. Also fill in style with how the printed menu looks: its colours, kinds of typeface, capitals and layout." }
         ]
       }]
     })
@@ -119,8 +125,10 @@ async function readMenuWithClaude(contentBlock, env) {
   if (!response.ok) {
     throw new Error(`Menu reading failed: ${result?.error?.message || `Anthropic API returned HTTP ${response.status}`}`);
   }
-  const menu = (result?.content || []).find((block) => block.type === "tool_use" && block.name === "record_menu")?.input;
-  if (!menu) throw new Error("Menu reading returned no menu");
+  const read = (result?.content || []).find((block) => block.type === "tool_use" && block.name === "record_menu")?.input;
+  if (!read) throw new Error("Menu reading returned no menu");
+  // Marks written in brackets ("Garden Salad (V, GF)") join the reader's tags (stage 15, Nov 17, 2026).
+  const menu = tagMenu(read);
   const { text, itemCount } = formatExtractedMenu(menu);
   if (itemCount === 0) throw new Error("No menu items could be read from the menu");
   return {

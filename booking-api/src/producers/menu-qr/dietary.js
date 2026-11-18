@@ -35,7 +35,8 @@ function markItems(menu) {
     items: (section.items || []).map((item) => {
       const name = splitMarks(item?.name);
       const description = splitMarks(item?.description);
-      const marks = ORDER.filter((code) => name.marks.includes(code) || description.marks.includes(code));
+      const tagged = normalizeTags(item?.tags);
+      const marks = ORDER.filter((code) => name.marks.includes(code) || description.marks.includes(code) || tagged.includes(code));
       marks.forEach((code) => used.add(code));
       return { ...item, name: name.text || String(item?.name ?? ""), description: description.text, marks };
     })
@@ -45,4 +46,26 @@ function markItems(menu) {
 
 const markLabel = (code) => MARKS.find((mark) => mark.code === code)?.label || code;
 
-export { MARKS, splitMarks, markItems, markLabel };
+// Stage 15 "AI menu details" (Nov 17, 2026): an item can also carry marks as data, item.tags = ["V", "GF"], read with
+// the menu (the reader maps the menu's own symbols and key, never guesses from ingredients) or ticked by the owner in
+// the menu editor. normalizeTags keeps known codes only, in MARKS order, no repeats.
+const CODES = new Set(ORDER);
+function normalizeTags(list) {
+  const given = new Set((Array.isArray(list) ? list : []).map((code) => String(code ?? "").trim().toUpperCase()).filter((code) => CODES.has(code)));
+  return ORDER.filter((code) => given.has(code));
+}
+
+// A freshly read item: marks written in brackets move out of its name and description into tags, joined with the
+// tags the reader gave. Returns a new item; an item with no marks comes back unchanged apart from an absent tags key.
+function tagItem(item) {
+  const name = splitMarks(item?.name);
+  const description = splitMarks(item?.description);
+  const tags = normalizeTags([...(item?.tags || []), ...name.marks, ...description.marks]);
+  const out = { ...item, name: name.text || String(item?.name ?? ""), description: description.text };
+  delete out.tags;
+  return tags.length ? { ...out, tags } : out;
+}
+
+const tagMenu = (menu) => ({ ...menu, sections: (menu?.sections || []).map((section) => ({ ...section, items: (section.items || []).map(tagItem) })) });
+
+export { MARKS, splitMarks, markItems, markLabel, normalizeTags, tagItem, tagMenu };

@@ -7,6 +7,7 @@ import { generate } from "../../ai/generate.js";
 import { LOGO_MODES, parseLogoInfo } from "../menu-qr/design.js";
 import { findUnsupportedFacts } from "../../ai/quality.js";
 import { readStyleMeta } from "../menu-qr/style.js";
+import { normalizeTags } from "../menu-qr/dietary.js";
 
 const decode = (text) => String(text ?? "")
   .replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&quot;/g, '"').replace(/&#0?39;/g, "'").replace(/&amp;/g, "&");
@@ -49,6 +50,9 @@ function parseMenuHtml(html) {
       };
       // Marked sold out by the owner (stage 15 menu editor); kept so later edits and Menu Care carry it through.
       if (chunk.startsWith(' class="sold-out">')) item.sold_out = true;
+      // Diet and allergen marks (stage 15, Nov 17, 2026).
+      const tags = normalizeTags(String(/<span class="tags" data-tags="([^"]*)"/.exec(chunk)?.[1] || "").split(/\s+/));
+      if (tags.length) item.tags = tags;
       items.push(item);
     }
     sections.push({ name, items });
@@ -80,16 +84,19 @@ function flatten(menu) {
   return map;
 }
 
+const tagText = (item) => normalizeTags(item?.tags).join(" ");
+
 function diffMenus(before, after) {
   const a = flatten(before);
   const b = flatten(after);
   const out = [];
   for (const [key, item] of b) {
     const old = a.get(key);
-    if (!old) out.push({ kind: "added", section: item.section, name: item.name, after: { price: item.price, description: item.description } });
-    else if (old.price !== item.price || old.description !== item.description) {
+    if (!old) out.push({ kind: "added", section: item.section, name: item.name, after: { price: item.price, description: item.description, ...(normalizeTags(item.tags).length ? { tags: normalizeTags(item.tags) } : {}) } });
+    else if (old.price !== item.price || old.description !== item.description || tagText(old) !== tagText(item)) {
       out.push({ kind: "changed", section: item.section, name: item.name,
-        before: { price: old.price, description: old.description }, after: { price: item.price, description: item.description } });
+        before: { price: old.price, description: old.description, tags: normalizeTags(old.tags) },
+        after: { price: item.price, description: item.description, tags: normalizeTags(item.tags) } });
     }
   }
   for (const [key, item] of a) {
@@ -108,6 +115,8 @@ function describeDiff(diff) {
     const bits = [];
     if ((d.before.price || "") !== (d.after.price || "")) bits.push(`price ${d.before.price || "none"} → ${d.after.price || "none"}`);
     if ((d.before.description || "") !== (d.after.description || "")) bits.push("description updated");
+    const marks = (list) => (list || []).join(", ") || "none";
+    if (marks(d.before.tags) !== marks(d.after.tags)) bits.push(`marks ${marks(d.before.tags)} → ${marks(d.after.tags)}`);
     return `Changed ${d.name} (${d.section}): ${bits.join(", ")}`;
   });
 }
@@ -126,7 +135,9 @@ const MENU_SCHEMA = {
             items: {
               type: "object",
               properties: { name: { type: "string" }, description: { type: "string" }, price: { type: "string" },
-                sold_out: { type: "boolean", description: "Copy through as given; true only if the current menu has it or the request marks the item sold out." } },
+                sold_out: { type: "boolean", description: "Copy through as given; true only if the current menu has it or the request marks the item sold out." },
+                tags: { type: "array", items: { type: "string", enum: ["V", "VG", "GF", "DF", "N", "HOT"] },
+                  description: "Diet and allergen marks. Copy through as given; change them only when the request says so." } },
               required: ["name", "description", "price"]
             }
           }
@@ -164,6 +175,12 @@ function checkChange({ before, after, requestText, diff }) {
     ...diff.filter((d) => d.section === "(notes)").map((d) => d.after.description)
   ].join("\n");
   for (const fact of findUnsupportedFacts(written, known)) problems.push(`${fact.kind} "${fact.value}" is not in the current menu or the request`);
+  // A diet or allergen mark may change only when the request talks about marks (never added on the model's own say).
+  const asksMarks = /vegan|vegetarian|veggie|gluten|dairy|nut|spic|hot|allerg|celiac|\b(v|vg|gf|df|n)\b|mark|tag|label/i.test(String(requestText || ""));
+  for (const d of diff) {
+    if (d.kind === "changed" && tagText(d.before) !== tagText(d.after) && !asksMarks) problems.push(`The marks on ${d.name} changed, but the request didn't ask for that`);
+    if (d.kind === "added" && normalizeTags(d.after?.tags).length && !asksMarks) problems.push(`${d.name} was added with diet marks the request didn't give`);
+  }
   return problems;
 }
 
@@ -200,7 +217,8 @@ function cleanMenu(body) {
       name: cleanText(item?.name, LIMITS.item),
       description: cleanText(item?.description, LIMITS.description),
       price: cleanText(item?.price, LIMITS.price),
-      ...(item?.sold_out === true ? { sold_out: true } : {})
+      ...(item?.sold_out === true ? { sold_out: true } : {}),
+      ...(normalizeTags(item?.tags).length ? { tags: normalizeTags(item.tags) } : {})
     })).filter((item) => item.name)
   })).filter((section) => section.items.length);
   sections.forEach((section, i) => { if (!section.name) section.name = i === 0 ? "Menu" : `Section ${i + 1}`; });

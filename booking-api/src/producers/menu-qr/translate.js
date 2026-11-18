@@ -46,6 +46,8 @@ const SLOTS = [
   { kind: "item", re: /(<span class="item">)([^<]*)(<\/span>)/g },
   { kind: "desc", re: /(<p class="desc">)([^<]*)(<\/p>)/g },
   { kind: "notes", re: /(<p class="notes">)([^<]*)(<\/p>)/g },
+  { kind: "key", re: /(<span class="key-label">)([^<]*)(<\/span>)/g },
+  { kind: "keynote", re: /(<span class="key-note">)([^<]*)(<\/span>)/g },
   { kind: "line", re: /(<\/h1>\s*<p>)([^<]*)(<\/p>)/g }
 ];
 
