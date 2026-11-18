@@ -474,6 +474,9 @@ body.hy-xmas .hy-design-grid img { border: 2px solid #f0c75e; }
 .hy-items-f { display: grid; gap: 3px; font-size: 13px; font-weight: 600; }
 .hy-items-f input, .hy-items-f textarea { width: 100%; box-sizing: border-box; font-size: 16px; }
 .hy-items-x { color: #ffb4b4; justify-self: start; }
+.hy-items-marks { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 14px; }
+.hy-items-marks .hy-hint { flex-basis: 100%; margin: 0; }
+.hy-items-mark { display: inline-flex; align-items: center; gap: 5px; font-size: 13px; }
 
 /* How-to video beside each generator (owner, Nov 15, 2026): same files as menu-made.com; one Full screen button that
    always works (iPhone player, browser full screen, or filling the screen with Close). */

@@ -20,7 +20,7 @@ import { queuePush } from "../producers/guest-app/engage.js";
 const TTL = 300;
 const MM = "https://menu-made.com";
 // Bumped whenever tools/howto-videos re-records the how-to videos, so phones fetch the new files.
-const HOWTO_VIDEO_VERSION = "20261117";
+const HOWTO_VIDEO_VERSION = "20261118";
 const NINO = "https://ninobattaglia.com";
 // Nino's shop API (NinoSite commerce-api): rewards card, ideas board and the last week's new designs (fans.mjs).
 const NINO_API = "https://nino-printful-commerce-api.ijpbattaglia.workers.dev";
@@ -124,7 +124,7 @@ function menumadeContent(catalog, { offCodes = [], now = Date.now() } = {}) {
     busy: ["Reading your holiday menu…", "Finding the courses, dishes and prices…", "Drawing your menu in six holiday designs…"], wait: "This takes about a minute. Keep the app open.",
     buttons: [
       { label: "Generate menu", text: "Shows your menu in the next of six holiday designs. Tap it as often as you like." },
-      { label: "Customize", text: "Adds your logo, your colour and the line under your name, on every design. Items and prices lets you fix a dish or change a price." },
+      { label: "Customize", text: "Adds your logo, your colour and the line under your name, on every design. Items, prices and diet marks lets you fix a dish, change a price or mark it vegan, gluten-free and more." },
       { label: "Make it live", text: `Orders the design on screen: ${holidayPrice} for one holiday, live through the day after it. A second holiday menu this season is ${dollars(HOLIDAY_PRICING.secondCents)}. Nothing renews.` }
     ]
   }] : [];
@@ -160,7 +160,7 @@ function menumadeContent(catalog, { offCodes = [], now = Date.now() } = {}) {
         busy: ["Reading your menu…", "Finding the sections, dishes and prices…", "Drawing your menu in nine designs…"], wait: "This takes about a minute. Keep the app open.",
         buttons: [
           { label: "Generate menu", text: "Shows your menu in the next of nine designs. Tap it as often as you like." },
-          { label: "Customize", text: "Adds your logo, your colour and your name the way you want it, on every design. Items and prices lets you fix a dish or change a price." },
+          { label: "Customize", text: "Adds your logo, your colour and your name the way you want it, on every design. Items, prices and diet marks lets you fix a dish, change a price or mark it vegan, gluten-free and more." },
           { label: "Make it live", text: `Orders the design on screen with MΞNU Plus (${plusPrice}): your menu online with its QR code, the print set and edits whenever you like, its first year free.` },
           { label: "Start free", text: "Puts your menu online free in the Classic design, with its own link and QR code. We email you a link to confirm." }
         ] },

@@ -564,6 +564,20 @@
         var i = el(area ? "textarea" : "input", area ? "hy-textarea" : null); if (!area) i.type = "text"; else i.rows = 2; i.maxLength = max; i.value = value || "";
         i.addEventListener("input", function () { onIn(i.value); }); l.appendChild(i); return l;
       }
+      // Diet and allergen marks (owner, Nov 18, 2026), the same as the website's Customize window.
+      var MARKS = [["V", "Vegetarian"], ["VG", "Vegan"], ["GF", "Gluten-free"], ["DF", "Dairy-free"], ["N", "Contains nuts"], ["HOT", "Spicy"]];
+      function marks(it) {
+        var w = el("div", "hy-items-marks"); w.appendChild(el("span", "hy-hint", "Diet and allergen marks"));
+        MARKS.forEach(function (m) {
+          var l = el("label", "hy-items-mark"), b = el("input"); b.type = "checkbox"; b.checked = (it.tags || []).indexOf(m[0]) >= 0;
+          b.addEventListener("change", function () {
+            var on = (it.tags || []).filter(function (c) { return c !== m[0]; }); if (b.checked) on.push(m[0]);
+            it.tags = MARKS.map(function (x) { return x[0]; }).filter(function (c) { return on.indexOf(c) >= 0; });
+          });
+          l.appendChild(b); l.appendChild(document.createTextNode(" " + m[1])); w.appendChild(l);
+        });
+        return w;
+      }
       function draw() {
         list.textContent = "";
         menu.sections.forEach(function (sec, si) {
@@ -575,6 +589,7 @@
             top.appendChild(field("Price", it.price, 40, function (v) { it.price = v; }));
             row.appendChild(top);
             row.appendChild(field("Description", it.description, 600, function (v) { it.description = v; }, true));
+            row.appendChild(marks(it));
             row.appendChild(button("Remove item", "hy-link hy-items-x", function () { sec.items.splice(ii, 1); draw(); }));
             box.appendChild(row);
           });

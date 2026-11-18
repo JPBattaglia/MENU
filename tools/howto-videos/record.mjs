@@ -302,12 +302,14 @@ async function menuVideo(local) {
   await s.tap('#mm-own input[name=use_brand]', { after: 300 });
   await s.page.locator('#mm-own input[name=brand]').evaluate((el) => { el.value = '#2f6f5a'; el.dispatchEvent(new Event('input', { bubbles: true })); });
   await s.wait(500);
-  s.cap(E, 'Items and prices: fix anything we read wrong, or change a price.');
+  s.cap(E, 'Items, prices and diet marks: fix anything we read wrong, change a price, mark vegan or gluten-free.');
   await s.tap('#mm-own .mm-own-items summary', { after: 600 });
   await s.scrollBy(330, { within: '#mm-own', ms: 900 });
   const price = s.page.locator('#mm-items .mm-it-row').nth(1).locator('input').nth(1);
   await s.tap(price, { after: 150 });
   await price.press('Control+A'); await price.pressSequentially('14', { delay: 120 });
+  await s.wait(500);
+  await s.tap(s.page.locator('#mm-items .mm-it-row').nth(1).locator('.mm-it-mark input').first(), { after: 300 });
   await s.wait(700);
   s.cap(E, 'Tap Update all 9 designs. Your changes show in every design.');
   await s.tap('#mm-own button[type=submit]', { after: 0 });
