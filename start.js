@@ -88,7 +88,9 @@ const siteInOrder = () => order.once.has('SITE_FILES') || order.once.has(WEBSITE
 let menuNote = '';
 function bringMenu() {
   const plus = planIncludes(PLUS);
-  if (!(plus || planIncludes('MENU_CARE')) || order.once.has(MENU) || hasOwnMenu || !sellable(offer(MENU))) return;
+  // A Holiday Menu is this order's menu (each menu needs its own file, so checkout refuses both together):
+  // a plan picked with it does not bring Online Menu + QR too (Nov 18, 2026).
+  if (!(plus || planIncludes('MENU_CARE')) || order.once.has(MENU) || order.once.has(HOLIDAY) || hasOwnMenu || !sellable(offer(MENU))) return;
   order.once.add(MENU);
   menuNote = plus
     ? 'MΞNU Plus starts with your menu online, so Online Menu + QR was added; its first year is free with Plus. Already have a menu with us? Remove it.'
@@ -595,6 +597,12 @@ function add(code, { quiet = false } = {}) {
     bringMenu();
   } else {
     if (order.once.has(code)) return false;
+    // Holiday Menu and Online Menu + QR each need their own menu file, so they check out separately.
+    if (code === MENU && order.once.has(HOLIDAY)) {
+      if (!quiet) showStatus('Check out your Holiday Menu first; your everyday Online Menu + QR goes in its own checkout, since each menu needs its own file.');
+      return false;
+    }
+    if (code === HOLIDAY && order.once.has(MENU)) order.once.delete(MENU);
     order.once.add(code);
     // Menus are sold as free or with MΞNU Plus (owner, Nov 14, 2026), never on their own: a menu with no plan
     // brings Plus, and its first year is free with it.
