@@ -44,6 +44,7 @@ import { handleProspectDemo, handleMenuPreview, upgradeProspectMenus, handlePros
 import { handleHolidayOutreach } from "./marketing/holiday-outreach.js";
 import { handleWeeklyNumbers } from "./marketing/weekly-numbers.js";
 import { handleMenuStatsOff, handleStatsPhoneConfirm, runWeeklyMenuStats } from "./marketing/menu-stats.js";
+import { runMonthlyReport } from "./marketing/monthly-report.js";
 import { kickProspectJobs } from "./marketing/prospect-kick.js";
 import { countingDb, saveTickCount } from "./lib/query-count.js";
 import { advanceMoneyPathsSelfTests } from "./selftest/money-paths.js";
@@ -518,6 +519,8 @@ const mmWorkerWithBooking = {
       await runPreviewReminders(env).catch((error) => console.error("Preview reminders failed:", error instanceof Error ? error.message : String(error)));
       // Owner stats: Monday morning, each live menu's numbers by email and to linked phones in the MΞNU app.
       await runWeeklyMenuStats(env).catch((error) => console.error("Weekly menu stats failed:", error instanceof Error ? error.message : String(error)));
+      // Stage 14: the owner's monthly marketing report, the 1st of each month about 8 am Pacific.
+      await runMonthlyReport(env).catch((error) => console.error("Monthly report failed:", error instanceof Error ? error.message : String(error)));
       // Logos waiting on Nino for 4+ days: one owner alert each (hourly, on the :15 tick).
       // Nino's app: a push when a new design enters its 24-hour early access (hourly, on the :25 tick).
       if (new Date().getUTCMinutes() >= 25 && new Date().getUTCMinutes() < 30) await announceNinoDrops(env).catch((error) => console.error("Nino app drops failed:", error instanceof Error ? error.message : String(error)));

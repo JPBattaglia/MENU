@@ -307,4 +307,5 @@ async function handleWeeklyNumbers(request, env, { now = Date.now() } = {}) {
   return json({ ok: Boolean(sent?.ok), at: nowIso(), lines: report.rows.length, ...(sent?.ok ? {} : { error: String(sent?.error || "send failed") }) });
 }
 
-export { appOpenLine, AUDIENCE as WEEKLY_NUMBERS_AUDIENCE, WORKFLOW as WEEKLY_NUMBERS_WORKFLOW, CAMPAIGNS, maxSpend, weakStep, weeklyNumbers, handleWeeklyNumbers };
+export { menuSales, menuCheckouts, campaignVisits, shopSales, outreach, freePreviews, holidayNumbers, ninoSteps, ninoStepLine, money,
+  appOpenLine, AUDIENCE as WEEKLY_NUMBERS_AUDIENCE, WORKFLOW as WEEKLY_NUMBERS_WORKFLOW, CAMPAIGNS, maxSpend, weakStep, weeklyNumbers, handleWeeklyNumbers };
