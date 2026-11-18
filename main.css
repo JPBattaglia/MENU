@@ -3272,6 +3272,10 @@ html.mm-lightbox-open { overflow: hidden; }
 .mm-edit-remove{color:#ffb4b4;border-color:rgba(255,140,140,.5)}
 .mm-edit-sold{display:inline-flex;gap:6px;align-items:center;margin-right:auto;font-weight:700}
 .mm-edit-sold input{width:20px;height:20px;accent-color:#f0c75e}
+.mm-edit-marks{display:flex;flex-wrap:wrap;gap:6px 14px;align-items:center;margin:4px 0 8px;font-size:14px}
+.mm-edit-marks-label{font-weight:700;margin-right:2px}
+.mm-edit-mark{display:inline-flex;gap:5px;align-items:center;cursor:pointer}
+.mm-edit-mark input{width:18px;height:18px;accent-color:#f0c75e}
 .mm-edit-add{margin-top:8px}
 /* Translated menus in the menu editor (stage 15, Nov 14, 2026) */
 .mm-langs-card h2{margin-top:0}

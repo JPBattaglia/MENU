@@ -10,6 +10,8 @@
   let menu = null;
   let dirty = false;
 
+  const MARKS = [['V', 'Vegetarian'], ['VG', 'Vegan'], ['GF', 'Gluten-free'], ['DF', 'Dairy-free'], ['N', 'Contains nuts'], ['HOT', 'Spicy']];
+
   function el(tag, className, text) {
     const node = document.createElement(tag);
     if (className) node.className = className;
@@ -73,6 +75,25 @@
         top.append(field('Price', item.price, (v) => { item.price = v; }, { max: 40, placeholder: '$12' }));
         row.append(top);
         row.append(field('Description', item.description, (v) => { item.description = v; }, { area: true, max: 600 }));
+        // Diet and allergen marks (stage 15, Nov 17, 2026): shown beside the item with a key on the live menu.
+        const marks = el('div', 'mm-edit-marks');
+        marks.append(el('span', 'mm-edit-marks-label', 'Marks'));
+        MARKS.forEach(([code, label]) => {
+          const opt = el('label', 'mm-edit-mark');
+          const box = el('input');
+          box.type = 'checkbox';
+          box.checked = (item.tags || []).includes(code);
+          box.addEventListener('change', () => {
+            const on = new Set(item.tags || []);
+            if (box.checked) on.add(code); else on.delete(code);
+            item.tags = MARKS.map(([c]) => c).filter((c) => on.has(c));
+            changed();
+          });
+          opt.title = label;
+          opt.append(box, document.createTextNode(` ${label}`));
+          marks.append(opt);
+        });
+        row.append(marks);
         const actions = el('div', 'mm-edit-tools');
         const sold = el('label', 'mm-edit-sold');
         const tick = el('input');
