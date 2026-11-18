@@ -11,6 +11,7 @@
 //
 // Look (kept from the Nov 12 videos): 1920x1080, the page in a rounded teal frame on dark navy, a pointer that moves
 // and taps, and a two-line caption underneath (eyebrow + one instruction). No sound.
+import { holidayDollars, holidayPrices } from "../../booking-api/src/checkout/holiday.js";
 import { mkdirSync, rmSync, writeFileSync, symlinkSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
@@ -415,7 +416,7 @@ async function holidayVideo(local) {
   await s.start();
   s.cap(E, 'Open menu-made.com/holiday-menu, or tap See holiday menus on any page.');
   await s.wait(1600);
-  s.cap(E, 'Pick a holiday. Both is $89 for a Christmas and a New Year\'s Eve menu.');
+  s.cap(E, `Pick a holiday. Both is ${holidayDollars(holidayPrices().both_cents)} for a Christmas and a New Year's Eve menu.`);
   await s.scrollTo('#try-free', { offset: 40 });
   await s.tap('input[name=occasion][value=both]', { after: 900 });
   await s.tap('input[name=occasion][value=christmas]', { after: 500 });

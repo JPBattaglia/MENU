@@ -63,6 +63,17 @@
       const pkg = offers?.get('ONLINE_MENU_QR')?.menu_package;
       if (pkg) el.textContent = money(pkg.additional_page_cents);
     });
+    // Holiday Menu early bird (Nov 17, 2026): data-holiday-both = both holidays today; data-holiday-early = the
+    // early-bird line (hidden once it ends); data-holiday-was = the regular price, struck through while it runs.
+    const hol = offers?.get('HOLIDAY_MENU')?.holiday;
+    if (hol) {
+      document.querySelectorAll('[data-holiday-both]').forEach(el => { el.textContent = money(hol.both_cents); });
+      document.querySelectorAll('[data-holiday-was]').forEach(el => { el.hidden = !hol.early_bird; el.textContent = money(hol.regular_first_cents); });
+      document.querySelectorAll('[data-holiday-early]').forEach(el => {
+        el.hidden = !hol.early_bird;
+        el.textContent = hol.early_bird ? `Early-bird price through ${hol.early_bird_ends}, then ${money(hol.regular_first_cents)}.` : '';
+      });
+    }
     document.querySelectorAll('[data-annual-note]').forEach(el => { el.hidden = state.interval !== 'year'; });
     document.querySelectorAll('[data-plan-cta]').forEach(el => {
       const offer = offers?.get(el.dataset.planCta);

@@ -198,7 +198,7 @@ async function handleProspectFollowups(request, env, { now = Date.now() } = {}) 
   const viaSql = body?.via === "getmenumade" ? "p.sent_via = 'getmenumade'" : "p.sent_via IS NULL";
   const range = [daysFromNow(-FOLLOWUP_AFTER_DAYS, now), daysFromNow(-21, now)];
   const opened = (await env.DB.prepare(`
-      SELECT p.id, p.name, p.city, p.email, p.website, p.sent_at, d.token, d.kind, d.open_count, d.expires_at, m.token AS generator
+      SELECT p.id, p.name, p.city, p.email, p.website, p.sent_at, p.holiday_drafted_at, d.token, d.kind, d.open_count, d.expires_at, m.token AS generator
       FROM prospects p JOIN prospect_demos d ON d.prospect_id = p.id AND d.status = 'READY'
       LEFT JOIN menu_previews m ON m.token = d.token
       WHERE p.status = 'SENT' AND p.followup_drafted_at IS NULL AND p.email IS NOT NULL AND ${viaSql}
@@ -214,7 +214,7 @@ async function handleProspectFollowups(request, env, { now = Date.now() } = {}) 
   const seen = new Set();
   const prospects = [
     ...opened.filter((r) => !seen.has(r.id) && seen.add(r.id)).map((r) => ({ kind: "opened", demo_kind: r.kind || "menu", id: r.id, name: r.name, city: r.city, email: r.email, website: r.website,
-      url: r.kind === "website" ? `${SITE}/api/website-preview/view/${r.token}/d/bistro/index.html` : r.generator ? generatorUrl(r.token) : `${SITE}/api/menu-preview/${r.token}`, opens: r.open_count })),
+      url: r.kind === "website" ? `${SITE}/api/website-preview/view/${r.token}/d/bistro/index.html` : r.generator ? generatorUrl(r.token) : `${SITE}/api/menu-preview/${r.token}`, opens: r.open_count, holiday: Boolean(r.holiday_drafted_at) })),
     ...previewless.filter((r) => !seen.has(r.id) && seen.add(r.id)).map((r) => ({ kind: "no_preview", id: r.id, name: r.name, city: r.city, email: r.email, website: r.website, gaps_json: r.gaps_json, menu_url: r.menu_url, offer_code: r.offer_code }))
   ].slice(0, 50);
   // Menus are free or with MΞNU Plus (owner, Nov 14, 2026); follow-ups quote that, not the old $144 first year.

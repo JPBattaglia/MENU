@@ -7,7 +7,7 @@
 // The emails don't mention a missing call button.
 import { MENU_DESIGNS } from "../../booking-api/src/producers/menu-qr/menu-designs.js";
 import { DESIGNS as SITE_DESIGNS } from "../../booking-api/src/producers/website/templates/designs.js";
-import { HOLIDAY_PRICING } from "../../booking-api/src/checkout/holiday.js";
+import { HOLIDAY_PRICING, holidayPrices } from "../../booking-api/src/checkout/holiday.js";
 
 const MENU_COUNT = MENU_DESIGNS.length;
 const SITE_COUNT = SITE_DESIGNS.length;
@@ -156,11 +156,11 @@ export function holidaySeasonNow(now = Date.now()) {
   const year = new Date(now).getUTCFullYear();
   return now >= Date.parse(`${year}-11-01T00:00:00-07:00`) && now <= Date.parse(`${year}-12-20T23:59:59-08:00`);
 }
-const holidayNote = () => `Doing a Christmas or New Year's Eve menu? I can put that online too, with its own QR code, from ${usd(HOLIDAY_PRICING.firstCents)}. Just reply.`;
+const holidayNote = () => `Doing a Christmas or New Year's Eve menu? I can put that online too, with its own QR code, from ${usd(holidayPrices().first_cents)}. Just reply.`;
 
 export function buildHoliday(p, demoUrl = null) {
-  const one = usd(HOLIDAY_PRICING.firstCents);
-  const both = usd(HOLIDAY_PRICING.firstCents + HOLIDAY_PRICING.secondCents);
+  const one = usd(holidayPrices().first_cents);
+  const both = usd(holidayPrices().both_cents);
   const subject = p.contacted ? `A holiday menu for ${p.name}` : `${p.name}'s holiday menu, online`;
   const paras = ["Hi there,",
     p.contacted
@@ -174,6 +174,33 @@ export function buildHoliday(p, demoUrl = null) {
     ? [["See your menu in the holiday designs", demoUrl, true], ["Make my holiday menu", `${HOLIDAY}#try-free`, false]]
     : [["See holiday menus", HOLIDAY, true], ["Try it free with your holiday menu", `${HOLIDAY}#try-free`, false]];
   return render(p, subject, paras, buttons, HOLIDAY_FOOTER);
+}
+
+// Holiday push (owner, Nov 17, 2026, "do all"): from Nov 1 to Dec 20 the auto-sent emails lead with the Holiday Menu.
+// Same plain-text note from JP, one link, today's price (early bird through Nov 30), free with MΞNU Plus, and a plain
+// deadline. demoUrl: their current menu shown in the holiday designs (holiday-outreach.js) when it could be read;
+// otherwise the link opens the holiday generator to try with their holiday menu.
+const HOLIDAY_DEADLINE = "Order by December 10 and it's online with plenty of time before Christmas.";
+function holidayPriceLine(now = Date.now()) {
+  const h = holidayPrices(now);
+  return h.early_bird
+    ? `It's ${usd(h.first_cents)} if you order by ${h.early_bird_ends} (then ${usd(h.regular_first_cents)}), ${usd(h.both_cents)} for Christmas and New Year's Eve, or free if you start MΞNU Plus at $12 a month.`
+    : `It's ${usd(h.first_cents)} per holiday, ${usd(h.both_cents)} for both, or free if you start MΞNU Plus at $12 a month.`;
+}
+export const holidaySubject = (p) => `${p.name}'s holiday menu`;
+export function buildHolidayLead(p, demoUrl = null, now = Date.now()) {
+  const paras = ["Hi there,",
+    p.contacted
+      ? `I wrote a little while ago about ${p.name}'s menu. With the holidays close, one more idea and then I'll leave you be.`
+      : `${opening(p, now)}I'm JP with Menu-made in San Francisco. We put food and drink menus online.`,
+    "Are you doing a Christmas or New Year's Eve menu this year? I can put it online as its own phone menu with a QR code for the tables, plus a print-ready PDF and a table tent. It sits beside your regular menu, and after the holiday the QR code sends guests back to it.",
+    ...(demoUrl
+      ? ["Here's your current menu in our holiday designs, so you can see the look:", demoUrl]
+      : ["Upload your holiday menu (a PDF or photos) and you'll see it in six holiday designs in a few seconds, free:", `${HOLIDAY}#try-free`]),
+    `${holidayPriceLine(now)} ${HOLIDAY_DEADLINE}`,
+    "Want me to set it up for you? Just reply with the menu attached."];
+  // A follow-up to a holiday first email threads under it; a holiday second email after a regular first one gets its own subject.
+  return render({}, p.holiday_followup ? `Re: ${holidaySubject(p)}` : p.contacted ? `A holiday menu for ${p.name}` : holidaySubject(p), paras);
 }
 
 // Plain text only (Nov 16, 2026). In the holiday season one P.S. offers the Holiday Menu, answered by reply, so the

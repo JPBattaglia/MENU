@@ -21,6 +21,7 @@ const json = (data, status = 200) => Response.json(data, { status, headers: { "C
 const daysFromNow = (days, now) => new Date(now + days * 86400000).toISOString();
 // A prospect emailed in the last few days isn't emailed again so soon.
 const RECENT_DAYS = 5;
+// Two emails per business at most (owner, Nov 16, 2026): a prospect that already had a follow-up gets no holiday one.
 
 // The season the emails run in: from Nov 1 to Dec 20 (time left to order and print). Christmas until Dec 20, then
 // nothing; the preview shows Christmas designs first while Christmas is on sale.
@@ -42,7 +43,7 @@ async function dueProspects(env, now, limit) {
   const { results = [] } = await env.DB.prepare(`
       SELECT id, name, city, email, website, status, sent_at, menu_url, opened_on FROM prospects
       WHERE email IS NOT NULL AND holiday_drafted_at IS NULL
-        AND (status = 'SENT' AND (sent_at IS NULL OR sent_at <= ?) OR status = 'NEW')
+        AND (status = 'SENT' AND followup_drafted_at IS NULL AND (sent_at IS NULL OR sent_at <= ?) OR status = 'NEW')
       ORDER BY CASE status WHEN 'SENT' THEN 0 ELSE 1 END, sent_at, score DESC, id
       LIMIT ?`).bind(recent, limit).all();
   return results.map((r) => ({ ...r, contacted: r.status === "SENT" }));

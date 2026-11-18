@@ -38,7 +38,7 @@ import { menuColors, readMenuWithClaude } from "../producers/menu-qr/claude-read
 import { LOGO_MODES, buildDesignedMenuHtml, parseLogoInfo } from "../producers/menu-qr/design.js";
 import { cleanMenu, diffMenus } from "../producers/menu-care/menu-edit.js";
 import { MENU_DESIGNS, designStyle, designsFor, menuDesignFor } from "../producers/menu-qr/menu-designs.js";
-import { HOLIDAY_PRICING, OCCASION_NAMES, holidayDollars, holidayOnSale, holidayQuote, isOccasion, otherOccasion, prepaidCover } from "../checkout/holiday.js";
+import { HOLIDAY_PRICING, OCCASION_NAMES, holidayDollars, holidayFirstCents, holidayPrices, holidayOnSale, holidayQuote, isOccasion, otherOccasion, prepaidCover } from "../checkout/holiday.js";
 import { completePrepaidHoliday } from "../checkout/session.js";
 import { frameAware, wantsJson, preflight } from "./framed.js";
 import { sniffImage } from "../producers/website/intake.js";
@@ -83,8 +83,8 @@ const cleanText = (value, max) => String(value || "").replace(/[\r\n\x00]/g, " "
 // Holiday previews (occasion "christmas" or "newyear") go to the Holiday Menu checkout instead.
 // both: the buyer picked "Both: $89" in the holiday picker (owner, Nov 12, 2026); the Start page ticks the other holiday.
 const startUrl = (token, occasion = null, both = false) => isOccasion(occasion) ? `${SITE}/contact.html?service=holiday&preview=${token}${both ? "&both=1" : ""}` : `${SITE}/contact.html?service=menu&plan=MENU_PLUS&preview=${token}`;
-const holidayPrice = () => holidayDollars(HOLIDAY_PRICING.firstCents);
-const bothPrice = () => holidayDollars(HOLIDAY_PRICING.firstCents + HOLIDAY_PRICING.secondCents);
+const holidayPrice = () => holidayDollars(holidayFirstCents());
+const bothPrice = () => holidayDollars(holidayFirstCents() + HOLIDAY_PRICING.secondCents);
 // prepaid: this holiday was already covered by an order for both holidays (owner, Nov 12, 2026: the second menu
 // "shouldn't [cost $59] because it's already paid for"), so nothing here names a price.
 // Owner, Nov 12, 2026: not "Make it live: $59" but "a button that says complete dual order or something to that effect".
@@ -447,7 +447,9 @@ async function runPreviewReminders(env, { now = Date.now(), force = false } = {}
     const ends = endsText(row.expires_at);
     const n = designsFor(row.occasion).length;
     const live = isOccasion(row.occasion) ? `${holidayPrice()}, live through ${OCCASION_NAMES[row.occasion]}` : `${plusLine()}, or Start free in the Classic design`;
-    const result = await sendTransactionalEmail(env, {
+    // Holiday previews (holiday push, Nov 17, 2026): a sharper reminder. The holiday menu disappears, the price is
+    // today's (early bird through Nov 30), and it's free when the buyer starts MΞNU Plus at checkout.
+    const result = isOccasion(row.occasion) ? await holidayReminder(env, row, email, { url, ends, n, now }) : await sendTransactionalEmail(env, {
       to: email,
       subject: `Your menu preview ends ${ends}`,
       html: brandedEmailHtml({
@@ -468,6 +470,35 @@ async function runPreviewReminders(env, { now = Date.now(), force = false } = {}
     if (result?.ok) { await mark(); sent.push(row.token); }
   }
   return sent;
+}
+
+async function holidayReminder(env, row, email, { url, ends, n, now }) {
+  const name = OCCASION_NAMES[row.occasion];
+  const hours = Math.max(1, Math.round((Date.parse(row.expires_at) - now) / 3600000));
+  const when = hours <= 30 ? "tomorrow" : `on ${ends}`;
+  const prices = holidayPrices(now);
+  const priceLine = prices.early_bird
+    ? `Make it live for ${holidayDollars(prices.first_cents)} (early-bird price through ${prices.early_bird_ends}, then ${holidayDollars(prices.regular_first_cents)}), or free when you start MΞNU Plus at checkout.`
+    : `Make it live for ${holidayDollars(prices.first_cents)}, or free when you start MΞNU Plus at checkout.`;
+  const order = startUrl(row.token, row.occasion);
+  return sendTransactionalEmail(env, {
+    to: email,
+    subject: `Your ${name} menu disappears ${when}`,
+    html: brandedEmailHtml({
+      preheader: `${row.business}'s ${name} menu preview ends ${ends}. Your menu file is already attached.`,
+      eyebrow: "HOLIDAY MENU",
+      heading: `Your ${name} menu disappears ${when}`,
+      paragraphs: [
+        `${escapeHtml(row.business)}'s ${name} menu preview ends <strong>${escapeHtml(ends)}</strong> (Pacific time). After that you'd have to upload it again.`,
+        `${escapeHtml(priceLine)} It goes live with a QR code for your tables, a print-ready PDF and a table tent, and your menu file is already attached, so checkout takes a minute.`,
+        `Order by December 10 and it's online with plenty of time before Christmas.`
+      ],
+      buttons: [{ label: "Make my holiday menu live", url: order, primary: true }, { label: `See all ${n} designs`, url }],
+      footnote: "This is the only reminder we'll send about this preview."
+    }),
+    text: `Your ${name} menu preview ends ${ends} (Pacific).\n${priceLine}\nMake it live: ${order}\nSee all ${n} designs: ${url}\nThis is the only reminder about this preview.`,
+    idempotencyKey: `menu-preview-reminder/${row.token}`, purpose: "MENU_PREVIEW", templateKey: "holiday_preview_reminder_v1"
+  }).catch((error) => ({ ok: false, error }));
 }
 
 // "Email me the rep link": always to the owner inbox, so asking for it reveals nothing.

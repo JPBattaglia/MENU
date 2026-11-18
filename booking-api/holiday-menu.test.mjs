@@ -17,6 +17,12 @@ const { hostedMenuSlug } = await import('./src/onboarding/menu-inputs.js');
 const MENU = { sections: [{ name: 'Christmas Eve', items: [{ name: 'Prime Rib', description: 'au jus', price: '$48' }] }], notes: '', unreadable: '' };
 const PHONE = 'Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X)';
 const NOV_20 = Date.parse('2026-11-20T18:00:00Z');
+// Early bird (Nov 17, 2026): $39 through Nov 30, then $59. Tests at a fixed date name their price; tests that run at
+// today's date read it from holiday.js.
+const D1 = holiday.holidayDollars(holiday.holidayFirstCents());
+const D2 = holiday.holidayDollars(holiday.holidayFirstCents() + 3000);
+const esc = (s) => s.replace(/[$]/g, '\\$');
+const rx = (s) => new RegExp(esc(s));
 const migration = readFileSync(new URL('./migrations/0054_holiday_menu.sql', import.meta.url), 'utf8');
 // The test schema already has the new columns; the offer rows come from the migration itself.
 const offerRows = (db) => { for (const stmt of migration.split(/;\s*\n/)) if (/^\s*INSERT/m.test(stmt)) db.exec(stmt.replace(/^--.*$/gm, '')); };
@@ -82,24 +88,25 @@ test('dates: on sale until the holiday, shown through the day after, a second me
   assert.equal(holiday.holidayEnded('2026-12-26', Date.parse('2026-12-27T00:30:00-08:00')), true);
   const env = { DB: createD1() };
   offerRows(env.DB.raw);
-  assert.equal(await holiday.holidayPriceCents(env, 'owner@harbor.example', NOV_20), 5900);
+  assert.equal(await holiday.holidayPriceCents(env, 'owner@harbor.example', NOV_20), 3900, 'early bird on Nov 20');
   const sql = (q, ...a) => env.DB.raw.prepare(q).run(...a);
   sql(`INSERT INTO customers (id, created_at, updated_at, email) VALUES ('c', '2026-11-01', '2026-11-01', 'Owner@Harbor.example')`);
   sql(`INSERT INTO orders (id, created_at, updated_at, customer_id, status, subtotal_cents, total_cents, payment_status) VALUES ('o', '2026-11-12T00:00:00.000Z', '2026-11-12', 'c', 'ONBOARDING_REQUIRED', 5900, 5900, 'PAID')`);
   sql(`INSERT INTO order_items (id, order_id, offer_id, offer_version_id, unit_price_cents, line_total_cents) VALUES ('i', 'o', 'offer_holiday_menu', 'offerv1_holiday_menu', 5900, 5900)`);
   assert.equal(await holiday.holidayPriceCents(env, 'owner@harbor.example', NOV_20), 3000, 'second holiday menu this season');
-  assert.equal(await holiday.holidayPriceCents(env, 'owner@harbor.example', Date.parse('2027-11-20T12:00:00Z')), 5900, 'next season starts over');
+  assert.equal(await holiday.holidayPriceCents(env, 'owner@harbor.example', Date.parse('2027-11-20T12:00:00Z')), 3900, 'next season starts over (early bird again)');
+  assert.equal(await holiday.holidayPriceCents(env, 'someone@new.example', Date.parse('2026-12-02T12:00:00-08:00')), 5900, 'from Dec 1 the regular price');
 });
 
 test('both holidays: $89 once, the other holiday then checks out at $0, and anything after that is $30', async () => {
   const env = { DB: createD1() };
   offerRows(env.DB.raw);
   const q = (occasion, both, now = NOV_20) => holiday.holidayQuote(env, 'owner@harbor.example', occasion, { both, now });
-  assert.deepEqual(await q('christmas', false), { price_cents: 5900 });
-  assert.deepEqual(await q('christmas', true), { price_cents: 8900, both_other: 'newyear' });
-  assert.deepEqual(await q('newyear', true), { price_cents: 8900, both_other: 'christmas' });
+  assert.deepEqual(await q('christmas', false), { price_cents: 3900 });
+  assert.deepEqual(await q('christmas', true), { price_cents: 6900, both_other: 'newyear' });
+  assert.deepEqual(await q('newyear', true), { price_cents: 6900, both_other: 'christmas' });
   assert.deepEqual(await q('newyear', true, Date.parse('2026-12-27T12:00:00-08:00')), { price_cents: 5900 }, 'Christmas is over, so there is no both');
-  assert.deepEqual(await q('christmas', 'true'), { price_cents: 5900 }, 'only a real true asks for both');
+  assert.deepEqual(await q('christmas', 'true'), { price_cents: 3900 }, 'only a real true asks for both');
   const sql = (text, ...a) => env.DB.raw.prepare(text).run(...a);
   sql(`INSERT INTO customers (id, created_at, updated_at, email) VALUES ('c', '2026-11-01', '2026-11-01', 'Owner@Harbor.example')`);
   sql(`INSERT INTO orders (id, created_at, updated_at, customer_id, status, subtotal_cents, total_cents, payment_status) VALUES ('o', '2026-11-12T00:00:00.000Z', '2026-11-12', 'c', 'ONBOARDING_REQUIRED', 8900, 8900, 'PAID')`);
@@ -119,13 +126,13 @@ test('Both picked in the holiday picker: the Make it live button and the checkou
   const html = '<html><head></head><body class="m"><main>Menu</main></body></html>';
   const one = publicPreviewPage(html, 'a'.repeat(36), { occasion: 'christmas' });
   const two = publicPreviewPage(html, 'a'.repeat(36), { occasion: 'christmas', both: true });
-  assert.match(one, /Make it live: \$59</);
-  assert.match(two, /Make it live: \$89 for both</);
-  assert.doesNotMatch(two, /Make it live: \$59/);
+  assert.match(one, rx(`Make it live: ${D1}<`));
+  assert.match(two, rx(`Make it live: ${D2} for both<`));
+  assert.doesNotMatch(two, rx(`Make it live: ${D1}<`));
   // The second menu of an order for both holidays: no price on the button.
   const paid = publicPreviewPage(html, 'a'.repeat(36), { occasion: 'newyear', prepaid: true });
   assert.match(paid, /Complete your order: already paid</);
-  assert.doesNotMatch(paid, /\$59|\$89/);
+  assert.doesNotMatch(paid, /\$\d/);
 });
 
 test('the second menu of a both-holidays order skips checkout: the button makes the order and lands on the Success page', async (t) => {
@@ -144,7 +151,7 @@ test('the second menu of a both-holidays order skips checkout: the button makes 
   const token = out.token;
   assert.match(await (await f.get(`/api/menu-preview/view/${token}`)).text(), /Complete your order: already paid</);
   // A live checkout never counts the test order: there it is a first menu at $59.
-  assert.equal((await holiday.holidayQuote(f.env, 'owner@harbor.example', 'newyear', { environment: 'live' })).price_cents, 5900);
+  assert.equal((await holiday.holidayQuote(f.env, 'owner@harbor.example', 'newyear', { environment: 'live' })).price_cents, holiday.holidayFirstCents());
   assert.deepEqual(await holiday.holidayQuote(f.env, 'owner@harbor.example', 'newyear', { environment: 'sandbox' }), { price_cents: 0, prepaid: true });
   const res = await f.get(`/api/menu-preview/choose/${token}/midnight`);
   assert.equal(res.status, 303);
@@ -172,15 +179,15 @@ test('a holiday preview: six holiday designs (that holiday first), the holiday p
   assert.equal(f.env.DB.raw.prepare(`SELECT occasion FROM menu_previews`).get().occasion, 'christmas');
   assert.equal(calls.claude, 1);
   assert.match(calls.sent[0].subject, /Your Christmas menu preview/);
-  assert.match(calls.sent[0].html, /Make it live for \$59/);
+  assert.match(calls.sent[0].html, rx(`Make it live for ${D1}`));
   const first = await (await f.get(`/api/menu-preview/view/${token}`)).text();
   assert.match(first, /Design 1 of 6: Evergreen \(Christmas\)/);
-  assert.match(first, /Make it live: \$59</);
+  assert.match(first, rx(`Make it live: ${D1}<`));
   assert.match(first, /<p>Christmas Menu<\/p>/, 'the line under the name says Christmas Menu');
   assert.ok(first.includes(`/api/menu-preview/view/${token}/candycane">Generate menu`));
   const last = await (await f.get(`/api/menu-preview/view/${token}/silvergold`)).text();
   assert.match(last, /Design 6 of 6: Silver and Gold<\/strong>/, 'a design for either holiday names no holiday');
-  assert.match(last, /Make it live: \$59</, 'one holiday: $59 on the button');
+  assert.match(last, rx(`Make it live: ${D1}<`), 'one holiday: $59 on the button');
   // The same stored page once this email's order for both holidays covers Christmas: the button is checked on
   // every open, so it stops naming a price. Without that order it is $59 again.
   const raw = f.env.DB.raw;
@@ -189,16 +196,16 @@ test('a holiday preview: six holiday designs (that holiday first), the holiday p
   raw.prepare(`INSERT INTO order_items (id, order_id, offer_id, offer_version_id, unit_price_cents, line_total_cents, metadata_json) VALUES ('ib', 'ob', 'offer_holiday_menu', 'offerv1_holiday_menu', 8900, 8900, ?)`).run(JSON.stringify({ holiday_menu: { occasion: 'newyear', both_other: 'christmas' } }));
   const covered = await (await f.get(`/api/menu-preview/view/${token}/silvergold`)).text();
   assert.match(covered, /Complete your order: already paid</);
-  assert.doesNotMatch(covered, /Make it live: \$59/);
+  assert.doesNotMatch(covered, rx(`Make it live: ${D1}`));
   raw.prepare(`DELETE FROM order_items WHERE id = 'ib'`).run(); raw.prepare(`DELETE FROM orders WHERE id = 'ob'`).run(); raw.prepare(`DELETE FROM customers WHERE id = 'cb'`).run();
-  assert.match(await (await f.get(`/api/menu-preview/view/${token}/silvergold`)).text(), /Make it live: \$59</);
+  assert.match(await (await f.get(`/api/menu-preview/view/${token}/silvergold`)).text(), rx(`Make it live: ${D1}<`));
   assert.equal((await f.get(`/api/menu-preview/view/${token}/confetti`)).status, 410, "New Year's Eve designs are not in a Christmas preview");
   assert.ok(last.includes(`/api/menu-preview/view/${token}/evergreen">Generate menu`), 'goes round to the first');
   assert.equal((await f.get(`/api/menu-preview/view/${token}/classic`)).status, 410, 'regular designs are not in a holiday preview');
   const state = await (await f.call(`/api/menu-preview/state/${token}`)).json();
   assert.equal(state.designs.length, 6);
   assert.equal(state.occasion, 'christmas');
-  assert.equal(state.choose_label, 'Make it live: $59 for Christmas');
+  assert.equal(state.choose_label, `Make it live: ${D1} for Christmas`);
   const chose = await f.get(`/api/menu-preview/choose/${token}/silentnight`);
   assert.equal(chose.status, 303);
   assert.equal(chose.headers.get('location'), `https://menu-made.com/contact.html?service=holiday&preview=${token}`);
@@ -210,11 +217,11 @@ test('a holiday preview: six holiday designs (that holiday first), the holiday p
   // Checkout: $59, a holiday line on Stripe, metadata the webhook turns into the project's holiday.
   const items = await normalizeCheckoutItems([{ code: 'HOLIDAY_MENU' }], f.env, { holiday_preview: token, customer: { email: 'owner@harbor.example' } }, { now: NOV_20 });
   assert.equal(items.length, 1);
-  assert.equal(items[0].priceCents, 5900);
-  assert.deepEqual(items[0].extraMetadata.holiday_menu, { occasion: 'christmas', ends_on: '2026-12-26', preview: token, design: 'silentnight', pages: 3, price_cents: 5900 });
+  assert.equal(items[0].priceCents, 3900);
+  assert.deepEqual(items[0].extraMetadata.holiday_menu, { occasion: 'christmas', ends_on: '2026-12-26', preview: token, design: 'silentnight', pages: 3, price_cents: 3900 });
   const params = new URLSearchParams();
   appendCheckoutLineItem(params, items[0], 0, 'live');
-  assert.equal(params.get('line_items[0][price_data][unit_amount]'), '5900');
+  assert.equal(params.get('line_items[0][price_data][unit_amount]'), '3900');
   assert.equal(params.get('line_items[0][price_data][product_data][name]'), 'Holiday Menu: Christmas');
   assert.match(params.get('line_items[0][price_data][product_data][description]'), /live through 2026-12-26.*nothing renews/);
   await assert.rejects(normalizeCheckoutItems([{ code: 'HOLIDAY_MENU' }], f.env, {}, { now: NOV_20 }), /holiday menu generator first/);
@@ -265,4 +272,12 @@ test('a holiday menu has its own address, never takes over the regular one, and 
   assert.match(ended, /href="https:\/\/menu-made\.com\/api\/menu\/harbor-kitchen-11111111">See our menu/, 'points to the regular menu');
   assert.equal(hostedMenuSlug('12345678-aaaa-4bbb-8ccc-999999999999', 'Harbor Kitchen', 'christmas'), 'harbor-kitchen-christmas-12345678');
   assert.equal(hostedMenuSlug('12345678-aaaa-4bbb-8ccc-999999999999', 'Harbor Kitchen'), 'harbor-kitchen-12345678');
+});
+
+test('early bird (Nov 17, 2026): $39 a holiday ($69 both) through Nov 30 Pacific, then $59 / $89; the second menu stays $30', () => {
+  const at = (iso) => holiday.holidayPrices(Date.parse(iso));
+  assert.deepEqual([at('2026-11-30T23:00:00-08:00').first_cents, at('2026-11-30T23:00:00-08:00').both_cents, at('2026-11-30T23:00:00-08:00').early_bird_ends], [3900, 6900, 'Nov 30']);
+  const dec = at('2026-12-01T00:30:00-08:00');
+  assert.deepEqual([dec.first_cents, dec.both_cents, dec.second_cents, dec.early_bird, dec.early_bird_ends], [5900, 8900, 3000, false, null]);
+  assert.equal(dec.regular_first_cents, 5900);
 });

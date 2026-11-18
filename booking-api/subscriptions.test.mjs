@@ -740,3 +740,26 @@ test('four choices (owner, Nov 15, 2026): MΞNU Pro is $79/mo, brings the menu f
     assert.deepEqual(h.jobs(id).map((j) => j.plan).sort(), ['ACCESSIBILITY_MONITORING', 'GOOGLE_PROFILE_CARE', 'MENU_CARE', 'REVIEW_REPLIES'], 'the four services each get their month; Plus does no work');
   } finally { h.restore(); }
 });
+
+test('holiday push (Nov 17, 2026): a holiday menu is free when the same checkout starts MΞNU Plus, one or both holidays', async () => {
+  const h = setup();
+  try {
+    h.env.DB.raw.exec(readFileSync(new URL('./migrations/0059_menu_plus.sql', import.meta.url), 'utf8'));
+    const holidayMigration = readFileSync(new URL('./migrations/0054_holiday_menu.sql', import.meta.url), 'utf8');
+    for (const stmt of holidayMigration.split(/;\s*\n/)) if (/^\s*INSERT/m.test(stmt)) h.env.DB.raw.exec(stmt.replace(/^--.*$/gm, ''));
+    const token = 'b'.repeat(36);
+    const t = new Date().toISOString();
+    h.env.DB.raw.prepare(`INSERT INTO menu_previews (token, request_id, email, business, status, created_at, expires_at, occasion, design) VALUES (?, 'req1', ?, 'Harbor', 'READY', ?, '2999-01-01T00:00:00.000Z', 'christmas', 'evergreen')`).run(token, buyer.email, t);
+    const res = await h.checkout({ items: [{ key: 'MENU_PLUS' }, { key: 'HOLIDAY_MENU' }], interval: 'month', holiday_preview: token, holiday_both: true, customer: buyer });
+    assert.equal(res.status, 200, JSON.stringify(res.body));
+    const p = h.stripe.sessions.at(-1).params;
+    assert.equal(p.get('line_items[0][price_data][unit_amount]'), '1200', 'only Plus is charged');
+    assert.equal(p.get('line_items[1][quantity]'), null, 'the holiday menu is not a Stripe line');
+    const line = h.one(`SELECT i.metadata_json, i.line_total_cents FROM order_items i JOIN offers o ON o.id = i.offer_id WHERE i.order_id = ? AND o.code = 'HOLIDAY_MENU'`, res.body.order_id);
+    const meta = JSON.parse(line.metadata_json);
+    assert.equal(meta.holiday_menu.price_cents, 0);
+    assert.equal(meta.holiday_menu.waived_reason, 'MΞNU Plus');
+    assert.equal(meta.holiday_menu.both_other, 'newyear', 'both holidays still owed, so the second menu is sent later at $0');
+    assert.ok(meta.setup_waived_cents > 0, 'the line stays on the order so the menu is made');
+  } finally { h.restore(); }
+});

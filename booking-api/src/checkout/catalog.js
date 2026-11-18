@@ -2,6 +2,7 @@ import { CUSTOM_ALLOWED, CUSTOM_CODE, CUSTOM_DISCOUNTS } from "../subscriptions/
 import { jsonResponse, nowIso, parseJsonOrNull } from "../lib/http.js";
 import { MENU_PACKAGE_PRICING } from "./quote.js";
 import { NINO_PRODUCTS } from "../producers/nino-design/products.js";
+import { holidayPrices } from "./holiday.js";
 
 async function getPublicOffers(env) {
   try {
@@ -281,6 +282,11 @@ async function getSiteCatalog(env) {
             additional_page_cents: MENU_PACKAGE_PRICING.additionalPageCents,
             max_pages: MENU_PACKAGE_PRICING.maxPages
           };
+        }
+        // Holiday Menu early bird (Nov 17, 2026): the price shown is today's; the pages read the rest from .holiday.
+        if (row.code === "HOLIDAY_MENU") {
+          offer.holiday = holidayPrices();
+          offer.price_cents = offer.holiday.first_cents;
         }
         byCode.set(row.code, offer);
       }

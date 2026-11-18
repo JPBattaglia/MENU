@@ -225,6 +225,7 @@ function holidaySetup(t, now, options = {}) {
   return { ...f, run };
 }
 
+const BOTH_TODAY = 6900; // the test clock is Nov 20: early bird, $39 + $30 (Nov 17, 2026)
 test('holiday self-test: both holidays at $89, quality checks at delivery, the second menu completes at $0 with no Stripe page; a first-time buyer again the next day', async (t) => {
   const f = holidaySetup(t, '2026-11-20T19:35:00.000Z');
   await withFetch(f.fetch, async () => {
@@ -232,14 +233,14 @@ test('holiday self-test: both holidays at $89, quality checks at delivery, the s
     const result = await f.run();
     assert.equal(result.status, 'PASSED', `${result.stage}: ${result.error}\n${result.log_json}`);
     const log = JSON.parse(result.log_json).map(l => l.note).filter(Boolean);
-    assert.match(log[0], /Christmas preview opened with 6 holiday designs; Silent Night chosen; order .* placed at \$89 for both holidays/);
+    assert.match(log[0], /Christmas preview opened with 6 holiday designs; Silent Night chosen; order .* placed at \$69 for both holidays/);
     assert.ok(log.some(l => /project carries the holiday \(ends 2026-12-26\)/.test(l)));
     const delivered = log.find(l => /^Delivered to the buyer/.test(l));
     assert.match(delivered, /live at \/api\/menu\/holiday-self-test-cafe-christmas-[0-9a-f]{8} in Silent Night through 2026-12-26/);
     assert.match(delivered, /all 6 items and prices on the page, QR code points at it, print PDF, tri-fold, table tent and TV screen open; preview removed/);
     assert.ok(log.some(l => /"Send your New Year's Eve menu" email sent; its preview says already paid; order .* completed at \$0 with no Stripe page/.test(l)), log.join('\n'));
     assert.match(log.at(-1), /New Year's Eve project started with its menu attached, then cancelled; second preview removed/);
-    assert.deepEqual([...f.sessions.values()].map(s => [s.amount_total, s.payment_status]), [[8900, 'paid']], 'one test payment: the second menu opens no Stripe page');
+    assert.deepEqual([...f.sessions.values()].map(s => [s.amount_total, s.payment_status]), [[BOTH_TODAY, 'paid']], 'one test payment: the second menu opens no Stripe page');
     for (const email of f.emails) assert.deepEqual(email.to, ['delivered@resend.dev'], email.subject);
     assert.ok(f.emails.some(e => /Your New Year's Eve menu is included/.test(e.subject)));
     assert.equal(f.row(`SELECT status FROM projects WHERE id = ?`, result.project_id).status, 'DELIVERED');
@@ -255,7 +256,7 @@ test('holiday self-test: both holidays at $89, quality checks at delivery, the s
     f.request('HOLIDAY_MENU_RUN');
     const next = await f.run();
     assert.equal(next.status, 'PASSED', `${next.stage}: ${next.error}`);
-    assert.equal([...f.sessions.values()].at(-1).amount_total, 8900);
+    assert.equal([...f.sessions.values()].at(-1).amount_total, BOTH_TODAY);
     assert.equal(f.rows(`SELECT id FROM orders WHERE payment_status = 'REFUNDED'`).length, 2, "yesterday's two test orders no longer count as paid");
   });
 });

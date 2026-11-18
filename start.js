@@ -245,6 +245,8 @@ function lineFor(code, kind) {
     small.textContent = quote ? `${quote.pages} page${quote.pages === 1 ? '' : 's'} · first-year hosting included${quote.free ? (planIncludes(PLUS) ? ' · first year free with MΞNU Plus' : ' · setup free with your yearly plan') : ''}` : 'Enter your page count';
   } else if (code === 'GUEST_APP_SETUP') {
     small.textContent = Catalog.label(o, interval()) + ' · one-time app build';
+  } else if (code === HOLIDAY && planIncludes(PLUS) && holidayCents !== 0) {
+    small.textContent = holidayBoth ? 'Both holiday menus free with MΞNU Plus' : 'Free with MΞNU Plus';
   } else if (code === HOLIDAY && holidayCents !== null) {
     small.textContent = holidayCents === 0 ? 'Already paid with your order for both holidays' : `${money(holidayCents)} · second holiday menu this season`;
   } else {
@@ -291,6 +293,8 @@ function render(openEmptyChoices = true) {
   let today = 0;
   for (const code of order.once) {
     els.items.append(lineFor(code, 'once'));
+    // A holiday menu is free when this checkout starts MΞNU Plus (Nov 17, 2026).
+    if (code === HOLIDAY && planIncludes(PLUS) && holidayCents !== 0) continue;
     today += code === MENU ? (quote?.totalCents || 0) : code === HOLIDAY && holidayCents !== null ? holidayCents : (Catalog.priceOf(offer(code), interval()) || 0);
     if (code === HOLIDAY && holidayBoth) today += HOLIDAY_SECOND_CENTS;
   }
@@ -348,8 +352,17 @@ function renderMenuAddon() {
   const on = planIncludes('MENU_CARE');
   const plusOn = order.plan === PLUS;
   // The plans include Menu Care, so the panel is for the menu on its own or with single services.
-  panel.hidden = !offers || !(order.once.has(MENU) || on || plusOn) || !(sellable(offer('MENU_CARE')) || sellable(offer(PLUS))) || /^BUNDLE_/.test(order.plan || '');
+  // A holiday menu offers MΞNU Plus too: it makes the holiday menu free (Nov 17, 2026).
+  const holidayOn = order.once.has(HOLIDAY) && holidayCents !== 0;
+  panel.hidden = !offers || !(order.once.has(MENU) || on || plusOn || holidayOn) || !(sellable(offer('MENU_CARE')) || sellable(offer(PLUS))) || /^BUNDLE_/.test(order.plan || '');
   if (panel.hidden) return;
+  const plusNote = panel.querySelector('[data-plus-row] small');
+  if (plusNote) {
+    if (!plusNote.dataset.menuText) plusNote.dataset.menuText = plusNote.textContent;
+    plusNote.textContent = holidayOn && !order.once.has(MENU)
+      ? 'Your holiday menu is free with Plus, and your regular menu goes online too: any design, the print set and TV menu, edit it yourself, other languages, no badge. Cancel any time.'
+      : plusNote.dataset.menuText;
+  }
   // MΞNU Plus first: offered when no other plan is chosen (it replaces a single plan, never a bundle or your own plan).
   const plusRow = panel.querySelector('[data-plus-row]');
   if (plusRow) {
@@ -367,7 +380,7 @@ function renderMenuAddon() {
   button.disabled = checkoutInFlight;
   const careRow = panel.querySelector('[data-care-row]');
   careRow.classList.toggle('is-selected', on);
-  careRow.hidden = !sellable(offer('MENU_CARE')) && !on;
+  careRow.hidden = (!sellable(offer('MENU_CARE')) && !on) || (holidayOn && !order.once.has(MENU) && !on);
   $('menuAddonNote').textContent = on ? (menuNote || (order.plan === CUSTOM ? `Your plan: ${order.custom.map(nameOf).join(', ')}, ${planLabel(CUSTOM)}.` : '')) : '';
 }
 function currentServices() {
@@ -901,7 +914,8 @@ if (previewToken && /^[a-f0-9]{36}$/.test(previewToken)) {
           render(false);
         });
         const words = document.createElement('span');
-        words.textContent = `Add my ${other} menu too: $89 for both holidays instead of $59. Send that menu later from the link we email you.`;
+        const h = offer(HOLIDAY)?.holiday;
+        words.textContent = `Add my ${other} menu too: ${money(h ? h.both_cents : 8900)} for both holidays instead of ${money(h ? h.first_cents : 5900)}. Send that menu later from the link we email you.`;
         label.append(box, words);
         $('lead_document_status').after(label);
         render(false);
