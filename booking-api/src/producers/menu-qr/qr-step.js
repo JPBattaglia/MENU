@@ -1,3 +1,4 @@
+import { qrScanUrl } from "../../marketing/menu-stats.js";
 import QRCode from "qrcode/lib/browser.js";
 import { nowIso } from "../../lib/http.js";
 import { sanitizeFilename, sha256Hex } from "../../lib/util.js";
@@ -105,8 +106,10 @@ async function runGenerateQrStep(targetStep, env) {
     );
     return output2;
   }
+  // The code opens a hosted menu with ?s=qr so scans show in the owner's stats (stage 15, Nov 17, 2026); the
+  // destination stored with the project stays the plain address. A buyer's own destination is left as it is.
   const svg = await QRCode.toString(
-    destinationUrl.toString(),
+    qrScanUrl(destinationUrl.toString(), env),
     {
       type: "svg",
       errorCorrectionLevel: "H",

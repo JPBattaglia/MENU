@@ -21,7 +21,7 @@ const PNG = new Uint8Array([0x89, 0x50, 0x4e, 0x47, 1, 2, 3, 4]);
 
 async function setup({ status = 'READY_TO_BUILD', logo = true } = {}) {
   const DB = createD1(); const ASSETS = createR2();
-  for (const m of ['0012_guest_app.sql', '0021_guest_app_engagement.sql', '0022_store_credentials.sql', '0024_android.sql', '0025_store_app.sql', '0026_store_app_builds.sql', '0027_store_app_listings.sql', '0029_store_app_live_version.sql']) DB.raw.exec(read(m));
+  for (const m of ['0012_guest_app.sql', '0021_guest_app_engagement.sql', '0062_menu_stats.sql', '0022_store_credentials.sql', '0024_android.sql', '0025_store_app.sql', '0026_store_app_builds.sql', '0027_store_app_listings.sql', '0029_store_app_live_version.sql']) DB.raw.exec(read(m));
   DB.raw.exec('PRAGMA foreign_keys = OFF');
   const sql = (q, ...a) => DB.raw.prepare(q).run(...a);
   const t = '2026-10-30T00:00:00.000Z';

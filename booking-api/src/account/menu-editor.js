@@ -8,6 +8,7 @@
 // code, and the print PDF, tri-fold, table tent and TV menu follow because they are built from the live page.
 // No owner approval: the business is editing its own menu. Prices are not checked against anything (they are the
 // business's own); the page check still makes sure everything typed is on the page.
+import { menuStats } from "../marketing/menu-stats.js";
 import { nowIso } from "../lib/http.js";
 import { sanitizeFilename, sha256Hex } from "../lib/util.js";
 import { buildDesignedMenuHtml, assertMenuRendered } from "../producers/menu-qr/design.js";
@@ -118,6 +119,8 @@ async function handleMenuEditor(request, env) {
     return privateJson({ ok: true, business: { id: business.id, name: business.name }, menu_url: menuUrl,
       menu: { sections: live.page.menu.sections, notes: live.page.menu.notes }, updated_at: live.row.delivered_at,
       languages: await languageState(env, business.id), plan: await planState(env, business.id),
+      // Owner stats (stage 15, Nov 17, 2026): the last 7 days, with Google profile clicks when Google is connected.
+      stats: await menuStats(env, business.id).catch(() => null),
       designs: MENU_DESIGNS.filter((d) => !d.occasion).map(({ key, label, blurb }) => ({ key, label, blurb })) });
   }
 

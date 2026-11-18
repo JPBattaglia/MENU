@@ -23,7 +23,7 @@ const P8 = generateKeyPairSync('ec', { namedCurve: 'P-256' }).privateKey.export(
 
 async function setup({ key = 'UNVERIFIED' } = {}) {
   const DB = createD1(); const ASSETS = createR2();
-  for (const m of ['0009_website_package.sql', '0012_guest_app.sql', '0021_guest_app_engagement.sql', '0022_store_credentials.sql', '0023_native_push.sql']) DB.raw.exec(read(m));
+  for (const m of ['0009_website_package.sql', '0012_guest_app.sql', '0021_guest_app_engagement.sql', '0062_menu_stats.sql', '0022_store_credentials.sql', '0023_native_push.sql', '0063_push_owner_link.sql']) DB.raw.exec(read(m));
   const sql = (q, ...a) => DB.raw.prepare(q).run(...a);
   const t = '2026-10-01T00:00:00.000Z';
   sql(`INSERT INTO businesses (id, created_at, updated_at, name) VALUES ('biz', ?, ?, 'Sample Cafe')`, t, t);

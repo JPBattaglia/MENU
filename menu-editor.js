@@ -172,6 +172,42 @@
     drawLanguages(out.languages, out.menu_url);
     drawPlan(out.plan);
     drawDesigns(out.designs, out.plan);
+    drawStats(out.stats);
+  }
+
+  // Owner stats (stage 15, Nov 17, 2026): views, QR scans and, with a connected Google profile, Google clicks.
+  function drawStats(stats) {
+    const card = $('editStats');
+    card.hidden = !stats;
+    if (!stats) return;
+    const tiles = $('statsTiles');
+    tiles.replaceChildren();
+    const tile = (n, label, before) => {
+      const t = el('div', 'mm-stat');
+      t.append(el('strong', null, String(n)), el('span', null, label));
+      if (typeof before === 'number') t.append(el('small', null, `week before: ${before}`));
+      tiles.append(t);
+    };
+    tile(stats.views, 'menu views', stats.previous && stats.previous.views);
+    tile(stats.qr_scans, 'from the QR code', stats.previous && stats.previous.qr_scans);
+    if (stats.google) {
+      tile(stats.google.calls, 'calls from Google');
+      tile(stats.google.website + stats.google.directions, 'Google website clicks and directions');
+    }
+    const days = $('statsDays');
+    days.replaceChildren();
+    const top = Math.max(1, ...stats.daily.map((d) => d.views));
+    for (const d of stats.daily) {
+      const col = el('div', 'mm-stats-day');
+      const bar = el('i');
+      bar.style.height = `${Math.round((d.views / top) * 100)}%`;
+      bar.title = `${d.day}: ${d.views} views, ${d.qr_scans} from the QR code`;
+      col.append(bar, el('span', null, new Date(`${d.day}T12:00:00`).toLocaleDateString('en-US', { weekday: 'narrow' })));
+      days.append(col);
+    }
+    $('statsNote').textContent = stats.google
+      ? `Google's numbers run a few days behind (${stats.google.from} to ${stats.google.to}). QR scans count from codes made since Nov 17, 2026. Every Monday these come by email too.`
+      : 'QR scans count from codes made since Nov 17, 2026. Every Monday these come by email too. With MΞNU Pro, calls, website clicks and directions from your Google profile show here as well.';
   }
 
   // MΞNU free plan (Nov 14, 2026): what the free menu includes, and the way to every design.

@@ -316,7 +316,7 @@ test('the Mobile App approval and delivery emails never call it a Guest App', as
 
 test('own apps: one owner email with a working "Send a notification" button for each app, and the account page shows them', async () => {
   const f = setup();
-  for (const m of ['0040_own_store_apps.sql', '0026_store_app_builds.sql', '0021_guest_app_engagement.sql', '0023_native_push.sql']) f.DB.raw.exec(read(m));
+  for (const m of ['0040_own_store_apps.sql', '0026_store_app_builds.sql', '0021_guest_app_engagement.sql', '0062_menu_stats.sql', '0023_native_push.sql', '0063_push_owner_link.sql']) f.DB.raw.exec(read(m));
   const own = await import('./src/store-app/own-apps.js');
   const LOGO = Uint8Array.from(atob('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg=='), (c) => c.charCodeAt(0));
   assert.deepEqual(await own.sendOwnAppPushLinks(f.env), { skipped: 'no_apps' });
@@ -343,7 +343,7 @@ test('own apps: one owner email with a working "Send a notification" button for 
 
 test('owner Notifications page: sign-in link goes only to the owner inbox, opens both apps\' send pages, expires', async () => {
   const f = setup();
-  for (const m of ['0040_own_store_apps.sql', '0026_store_app_builds.sql', '0021_guest_app_engagement.sql', '0023_native_push.sql']) f.DB.raw.exec(read(m));
+  for (const m of ['0040_own_store_apps.sql', '0026_store_app_builds.sql', '0021_guest_app_engagement.sql', '0062_menu_stats.sql', '0023_native_push.sql', '0063_push_owner_link.sql']) f.DB.raw.exec(read(m));
   const own = await import('./src/store-app/own-apps.js');
   const LOGO = Uint8Array.from(atob('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg=='), (c) => c.charCodeAt(0));
   await own.ensureOwnStoreApps(f.env, { force: true, fetchImpl: async () => new Response(LOGO) });

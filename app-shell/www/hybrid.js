@@ -809,8 +809,38 @@
       });
       s.appendChild(list);
       s.appendChild(pushCard("Notifications", "Hear when there's something new."));
+      if (data.theme === "menumade") s.appendChild(statsPhoneCard());
     }
   };
+
+  // Owner stats (stage 15, Nov 17, 2026): a business owner gets their menu's weekly views and QR scans on this phone.
+  // The email gets a link that confirms this phone, so nobody can ask for someone else's numbers.
+  function statsPhoneCard() {
+    var card = el("div", "hy-card hy-form");
+    function draw() {
+      while (card.firstChild) card.removeChild(card.firstChild);
+      var sent = t.store.get("push-sent-v2") || {};
+      card.hidden = !push.plugin || push.state !== "on" || !sent.token;
+      if (card.hidden) return;
+      card.appendChild(el("strong", null, "Your menu's numbers on this phone"));
+      card.appendChild(el("p", "hy-muted", "Have a live menu with us? Every Monday, get last week's menu views and QR scans here."));
+      var mail = el("input"); mail.type = "email"; mail.placeholder = "Your Menu-Made email"; mail.autocomplete = "email"; mail.setAttribute("aria-label", "Your Menu-Made email");
+      card.appendChild(mail);
+      var msg = el("p", "hy-muted");
+      var go = button("Send them to this phone", "hy-btn", function () {
+        var email = String(mail.value || "").trim();
+        if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { msg.textContent = "Type the email you use with Menu-Made."; return; }
+        go.disabled = true; msg.textContent = "Sending…";
+        t.api("menu-stats/link", { email: email, token: sent.token }).then(function (r) {
+          go.disabled = false;
+          msg.textContent = r.ok ? (r.message || "Check your email for a link.") : (r.error || "That didn't go through. Try again.");
+        }).catch(function () { go.disabled = false; msg.textContent = "That didn't go through. Try again."; });
+      });
+      card.appendChild(go); card.appendChild(msg);
+    }
+    push.listeners.push(draw); draw();
+    return card;
+  }
 
   // ---- Nino (shop) ----
   function productCard(p) {

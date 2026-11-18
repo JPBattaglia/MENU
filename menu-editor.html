@@ -68,6 +68,12 @@
   <div id="editSignIn" hidden class="mm-card"><h2>Sign in first</h2><p>Editing your menu needs your account. We email you a sign-in link; no password.</p><a class="btn primary" href="account.html">Sign in</a></div>
   <div id="editPick" hidden class="mm-card"><label for="editBusiness">Which menu?</label><select id="editBusiness"></select></div>
   <div id="editor" hidden>
+    <section class="mm-card mm-stats-card" id="editStats" hidden aria-labelledby="statsTitle">
+      <h2 id="statsTitle">Your menu, last 7 days</h2>
+      <div class="mm-stats" id="statsTiles"></div>
+      <div class="mm-stats-days" id="statsDays" aria-hidden="true"></div>
+      <p class="mini" id="statsNote"></p>
+    </section>
     <section class="mm-card mm-free-card" id="editFree" hidden aria-labelledby="freeTitle">
       <h2 id="freeTitle">Your menu is on the free plan</h2>
       <p id="freeWelcome" hidden><strong>It's live.</strong> Your QR code and a link to this page are in your email, and on your account page.</p>

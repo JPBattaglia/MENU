@@ -20,6 +20,7 @@
 // Cost guard: the AI read already happened (and was capped) when the preview was made; this adds storage only.
 // FREE_PER_DAY menus a day in total and FREE_PER_EMAIL per address keep a runaway loop or a bad actor small.
 import QRCode from "qrcode/lib/browser.js";
+import { qrScanUrl } from "./menu-stats.js";
 import { nowIso, parseJsonOrNull, simplePage } from "../lib/http.js";
 import { brandedEmailHtml, escapeHtml, sendTransactionalEmail } from "../lib/email.js";
 import { signLinkToken, verifyLinkToken } from "../lib/links.js";
@@ -215,7 +216,7 @@ async function createFreeMenu(env, row, { now = Date.now() } = {}) {
 
     const html = renderMenuDesign(data, FREE_DESIGN, await loadPreviewLogo(env, row.token, data.custom).catch(() => null));
     const menu = await storeDeliverable(env, { projectId, orderId, customerId, businessId, t, type: "MENU_DRAFT", ext: "html", mime: "text/html; charset=utf-8", bytes: new TextEncoder().encode(html), name: `${name}-menu.html`, meta: { free_plan: true, design: FREE_DESIGN } });
-    const svg = await QRCode.toString(destination, { type: "svg", errorCorrectionLevel: "H", margin: 4, width: 1024 });
+    const svg = await QRCode.toString(qrScanUrl(destination, env), { type: "svg", errorCorrectionLevel: "H", margin: 4, width: 1024 });
     const qr = await storeDeliverable(env, { projectId, orderId, customerId, businessId, t, type: "QR_CODE", ext: "svg", mime: "image/svg+xml", bytes: new TextEncoder().encode(svg), name: `${name}-qr.svg`, meta: { free_plan: true, destination_url: destination } });
     await sendLiveEmail(env, { email, name, destination, qrDeliverableId: qr, businessId, customerId, orderId, projectId, token: row.token });
     return { ok: true, projectId, businessId, customerId, menuDeliverableId: menu, qrDeliverableId: qr, destination };
