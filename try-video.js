@@ -60,17 +60,21 @@
     const enlarge = () => {
       const playing = !video.paused;
       if (video.preload === 'none') video.preload = 'auto';
-      realFullscreen(frame).then(() => {
-        // Some browsers resolve without going full screen (a blocked frame); check, then fall back.
-        setTimeout(() => { if (!inFullscreen()) fillWindow(); }, 300);
-      }).catch(() => {
+      // Owner, Nov 17, 2026: in the Claude app's browser the full-screen request never answers (neither yes nor no),
+      // so the button did nothing. Whatever the request does, if the video isn't full screen after a moment it fills
+      // the window instead; a late "yes" still wins (the fill is undone when full screen starts).
+      let settled = false;
+      const fallback = () => {
+        if (settled || inFullscreen()) return;
+        settled = true;
         if (typeof video.webkitEnterFullscreen === 'function' && /iP(hone|ad|od)/.test(navigator.userAgent)) {
           try { video.webkitEnterFullscreen(); return; } catch { /* fall through */ }
         }
         fillWindow();
-      }).finally(() => {
-        if (!playing) video.play().catch(() => {});
-      });
+      };
+      realFullscreen(frame).then(() => { setTimeout(fallback, 300); }).catch(fallback);
+      setTimeout(fallback, 700);
+      if (!playing) video.play().catch(() => {});
     };
 
     open.addEventListener('click', enlarge);
@@ -79,7 +83,11 @@
     document.addEventListener('keydown', (event) => { if (event.key === 'Escape') unfill(); });
   }
 
-  const sync = () => document.documentElement.classList.toggle('mm-video-fs', Boolean(inFullscreen()));
+  const sync = () => {
+    document.documentElement.classList.toggle('mm-video-fs', Boolean(inFullscreen()));
+    // A full-screen "yes" that arrives after the window fill took over: drop the fill.
+    if (inFullscreen()) document.querySelectorAll('.mm-video-frame.is-filling .mm-video-close').forEach((b) => b.click());
+  };
   document.addEventListener('fullscreenchange', sync);
   document.addEventListener('webkitfullscreenchange', sync);
 })();
