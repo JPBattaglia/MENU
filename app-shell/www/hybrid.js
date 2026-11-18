@@ -264,9 +264,23 @@
     full.addEventListener("click", function () {
       try { if (video.paused) video.play().catch(function () {}); } catch (e) {}
       if (video.webkitEnterFullscreen && /iP(hone|ad|od)/.test(navigator.userAgent)) { try { video.webkitEnterFullscreen(); return; } catch (e) {} }
-      var ask = frame.requestFullscreen ? frame.requestFullscreen() : frame.webkitRequestFullscreen ? Promise.resolve(frame.webkitRequestFullscreen()) : Promise.reject();
-      Promise.resolve(ask).then(function () { if (!(document.fullscreenElement || document.webkitFullscreenElement)) fill(true); }).catch(function () { fill(true); });
+      // Mirrors menu-made.com #303 (owner, Nov 17, 2026): some web views never answer the full-screen request (neither
+      // yes nor no), so the button did nothing. If the video isn't full screen after a moment it fills the screen
+      // instead; a late "yes" still wins (the fill is undone when full screen starts).
+      var settled = false;
+      var fallback = function () {
+        if (settled || isFull()) return;
+        settled = true; fill(true);
+      };
+      var ask;
+      try { ask = frame.requestFullscreen ? frame.requestFullscreen() : frame.webkitRequestFullscreen ? Promise.resolve(frame.webkitRequestFullscreen()) : Promise.reject(); } catch (e) { ask = Promise.reject(e); }
+      Promise.resolve(ask).then(function () { setTimeout(fallback, 300); }).catch(fallback);
+      setTimeout(fallback, 700);
     });
+    function isFull() { return Boolean(document.fullscreenElement || document.webkitFullscreenElement); }
+    function lateYes() { if (isFull() && frame.classList.contains("is-filling")) { frame.classList.remove("is-filling"); close.hidden = true; document.body.classList.remove("hy-sheet-open"); } }
+    frame.addEventListener("fullscreenchange", lateYes);
+    frame.addEventListener("webkitfullscreenchange", lateYes);
     close.addEventListener("click", function () { fill(false); });
     document.addEventListener("keydown", function (ev) { if (ev.key === "Escape" && frame.classList.contains("is-filling")) fill(false); });
     frame.appendChild(close);
