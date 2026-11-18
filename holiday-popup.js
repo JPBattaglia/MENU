@@ -73,6 +73,20 @@
     cta.focus();
   }
 
-  function start() { setTimeout(open, 3000); }
+  // Banner button colour (owner, Nov 17, 2026): red when it sits on the right, over the strip's green side; green when
+  // the strip wraps and it lands on the left, over the red side. Checked on load and whenever the strip changes size.
+  function sideColours() {
+    document.querySelectorAll('.mm-holiday-strip').forEach(function (strip) {
+      var btn = strip.querySelector('.btn');
+      if (!btn) return;
+      var check = function () {
+        var s = strip.getBoundingClientRect(), b = btn.getBoundingClientRect();
+        strip.classList.toggle('mm-strip-btn-left', b.left + b.width / 2 < s.left + s.width / 2);
+      };
+      check();
+      if (window.ResizeObserver) new ResizeObserver(check).observe(strip); else window.addEventListener('resize', check);
+    });
+  }
+  function start() { sideColours(); setTimeout(open, 3000); }
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', start); else start();
 })();

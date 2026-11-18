@@ -3201,8 +3201,11 @@ body.mm-xmas .footer { background: #08261b; border-top: 6px solid transparent; b
 .mm-xmas-card .mm-xmas-actions { display: flex; flex-direction: column; gap: 10px; align-items: stretch; }
 .mm-xmas-card .mm-xmas-later { background: none; border: 0; box-shadow: none; border-radius: 8px; color: #f6d983; font: inherit; text-decoration: underline; text-underline-offset: 4px; cursor: pointer; padding: 8px; }
 .mm-xmas-card .mm-xmas-close { position: absolute; top: 16px; right: 12px; width: 36px; height: 36px; border-radius: 50%; border: 1px solid rgba(255,255,255,.5); background: rgba(0,0,0,.25); color: #fff; font-size: 22px; line-height: 1; cursor: pointer; }
-/* On the red side of the strip the button is pine green, so it still stands out. */
-.mm-holiday-strip .btn.primary { background: linear-gradient(135deg, #1f7a52, #0d3b2a); color: #fff; border-color: #f0c75e; }
+/* Owner, Nov 17, 2026: the button takes the opposite colour of the side it sits on: berry red on the right (the strip's
+   green side), pine green when the strip wraps and it lands on the left (the red side). holiday-popup.js sets
+   .mm-strip-btn-left. */
+.mm-holiday-strip .btn.primary { background: linear-gradient(135deg, #d4242f, #8e1119); color: #fff; border-color: #f0c75e; }
+.mm-holiday-strip.mm-strip-btn-left .btn.primary { background: linear-gradient(135deg, #1f7a52, #0d3b2a); }
 
 /* Holiday Menu page: tap a design to see it full size (holiday-designs.js). */
 .mm-design-zoom { display: block; width: 100%; padding: 0; margin: 0; border: 0; background: none; cursor: zoom-in; position: relative; border-radius: 14px; box-shadow: none; }
