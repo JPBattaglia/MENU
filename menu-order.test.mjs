@@ -301,3 +301,20 @@ test('if prices cannot load, nothing can be bought and the buyer is told', async
   assert.match(p.get('status').textContent, /Prices could not be loaded/);
   assert.equal(p.buttons.get('BUNDLE_PREMIUM').disabled, true);
 });
+
+test('Holiday Menu with MΞNU Plus checks out without Online Menu + QR (owner, Nov 18, 2026: test checkout was refused)', async () => {
+  const p = await page('?service=holiday&preview=' + 'a'.repeat(36));
+  assert.deepEqual(p.state().once, ['HOLIDAY_MENU']);
+  vm.runInNewContext("add('MENU_PLUS')", p.context);
+  assert.deepEqual(p.state(), { plan: 'MENU_PLUS', once: ['HOLIDAY_MENU'] }, 'Plus does not bring a second menu');
+  assert.equal(vm.runInNewContext("add('ONLINE_MENU_QR')", p.context), false, 'the everyday menu checks out on its own');
+  p.fill();
+  await p.get('checkoutBtn').fire('click');
+  assert.equal(p.sent.at(-1).url, '/api/create-checkout');
+  assert.deepEqual(p.sent.at(-1).body.items.map(i => i.key), ['MENU_PLUS', 'HOLIDAY_MENU']);
+  // Plus first, then the Holiday Menu: the menu Plus brought is swapped for the holiday one.
+  const q = await page('?plan=MENU_PLUS&interval=month');
+  assert.deepEqual(q.state().once, ['ONLINE_MENU_QR']);
+  vm.runInNewContext("holidayPreview = '" + 'b'.repeat(36) + "'; add('HOLIDAY_MENU')", q.context);
+  assert.deepEqual(q.state(), { plan: 'MENU_PLUS', once: ['HOLIDAY_MENU'] });
+});
