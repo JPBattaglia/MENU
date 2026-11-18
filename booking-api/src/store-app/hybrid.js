@@ -13,14 +13,14 @@
 // https://localhost and the store screenshots load it from a local page.
 import { getSiteCatalog } from "../checkout/catalog.js";
 import { MENU_PACKAGE_PRICING } from "../checkout/quote.js";
-import { HOLIDAY_PRICING, OCCASION_NAMES, holidayOnSale } from "../checkout/holiday.js";
+import { HOLIDAY_PRICING, OCCASION_NAMES, holidayOnSale, holidayPrices } from "../checkout/holiday.js";
 import { SERVICES as SWITCHED, offSwitches } from "../lib/switches.js";
 import { queuePush } from "../producers/guest-app/engage.js";
 
 const TTL = 300;
 const MM = "https://menu-made.com";
 // Bumped whenever tools/howto-videos re-records the how-to videos, so phones fetch the new files.
-const HOWTO_VIDEO_VERSION = "20261115";
+const HOWTO_VIDEO_VERSION = "20261117";
 const NINO = "https://ninobattaglia.com";
 // Nino's shop API (NinoSite commerce-api): rewards card, ideas board and the last week's new designs (fans.mjs).
 const NINO_API = "https://nino-printful-commerce-api.ijpbattaglia.workers.dev";
@@ -69,7 +69,10 @@ function menumadeContent(catalog, { offCodes = [], now = Date.now() } = {}) {
     .map((o) => ({ name: clean(o.name, 60), text: clean(o.short_description, 220), price: o.code === "ONLINE_MENU_QR" ? `Free, or ${plusPrice} with MΞNU Plus` : o.prices?.month ? `${dollars(o.prices.month)}/mo` : o.price_cents ? dollars(o.price_cents) : "" }))
     .filter((x) => x.price).slice(0, 20);
   const occasions = offCodes.includes("HOLIDAY_MENU") || !byCode.get("HOLIDAY_MENU")?.on_sale ? [] : ["christmas", "newyear"].filter((o) => holidayOnSale(o, now)).map((o) => ({ key: o, label: OCCASION_NAMES[o] }));
-  const holidayPrice = dollars(HOLIDAY_PRICING.firstCents);
+  // Early bird through Nov 30, then the regular price (checkout/holiday.js); free with MΞNU Plus.
+  const hp = holidayPrices(now);
+  const holidayPrice = dollars(hp.first_cents);
+  const early = hp.early_bird ? ` Early-bird price through ${hp.early_bird_ends} (then ${dollars(hp.regular_first_cents)}), or free when you start MΞNU Plus.` : " Or free when you start MΞNU Plus.";
   const first = occasions[0]?.key;
   const which = occasions.map((o) => o.label).join(" or ");
   // The how-to video beside each generator on menu-made.com (owner, Nov 15, 2026: "Why are the instruction videos in
@@ -88,7 +91,7 @@ function menumadeContent(catalog, { offCodes = [], now = Date.now() } = {}) {
       icons: first === "christmas" ? "🎄🎁❄️" : "🥂✨🎉", kicker: "Holiday special",
       title: `Get your ${OCCASION_NAMES[first]} menu online`,
       text: "Your holiday menu as a phone page with its own QR code, a print PDF and a table tent. It sits beside the menu you already have.",
-      price: holidayPrice, price_note: occasions.length > 1 ? `per holiday, or ${dollars(HOLIDAY_PRICING.firstCents + HOLIDAY_PRICING.secondCents)} for Christmas and New Year's Eve` : "nothing renews",
+      price: holidayPrice, price_note: (occasions.length > 1 ? `per holiday, or ${dollars(hp.both_cents)} for Christmas and New Year's Eve.` : "Nothing renews.") + early,
       action: "See my holiday menu free", later: "Not now"
     },
     // The six designs to look through before uploading (owner, Nov 11, 2026: "include the 6 templates available to

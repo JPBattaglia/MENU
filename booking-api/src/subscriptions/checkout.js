@@ -126,6 +126,17 @@ async function buildSubscriptionCart(itemsInput, data, env, environment) {
       // left off the Stripe checkout but stays on the order, so the menu is still made.
       // MΞNU Plus (owner, Nov 14, 2026: Plus "replaces the $59 first year") makes it free monthly or yearly.
       const plus = Boolean(plan?.includes.includes("MENU_PLUS"));
+      // Holiday Menu free with MΞNU Plus (owner, Nov 17, 2026: "do all" on the holiday push): starting Plus in the same
+      // checkout makes the holiday menu (one or both holidays) $0. The line stays on the order so the menu is made.
+      if (plus) {
+        for (const item of normalizedItems) {
+          if (!item.holiday || item.holiday.prepaid) continue;
+          const waived = item.priceCents;
+          item.priceCents = 0;
+          item.holiday = { ...item.holiday, price_cents: 0, waived_cents: waived, waived_reason: "MΞNU Plus" };
+          item.extraMetadata = { ...(item.extraMetadata || {}), holiday_menu: item.holiday, setup_waived_cents: waived };
+        }
+      }
       if ((plan?.interval === "YEAR" && plan.includes.includes("MENU_CARE")) || plus) {
         for (const item of normalizedItems) {
           if (!item.menuPackage) continue;

@@ -14,7 +14,7 @@
 import { resolveMx } from "node:dns/promises";
 import { ImapFlow } from "imapflow";
 import nodemailer from "nodemailer";
-import { build, buildFollowup, buildFirstFollowup, holidaySeasonNow } from "./email.mjs";
+import { build, buildFollowup, buildFirstFollowup, buildHolidayLead, holidaySeasonNow } from "./email.mjs";
 import { verify } from "./verify.mjs";
 import { makePreview } from "./preview.mjs";
 import { isAutoReply } from "./auto-reply.mjs";
@@ -115,12 +115,18 @@ const due = [...(mine.prospects || []), ...(his.prospects || [])];
 const price = mine.price;
 const followed = [];
 let built = 0;
+// Holiday push (owner, Nov 17, 2026): Nov 1 to Dec 20 every email leads with the Holiday Menu, showing the business's
+// own menu in the holiday designs when it can be read (holiday-outreach.js, reused when it already exists).
+const season = holidaySeasonNow();
+const holidayUrl = async (p) => (await api("holiday", { id: p.id }).catch(() => null))?.url || null;
 for (const row of due) {
   if (left <= 0) break;
   // In the holiday season the follow-up closes with the Holiday Menu offer as well (owner, Nov 12, 2026).
-  const p = { ...row, holiday_note: holidaySeasonNow() };
+  const p = { ...row, holiday_note: season };
   let email;
-  if (p.kind === "no_preview") {
+  if (season) {
+    email = buildHolidayLead({ ...p, contacted: true, holiday_followup: p.holiday === true }, await holidayUrl(p));
+  } else if (p.kind === "no_preview") {
     const preview = await makePreview(api, p);
     if (preview) built++;
     email = buildFirstFollowup({ ...p, offer_code: preview?.offer_code || p.offer_code }, preview?.url || null, price, preview?.kind);
@@ -131,6 +137,21 @@ for (const row of due) {
   left--;
 }
 if (followed.length) await api("followups", { mark: followed });
+
+// 3a'. Holiday push: businesses emailed once with a regular email and no follow-up get the Holiday Menu email as their
+// second (and last) one. Marked through the holiday endpoint, which also counts as their follow-up.
+const holidaySent = [];
+if (season && left > 0) {
+  const { prospects: due2 = [] } = await api("holiday", { limit: Math.min(50, left) });
+  for (const p of due2.filter((r) => r.contacted)) {
+    if (left <= 0) break;
+    const email = buildHolidayLead({ ...p, contacted: true }, await holidayUrl(p));
+    await smtp.sendMail(mail(p, email, { "X-Menu-Made-Followup": "1" }));
+    holidaySent.push(p.id);
+    left--;
+  }
+  if (holidaySent.length) await api("holiday", { mark: holidaySent });
+}
 
 // 3b. New prospects.
 const sent = [], skipped = [];
@@ -148,16 +169,22 @@ if (left > 0) {
     const p = { ...candidate, gaps_json: JSON.stringify(checked.gaps), offer_code: checked.offer_code, email: checked.email };
     // The preview is built while the prospect is still NEW; record the confirmed gaps first.
     await api("status", { updates: [{ id: p.id, status: "NEW", gaps: checked.gaps, offer_code: checked.offer_code }] });
-    const preview = await makePreview(api, p, checked.gaps);
-    if (preview) { previews++; p.offer_code = preview.offer_code; }
-    const demoUrl = preview?.url || null;
-    const email = build(p, demoUrl, preview?.kind);
+    let email;
+    if (season) {
+      const url = await holidayUrl(p);
+      if (url) previews++;
+      email = buildHolidayLead(p, url);
+    } else {
+      const preview = await makePreview(api, p, checked.gaps);
+      if (preview) { previews++; p.offer_code = preview.offer_code; }
+      email = build(p, preview?.url || null, preview?.kind);
+    }
     if (!email) continue;
     await smtp.sendMail(mail(p, email));
-    sent.push({ id: p.id, status: "SENT", via: "getmenumade", sent_at: new Date().toISOString(), gaps: checked.gaps, offer_code: p.offer_code });
+    sent.push({ id: p.id, status: "SENT", via: "getmenumade", sent_at: new Date().toISOString(), gaps: checked.gaps, offer_code: p.offer_code, ...(season ? { holiday: true } : {}) });
   }
   await browser.close();
 }
 if (sent.length || skipped.length) await api("status", { updates: [...sent, ...skipped] });
 await imap.logout();
-console.log(`Sent from ${USER}: ${sent.length} new (${previews} with a menu or website preview), ${followed.length} follow-ups (${built} previews built); ${skipped.length} candidates skipped.`);
+console.log(`Sent from ${USER}: ${sent.length} new (${previews} with a menu or website preview), ${followed.length} follow-ups (${built} previews built), ${holidaySent.length} holiday second emails; ${skipped.length} candidates skipped.`);

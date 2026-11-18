@@ -86,6 +86,12 @@ async function handleProspects(request, env) {
 const DRAFTS_AUDIENCE = "menu-made-prospect-drafts";
 const DRAFTS_WORKFLOW = "JPBattaglia/MENU/.github/workflows/prospect-drafts.yml@refs/heads/master";
 const NEW_OPENING_DAYS = 120;
+// Holiday push (owner, Nov 17, 2026): Nov 1 to Dec 20 the places that change their menus for the holidays
+// (restaurants, bars and pubs, bakeries, cafés) are emailed first, ahead of fast food and ice cream.
+function holidaySeason(now = Date.now()) {
+  const year = new Date(now).getUTCFullYear();
+  return now >= Date.parse(`${year}-11-01T00:00:00-07:00`) && now <= Date.parse(`${year}-12-20T23:59:59-08:00`);
+}
 const NEXT = { NEW: ["NEW"], SKIPPED: ["NEW"], BOUNCED: ["NEW", "DRAFTED", "SENT"], DRAFTED: ["NEW", "DRAFTED"], SENT: ["NEW", "DRAFTED"], REPLIED: ["NEW", "DRAFTED", "SENT"], OPTED_OUT: ["NEW", "DRAFTED", "SENT", "REPLIED", "SKIPPED"] };
 
 async function handleProspectBatch(request, env) {
@@ -104,21 +110,22 @@ async function handleProspectBatch(request, env) {
   const rows = (await env.DB.prepare(`
       SELECT id, name, kind, cuisine, city, website, email, email_source, gaps_json, menu_url, offer_code, score, opened_on,
         (opened_on IS NOT NULL AND opened_on >= ?1) AS t_open,
-        (offer_code = 'ONLINE_MENU_QR' AND menu_url IS NOT NULL AND (gaps_json LIKE '%menu_pdf%' OR gaps_json LIKE '%menu_image%')) AS t_menu
+        (offer_code = 'ONLINE_MENU_QR' AND menu_url IS NOT NULL AND (gaps_json LIKE '%menu_pdf%' OR gaps_json LIKE '%menu_image%')) AS t_menu,
+        (?3 = 1 AND (kind LIKE '%restaurant%' OR kind LIKE '%bar%' OR kind LIKE '%pub%' OR kind LIKE '%bakery%' OR kind LIKE '%pastry%' OR kind LIKE '%cafe%' OR kind LIKE '%biergarten%')) AS t_hol
       FROM prospects p
       WHERE status = 'NEW' AND email IS NOT NULL AND offer_code IS NOT NULL
         AND NOT EXISTS (SELECT 1 FROM prospects q WHERE q.email = p.email AND q.status != 'NEW')
-      ORDER BY t_open DESC, t_menu DESC, score DESC, id LIMIT ?2`).bind(new Date(Date.now() - NEW_OPENING_DAYS * 86400000).toISOString().slice(0, 10), limit * 6).all()).results || [];
+      ORDER BY t_open DESC, t_hol DESC, t_menu DESC, score DESC, id LIMIT ?2`).bind(new Date(Date.now() - NEW_OPENING_DAYS * 86400000).toISOString().slice(0, 10), limit * 6, holidaySeason() ? 1 : 0).all()).results || [];
   // Nov 13, 2026 (owner: "widen to national"): within each priority group the batch takes one business per city in
   // turn, so a day's emails reach the new US metros too instead of waiting behind the larger Bay Area backlog.
   const seen = new Set(); const tiers = new Map();
   for (const r of rows) {
     if (seen.has(r.email)) continue; seen.add(r.email);
-    const tierKey = `${r.t_open ? 1 : 0}${r.t_menu ? 1 : 0}`;
+    const tierKey = `${r.t_open ? 1 : 0}${r.t_hol ? 1 : 0}${r.t_menu ? 1 : 0}`;
     if (!tiers.has(tierKey)) tiers.set(tierKey, new Map());
     const cities = tiers.get(tierKey); const city = String(r.city || "").trim().toLowerCase();
     if (!cities.has(city)) cities.set(city, []);
-    const { t_open, t_menu, ...row } = r; cities.get(city).push(row);
+    const { t_open, t_menu, t_hol, ...row } = r; cities.get(city).push(row);
   }
   const batch = [];
   for (const cities of tiers.values()) {
@@ -221,7 +228,8 @@ async function handleProspectStatus(request, env) {
   const t = nowIso(); const statements = [];
   for (const u of updates) {
     const from = NEXT[u?.status]; if (!from) continue;
-    const via = u.status === "SENT" && u.via === "getmenumade" ? ", sent_via = 'getmenumade'" : "";
+    // holiday: the first email was the Holiday Menu one (holiday push, Nov 17, 2026), so it isn't sent a second one.
+    const via = (u.status === "SENT" && u.via === "getmenumade" ? ", sent_via = 'getmenumade'" : "") + (u.status === "SENT" && u.holiday === true ? ", holiday_drafted_at = COALESCE(holiday_drafted_at, strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))" : "");
     const stamp = (u.status === "DRAFTED" ? ", drafted_at = COALESCE(drafted_at, ?)" : u.status === "SENT" ? ", sent_at = ?" : "") + via;
     const where = typeof u.id === "string" ? "id = ?" : typeof u.email === "string" ? "email = ?" : null; if (!where) continue;
     const key = u.id || String(u.email).toLowerCase();

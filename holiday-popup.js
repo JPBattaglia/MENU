@@ -28,12 +28,22 @@
         '<p class="mm-xmas-kicker">Holiday special</p>' +
         '<h2 id="mmXmasTitle">' + (christmas ? 'Get your Christmas menu online' : 'Get your New Year’s Eve menu online') + '</h2>' +
         '<p>Your holiday menu as a phone page with its own QR code, a print PDF and a table tent. It sits beside the menu you already have.</p>' +
-        '<div class="mm-xmas-price">$59<small>per holiday, or $89 for Christmas and New Year’s Eve</small></div>' +
+        '<div class="mm-xmas-price"><span data-pop-first>$59</span><small>per holiday, or <span data-pop-both>$89</span> for Christmas and New Year’s Eve<span data-pop-early hidden></span>. Or free when you start MΞNU Plus.</small></div>' +
         '<div class="mm-xmas-actions">' +
           '<a class="btn primary" href="holiday-menu.html#try-free" data-cta-label="Holiday popup">See my holiday menu free</a>' +
           '<button class="mm-xmas-later" type="button">Not now</button>' +
         '</div>' +
       '</div>';
+    // Today's prices from the catalog (early bird through Nov 30, Nov 17, 2026).
+    if (window.MenuMadeCatalog) window.MenuMadeCatalog.ready.then(function (offers) {
+      var h = offers && offers.get('HOLIDAY_MENU') && offers.get('HOLIDAY_MENU').holiday;
+      if (!h) return;
+      var m = window.MenuMadeCatalog.money;
+      wrap.querySelector('[data-pop-first]').textContent = m(h.first_cents);
+      wrap.querySelector('[data-pop-both]').textContent = m(h.both_cents);
+      var e = wrap.querySelector('[data-pop-early]');
+      if (h.early_bird) { e.hidden = false; e.textContent = ' (early bird through ' + h.early_bird_ends + ', then ' + m(h.regular_first_cents) + ')'; }
+    }).catch(function () {});
     return wrap;
   }
 

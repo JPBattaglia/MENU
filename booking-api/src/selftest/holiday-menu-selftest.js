@@ -22,7 +22,7 @@
 // Then the previews are removed, so they never count as real ones (daily limit, Friday numbers).
 // Outside the season (after Dec 31) nothing is on sale: the run passes once checkout has refused a holiday menu.
 // Start one by inserting a self_tests row with kind HOLIDAY_MENU_RUN and status REQUESTED. Only a failure emails the owner.
-import { HOLIDAY_PRICING, OCCASION_NAMES, holidayEndsOn, holidayOnSale, otherOccasion, seasonYear } from "../checkout/holiday.js";
+import { HOLIDAY_PRICING, OCCASION_NAMES, holidayFirstCents, holidayEndsOn, holidayOnSale, otherOccasion, seasonYear } from "../checkout/holiday.js";
 import { ownerSandboxToken } from "../lib/owner-sandbox.js";
 import { ownerEmailAddress, publicBaseUrl } from "../lib/config.js";
 import { SELF_TEST_EMAIL, brandedEmailHtml, sendTransactionalEmail } from "../lib/email.js";
@@ -149,7 +149,7 @@ async function buyAndPay(env, app, holder, { base, now, occasion, name, list, de
   const generator = await json(await app(new Request(`${base}/api/menu-preview/state/${token}`)));
   const keys = (generator.body?.designs || []).map((d) => d.key).join(",");
   if (keys !== list.map((d) => d.key).join(",")) throw new Error(`The holiday generator shows ${keys || "no designs"}`);
-  if (!String(generator.body?.choose_label || "").includes(dollars(HOLIDAY_PRICING.firstCents))) throw new Error(`The Make it live button says "${generator.body?.choose_label}"`);
+  if (!String(generator.body?.choose_label || "").includes(dollars(holidayFirstCents()))) throw new Error(`The Make it live button says "${generator.body?.choose_label}"`);
   if ((await app(new Request(`${base}/api/menu-preview/view/${token}/classic`))).status === 200) throw new Error("A regular design opened in a holiday preview");
 
   // "Make it live" on the chosen design, then the checkout prefill.
@@ -162,8 +162,9 @@ async function buyAndPay(env, app, holder, { base, now, occasion, name, list, de
   // Checkout needs a holiday preview, takes one holiday menu, and charges the holiday price.
   const customer = { name: "Menu-Made Self-Test", business: BUSINESS, email: SELF_TEST_EMAIL, phone: "", notes: `Holiday menu (self-test)\nDocument ref: ${requestId}` };
   if ((await checkout(env, app, { items: [{ code: "HOLIDAY_MENU" }], customer })).body?.ok) throw new Error("Checkout opened for a holiday menu with no holiday preview");
-  // A first-time buyer: $59 for one holiday, $89 for both while the other holiday is still on sale.
-  const expected = both ? HOLIDAY_PRICING.firstCents + HOLIDAY_PRICING.secondCents : HOLIDAY_PRICING.firstCents;
+  // A first-time buyer: today's first price ($39 early bird through Nov 30, then $59) for one holiday, plus $30 for both
+  // while the other holiday is still on sale.
+  const expected = both ? holidayFirstCents() + HOLIDAY_PRICING.secondCents : holidayFirstCents();
   const opened = await checkout(env, app, { items: [{ code: "HOLIDAY_MENU" }], holiday_preview: token, ...(both ? { holiday_both: true } : {}), customer });
   if (!opened.body?.ok || !opened.body.order_id) throw new Error(`Test checkout failed (HTTP ${opened.status}): ${JSON.stringify(opened.body).slice(0, 300)}`);
   const orderId = opened.body.order_id;

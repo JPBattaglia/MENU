@@ -14,6 +14,27 @@ const HOLIDAY_PRICING = Object.freeze({
   additionalPageCents: 2000
 });
 
+// Early bird (owner, Nov 17, 2026: "do all" on the holiday push): the first holiday menu is $39 through Nov 30 (Pacific),
+// so both holidays are $69; from Dec 1 back to $59 / $89. The second menu stays $30. Every price shown or charged
+// comes from holidayFirstCents / holidayPrices, never from HOLIDAY_PRICING.firstCents directly.
+const EARLY_BIRD = Object.freeze({ firstCents: 3900, lastDay: "11-30" });
+function earlyBirdOn(now = Date.now()) {
+  return now <= Date.parse(`${seasonYear(now)}-${EARLY_BIRD.lastDay}T23:59:59-08:00`);
+}
+function holidayFirstCents(now = Date.now()) {
+  return earlyBirdOn(now) ? EARLY_BIRD.firstCents : HOLIDAY_PRICING.firstCents;
+}
+// Everything a page or email needs to show the current prices.
+function holidayPrices(now = Date.now()) {
+  const first = holidayFirstCents(now);
+  const early = earlyBirdOn(now);
+  return {
+    first_cents: first, second_cents: HOLIDAY_PRICING.secondCents, both_cents: first + HOLIDAY_PRICING.secondCents,
+    regular_first_cents: HOLIDAY_PRICING.firstCents, regular_both_cents: HOLIDAY_PRICING.firstCents + HOLIDAY_PRICING.secondCents,
+    early_bird: early, early_bird_ends: early ? "Nov 30" : null
+  };
+}
+
 const OCCASION_NAMES = { christmas: "Christmas", newyear: "New Year's Eve" };
 const isOccasion = (value) => Object.prototype.hasOwnProperty.call(OCCASION_NAMES, value);
 
@@ -46,7 +67,7 @@ function holidayOnSale(occasion, now = Date.now()) {
 // Price for this buyer: $30 when the same email already has a paid holiday menu this season, otherwise $59.
 async function holidayPriceCents(env, email, now = Date.now()) {
   const clean = String(email || "").trim().toLowerCase();
-  if (!clean || !env?.DB) return HOLIDAY_PRICING.firstCents;
+  if (!clean || !env?.DB) return holidayFirstCents(now);
   const since = `${seasonYear(now)}-07-01T00:00:00.000Z`;
   const row = await env.DB.prepare(`
       SELECT 1 AS found FROM orders o
@@ -55,7 +76,7 @@ async function holidayPriceCents(env, email, now = Date.now()) {
       JOIN offers f ON f.id = oi.offer_id
       WHERE lower(c.email) = ? AND f.code = 'HOLIDAY_MENU' AND o.payment_status = 'PAID' AND o.created_at >= ?
       LIMIT 1`).bind(clean, since).first().catch(() => null);
-  return row ? HOLIDAY_PRICING.secondCents : HOLIDAY_PRICING.firstCents;
+  return row ? HOLIDAY_PRICING.secondCents : holidayFirstCents(now);
 }
 
 // Both holidays in one checkout (owner, Nov 12, 2026: "it should be possible to select both to secure the $89
@@ -104,12 +125,12 @@ async function holidayQuote(env, email, occasion, { both = false, now = Date.now
   const rows = environment ? all.filter((row) => row.environment === environment) : all;
   if (!rows.length) {
     const other = otherOccasion(occasion);
-    if (both === true && holidayOnSale(other, now)) return { price_cents: HOLIDAY_PRICING.firstCents + HOLIDAY_PRICING.secondCents, both_other: other };
-    return { price_cents: HOLIDAY_PRICING.firstCents };
+    if (both === true && holidayOnSale(other, now)) return { price_cents: holidayFirstCents(now) + HOLIDAY_PRICING.secondCents, both_other: other };
+    return { price_cents: holidayFirstCents(now) };
   }
   return { price_cents: HOLIDAY_PRICING.secondCents };
 }
 
 const dollars = (cents) => `$${(cents / 100).toLocaleString("en-US", { maximumFractionDigits: 2 })}`;
 
-export { HOLIDAY_PRICING, OCCASION_NAMES, isOccasion, seasonYear, holidayEndsOn, holidayEnded, holidayOnSale, holidayPriceCents, holidayQuote, prepaidCover, otherOccasion, dollars as holidayDollars };
+export { HOLIDAY_PRICING, EARLY_BIRD, earlyBirdOn, holidayFirstCents, holidayPrices, OCCASION_NAMES, isOccasion, seasonYear, holidayEndsOn, holidayEnded, holidayOnSale, holidayPriceCents, holidayQuote, prepaidCover, otherOccasion, dollars as holidayDollars };
