@@ -110,7 +110,7 @@ test('holiday push (Nov 17, 2026): auto-sent emails lead with the holiday menu, 
   assert.match(fresh.text, /Christmas or New Year's Eve menu/);
   assert.match(fresh.text, /https:\/\/menu-made\.com\/api\/menu-preview\/view\/abc/);
   assert.equal((fresh.text.match(/https:\/\//g) || []).length, 1, 'one link');
-  assert.match(fresh.text, /\$39 if you order by Nov 30 \(then \$59\), \$69 for Christmas and New Year's Eve, or free if you start MΞNU Plus/);
+  assert.match(fresh.text, /\$39 if you order by Nov 30 \(then \$59\), \$69 for Christmas and New Year's Eve, or free with any MΞNU plan/);
   assert.match(fresh.text, /Order by December 10/);
   assert.match(fresh.text, /Reply "no thanks"/, 'opt-out and address footer');
   const dec = buildHolidayLead({ name: 'Harbor Kitchen' }, null, Date.parse('2026-12-03T12:00:00-08:00'));

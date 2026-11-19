@@ -180,7 +180,7 @@ async function stageStart(env, app, test) {
   if (!checkout.body?.ok || !checkout.body.order_id) throw new Error(`Test checkout failed (HTTP ${checkout.status}): ${JSON.stringify(checkout.body).slice(0, 300)}`);
   const orderId = checkout.body.order_id;
   const order = await env.DB.prepare(`SELECT stripe_checkout_session_id, total_cents FROM orders WHERE id = ?`).bind(orderId).first();
-  if (order?.total_cents !== 14400) throw new Error(`Expected a $144 order for ${PAID_PAGES} pages, got ${order?.total_cents}`);
+  if (order?.total_cents !== 14900) throw new Error(`Expected a $149 order for ${PAID_PAGES} pages, got ${order?.total_cents}`);
   const paid = await payTestCheckout(env, order.stripe_checkout_session_id);
   return updateTest(env, test, {
     status: "RUNNING", stage: "AWAIT_ORDER_PAID", order_id: orderId,

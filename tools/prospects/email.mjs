@@ -15,7 +15,8 @@ const SITE_COUNT = SITE_DESIGNS.length;
 // that follows is counted against the outreach (funnel.js keeps the labels through checkout).
 const WEBSITE = "https://menu-made.com/website-design?utm_source=outreach&utm_medium=email&utm_campaign=demo-website";
 const ONLINE_MENU = "https://menu-made.com/online-menu?utm_source=outreach&utm_medium=email&utm_campaign=demo-menu";
-// Menus are free or MΞNU Plus (owner, Nov 14, 2026); the website is $299 one time (Nov 6). The old $144 copy is gone.
+// Menus: a $149 setup, then MΞNU Plus from $19.99/mo, Pro $39 or Max $79 with no setup (owner, Nov 19, 2026: "no FREE");
+// the website is $299 one time (Nov 6).
 const OFFERS = {
   ONLINE_MENU_QR: { name: "Online Menu + QR", url: ONLINE_MENU },
   WEBSITE_PACKAGE: { name: "Your Website", url: WEBSITE }
@@ -57,8 +58,8 @@ function findingOnly(p) {
 
 // Nov 16, 2026 (owner: "Emails are getting no response"; 127 sent, 0 replies): the emails are now short plain-text
 // notes from JP, not designed newsletters. Each one names the business, says what was noticed, gives ONE link (their
-// own preview when there is one), leads with what's free, and ends on a question that's easy to answer. No logo, no
-// buttons, no prices on menus beyond "free" (menus are free or MΞNU Plus since Nov 14). Plain text reads as a person
+// own preview when there is one), leads with seeing it free, and ends on a question that's easy to answer. No logo, no
+// buttons; one short price line for menus (no free plan since Nov 19). Plain text reads as a person
 // writing and is far less likely to land in Promotions or junk. Subjects are fixed per preview kind so the follow-up
 // threads under the first email as "Re:".
 const WEBSITE_PRICE = "$299";
@@ -66,7 +67,7 @@ const builtFrom = (p) => (p.website ? "what's on your current site" : "your publ
 const SIGNATURE = "JP Battaglia\nMenu-made, San Francisco\n(415) 937-0669";
 const menuSubject = (p) => `${p.name}'s menu on a phone`;
 const siteSubject = (p) => `A website for ${p.name}`;
-const FREE_LINE = "Keeping it live is free: your own link and QR code, and you change prices or mark items sold out yourself. No card needed.";
+const FREE_LINE = "Seeing it is free. To keep it live with its own link and QR code, it's a one-time $149 setup, then $19.99 a month, and you change prices or mark items sold out yourself.";
 
 export function build(p, demoUrl = null, demoKind = "menu") {
   const [, observed] = finding(p);
@@ -112,7 +113,7 @@ export function buildFollowup(p) {
   return render(p, `Re: ${menuSubject(p)}`, ["Hi again,",
     `Following up on the phone menu I made for ${p.name}. It's still here for a little while longer:`,
     p.url,
-    "Tap Start free to keep it live in the Classic design at no cost. If you'd like any of the other designs plus a print-ready PDF, table tent and TV menu, that's MΞNU Plus at $12 a month.",
+    "To keep it live: a one-time $149 setup, then $19.99 a month with MΞNU Plus (your link, QR code, print menu and TV menu). For other languages, a tri-fold and table tents it's $39 a month, or $79 a month and I make every change for you with no setup fee.",
     "Anything you'd want changed first?"]);
 }
 
@@ -177,15 +178,15 @@ export function buildHoliday(p, demoUrl = null) {
 }
 
 // Holiday push (owner, Nov 17, 2026, "do all"): from Nov 1 to Dec 20 the auto-sent emails lead with the Holiday Menu.
-// Same plain-text note from JP, one link, today's price (early bird through Nov 30), free with MΞNU Plus, and a plain
+// Same plain-text note from JP, one link, today's price (early bird through Nov 30), free with any plan, and a plain
 // deadline. demoUrl: their current menu shown in the holiday designs (holiday-outreach.js) when it could be read;
 // otherwise the link opens the holiday generator to try with their holiday menu.
 const HOLIDAY_DEADLINE = "Order by December 10 and it's online with plenty of time before Christmas.";
 function holidayPriceLine(now = Date.now()) {
   const h = holidayPrices(now);
   return h.early_bird
-    ? `It's ${usd(h.first_cents)} if you order by ${h.early_bird_ends} (then ${usd(h.regular_first_cents)}), ${usd(h.both_cents)} for Christmas and New Year's Eve, or free if you start MΞNU Plus at $12 a month.`
-    : `It's ${usd(h.first_cents)} per holiday, ${usd(h.both_cents)} for both, or free if you start MΞNU Plus at $12 a month.`;
+    ? `It's ${usd(h.first_cents)} if you order by ${h.early_bird_ends} (then ${usd(h.regular_first_cents)}), ${usd(h.both_cents)} for Christmas and New Year's Eve, or free with any MΞNU plan (from $19.99 a month).`
+    : `It's ${usd(h.first_cents)} per holiday, ${usd(h.both_cents)} for both, or free with any MΞNU plan (from $19.99 a month).`;
 }
 export const holidaySubject = (p) => `${p.name}'s holiday menu`;
 export function buildHolidayLead(p, demoUrl = null, now = Date.now()) {

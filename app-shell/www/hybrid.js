@@ -774,7 +774,7 @@
       });
       s.appendChild(toggle);
       if (!data.plans.length) s.appendChild(el("div", "hy-card", "Plans will show here soon."));
-      // Four choices (owner, Nov 15, 2026): MΞNU Pro is the featured plan on the site, so it starts selected.
+      // MΞNU Max (offer BUNDLE_PREMIUM) is the featured plan on the site, so it starts selected (Nov 19, 2026).
       if (!chosenPlan && data.plans.length) chosenPlan = (data.plans.filter(function (p) { return p.code === "BUNDLE_PREMIUM"; })[0] || data.plans[Math.min(1, data.plans.length - 1)]).code;
       data.plans.forEach(function (plan) {
         var b = el("button", "hy-plan"); b.type = "button"; b.setAttribute("aria-pressed", String(chosenPlan === plan.code));

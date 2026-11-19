@@ -47,7 +47,7 @@ import { pausedForSale } from "../lib/switches.js";
 import { signLinkToken, verifyLinkToken } from "../lib/links.js";
 import { ownerEmailAddress } from "../lib/config.js";
 import { simplePage } from "../lib/http.js";
-import { addFreeButton, freeButton, handleFreeStart } from "./free-menu.js";
+import { addFreeButton, freeButton } from "./free-menu.js";
 import { addShowcaseButton, handleRepShowcase } from "./rep-showcase.js";
 
 const PREVIEW_HOURS = 72;
@@ -75,10 +75,12 @@ const SCANNER = /bot|crawl|spider|slurp|preview|scanner|proofpoint|mimecast|barr
 const json = (data, status = 200) => Response.json(data, { status, headers: { "Cache-Control": "no-store", "Access-Control-Allow-Origin": "*" } });
 const hoursFromNow = (hours, now) => new Date(now + hours * 3600000).toISOString();
 const firstYearCents = () => MENU_PACKAGE_PRICING.setupCents + MENU_PACKAGE_PRICING.hostingFirstYearCents;
-// Menus are sold as free or with MΞNU Plus (owner, Nov 14, 2026): "Make it live" checks out Plus, the menu's first
-// year free with it. 1200 = offerv1_menu_plus (migration 0059); the Start page and checkout use the catalog price.
-const PLUS_MONTH_CENTS = 1200;
-const plusLine = () => `${dollars(PLUS_MONTH_CENTS)}/mo with MΞNU Plus`;
+// New pricing (owner, Nov 19, 2026): a $149 setup, then MΞNU Plus $19.99/mo, Pro $29 or Max $79 (no setup fee), and
+// no free plan. "Make it live" opens the Start page with Plus chosen; Pro and Max are one tap away there. 1999 =
+// MΞNU Plus monthly (migration 0065); the Start page and checkout use the catalog price.
+const PLUS_MONTH_CENTS = 1999;
+const plusLine = () => `from ${dollars(PLUS_MONTH_CENTS)}/mo`;
+const setupLine = () => `${dollars(MENU_PACKAGE_PRICING.setupCents)} setup, then ${plusLine()} with MΞNU Plus (Pro ${dollars(3900)}/mo adds languages, tri-fold and table tent; Max ${dollars(7900)}/mo, no setup fee, and we make your changes)`;
 const dollars = (cents) => `$${(cents / 100).toLocaleString("en-US", { maximumFractionDigits: 2 })}`;
 const cleanText = (value, max) => String(value || "").replace(/[\r\n\x00]/g, " ").trim().slice(0, max);
 // Holiday previews (occasion "christmas" or "newyear") go to the Holiday Menu checkout instead.
@@ -422,12 +424,12 @@ async function handlePreviewCreate(request, env, { now = Date.now() } = {}) {
         `Tap <strong>Generate menu</strong> to see it in ${designCount} ${holiday ? "holiday " : ""}designs, and <strong>Customize</strong> to add your logo and colour.`,
         holiday
           ? `Like it? <a href="${escapeHtml(startUrl(token, occasion, both))}">${prepaid ? "Complete your order: it is already paid for" : `Make it live for ${both ? `${bothPrice()} for both holidays` : holidayPrice()}`}</a>: its own link and QR code, a print-ready PDF and a table tent, live through the holiday. Your menu file is already attached, so checkout takes a minute.`
-          : `Like it? <a href="${escapeHtml(startUrl(token))}">Make it live for ${plusLine()}</a>: any design, the print set and edits whenever you like, and your first year of the menu is free with Plus. Or press <strong>Start free</strong> in the preview to keep the Classic design free. Your menu file is already attached, so checkout takes a minute.`
+          : `Like it? <a href="${escapeHtml(startUrl(token))}">Make it live</a>: ${escapeHtml(setupLine())}. Your link and QR code, the print menu and TV menu, in any design. Your menu file is already attached, so checkout takes a minute.`
       ]
     }),
     text: holiday
       ? `Your ${holiday} menu preview: ${url}\nIt ends in ${PREVIEW_HOURS / 24} days and has no QR code.\nMake it live (${prepaid ? "already paid" : both ? `${bothPrice()} for both holidays` : holidayPrice()}): ${startUrl(token, occasion, both)}`
-      : `Your menu preview: ${url}\nIt ends in ${PREVIEW_HOURS / 24} days and has no QR code.\nMake it live (${plusLine()}): ${startUrl(token)}\nOr start free in the Classic design from the preview.`,
+      : `Your menu preview: ${url}\nIt ends in ${PREVIEW_HOURS / 24} days and has no QR code.\nMake it live (${setupLine()}): ${startUrl(token)}`,
     idempotencyKey: `menu-preview/${token}`, purpose: "MENU_PREVIEW", templateKey: holiday ? "holiday_menu_preview_v1" : "menu_preview_v1"
   }).catch((error) => console.error("Preview email failed:", error instanceof Error ? error.message : String(error)));
   return json({ ok: true, url, token, seconds, ...(rep ? { start: startUrl(token) } : {}) });
@@ -464,7 +466,7 @@ async function runPreviewReminders(env, { now = Date.now(), force = false } = {}
     const url = viewUrl(row.token);
     const ends = endsText(row.expires_at);
     const n = designsFor(row.occasion).length;
-    const live = isOccasion(row.occasion) ? `${holidayPrice()}, live through ${OCCASION_NAMES[row.occasion]}` : `${plusLine()}, or Start free in the Classic design`;
+    const live = isOccasion(row.occasion) ? `${holidayPrice()}, live through ${OCCASION_NAMES[row.occasion]}` : setupLine();
     // Holiday previews (holiday push, Nov 17, 2026): a sharper reminder. The holiday menu disappears, the price is
     // today's (early bird through Nov 30), and it's free when the buyer starts MΞNU Plus at checkout.
     const result = isOccasion(row.occasion) ? await holidayReminder(env, row, email, { url, ends, n, now }) : await sendTransactionalEmail(env, {
@@ -582,6 +584,8 @@ async function handlePreviewView(request, env, token, { now = Date.now(), design
   }
   // Free plan (Nov 14, 2026): "Start free: Classic design" beside Make it live on regular menu previews.
   if (!isOccasion(row.occasion)) page = addFreeButton(env, page, row, now);
+  // Stored pages keep the label they were made with; regular menus always show today's price (Nov 19, 2026).
+  if (!isOccasion(row.occasion)) page = page.replace(/(<a class="mm-gen-pick"[^>]*>)[^<]*(<\/a>)/g, (_, open, close) => `${open}${escapeHtml(makeLiveLabel(null))}${close}`);
   // Rep mode (Nov 19, 2026): "All formats" shows the QR code, table tent, tri-fold, print menu and TV screen on the spot.
   if (row.campaign === "rep") page = addShowcaseButton(page, token, key);
   return new Response(frameAware(page), { status: 200, headers: { "Content-Type": "text/html; charset=utf-8", "Cache-Control": "no-store", "X-Robots-Tag": "noindex, nofollow", "Referrer-Policy": "no-referrer" } });
@@ -789,7 +793,7 @@ async function handlePreviewHandoff(env, token, { now = Date.now() } = {}) {
 // GET /api/menu-preview/showcase/<token>/<design>[/<format>] (rep-showcase.js), drawn from the stored read.
 function handlePreviewShowcase(request, env, token, design, format, opts = {}) {
   return handleRepShowcase(request, env, token, design, format, { ...opts, loadLogo: loadPreviewLogo, renderDesign: renderMenuDesign,
-    chooseUrl, buyLabel: makeLiveLabel(null).replace(/^Make it live: /, ""), ownerEmail: ownerEmailAddress(env), startFree: handleFreeStart });
+    chooseUrl, buyLabel: setupLine(), ownerEmail: ownerEmailAddress(env) });
 }
 
 export { handleRepLink, handlePreviewShowcase, repUrl, REP_PER_DAY };

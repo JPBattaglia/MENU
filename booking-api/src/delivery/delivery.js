@@ -3,7 +3,7 @@ import { parseJsonOrNull, simplePage } from "../lib/http.js";
 import { escapeHtml2 } from "../lib/util.js";
 import { OCCASION_NAMES, holidayEnded } from "../checkout/holiday.js";
 import { verifyLinkToken } from "../lib/links.js";
-import { menuHostingState } from "../producers/menu-qr/hosting-renewal.js";
+import { hasProFeatures, menuHostingState } from "../producers/menu-qr/hosting-renewal.js";
 import { buildPrintMenuPdf, buildQrSheetPdf, buildTableTentPdf, buildTriFoldPdf } from "../producers/menu-qr/print-pdf.js";
 import { qrPng } from "../producers/menu-qr/qr-image.js";
 import { buildTvMenuHtml, qrModulesToSvg } from "../producers/menu-qr/tv-menu.js";
@@ -93,7 +93,7 @@ async function loadHostedMenu(env, slug, { now = Date.now() } = {}) {
         : simplePage(404, "Menu not found", "<p>This menu link isn't active.</p>")
     };
   }
-  return { object, row, hostedUrl, freePlan: state?.reason === "free_plan" };
+  return { object, row, hostedUrl, holiday, freePlan: state?.reason === "free_plan" };
 }
 
 // Free plan (stage 15, owner Nov 14, 2026): 'a small "Made with MΞNU" badge' on the live menu. Added when the page is
@@ -102,6 +102,10 @@ const MADE_WITH = `<style>.mm-made-with{display:block;width:max-content;margin:2
 // The print set and the TV menu are paid (owner, Nov 14, 2026: "Paid unlocks ... the print set").
 const paidOnlyPage = (found) => simplePage(200, "Comes with MΞNU Plus",
   `<p>The print menu, tri-fold, table tent and TV menu come with MΞNU Plus or any paid plan. <a href="${escapeHtml2(found.hostedUrl)}">Open the online menu</a>.</p><p style="font-size:14px">Is this your business? Sign in to <a href="https://menu-made.com/account.html">your account</a> to add MΞNU Plus.</p>`);
+// The tri-fold and table tent come with MΞNU Pro and Max (owner, Nov 19, 2026); a Holiday Menu always has them.
+const proOnlyPage = (found) => simplePage(200, "Comes with MΞNU Pro",
+  `<p>The tri-fold and table tent come with MΞNU Pro or Max. <a href="${escapeHtml2(found.hostedUrl)}">Open the online menu</a> or <a href="${escapeHtml2(found.hostedUrl)}/print.pdf">the print menu</a>.</p><p style="font-size:14px">Is this your business? Sign in to <a href="https://menu-made.com/account.html">your account</a> to move to MΞNU Pro.</p>`);
+const PRO_FORMATS = new Set(["tri-fold.pdf", "table-tent.pdf"]);
 const withBadge = (html) => html.includes("</body>") ? html.replace(/<\/body>(?![\s\S]*<\/body>)/, () => `${MADE_WITH}\n</body>`) : `${html}${MADE_WITH}`;
 
 // After its holiday a Holiday Menu's address (and QR code) says so, and points to the business's regular menu with
@@ -191,6 +195,7 @@ async function handleHostedMenuPdf(request, env, slug, format = "print.pdf") {
   const found = await loadHostedMenu(env, slug);
   if (found.response) return found.response;
   if (found.freePlan) return paidOnlyPage(found);
+  if (PRO_FORMATS.has(format) && !found.holiday && !await hasProFeatures(env, found.row.business_id).catch(() => true)) return proOnlyPage(found);
   const pdfHeaders = {
     "Content-Type": "application/pdf",
     "Content-Disposition": `inline; filename="${slug}-${spec.file}.pdf"`,

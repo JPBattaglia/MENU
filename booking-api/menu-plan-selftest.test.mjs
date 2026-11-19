@@ -30,8 +30,10 @@ test('the runs buy the right plans and expect the right services and period work
   assert.equal(runs.MENU_PLUS_RUN.plan, 'MENU_PLUS');
   assert.deepEqual(runs.MENU_PLUS_RUN.entitlements, ['MENU_PLUS']);
   assert.deepEqual(runs.MENU_PLUS_RUN.jobs, [], 'Plus does no work each period');
-  assert.equal(runs.MENU_PRO_RUN.plan, 'BUNDLE_PREMIUM', 'MΞNU Pro keeps the offer code BUNDLE_PREMIUM');
-  assert.deepEqual(runs.MENU_PRO_RUN.entitlements, ['ACCESSIBILITY_MONITORING', 'GOOGLE_PROFILE_CARE', 'MENU_CARE', 'MENU_PLUS', 'REVIEW_REPLIES']);
+  assert.equal(runs.MENU_PRO_RUN.plan, 'BUNDLE_PREMIUM', 'MΞNU Max keeps the offer code BUNDLE_PREMIUM');
+  assert.deepEqual(runs.MENU_PRO_RUN.entitlements, ['ACCESSIBILITY_MONITORING', 'GOOGLE_PROFILE_CARE', 'MENU_CARE', 'MENU_PLUS', 'MENU_PRO', 'REVIEW_REPLIES']);
+  assert.equal(runs.MENU_PLUS_RUN.setupFree, false, 'Plus pays the $149 setup');
+  assert.equal(runs.MENU_PRO_RUN.setupFree, true, 'Max has no setup fee');
   assert.deepEqual(runs.MENU_PRO_RUN.jobs, ['ACCESSIBILITY_MONITORING', 'GOOGLE_PROFILE_CARE', 'MENU_CARE', 'REVIEW_REPLIES']);
   assert.notEqual(runs.MENU_PLUS_RUN.business, runs.MENU_PRO_RUN.business, 'each run has its own test business');
   assert.notEqual(runs.MENU_PLUS_RUN.design, 'classic', 'a lost design choice shows');

@@ -33,6 +33,22 @@ async function hasMenuCare(env, businessId) {
     `).bind(businessId).first());
 }
 
+// MΞNU Pro and Max (owner, Nov 19, 2026): "$29 for languages, trifold, table tents". The MENU_PRO entitlement comes
+// with Pro and Max; Menu Care (Max, and the older Menu Care plan) counts too.
+// Only menus bought with Plus (plan_hosted MENU_PLUS) are held to it: a menu bought before Nov 19, 2026 (its paid
+// first year included the whole print set) or with Pro or Max keeps the tri-fold and table tent.
+async function hasProFeatures(env, businessId) {
+  if (await env.DB.prepare(`
+      SELECT 1 FROM entitlements WHERE business_id = ? AND entitlement_type IN ('MENU_PRO', 'MENU_CARE') AND status = 'ACTIVE' LIMIT 1
+    `).bind(businessId).first()) return true;
+  const newest = await env.DB.prepare(`
+      SELECT json_extract(oi.metadata_json, '$.plan_hosted') AS plan FROM projects p JOIN order_items oi ON oi.id = p.order_item_id
+      WHERE p.business_id = ? AND p.workflow_key = 'MENU_QR_V1' AND json_extract(COALESCE(p.metadata_json, '{}'), '$.holiday_menu') IS NULL
+      ORDER BY p.created_at DESC LIMIT 1
+    `).bind(businessId).first().catch(() => null);
+  return newest?.plan !== "MENU_PLUS";
+}
+
 async function planPrices(env, code, fallback) {
   const t = new Date().toISOString();
   const rows = (await env.DB.prepare(`
@@ -46,7 +62,7 @@ async function planPrices(env, code, fallback) {
 }
 const menuCarePrices = (env) => planPrices(env, "MENU_CARE", { month: 2900, year: 29000 });
 // MΞNU Plus (owner, Nov 14, 2026) "replaces ... Menu Care as hosting": the renewal offers Plus first.
-const plusPrices = (env) => planPrices(env, "MENU_PLUS", { month: 1200, year: 12000 });
+const plusPrices = (env) => planPrices(env, "MENU_PLUS", { month: 1999, year: 19990 });
 // Four choices (owner, Nov 15, 2026): "we make the changes for you" is MΞNU Pro, no longer Menu Care alone.
 const donePrices = (env) => planPrices(env, "BUNDLE_PREMIUM", { month: 7900, year: 79000 });
 
@@ -61,7 +77,9 @@ async function hasWaivedMenu(env, businessId) {
   return Boolean(await env.DB.prepare(`
       SELECT 1 AS ok FROM projects p WHERE p.business_id = ? AND p.workflow_key = 'MENU_QR_V1'
         AND json_extract(COALESCE(p.metadata_json, '{}'), '$.holiday_menu') IS NULL
-        AND COALESCE(json_extract((SELECT oi.metadata_json FROM order_items oi WHERE oi.id = p.order_item_id), '$.setup_waived_cents'), 0) > 0 LIMIT 1
+        AND COALESCE(json_extract((SELECT oi.metadata_json FROM order_items oi WHERE oi.id = p.order_item_id), '$.setup_waived_cents'), 0) > 0
+        -- New pricing (Nov 19, 2026, "no FREE"): a menu bought with a plan goes offline when the plan ends.
+        AND json_extract((SELECT oi.metadata_json FROM order_items oi WHERE oi.id = p.order_item_id), '$.plan_hosted') IS NULL LIMIT 1
     `).bind(businessId).first());
 }
 
@@ -84,6 +102,7 @@ async function menuHostingState(env, businessId, now = new Date()) {
         AND json_extract(COALESCE(p.metadata_json, '{}'), '$.holiday_menu') IS NULL   -- Holiday Menus have no hosting year
         AND json_extract(COALESCE(p.metadata_json, '{}'), '$.free_plan') IS NULL   -- nor does the free plan
         AND COALESCE(json_extract((SELECT oi.metadata_json FROM order_items oi WHERE oi.id = p.order_item_id), '$.setup_waived_cents'), 0) = 0   -- nor a menu whose first year came free with a plan
+        AND json_extract((SELECT oi.metadata_json FROM order_items oi WHERE oi.id = p.order_item_id), '$.plan_hosted') IS NULL   -- nor one hosted by its plan (Nov 19, 2026)
       GROUP BY p.id ORDER BY first_delivered_at DESC LIMIT 1
     `).bind(businessId).first();
   const care = await env.DB.prepare(`
@@ -142,7 +161,7 @@ async function sendReminder(env, project, reminder) {
   const prices = await menuCarePrices(env);
   const plus = await plusPrices(env);
   const done = await donePrices(env);
-  const careLine = done.onSale ? `Rather we do the work for you? MΞNU Pro is ${dollars(done.month)}/month.` : `Rather we make the changes for you? Menu Care is ${dollars(prices.month)}/month.`;
+  const careLine = done.onSale ? `Rather we do the work for you? MΞNU Max is ${dollars(done.month)}/month.` : `Rather we make the changes for you? Menu Care is ${dollars(prices.month)}/month.`;
   const menuUrl = hostedMenuUrl(project.id, project.business_name);
   const greeting = project.first_name ? `Hi ${project.first_name},` : "Hi,";
   const isOffline = reminder.key === "offline";
@@ -205,6 +224,8 @@ async function remindMenuHostingRenewals(env, { now = new Date(), projectIds = n
       if (!isCustomerEmail(project.email, PURPOSE, env)) { skip("owner address"); continue; }
       if (await hasMenuCare(env, project.business_id)) { skip("has Menu Care"); continue; }
       if (await hasFreePlan(env, project.business_id) || await hasWaivedMenu(env, project.business_id)) { skip("free plan: never goes offline"); continue; }
+      const hostedBy = await env.DB.prepare(`SELECT json_extract(oi.metadata_json, '$.plan_hosted') AS plan FROM projects p JOIN order_items oi ON oi.id = p.order_item_id WHERE p.id = ?`).bind(id).first().catch(() => null);
+      if (hostedBy?.plan) { skip("hosted by its plan: no first year"); continue; }
       const daysLeft = (Date.parse(yearEnd(project)) - now.getTime()) / DAY;
       let due;
       if (daysLeft <= -GRACE_DAYS) {
@@ -255,9 +276,9 @@ async function handleMenuHostingRenewal(request, env, projectId) {
   if (request.method !== "POST") {
     const button = (interval, label, plan = "MENU_CARE") => `<form method="post" style="display:inline"><input type="hidden" name="t" value="${escapeHtml(token)}"><input type="hidden" name="interval" value="${interval}"><input type="hidden" name="plan" value="${plan}"><button type="submit">${escapeHtml(label)}</button></form>`;
     const plusBlock = plus.onSale ? `<h2 style="font-size:18px;margin:18px 0 6px">MΞNU Plus</h2><p>Keeps <strong>${escapeHtml(project.business_name)}</strong>'s menu online at the same address and QR code. Edit it yourself any time from your account, in any design, with the print set and translations.</p>
-${button("month", `${dollars(plus.month)} a month`, "MENU_PLUS")}${button("year", `${dollars(plus.year)} a year (2 months free)`, "MENU_PLUS")}<h2 style="font-size:18px;margin:22px 0 6px">${done.onSale ? "Or MΞNU Pro: we do the work" : "Or Menu Care: we make the changes"}</h2>` : "";
+${button("month", `${dollars(plus.month)} a month`, "MENU_PLUS")}${button("year", `${dollars(plus.year)} a year (2 months free)`, "MENU_PLUS")}<h2 style="font-size:18px;margin:22px 0 6px">${done.onSale ? "Or MΞNU Max: we do the work" : "Or Menu Care: we make the changes"}</h2>` : "";
     return page(200, "Keep your menu online",
-      `${plusBlock}<p>${done.onSale ? `MΞNU Pro keeps <strong>${escapeHtml(project.business_name)}</strong>'s menu online at the same address and QR code with everything in Plus, and we make every change you send, keep your Google profile current and reply to your reviews.` : `Menu Care keeps <strong>${escapeHtml(project.business_name)}</strong>'s menu online at the same address and QR code, and we make every change you send.`} Cancel any time.</p>
+      `${plusBlock}<p>${done.onSale ? `MΞNU Max keeps <strong>${escapeHtml(project.business_name)}</strong>'s menu online at the same address and QR code with everything in Plus, and we make every change you send, keep your Google profile current and reply to your reviews.` : `Menu Care keeps <strong>${escapeHtml(project.business_name)}</strong>'s menu online at the same address and QR code, and we make every change you send.`} Cancel any time.</p>
 <dl><dt>Your menu</dt><dd>${escapeHtml(hostedMenuUrl(project.id, project.business_name))}</dd>${project.first_delivered_at ? `<dt>First year ends</dt><dd>${escapeHtml(formatDate(yearEnd(project)))}</dd><dt>Without a plan, offline from</dt><dd>${escapeHtml(formatDate(new Date(Date.parse(yearEnd(project)) + GRACE_DAYS * DAY).toISOString()))}</dd>` : ""}</dl>
 ${done.onSale ? `${button("month", `${dollars(done.month)} a month`, "BUNDLE_PREMIUM")}${button("year", `${dollars(done.year)} a year (2 months free)`, "BUNDLE_PREMIUM")}` : `${button("month", `${dollars(prices.month)} a month`)}${button("year", `${dollars(prices.year)} a year (2 months free)`)}`}
 <p>Payment is handled by Stripe.</p>`);
@@ -291,4 +312,4 @@ ${done.onSale ? `${button("month", `${dollars(done.month)} a month`, "BUNDLE_PRE
   return new Response(null, { status: 303, headers: { Location: result.url, "Cache-Control": "no-store" } });
 }
 
-export { GRACE_DAYS, PURPOSE as MENU_HOSTING_PURPOSE, freePlanUpgradeUrl, hasFreePlan, menuHostingState, remindMenuHostingRenewals, handleMenuHostingRenewal, renewalLink };
+export { GRACE_DAYS, PURPOSE as MENU_HOSTING_PURPOSE, freePlanUpgradeUrl, hasFreePlan, hasProFeatures, menuHostingState, remindMenuHostingRenewals, handleMenuHostingRenewal, renewalLink };

@@ -81,8 +81,11 @@ let checkoutInFlight = false;
 const startParams = new URLSearchParams(location.search);
 let hasOwnMenu = startParams.get('have') === 'menu';
 const hasOwnSite = startParams.get('have') === 'site';
-// MΞNU Plus (owner, Nov 14, 2026): $12 a month or $120 a year, and the menu's $144 first year is free with it.
+// New pricing (owner, Nov 19, 2026): a $149 setup, then MΞNU Plus ($19.99/mo), MΞNU Pro (MENU_PRO, $39/mo) or MΞNU Max
+// (BUNDLE_PREMIUM, $79/mo, no setup fee). All three include MENU_PLUS; Max includes MENU_CARE. No free plan.
 const PLUS = 'MENU_PLUS';
+const PRO = 'MENU_PRO';
+const MENU_PLANS = [PLUS, PRO];
 const planIncludes = code => order.plan === CUSTOM ? order.custom.includes(code) : Boolean(order.plan && (order.plan === code || offer(order.plan)?.includes?.includes(code)));
 const siteInOrder = () => order.once.has('SITE_FILES') || order.once.has(WEBSITE);
 let menuNote = '';
@@ -92,9 +95,9 @@ function bringMenu() {
   // a plan picked with it does not bring Online Menu + QR too (Nov 18, 2026).
   if (!(plus || planIncludes('MENU_CARE')) || order.once.has(MENU) || order.once.has(HOLIDAY) || hasOwnMenu || !sellable(offer(MENU))) return;
   order.once.add(MENU);
-  menuNote = plus
-    ? 'MΞNU Plus starts with your menu online, so Online Menu + QR was added; its first year is free with Plus. Already have a menu with us? Remove it.'
-    : 'Your plan starts with your menu online, so Online Menu + QR was added (its setup is free with yearly billing). Already have a menu with us? Remove it.';
+  menuNote = menuIncluded()
+    ? 'Your plan starts with your menu online, so Online Menu + QR was added; its setup is free with MΞNU Max. Already have a menu with us? Remove it.'
+    : 'Your plan starts with your menu online, so Online Menu + QR was added with its one-time setup. Already have a menu with us? Remove it.';
 }
 let uploadedDocumentRequest = null;
 let menuPreview = ''; // the free menu preview "Make it live" came from (its design and Customize settings)
@@ -158,7 +161,8 @@ function menuQuote() {
   const baseCents = free ? 0 : pkg.setup_cents + pkg.hosting_first_year_cents;
   return { pages, extraPages, extrasCents, totalCents: baseCents + extrasCents, free, pkg };
 }
-function menuIncluded() { return planIncludes(PLUS) || (interval() === 'year' && planIncludes('MENU_CARE')); }
+// The $149 setup is free with MΞNU Max only (owner, Nov 19, 2026: "waived at max"), monthly or yearly.
+function menuIncluded() { return planIncludes('MENU_CARE'); }
 
 // The plan the checkout will start. A Website Package bought without a plan starts Website Care on a trial.
 function effectivePlan() {
@@ -179,7 +183,7 @@ function orderProblem() {
     return { text: 'Website Care looks after a site Menu-Made builds, so it starts with your site. Pick yours free in the site generator and this plan comes with it.', href: 'website-design.html?then=' + encodeURIComponent(thenParams()) + '#try-free', label: 'Pick your site' };
   }
   if (order.once.has(MENU) && offers && sellable(offer(PLUS)) && !planIncludes(PLUS) && !planIncludes('MENU_CARE')) {
-    return { text: 'Your online menu comes with MΞNU Plus ($12 a month, its first year free) or a plan with Menu Care. Or keep it free: start free from your menu preview.', href: 'online-menu.html#try-free', label: 'Start free instead' };
+    return { text: 'Your online menu comes with a plan: MΞNU Plus, Pro or Max. Choose one above to check out.', href: 'plans.html', label: 'Compare plans' };
   }
   const codes = order.plan === CUSTOM ? [...order.custom, ...order.once] : [order.plan, ...order.once];
   for (const code of codes.filter(Boolean)) {
@@ -244,11 +248,11 @@ function lineFor(code, kind) {
     small.textContent = Catalog.label(o, interval()) + (interval() === 'year' ? ' · billed yearly' : ' · billed monthly');
   } else if (code === MENU) {
     const quote = menuQuote();
-    small.textContent = quote ? `${quote.pages} page${quote.pages === 1 ? '' : 's'} · first-year hosting included${quote.free ? (planIncludes(PLUS) ? ' · first year free with MΞNU Plus' : ' · setup free with your yearly plan') : ''}` : 'Enter your page count';
+    small.textContent = quote ? `${quote.pages} page${quote.pages === 1 ? '' : 's'} · one-time setup${quote.free ? ' · free with MΞNU Max' : ''} · hosted by your plan` : 'Enter your page count';
   } else if (code === 'GUEST_APP_SETUP') {
     small.textContent = Catalog.label(o, interval()) + ' · one-time app build';
   } else if (code === HOLIDAY && planIncludes(PLUS) && holidayCents !== 0) {
-    small.textContent = holidayBoth ? 'Both holiday menus free with MΞNU Plus' : 'Free with MΞNU Plus';
+    small.textContent = holidayBoth ? 'Both holiday menus free with your plan' : 'Free with your plan';
   } else if (code === HOLIDAY && holidayCents !== null) {
     small.textContent = holidayCents === 0 ? 'Already paid with your order for both holidays' : `${money(holidayCents)} · second holiday menu this season`;
   } else {
@@ -280,14 +284,13 @@ function render(openEmptyChoices = true) {
   setFieldState(els.menuPages, $('menuPagesError'), validPages, `Enter a whole number from 1 to ${offer(MENU)?.menu_package?.max_pages || 50}.`);
   const planNote = $('menuPlanNote');
   if (planNote) {
-    const text = hasMenu && (/^BUNDLE_/.test(order.plan || '') || order.plan === PLUS) ? menuNote : '';
+    const text = hasMenu && (/^BUNDLE_/.test(order.plan || '') || MENU_PLANS.includes(order.plan)) ? menuNote : '';
     planNote.textContent = text;
     planNote.hidden = !text;
   }
   if (quote) {
-    const freeWith = planIncludes(PLUS) ? 'Free with MΞNU Plus' : 'Free with yearly';
-    $('menuSetupAmount').textContent = quote.free ? freeWith : money(quote.pkg.setup_cents);
-    $('menuHostingAmount').textContent = quote.free ? freeWith : money(quote.pkg.hosting_first_year_cents);
+    $('menuSetupAmount').textContent = quote.free ? 'Free with MΞNU Max' : money(quote.pkg.setup_cents);
+    $('menuHostingAmount').textContent = 'With your plan';
     $('extraPagesLabel').textContent = `Additional pages · ${quote.extraPages}`;
     $('extraPagesAmount').textContent = money(quote.extrasCents);
   }
@@ -295,7 +298,7 @@ function render(openEmptyChoices = true) {
   let today = 0;
   for (const code of order.once) {
     els.items.append(lineFor(code, 'once'));
-    // A holiday menu is free when this checkout starts MΞNU Plus (Nov 17, 2026).
+    // A holiday menu is free when this checkout starts any plan (Plus, Pro or Max; owner, Nov 19, 2026).
     if (code === HOLIDAY && planIncludes(PLUS) && holidayCents !== 0) continue;
     today += code === MENU ? (quote?.totalCents || 0) : code === HOLIDAY && holidayCents !== null ? holidayCents : (Catalog.priceOf(offer(code), interval()) || 0);
     if (code === HOLIDAY && holidayBoth) today += HOLIDAY_SECOND_CENTS;
@@ -351,49 +354,38 @@ function render(openEmptyChoices = true) {
 function renderMenuAddon() {
   const panel = $('menuAddon');
   if (!panel) return;
-  const on = planIncludes('MENU_CARE');
-  const plusOn = order.plan === PLUS;
-  // The plans include Menu Care, so the panel is for the menu on its own or with single services.
-  // A holiday menu offers MΞNU Plus too: it makes the holiday menu free (Nov 17, 2026).
+  // "Your menu plan" (Nov 19, 2026): Plus or Pro, one tap each, for a menu or holiday menu with no plan or one of
+  // these two. Max is a bundle, chosen from the cards above; then this panel stays hidden.
   const holidayOn = order.once.has(HOLIDAY) && holidayCents !== 0;
-  panel.hidden = !offers || !(order.once.has(MENU) || on || plusOn || holidayOn) || !(sellable(offer('MENU_CARE')) || sellable(offer(PLUS))) || /^BUNDLE_/.test(order.plan || '');
+  panel.hidden = !offers || !(order.once.has(MENU) || MENU_PLANS.includes(order.plan) || holidayOn) || !MENU_PLANS.some(c => sellable(offer(c))) || /^BUNDLE_/.test(order.plan || '');
   if (panel.hidden) return;
-  const plusNote = panel.querySelector('[data-plus-row] small');
-  if (plusNote) {
-    if (!plusNote.dataset.menuText) plusNote.dataset.menuText = plusNote.textContent;
-    plusNote.textContent = holidayOn && !order.once.has(MENU)
-      ? 'Your holiday menu is free with Plus, and your regular menu goes online too: any design, the print set and TV menu, edit it yourself, other languages, no badge. Cancel any time.'
-      : plusNote.dataset.menuText;
-  }
-  // MΞNU Plus first: offered when no other plan is chosen (it replaces a single plan, never a bundle or your own plan).
-  const plusRow = panel.querySelector('[data-plus-row]');
-  if (plusRow) {
-    plusRow.hidden = !sellable(offer(PLUS)) || !(order.plan === null || order.plan === PLUS || order.plan === 'MENU_CARE');
-    const plusButton = plusRow.querySelector('[data-plus-add]');
-    plusButton.textContent = plusOn ? 'Added' : 'Add';
-    plusButton.setAttribute('aria-pressed', String(plusOn));
-    plusButton.disabled = checkoutInFlight;
-    plusRow.classList.toggle('is-selected', plusOn);
-  }
+  panel.querySelectorAll('[data-plan-row]').forEach(row => {
+    const code = row.dataset.planRow;
+    const on = order.plan === code;
+    row.hidden = !sellable(offer(code)) || !(order.plan === null || MENU_PLANS.includes(order.plan));
+    const button = row.querySelector('[data-plan-add]');
+    button.textContent = on ? 'Added' : 'Add';
+    button.setAttribute('aria-pressed', String(on));
+    button.disabled = checkoutInFlight;
+    row.classList.toggle('is-selected', on);
+    const note = row.querySelector('small');
+    if (!note.dataset.menuText) note.dataset.menuText = note.textContent;
+    note.textContent = holidayOn && !order.once.has(MENU) ? `Your holiday menu is free with it. ${note.dataset.menuText}` : note.dataset.menuText;
+  });
   panel.querySelectorAll('[data-price]').forEach(el => { const o = offer(el.dataset.price); el.textContent = o ? Catalog.label(o, interval()) : ''; });
-  const button = panel.querySelector('[data-menu-care-add]');
-  button.textContent = on ? 'Added' : 'Add';
-  button.setAttribute('aria-pressed', String(on));
-  button.disabled = checkoutInFlight;
   const careRow = panel.querySelector('[data-care-row]');
-  careRow.classList.toggle('is-selected', on);
-  careRow.hidden = (!sellable(offer('MENU_CARE')) && !on) || (holidayOn && !order.once.has(MENU) && !on);
-  $('menuAddonNote').textContent = on ? (menuNote || (order.plan === CUSTOM ? `Your plan: ${order.custom.map(nameOf).join(', ')}, ${planLabel(CUSTOM)}.` : '')) : '';
+  if (careRow) careRow.hidden = true; // Menu Care alone is off sale; Max includes it.
+  $('menuAddonNote').textContent = '';
 }
 function currentServices() {
   if (order.plan === CUSTOM) return [...order.custom];
   if (!order.plan) return [];
   return [...(offer(order.plan)?.includes || [order.plan])];
 }
-function togglePlus() {
+function togglePlan(code) {
   if (flowBusy() || !offers) return;
-  if (order.plan === PLUS) { remove(PLUS); menuNote = ''; }
-  else add(PLUS, { quiet: true });
+  if (order.plan === code) { remove(code); menuNote = ''; }
+  else add(code, { quiet: true });
   clearStatus();
   render(false);
 }
@@ -417,7 +409,8 @@ function toggleMenuCare() {
   render(false);
 }
 $('menuAddon')?.addEventListener('click', event => {
-  if (event.target.closest('[data-plus-add]')) togglePlus();
+  const planButton = event.target.closest('[data-plan-add]');
+  if (planButton) togglePlan(planButton.dataset.planAdd);
   else if (event.target.closest('[data-menu-care-add]')) toggleMenuCare();
 });
 
@@ -604,11 +597,11 @@ function add(code, { quiet = false } = {}) {
     }
     if (code === HOLIDAY && order.once.has(MENU)) order.once.delete(MENU);
     order.once.add(code);
-    // Menus are sold as free or with MΞNU Plus (owner, Nov 14, 2026), never on their own: a menu with no plan
-    // brings Plus, and its first year is free with it.
+    // Menus are sold with a plan (owner, Nov 19, 2026), never on their own: a menu with no plan brings Plus; Pro or
+    // Max is one tap away.
     if (code === MENU && !order.plan && sellable(offer(PLUS))) {
       order.plan = PLUS;
-      menuNote = 'Your online menu comes with MΞNU Plus, and its first year is free with Plus. Rather we make your changes? Pick Menu Care below.';
+      menuNote = 'Your online menu comes with a plan: MΞNU Plus is added. Want other languages, a tri-fold and table tents? Pick Pro. Rather we do the work, with no setup fee? Choose MΞNU Max above.';
     }
   }
   window.MenuMadeFunnel?.track('service_selected', code);
@@ -641,7 +634,7 @@ function remove(code) {
     order.once.delete(code);
     if (code === MENU && (planIncludes('MENU_CARE') || planIncludes(PLUS))) {
       hasOwnMenu = true;
-      menuNote = planIncludes(PLUS) ? 'MΞNU Plus will cover the menu you already have with us.' : 'Menu Care will update the menu you already have with us.';
+      menuNote = planIncludes('MENU_CARE') ? 'Your plan will update the menu you already have with us.' : 'Your plan will cover the menu you already have with us.';
     }
   }
   clearStatus();

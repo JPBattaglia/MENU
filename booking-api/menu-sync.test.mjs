@@ -66,7 +66,7 @@ test('an edited menu rebuilds the hosted generator website\'s menu and goes live
 });
 
 test('the free plan self-test passes end to end and leaves nothing behind', async (t) => {
-  const env = { DB: createD1(), ASSETS: createR2(), RESEND_API_KEY: 're_test', PRODUCTION_RUNNER_SECRET: 'test-runner-secret' };
+  const env = { DB: createD1(), ASSETS: createR2(), RESEND_API_KEY: 're_test', PRODUCTION_RUNNER_SECRET: 'test-runner-secret', MENU_FREE_PLAN: 'on' };
   for (const m of ['0007_plan_settings.sql', '0009_website_package.sql', '0017_customer_accounts.sql', '0018_menu_hosting_index.sql']) env.DB.raw.exec(read(m));
   const original = globalThis.fetch;
   globalThis.fetch = async (input) => {

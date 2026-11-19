@@ -20,15 +20,16 @@ import { queuePush } from "../producers/guest-app/engage.js";
 const TTL = 300;
 const MM = "https://menu-made.com";
 // Bumped whenever tools/howto-videos re-records the how-to videos, so phones fetch the new files.
-const HOWTO_VIDEO_VERSION = "20261118";
+const HOWTO_VIDEO_VERSION = "20261119";
 const NINO = "https://ninobattaglia.com";
 // Nino's shop API (NinoSite commerce-api): rewards card, ideas board and the last week's new designs (fans.mjs).
 const NINO_API = "https://nino-printful-commerce-api.ijpbattaglia.workers.dev";
 const EARLY_SECONDS = 86400;
 const HYBRID_KEYS = new Set(["menumade", "nino"]);
-// Four choices (owner, Nov 15, 2026), as on the plans page: MΞNU Plus, then MΞNU Pro. Older plans stay listed
-// here only so an app still showing them can map them; the catalog marks them off sale, and off-sale plans are dropped.
-const PLAN_ORDER = ["MENU_PLUS", "BUNDLE_PREMIUM", "BUNDLE_STARTER", "BUNDLE_GROWTH", "BUNDLE_PRO"];
+// New pricing (owner, Nov 19, 2026), as on the plans page: MΞNU Plus, MΞNU Pro (MENU_PRO), then MΞNU Max (offer code
+// BUNDLE_PREMIUM). Older plans stay listed here only so an app still showing them can map them; the catalog marks
+// them off sale, and off-sale plans are dropped. (BUNDLE_PRO is the older "Pro" bundle, off sale since Nov 15.)
+const PLAN_ORDER = ["MENU_PLUS", "MENU_PRO", "BUNDLE_PREMIUM", "BUNDLE_STARTER", "BUNDLE_GROWTH", "BUNDLE_PRO"];
 
 const clean = (value, max) => String(value ?? "").replace(/\s+/g, " ").trim().slice(0, max);
 const httpsUrl = (value, base) => {
@@ -62,17 +63,18 @@ function menumadeContent(catalog, { offCodes = [], now = Date.now() } = {}) {
   // Services (the Account tab's own list, so "All services" no longer opens the website): everything on sale that
   // isn't a bundle or one of Nino's design services, with its price from the same catalog.
   const dollars = (cents) => `$${(Number(cents) / 100).toLocaleString("en-US", { maximumFractionDigits: 2 })}`;
-  // Menus are free or with MΞNU Plus (owner, Nov 14, 2026); Plus's price comes from the same catalog.
-  const plusPrice = `${dollars(offers.find((o) => o && o.code === "MENU_PLUS")?.prices?.month || 1200)}/mo`;
+  // Menus come with a plan (owner, Nov 19, 2026): a $149 setup, then Plus, Pro or Max; prices from the same catalog.
+  const plusPrice = `${dollars(offers.find((o) => o && o.code === "MENU_PLUS")?.prices?.month || 1999)}/mo`;
+  const setupPrice = dollars(byCode.get("ONLINE_MENU_QR")?.price_cents || 14900);
   const services = offers.filter((o) => o && o.on_sale && o.kind !== "BUNDLE" && !PLAN_ORDER.includes(o.code) && !offCodes.includes(o.code) && !/^NINO_/.test(String(o.code || "")) && o.name)
-    // Menus are free or with MΞNU Plus (owner, Nov 14, 2026), as on the site; "Make it live" checks out Plus.
-    .map((o) => ({ name: clean(o.name, 60), text: clean(o.short_description, 220), price: o.code === "ONLINE_MENU_QR" ? `Free, or ${plusPrice} with MΞNU Plus` : o.prices?.month ? `${dollars(o.prices.month)}/mo` : o.price_cents ? dollars(o.price_cents) : "" }))
+    // Menus come with a plan (owner, Nov 19, 2026), as on the site; "Make it live" checks out Plus with the setup.
+    .map((o) => ({ name: clean(o.name, 60), text: clean(o.short_description, 220), price: o.code === "ONLINE_MENU_QR" ? `${setupPrice} setup, then from ${plusPrice}` : o.prices?.month ? `${dollars(o.prices.month)}/mo` : o.price_cents ? dollars(o.price_cents) : "" }))
     .filter((x) => x.price).slice(0, 20);
   const occasions = offCodes.includes("HOLIDAY_MENU") || !byCode.get("HOLIDAY_MENU")?.on_sale ? [] : ["christmas", "newyear"].filter((o) => holidayOnSale(o, now)).map((o) => ({ key: o, label: OCCASION_NAMES[o] }));
   // Early bird through Nov 30, then the regular price (checkout/holiday.js); free with MΞNU Plus.
   const hp = holidayPrices(now);
   const holidayPrice = dollars(hp.first_cents);
-  const early = hp.early_bird ? ` Early-bird price through ${hp.early_bird_ends} (then ${dollars(hp.regular_first_cents)}), or free when you start MΞNU Plus.` : " Or free when you start MΞNU Plus.";
+  const early = hp.early_bird ? ` Early-bird price through ${hp.early_bird_ends} (then ${dollars(hp.regular_first_cents)}), or free when you start any MΞNU plan.` : " Or free when you start any MΞNU plan.";
   const first = occasions[0]?.key;
   const which = occasions.map((o) => o.label).join(" or ");
   // The how-to video beside each generator on menu-made.com (owner, Nov 15, 2026: "Why are the instruction videos in
@@ -161,8 +163,7 @@ function menumadeContent(catalog, { offCodes = [], now = Date.now() } = {}) {
         buttons: [
           { label: "Generate menu", text: "Shows your menu in the next of nine designs. Tap it as often as you like." },
           { label: "Customize", text: "Adds your logo, your colour and your name the way you want it, on every design. Items, prices and diet marks lets you fix a dish, change a price or mark it vegan, gluten-free and more." },
-          { label: "Make it live", text: `Orders the design on screen with MΞNU Plus (${plusPrice}): your menu online with its QR code, the print set and edits whenever you like, its first year free.` },
-          { label: "Start free", text: "Puts your menu online free in the Classic design, with its own link and QR code. We email you a link to confirm." }
+          { label: "Make it live", text: `Orders the design on screen: a ${setupPrice} setup, then MΞNU Plus from ${plusPrice} for your menu online with its QR code, the print menu and TV menu. Pro adds languages, the tri-fold and table tent; Max has no setup fee and we make your changes.` }
         ] },
       { key: "site", title: "Website generator", count: 9, text: "The same menu becomes a whole website: home, menu, about and contact pages.",
         create_url: `${MM}/api/website-preview/create`, state_url: `${MM}/api/website-preview/state/`, start: "Build my website preview", city: true,

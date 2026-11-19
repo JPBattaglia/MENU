@@ -53,7 +53,7 @@ function cartLines(items) {
       const per = meta.interval === "YEAR" ? "year" : "month";
       return [item.offer_name, `${money(meta.recurring_amount_cents ?? item.unit_price_cents)}/${per}`];
     }
-    if (meta.menu_package) return [item.offer_name, `${money(item.line_total_cents)} (${meta.menu_package.menu_pages} menu pages, first-year hosting)`];
+    if (meta.menu_package) return [item.offer_name, `${money(item.line_total_cents)} (${meta.menu_package.menu_pages} menu pages, setup)`];
     if (meta.holiday_menu) return [`${item.offer_name} (${meta.holiday_menu.occasion === "christmas" ? "Christmas" : "New Year's Eve"})`, money(item.line_total_cents)];
     return [item.offer_name, money(item.line_total_cents)];
   });

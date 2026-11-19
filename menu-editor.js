@@ -210,7 +210,7 @@
     }
     $('statsNote').textContent = stats.google
       ? `Google's numbers run a few days behind (${stats.google.from} to ${stats.google.to}). QR scans count from codes made since Nov 17, 2026. Every Monday these come by email too.`
-      : 'QR scans count from codes made since Nov 17, 2026. Every Monday these come by email too. With MΞNU Pro, calls, website clicks and directions from your Google profile show here as well.';
+      : 'QR scans count from codes made since Nov 17, 2026. Every Monday these come by email too. With MΞNU Max, calls, website clicks and directions from your Google profile show here as well.';
   }
 
   // MΞNU free plan (Nov 14, 2026): what the free menu includes, and the way to every design.

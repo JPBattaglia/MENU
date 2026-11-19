@@ -14,8 +14,9 @@ const OFFERS = [
   { code: 'BUNDLE_GROWTH', name: 'Growth Plan', kind: 'BUNDLE', on_sale: true, prices: { month: 17900, year: 179000 }, includes: ['MENU_CARE', 'REVIEW_REPLIES', 'ACCESSIBILITY_MONITORING', 'GOOGLE_PROFILE_CARE'], requires_setup: null },
   { code: 'BUNDLE_PRO', name: 'Pro Plan', kind: 'BUNDLE', on_sale: false, prices: { month: 27900, year: 279000 }, includes: ['MENU_CARE', 'REVIEW_REPLIES', 'ACCESSIBILITY_MONITORING', 'GOOGLE_PROFILE_CARE', 'SOCIAL_POSTS', 'WEBSITE_CARE'], requires_setup: null },
   { code: 'MENU_CARE', name: 'Menu Care', kind: 'PLAN', on_sale: true, prices: { month: 2900, year: 29000 }, includes: ['MENU_CARE'], requires_setup: null },
-  { code: 'BUNDLE_PREMIUM', name: 'MΞNU Pro', kind: 'BUNDLE', on_sale: true, prices: { month: 7900, year: 79000 }, includes: ['MENU_PLUS', 'MENU_CARE', 'GOOGLE_PROFILE_CARE', 'REVIEW_REPLIES', 'ACCESSIBILITY_MONITORING'], requires_setup: null },
-  { code: 'MENU_PLUS', name: 'MΞNU Plus', kind: 'PLAN', on_sale: true, prices: { month: 1200, year: 12000 }, includes: ['MENU_PLUS'], requires_setup: null },
+  { code: 'BUNDLE_PREMIUM', name: 'MΞNU Max', kind: 'BUNDLE', on_sale: true, prices: { month: 7900, year: 79000 }, includes: ['MENU_PLUS', 'MENU_PRO', 'MENU_CARE', 'GOOGLE_PROFILE_CARE', 'REVIEW_REPLIES', 'ACCESSIBILITY_MONITORING'], requires_setup: null },
+  { code: 'MENU_PLUS', name: 'MΞNU Plus', kind: 'PLAN', on_sale: true, prices: { month: 1999, year: 19990 }, includes: ['MENU_PLUS'], requires_setup: null },
+  { code: 'MENU_PRO', name: 'MΞNU Pro', kind: 'PLAN', on_sale: true, prices: { month: 3900, year: 39000 }, includes: ['MENU_PLUS', 'MENU_PRO'], requires_setup: null },
   { code: 'REVIEW_REPLIES', name: 'Review Replies', kind: 'PLAN', on_sale: true, prices: { month: 4900, year: 49000 }, includes: ['REVIEW_REPLIES'], requires_setup: null },
   { code: 'GOOGLE_PROFILE_CARE', name: 'Google Profile Care', kind: 'PLAN', on_sale: true, prices: { month: 14900, year: 149000 }, includes: ['GOOGLE_PROFILE_CARE'], requires_setup: null },
   { code: 'SOCIAL_POSTS', name: 'Social Posts', kind: 'PLAN', on_sale: true, prices: { month: 12900, year: 129000 }, includes: ['SOCIAL_POSTS'], requires_setup: null },
@@ -23,7 +24,7 @@ const OFFERS = [
   { code: 'ACCESSIBILITY_MONITORING', name: 'Accessibility Monitoring', kind: 'PLAN', on_sale: true, prices: { month: 3900, year: 39000 }, includes: ['ACCESSIBILITY_MONITORING'], requires_setup: null },
   { code: 'GUEST_APP', name: 'Guest App', kind: 'PLAN', on_sale: true, prices: { month: 2900, year: 29000 }, includes: ['GUEST_APP'], requires_setup: 'GUEST_APP_SETUP' },
   { code: 'GUEST_APP_SETUP', name: 'Guest App Setup', kind: 'ONE_TIME', on_sale: true, price_cents: 29900 },
-  { code: 'ONLINE_MENU_QR', name: 'Online Menu + QR', kind: 'ONE_TIME', on_sale: true, price_cents: 12900, menu_package: { setup_cents: 12900, hosting_first_year_cents: 1500, included_pages: 3, additional_page_cents: 2000, max_pages: 50 } },
+  { code: 'ONLINE_MENU_QR', name: 'Online Menu + QR', kind: 'ONE_TIME', on_sale: true, price_cents: 14900, menu_package: { setup_cents: 14900, hosting_first_year_cents: 0, included_pages: 3, additional_page_cents: 2000, max_pages: 50 } },
   { code: 'HOLIDAY_MENU', name: 'Holiday Menu', kind: 'ONE_TIME', on_sale: true, price_cents: 5900 },
   { code: 'WEBSITE_PACKAGE', name: 'Website Package', kind: 'ONE_TIME', on_sale: true, price_cents: 49900 },
   { code: 'SITE_FILES', name: 'Your Website', kind: 'ONE_TIME', on_sale: true, price_cents: 29900 },
@@ -164,15 +165,15 @@ test('an offer that is not on sale cannot be bought live, but can in test mode',
 });
 
 test('menu page count is priced from the catalog package and invalid counts block checkout', async () => {
-  // Menus come with MΞNU Plus (first year free) or a plan (Nov 14, 2026), so the package is priced here with
-  // Menu Care monthly ($29 + the menu); with Plus only pages past 3 are charged.
+  // Menus come with a plan (Nov 19, 2026): with Plus the $149 setup is charged; a plan with Menu Care (Max, or the
+  // older Menu Care plan here) makes the setup free, and only pages past 3 are charged.
   const plus = await page('?service=menu');
-  for (const [pages, total] of [['1', '$12.00'], ['4', '$32.00']]) {
+  for (const [pages, total] of [['1', '$168.99'], ['4', '$188.99']]) {
     plus.get('menuPages').value = pages; await plus.get('menuPages').fire('input');
     assert.equal(plus.get('cartTotal').textContent, total);
   }
   const p = await page('?plan=MENU_CARE&interval=month');
-  for (const [pages, total] of [['1', '$173.00'], ['3', '$173.00'], ['4', '$193.00'], ['50', '$1,113.00']]) {
+  for (const [pages, total] of [['1', '$29.00'], ['3', '$29.00'], ['4', '$49.00'], ['50', '$969.00']]) {
     p.get('menuPages').value = pages; await p.get('menuPages').fire('input');
     assert.equal(p.get('cartTotal').textContent, total);
   }
@@ -213,51 +214,36 @@ test('your own plan from the plans page: the picks, the one-time services and th
   assert.equal(overlap.state().plan, 'GOOGLE_PROFILE_CARE', 'Google Profile Care already answers reviews');
 });
 
-test('each plan starts from its foundation (owner, Nov 8, 2026): Menu Care brings the menu, Website Care needs the site', async () => {
-  const mc = await page('?plan=MENU_CARE');
-  assert.deepEqual(mc.state(), { plan: 'MENU_CARE', once: ['ONLINE_MENU_QR'] }, 'Menu Care brings Online Menu + QR');
-  assert.match(mc.get('menuAddonNote').textContent, /Already have a menu with us\? Remove it/);
-  await mc.get('cartItems').fire('click', { target: { dataset: { remove: 'ONLINE_MENU_QR' } } });
-  assert.deepEqual(mc.state(), { plan: 'MENU_CARE', once: [] }, 'removing the menu keeps Menu Care for the menu they have');
-  assert.match(mc.get('menuAddonNote').textContent, /menu you already have/);
-  const existing = await page('?plan=MENU_CARE&have=menu');
-  assert.deepEqual(existing.state(), { plan: 'MENU_CARE', once: [] }, 'links to existing menu customers add nothing');
+test('each plan starts from its foundation (owner, Nov 19, 2026): every menu plan brings the menu with its $149 setup, free with Max; Website Care needs the site', async () => {
+  const pro = await page('?plan=MENU_PRO&interval=month');
+  assert.deepEqual(pro.state(), { plan: 'MENU_PRO', once: ['ONLINE_MENU_QR'] }, 'Pro brings Online Menu + QR');
+  assert.equal(pro.get('cartTotal').textContent, '$188.00', '$39 + $149 setup');
+  assert.equal(pro.get('menuSetupAmount').textContent, '$149.00');
+  assert.match(pro.get('menuPlanNote').textContent, /Already have a menu with us\? Remove it/);
+  await pro.get('cartItems').fire('click', { target: { dataset: { remove: 'ONLINE_MENU_QR' } } });
+  assert.deepEqual(pro.state(), { plan: 'MENU_PRO', once: [] }, 'removing the menu keeps Pro for the menu they have');
+  const existing = await page('?plan=MENU_PRO&have=menu');
+  assert.deepEqual(existing.state(), { plan: 'MENU_PRO', once: [] }, 'links to existing menu customers add nothing');
 
-  // Every plan starts with the menu: Starter brings Online Menu + QR; yearly makes its setup free.
-  const starter = await page('?plan=BUNDLE_STARTER&interval=month');
-  assert.deepEqual(starter.state(), { plan: 'BUNDLE_STARTER', once: ['ONLINE_MENU_QR'] });
-  assert.equal(starter.get('cartTotal').textContent, '$223.00', '$79 + $144 menu');
-  const yearly = await page('?plan=BUNDLE_STARTER&interval=year');
-  assert.equal(yearly.get('cartTotal').textContent, '$790.00', 'menu setup free with yearly');
-  assert.equal(yearly.get('menuSetupAmount').textContent, 'Free with yearly');
-  assert.match(yearly.get('menuPlanNote').textContent, /Already have a menu with us\? Remove it/);
+  // Max: the setup is free, monthly or yearly.
+  const max = await page('?plan=BUNDLE_PREMIUM&interval=month');
+  assert.deepEqual(max.state(), { plan: 'BUNDLE_PREMIUM', once: ['ONLINE_MENU_QR'] });
+  assert.equal(max.get('cartTotal').textContent, '$79.00', 'no setup fee with Max');
+  assert.equal(max.get('menuSetupAmount').textContent, 'Free with MΞNU Max');
 
-  // Menu Care added to a single service: the two become your own plan; taking it off goes back.
-  const single = await page('?plan=REVIEW_REPLIES&add=menu');
-  await single.get('menuAddon').fire('click', { target: { closest: (sel) => sel === '[data-menu-care-add]' ? {} : null } });
-  const s = JSON.parse(vm.runInNewContext('JSON.stringify(order)', single.context));
-  assert.equal(s.plan, 'CUSTOM_PLAN');
-  assert.deepEqual(s.custom, ['MENU_CARE', 'REVIEW_REPLIES']);
-  await single.get('menuAddon').fire('click', { target: { closest: (sel) => sel === '[data-menu-care-add]' ? {} : null } });
-  const back = JSON.parse(vm.runInNewContext('JSON.stringify(order)', single.context));
-  assert.equal(back.plan, 'REVIEW_REPLIES', 'taking Menu Care off leaves the one service');
-
-  // MΞNU Plus (owner, Nov 14, 2026): brings the menu, and the menu's first year is free with it, monthly too.
   const plus = await page('?plan=MENU_PLUS&interval=month');
   assert.deepEqual(plus.state(), { plan: 'MENU_PLUS', once: ['ONLINE_MENU_QR'] });
-  assert.equal(plus.get('cartTotal').textContent, '$12.00', 'only Plus today');
-  assert.equal(plus.get('menuSetupAmount').textContent, 'Free with MΞNU Plus');
-  assert.match(plus.get('menuPlanNote').textContent + plus.get('menuAddonNote').textContent, /first year is free with Plus/);
-  // A menu on its own brings Plus (Nov 14, 2026: menus are free or with Plus, never on their own); taking Plus off
-  // blocks checkout with the way to start free; Menu Care in its place swaps the plan.
+  assert.equal(plus.get('cartTotal').textContent, '$168.99', '$19.99 + $149 setup');
+  // A menu on its own brings Plus (no free plan); Pro is one tap in "Your menu plan"; taking the plan off blocks checkout.
   const menuOnly = await page('?service=menu');
   assert.deepEqual(menuOnly.state(), { plan: 'MENU_PLUS', once: ['ONLINE_MENU_QR'] });
-  await menuOnly.get('menuAddon').fire('click', { target: { closest: (sel) => sel === '[data-plus-add]' ? {} : null } });
+  const tap = (code) => menuOnly.get('menuAddon').fire('click', { target: { closest: (sel) => sel === '[data-plan-add]' ? { dataset: { planAdd: code } } : null } });
+  await tap('MENU_PRO');
+  assert.equal(menuOnly.state().plan, 'MENU_PRO');
+  await tap('MENU_PRO');
   assert.deepEqual(menuOnly.state(), { plan: null, once: ['ONLINE_MENU_QR'] });
-  assert.match(menuOnly.get('orderProblem').textContent, /comes with MΞNU Plus/);
+  assert.match(menuOnly.get('orderProblem').textContent, /comes with a plan: MΞNU Plus, Pro or Max/);
   assert.equal(menuOnly.get('checkoutBtn').disabled, true);
-  await menuOnly.get('menuAddon').fire('click', { target: { closest: (sel) => sel === '[data-menu-care-add]' ? {} : null } });
-  assert.equal(menuOnly.state().plan, 'MENU_CARE');
 
   const wc = await page('?plan=WEBSITE_CARE');
   assert.equal(wc.get('checkoutBtn').disabled, true, 'Website Care without a site cannot check out');

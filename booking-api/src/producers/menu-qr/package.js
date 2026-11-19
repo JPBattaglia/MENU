@@ -6,6 +6,15 @@ import { getInputValue, loadPreparedPayload } from "./inputs.js";
 import { isTestOrder, loadDeliveryContext, runDeliverStep } from "../../approvals/release.js";
 import { pageBillingNote } from "./page-billing.js";
 import { TRI_FOLD_NOTE, triFoldPossible } from "./trifold-check.js";
+import { hasProFeatures } from "./hosting-renewal.js";
+
+// MΞNU Pro and Max (owner, Nov 19, 2026) include the tri-fold and table tent; Plus doesn't. A Holiday Menu always does.
+async function proIncluded(env, projectId) {
+  const project = await env.DB.prepare(`SELECT business_id, metadata_json FROM projects WHERE id = ?`).bind(projectId).first().catch(() => null);
+  if (!project) return true;
+  if (parseJsonOrNull(project.metadata_json)?.holiday_menu) return true;
+  return hasProFeatures(env, project.business_id).catch(() => true);
+}
 
 async function loadPackageDeliverables(projectId, env) {
   const rows = (await env.DB.prepare(`
@@ -115,7 +124,8 @@ async function menuQrBuyerEmail({ context, files, linkFor, targetStep, env }) {
   // buyer who isn't technical can't use. The SVG moves to the end, for print shops.
   const printUrl = hosted ? `${qrDestination}/print.pdf` : null;
   const qrPngUrl = hosted ? `${qrDestination}/qr.png` : null;
-  const triFold = hosted ? await triFoldPossible(env, context.id) : null;
+  const pro = hosted ? await proIncluded(env, context.id) : true;
+  const triFold = !pro ? false : hosted ? await triFoldPossible(env, context.id) : null;
   if (hosted) {
     const svg = links.filter((link) => link.type === "QR_CODE");
     const rest = links.filter((link) => link.type !== "QR_CODE");
@@ -125,14 +135,18 @@ async function menuQrBuyerEmail({ context, files, linkFor, targetStep, env }) {
       { type: "QR_PDF", label: "Print your QR code (PDF sheet)", url: `${qrDestination}/qr.pdf` },
       { type: "PRINT_PDF", label: "Download your print menu (PDF)", url: printUrl },
       ...(triFold === false ? [] : [{ type: "TRI_FOLD", label: "Download your tri-fold menu (PDF)", url: `${qrDestination}/tri-fold.pdf` }]),
-      { type: "TABLE_TENT", label: "Download your QR table tent (PDF)", url: `${qrDestination}/table-tent.pdf` },
+      ...(pro ? [{ type: "TABLE_TENT", label: "Download your QR table tent (PDF)", url: `${qrDestination}/table-tent.pdf` }] : []),
       { type: "TV", label: "Open your TV menu screen", url: `${qrDestination}/tv` },
       ...svg);
   }
-  const INCLUDED = triFold === false
+  const INCLUDED = !pro
+    ? "Your order includes four things, each with its own button below: your live menu page, your QR code, a print-ready menu and a TV menu screen. The tri-fold, table tent and your menu in other languages come with MΞNU Pro, which you can move to any time from your account."
+    : triFold === false
     ? `Your order includes five things, each with its own button below: your live menu page, your QR code, a print-ready menu, a QR table tent and a TV menu screen. ${TRI_FOLD_NOTE}`
     : "Your order includes six things, each with its own button below: your live menu page, your QR code, a print-ready menu, a tri-fold menu, a QR table tent and a TV menu screen.";
-  const TIPS = triFold === false
+  const TIPS = !pro
+    ? "Tip: open the TV screen in a smart TV's browser."
+    : triFold === false
     ? "Printing tips: fold the table tent in half; open the TV screen in a smart TV's browser."
     : "Printing tips: print the tri-fold double-sided and flip on the short edge; fold the table tent in half; open the TV screen in a smart TV's browser.";
   const business = context.business_name || "your business";

@@ -56,7 +56,8 @@ test('an upload becomes a watermarked, unprintable phone preview with no QR, and
   assert.equal(page.headers.get('X-Robots-Tag'), 'noindex, nofollow');
   const html = await page.text();
   assert.match(html, /Garlic Bread/);
-  assert.match(html, /Make it live: \$12\/mo with MΞNU Plus/, 'the price keeps its dollar sign');
+  assert.match(html, /Make it live: from \$19\.99\/mo/, 'the price keeps its dollar sign');
+  assert.doesNotMatch(html, /Start free/, 'no free plan since Nov 19, 2026');
   // "Your printed menu" (last of the designs since Nov 10, 2026) keeps the menu's own colours.
   const yours = await (await f.get(`${new URL(out.url).pathname}/yours`)).text();
   assert.match(yours, /--primary: #a8322d/, "the menu's own colour, not black and white; the cream paper colour is skipped");
@@ -431,7 +432,8 @@ test('the app reads a preview\'s designs, buttons and Customize fields, and its 
   assert.deepEqual([state.designs[0].key, state.designs.at(-1).key, state.design], ['classic', 'yours', 'classic'], 'Classic leads; Your printed menu is last');
   assert.match(state.designs[0].url, new RegExp(`/api/menu-preview/view/${token}/classic$`));
   assert.equal(state.next_label, 'Generate menu');
-  assert.match(state.choose_label, /^Make it live: \$12\/mo with MΞNU Plus/);
+  assert.match(state.choose_label, /^Make it live: from \$19\.99\/mo/);
+  assert.equal(state.free, null, 'no Start free in the app either (Nov 19, 2026)');
   assert.deepEqual(state.customize.fields.map((x) => x.name), ['logo', 'logo_bg', 'business_name', 'hide_name', 'brand', 'use_brand', 'subtitle']);
   const form = new FormData();
   form.set('design', 'diner'); form.set('subtitle', 'Dinner Menu'); form.set('business_name', 'Sample Cafe');

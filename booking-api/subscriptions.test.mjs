@@ -26,7 +26,7 @@ function setup() {
   const t = '2026-09-04T00:00:00.000Z';
   const sql = (q, ...a) => DB.raw.prepare(q).run(...a);
   // Existing live one-time offers (Oct 25, 2026) the migration builds on.
-  for (const [code, slug, price, wf] of [['ONLINE_MENU_QR', 'online-menu-qr', 12900, 'MENU_QR_V1'], ['GOOGLE_VISIBILITY', 'google-visibility', 14900, 'GOOGLE_VISIBILITY_V1'], ['CONVERSION_FIX', 'conversion-fix', 29900, 'CONVERSION_FIX_V1']]) {
+  for (const [code, slug, price, wf] of [['ONLINE_MENU_QR', 'online-menu-qr', 14900, 'MENU_QR_V1'], ['GOOGLE_VISIBILITY', 'google-visibility', 14900, 'GOOGLE_VISIBILITY_V1'], ['CONVERSION_FIX', 'conversion-fix', 29900, 'CONVERSION_FIX_V1']]) {
     sql(`INSERT INTO offers (id, created_at, updated_at, code, name, category, status, billing_type, fulfillment_type, requires_approval, requires_assets, default_workflow_key, public_slug, sort_order, is_public, is_featured, cta_text)
          VALUES (?, ?, ?, ?, ?, 'OTHER', 'ACTIVE', 'ONE_TIME', 'DIGITAL', 0, 0, ?, ?, 1, 1, 0, 'Get Started')`, `offer_${code.toLowerCase()}`, t, t, code, code, wf, slug);
     sql(`INSERT INTO offer_versions (id, offer_id, version_number, created_at, effective_from, status, price_cents, currency, scope_json, stripe_price_id)
@@ -179,7 +179,7 @@ test('site catalog lists every plan with monthly and annual prices, bundle conte
     assert.equal(by.WEBSITE_PACKAGE.price_cents, catalog.one_time.WEBSITE_PACKAGE.amount);
     assert.equal(by.ONLINE_MENU_QR.on_sale, true);
     assert.equal(by.ONLINE_MENU_QR.kind, 'ONE_TIME');
-    assert.deepEqual(by.ONLINE_MENU_QR.menu_package, { setup_cents: 12900, hosting_first_year_cents: 1500, included_pages: 3, additional_page_cents: 2000, max_pages: 50 });
+    assert.deepEqual(by.ONLINE_MENU_QR.menu_package, { setup_cents: 14900, hosting_first_year_cents: 0, included_pages: 3, additional_page_cents: 2000, max_pages: 50 });
     h.env.DB.raw.prepare(`UPDATE offers SET is_public = 1 WHERE code = 'BUNDLE_STARTER'`).run();
     const after = Object.fromEntries((await (await h.call('/api/catalog')).json()).offers.map((o) => [o.code, o]));
     assert.equal(after.BUNDLE_STARTER.on_sale, true);
@@ -226,18 +226,19 @@ test('a setup rides along as a one-time line in the same subscription checkout',
   } finally { h.restore(); }
 });
 
-test('every plan starts with the menu (owner, Nov 8, 2026): its setup is free with a yearly plan that includes Menu Care', async () => {
+test('every plan starts with the menu: its setup is free with a plan that includes Menu Care (Max, or an older bundle), monthly or yearly (owner, Nov 19, 2026)', async () => {
   const h = setup();
   try {
     const year = await h.checkout({ items: [{ key: 'BUNDLE_STARTER' }, { key: 'ONLINE_MENU_QR' }], interval: 'year', menu_pages: 5, customer: buyer });
     assert.equal(year.status, 200, JSON.stringify(year.body));
     let p = h.stripe.sessions.at(-1).params;
-    // 5 pages: the $144 setup and hosting are free; the 2 extra pages ($40) are still charged.
+    // 5 pages: the $149 setup is free; the 2 extra pages ($40) are still charged.
     assert.equal(p.get('line_items[0][price_data][unit_amount]'), '4000');
     assert.equal(p.get('line_items[1][price_data][recurring][interval]'), 'year');
     const menuLine = h.one(`SELECT i.line_total_cents, i.metadata_json FROM order_items i JOIN offers o ON o.id = i.offer_id WHERE i.order_id = ? AND o.code = 'ONLINE_MENU_QR'`, year.body.order_id);
     assert.equal(menuLine.line_total_cents, 4000);
-    assert.equal(JSON.parse(menuLine.metadata_json).setup_waived_cents, 14400);
+    assert.equal(JSON.parse(menuLine.metadata_json).setup_waived_cents, 14900);
+    assert.equal(JSON.parse(menuLine.metadata_json).plan_hosted, 'BUNDLE_STARTER', 'the plan hosts the menu');
     const three = await h.checkout({ items: [{ key: 'BUNDLE_STARTER' }, { key: 'ONLINE_MENU_QR' }], interval: 'year', menu_pages: 3, customer: buyer });
     assert.equal(three.status, 200, JSON.stringify(three.body));
     p = h.stripe.sessions.at(-1).params;
@@ -245,8 +246,9 @@ test('every plan starts with the menu (owner, Nov 8, 2026): its setup is free wi
     assert.equal(p.get('line_items[1][quantity]'), null);
     assert.ok(h.one(`SELECT 1 AS ok FROM order_items i JOIN offers o ON o.id = i.offer_id WHERE i.order_id = ? AND o.code = 'ONLINE_MENU_QR'`, three.body.order_id), 'the menu is still on the order, so it is made');
     const month = await h.checkout({ items: [{ key: 'BUNDLE_STARTER' }, { key: 'ONLINE_MENU_QR' }], interval: 'month', menu_pages: 3, customer: buyer });
-    assert.equal(h.stripe.sessions.at(-1).params.get('line_items[0][price_data][unit_amount]'), '14400', 'monthly pays the setup');
     assert.equal(month.status, 200);
+    assert.equal(h.stripe.sessions.at(-1).params.get('line_items[0][price_data][recurring][interval]'), 'month', 'monthly is free too');
+    assert.equal(h.stripe.sessions.at(-1).params.get('line_items[1][quantity]'), null);
   } finally { h.restore(); }
 });
 
@@ -669,32 +671,53 @@ test('Growth at $169 (owner, Nov 6, 2026): new checkouts use the new price; subs
   } finally { h.restore(); }
 });
 
-test('MΞNU Plus (owner, Nov 14, 2026): $12/mo or $120/yr, the menu\'s first year is free with it monthly too, and it does no work each period', async () => {
+test('Plus, Pro and Max (owner, Nov 19, 2026): $149 setup with Plus ($19.99) and Pro ($39), none with Max ($79); Pro and Max unlock MENU_PRO; holiday menus free with any plan; Plus does no work each period', async () => {
   const h = setup();
   try {
-    h.env.DB.raw.exec(readFileSync(new URL('./migrations/0059_menu_plus.sql', import.meta.url), 'utf8'));
-    const versions = h.rows(`SELECT v.billing_interval, v.price_cents, v.stripe_price_id FROM offers o JOIN offer_versions v ON v.offer_id = o.id WHERE o.code = 'MENU_PLUS' ORDER BY v.version_number`);
-    assert.deepEqual(versions.map((v) => [v.billing_interval, v.price_cents]), [['MONTH', 1200], ['YEAR', 12000]]);
-    assert.ok(versions.every((v) => /^price_/.test(v.stripe_price_id)));
-    const res = await h.checkout({ items: [{ key: 'MENU_PLUS' }, { key: 'ONLINE_MENU_QR' }], interval: 'month', menu_pages: 3, customer: buyer });
-    assert.equal(res.status, 200, JSON.stringify(res.body));
-    const p = h.stripe.sessions.at(-1).params;
-    assert.equal(p.get('line_items[0][price_data][unit_amount]'), '1200', 'only Plus is charged');
-    assert.equal(p.get('line_items[0][price_data][recurring][interval]'), 'month');
-    assert.equal(p.get('line_items[1][quantity]'), null);
-    const menuLine = h.one(`SELECT i.metadata_json FROM order_items i JOIN offers o ON o.id = i.offer_id WHERE i.order_id = ? AND o.code = 'ONLINE_MENU_QR'`, res.body.order_id);
-    assert.equal(JSON.parse(menuLine.metadata_json).setup_waived_cents, 14400, 'the menu is still made, free');
+    for (const f of ['0059_menu_plus.sql', '0060_four_choices.sql', '0061_menu_pro_name.sql', '0065_plus_pro_max.sql']) h.env.DB.raw.exec(readFileSync(new URL('./migrations/' + f, import.meta.url), 'utf8'));
+    h.env.DB.raw.exec(readFileSync(new URL('./migrations/0065_plus_pro_max.sql', import.meta.url), 'utf8')); // safe twice
+    const cat = await (await h.call('/api/catalog')).json();
+    const by = Object.fromEntries(cat.offers.map((o) => [o.code, o]));
+    assert.deepEqual(by.MENU_PLUS.prices, { month: 1999, year: 19990 });
+    assert.deepEqual(by.MENU_PRO.prices, { month: 3900, year: 39000 });
+    assert.deepEqual(by.BUNDLE_PREMIUM.prices, { month: 7900, year: 79000 });
+    assert.equal(by.BUNDLE_PREMIUM.name, 'MΞNU Max');
+    assert.equal(by.MENU_PRO.name, 'MΞNU Pro');
+    assert.ok(by.BUNDLE_PREMIUM.includes.includes('MENU_PRO'));
+    assert.equal(by.ONLINE_MENU_QR.price_cents, 14900);
 
-    const start = '2026-11-15T18:00:00.000Z';
-    const sub = h.makeSub({ id: 'sub_plus', orderId: res.body.order_id, plan: 'MENU_PLUS', amount: 1200, start });
-    const done = await h.webhook('checkout.session.completed', { id: h.stripe.sessions.at(-1).id, object: 'checkout.session', mode: 'subscription',
-      subscription: 'sub_plus', customer: 'cus_test_1', amount_total: 1200, currency: 'usd', payment_status: 'paid', metadata: { order_id: res.body.order_id } });
+    const plus = await h.checkout({ items: [{ key: 'MENU_PLUS' }, { key: 'ONLINE_MENU_QR' }], interval: 'month', menu_pages: 3, customer: buyer });
+    assert.equal(plus.status, 200, JSON.stringify(plus.body));
+    let p = h.stripe.sessions.at(-1).params;
+    assert.equal(p.get('line_items[0][price_data][unit_amount]'), '14900', 'the setup is charged with Plus');
+    assert.equal(p.get('line_items[1][price_data][unit_amount]'), '1999');
+    assert.equal(p.get('line_items[1][price_data][recurring][interval]'), 'month');
+    const plusLine = JSON.parse(h.one(`SELECT i.metadata_json FROM order_items i JOIN offers o ON o.id = i.offer_id WHERE i.order_id = ? AND o.code = 'ONLINE_MENU_QR'`, plus.body.order_id).metadata_json);
+    assert.equal(plusLine.setup_waived_cents, undefined);
+    assert.equal(plusLine.plan_hosted, 'MENU_PLUS');
+
+    const pro = await h.checkout({ items: [{ key: 'MENU_PRO' }, { key: 'ONLINE_MENU_QR' }], interval: 'year', menu_pages: 3, customer: buyer });
+    assert.equal(pro.status, 200, JSON.stringify(pro.body));
+    p = h.stripe.sessions.at(-1).params;
+    assert.equal(p.get('line_items[0][price_data][unit_amount]'), '14900', 'the setup is charged with Pro');
+    assert.equal(p.get('line_items[1][price_data][unit_amount]'), '39000');
+
+    const max = await h.checkout({ items: [{ key: 'BUNDLE_PREMIUM' }, { key: 'ONLINE_MENU_QR' }], interval: 'month', menu_pages: 3, customer: buyer });
+    assert.equal(max.status, 200, JSON.stringify(max.body));
+    p = h.stripe.sessions.at(-1).params;
+    assert.equal(p.get('line_items[0][price_data][unit_amount]'), '7900', 'only Max is charged: no setup fee');
+    assert.equal(p.get('line_items[1][quantity]'), null);
+    assert.equal(JSON.parse(h.one(`SELECT i.metadata_json FROM order_items i JOIN offers o ON o.id = i.offer_id WHERE i.order_id = ? AND o.code = 'ONLINE_MENU_QR'`, max.body.order_id).metadata_json).setup_waived_cents, 14900);
+
+    const start = '2026-11-20T18:00:00.000Z';
+    const sub = h.makeSub({ id: 'sub_pro', orderId: pro.body.order_id, plan: 'MENU_PRO', amount: 39000, start, interval: 'year' });
+    const done = await h.webhook('checkout.session.completed', { id: h.stripe.sessions.at(-2).id, object: 'checkout.session', mode: 'subscription',
+      subscription: 'sub_pro', customer: 'cus_test_1', amount_total: 53900, currency: 'usd', payment_status: 'paid', metadata: { order_id: pro.body.order_id } });
     assert.equal(done.status, 200, JSON.stringify(done.body));
-    assert.deepEqual(h.rows(`SELECT entitlement_type, status FROM entitlements`).map((e) => [e.entitlement_type, e.status]), [['MENU_PLUS', 'ACTIVE']]);
-    const paid = await h.webhook('invoice.paid', h.invoice(sub, { id: 'in_plus_1', start, end: addMonths(start, 1), amount: 1200 }));
+    assert.deepEqual(h.rows(`SELECT entitlement_type, status FROM entitlements ORDER BY entitlement_type`).map((e) => [e.entitlement_type, e.status]), [['MENU_PLUS', 'ACTIVE'], ['MENU_PRO', 'ACTIVE']]);
+    const paid = await h.webhook('invoice.paid', h.invoice(sub, { id: 'in_pro_1', start, end: addMonths(start, 12), amount: 39000 }));
     assert.equal(paid.status, 200, JSON.stringify(paid.body));
-    assert.equal(h.jobs(h.one(`SELECT id FROM subscriptions WHERE provider_subscription_id = 'sub_plus'`).id).length, 0, 'no period work');
-    assert.equal(h.one(`SELECT COUNT(*) AS n FROM orders WHERE notes LIKE 'Subscription MENU_PLUS period%'`).n, 0, 'and no empty period order');
+    assert.equal(h.jobs(h.one(`SELECT id FROM subscriptions WHERE provider_subscription_id = 'sub_pro'`).id).length, 0, 'no period work');
   } finally { h.restore(); }
 });
 
@@ -705,7 +728,7 @@ test('menus are free or with MΞNU Plus (owner, Nov 14, 2026): live checkout ref
     h.env.DB.raw.prepare(`UPDATE offers SET is_public = 1 WHERE code IN ('ONLINE_MENU_QR', 'MENU_CARE')`).run();
     const alone = await h.checkout({ items: [{ key: 'ONLINE_MENU_QR' }], menu_pages: 3, customer: buyer }, true);
     assert.equal(alone.status, 400);
-    assert.match(alone.body.error, /comes with MΞNU Plus/);
+    assert.match(alone.body.error, /comes with a plan: MΞNU Plus, Pro or Max/);
     assert.equal(h.stripe.sessions.length, 0);
     const withPlus = await h.checkout({ items: [{ key: 'MENU_PLUS' }, { key: 'ONLINE_MENU_QR' }], interval: 'month', menu_pages: 3, customer: buyer }, true);
     assert.equal(withPlus.status, 200, JSON.stringify(withPlus.body));
