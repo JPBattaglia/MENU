@@ -21,7 +21,7 @@ async function run(ua, links, touch = 0) {
   ctx.window = ctx;
   vm.runInNewContext(code, ctx);
   await p; await new Promise(r => setTimeout(r, 0));
-  return { shown: !section.hidden, buttons: slot.children.map(b => `${b.tag}:${b.textContent}`) };
+  return { shown: !section.hidden, buttons: slot.children.map(b => `${b.tag}:${b.children[0]?.alt || b.textContent}`) };
 }
 const both = { apple: 'https://apps.apple.com/app/id1', google: 'https://play.google.com/x' };
 const googleOnly = { apple: null, google: 'https://play.google.com/x' };
@@ -30,16 +30,16 @@ const ANDROID = 'Mozilla/5.0 (Linux; Android 15; Pixel 9)';
 const MAC = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 14_0)';
 
 test('iPhone sees only the App Store, Android only Google Play, a computer both', async () => {
-  assert.deepEqual((await run(IPHONE, both)).buttons, ['a:Apple']);
-  assert.deepEqual((await run(ANDROID, both)).buttons, ['a:Android']);
-  assert.deepEqual((await run(MAC, both)).buttons, ['a:Apple', 'a:Android']);
-  assert.deepEqual((await run(MAC, both, 5)).buttons, ['a:Apple'], 'an iPad says Macintosh but has touch');
+  assert.deepEqual((await run(IPHONE, both)).buttons, ['a:Download on the App Store']);
+  assert.deepEqual((await run(ANDROID, both)).buttons, ['a:Get it on Google Play']);
+  assert.deepEqual((await run(MAC, both)).buttons, ['a:Download on the App Store', 'a:Get it on Google Play']);
+  assert.deepEqual((await run(MAC, both, 5)).buttons, ['a:Download on the App Store'], 'an iPad says Macintosh but has touch');
 });
 
 test('while Apple is still reviewing, iPhones see "coming soon", never Google Play', async () => {
-  assert.deepEqual((await run(IPHONE, googleOnly)).buttons, ['span:Apple: coming soon']);
-  assert.deepEqual((await run(ANDROID, googleOnly)).buttons, ['a:Android']);
-  assert.deepEqual((await run(MAC, googleOnly)).buttons, ['span:Apple: coming soon', 'a:Android']);
+  assert.deepEqual((await run(IPHONE, googleOnly)).buttons, ['span:App Store: coming soon']);
+  assert.deepEqual((await run(ANDROID, googleOnly)).buttons, ['a:Get it on Google Play']);
+  assert.deepEqual((await run(MAC, googleOnly)).buttons, ['span:App Store: coming soon', 'a:Get it on Google Play']);
 });
 
 test('before either store has the app nothing shows', async () => {

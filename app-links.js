@@ -18,29 +18,33 @@
     // of that"): iPhones and iPads see the App Store, Android sees Google Play, computers see both. A store whose
     // app is not public yet (Apple review) shows as "Coming soon" instead of a link, so iPhone visitors are never
     // sent to Google Play.
-    // Nov 18, 2026 (owner): every store button reads just "Apple" or "Android".
     const ua = navigator.userAgent || '';
     const ios = /iPhone|iPad|iPod/i.test(ua) || (/Macintosh/.test(ua) && navigator.maxTouchPoints > 1);
     const android = !ios && /Android/i.test(ua);
+    // Nov 18, 2026 (owner): the stores' own badges (icon + "App Store" / "Google Play"), the official artwork both
+    // stores require, served from assets/badges. Footer badges are a little smaller than the section ones.
+    const BADGES = { 'App Store': ['assets/badges/app-store.svg', 'Download on the App Store', 120 / 40],
+      'Google Play': ['assets/badges/google-play.svg', 'Get it on Google Play', 180 / 53.333] };
     const soon = (text, big) => {
       const s = document.createElement('span');
-      s.textContent = text === 'App Store' ? 'Apple: coming soon' : 'Android: coming soon';
+      s.textContent = text === 'App Store' ? 'App Store: coming soon' : 'Google Play: coming soon';
       s.className = big ? 'btn mm-store-btn mm-store-soon' : 'mm-store-soon';
       s.style.cssText = big ? 'opacity:.75;cursor:default' : 'display:inline-block;padding:10px 18px;border-radius:999px;border:1px dashed #2ad1e0;opacity:.8';
       return s;
     };
     const button = (url, text, big) => {
       if (!url) return soon(text, big);
+      const [src, label, ratio] = BADGES[text];
       const a = document.createElement('a');
       a.href = url; a.target = '_blank'; a.rel = 'noopener';
-      if (big) {
-        a.className = 'btn primary mm-store-btn';
-        a.textContent = text === 'App Store' ? 'Apple' : 'Android';
-        a.setAttribute('aria-label', `${a.textContent} (opens in a new tab)`);
-      } else {
-        a.textContent = text === 'App Store' ? 'Apple' : 'Android';
-        a.style.cssText = 'display:inline-block;padding:10px 18px;border-radius:999px;background:#012a30;color:#fff;font-weight:700;text-decoration:none;border:1px solid #2ad1e0';
-      }
+      a.className = 'mm-store-badge';
+      a.setAttribute('aria-label', `${label} (opens in a new tab)`);
+      a.style.cssText = 'display:inline-block;line-height:0;border-radius:8px';
+      const img = document.createElement('img');
+      const h = big ? 52 : 44;
+      img.src = '/' + src; img.alt = label; img.height = h; img.width = Math.round(h * ratio);
+      img.style.cssText = `height:${h}px;width:auto;display:block`;
+      a.appendChild(img);
       return a;
     };
     fetch('https://menu-made.com/api/app-links/menumade').then(r => r.ok ? r.json() : null).then(links => {
