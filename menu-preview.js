@@ -66,6 +66,13 @@
     form.querySelectorAll('input[name="occasion"]').forEach(input => input.addEventListener('change', sync));
     sync();
   }
+  // Google Ads "free preview" conversion (owner, Nov 19, 2026): counted once per new preview a visitor makes.
+  // Rep-mode demos, sandbox tests and a reopened (reused) preview are not counted. gtag is absent when the visitor
+  // has Do Not Track / Global Privacy Control on, so nothing is sent then.
+  const countPreview = (result, requestId) => {
+    if (rep || window.MenuMadeSandbox === true || result?.reused || typeof window.gtag !== 'function') return;
+    try { window.gtag('event', 'conversion', { send_to: 'AW-18554819883/zfRWCLDyxLsdEKuq0I9F', transaction_id: String(requestId || '') }); } catch { /* ads blocked */ }
+  };
   const esc = text => String(text).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 
   form.addEventListener('submit', async event => {
@@ -108,6 +115,7 @@
       const result = await response.json().catch(() => null);
       if (response.ok && result?.ok && result.url) {
         window.MenuMadeFunnel?.track?.('menu_preview_ready');
+        countPreview(result, upload.requestId);
         if (rep) say(`Ready in ${esc(result.seconds ?? '?')} seconds. <a class="btn primary" href="${esc(result.url)}" target="_blank" rel="noopener">Show my menu<span class="mm-sr"> (opens in a new tab)</span></a> The link is emailed too.`);
         else if (result.reused) say(`You already have a preview of this menu. <a class="btn primary" href="${esc(result.url)}" target="_blank" rel="noopener">Open my menu<span class="mm-sr"> (opens in a new tab)</span></a>`);
         else say(`Your preview is ready. <a class="btn primary" href="${esc(result.url)}" target="_blank" rel="noopener">Open my menu<span class="mm-sr"> (opens in a new tab)</span></a> We’ve emailed you the link too.`);
