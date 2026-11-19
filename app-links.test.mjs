@@ -13,7 +13,7 @@ function el(tag) {
 async function run(ua, links, touch = 0) {
   const slot = el('div'), section = el('section'), foot = el('footer');
   section.querySelector = () => slot;
-  const document = { createElement: el, querySelector: (q) => q === 'footer' ? foot : null, querySelectorAll: () => [section] };
+  const document = { head: el('head'), createElement: el, querySelector: (q) => q === 'footer' ? foot : null, querySelectorAll: () => [section] };
   let done; const p = new Promise(r => { done = r; });
   const ctx = { document, location: { search: '' }, sessionStorage: { getItem: () => null, setItem() {} },
     navigator: { userAgent: ua, maxTouchPoints: touch },
@@ -21,7 +21,9 @@ async function run(ua, links, touch = 0) {
   ctx.window = ctx;
   vm.runInNewContext(code, ctx);
   await p; await new Promise(r => setTimeout(r, 0));
-  return { shown: !section.hidden, buttons: slot.children.map(b => `${b.tag}:${b.children[0]?.alt || b.textContent}`) };
+  const box = foot.children[0];
+  return { shown: !section.hidden, buttons: slot.children.map(b => `${b.tag}:${b.children[0]?.alt || b.textContent}`),
+    footer: box ? box.children[1].children.map(b => `${b.tag}:${b.children[0]?.alt || b.textContent}`) : [] };
 }
 const both = { apple: 'https://apps.apple.com/app/id1', google: 'https://play.google.com/x' };
 const googleOnly = { apple: null, google: 'https://play.google.com/x' };
@@ -44,4 +46,9 @@ test('while Apple is still reviewing, iPhones see "coming soon", never Google Pl
 
 test('before either store has the app nothing shows', async () => {
   for (const ua of [IPHONE, ANDROID, MAC]) assert.equal((await run(ua, { apple: null, google: null })).shown, false);
+});
+
+test('footer: the label, then the badges together in one row (owner, Nov 18, 2026)', async () => {
+  const r = await run(MAC, both);
+  assert.deepEqual(r.footer, ['a:Download on the App Store', 'a:Get it on Google Play']);
 });
