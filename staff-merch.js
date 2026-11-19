@@ -1,11 +1,10 @@
 // Staff merch page (stage 10, logo-first since Oct 28, 2026): upload the business's logo, see it straight away on
-// typical restaurant merch (shirts, aprons, hats, mugs, coasters...), pick colours, sizes and quantities, optionally add
-// shirts in Nino Battaglia's designs, get Printful's delivery price, then pay with Stripe.
+// typical restaurant merch (shirts, aprons, hats, mugs, coasters...), pick colours, sizes and quantities, get Printful's
+// delivery price, then pay with Stripe. Shirts in Nino Battaglia's designs were taken off this page (owner, Nov 18, 2026).
 // Mockups are drawn here from Printful's own mockup templates (product photo + print area), served by
 // /api/merch/products. Every price is re-checked and quoted by menu-made.com (/api/merch/quote) before payment, so
 // nothing shown here is trusted at checkout. Owner testing: ?checkout=test uses Stripe test mode and a Printful draft.
 (() => {
-  const NINO_API = 'https://nino-printful-commerce-api.ijpbattaglia.workers.dev';
   const API = location.hostname.endsWith('menu-made.com') ? '' : 'https://menu-made.com';
   // The owner sandbox switch (site-nav.js) counts as test mode too.
   const TEST = window.MenuMadeSandbox === true || new URLSearchParams(location.search).get('checkout') === 'test';
@@ -158,75 +157,12 @@
     state.quote = null; renderCart(); renderMockups();
   }
 
-  // ---- Nino designs on shirts (optional) ----
-  // Designs built on other companies' brands, logos or characters are not offered on menu-made.com
-  // (owner, Nov 15, 2026, Google Ads appeal: menu-made.com must not sell or imply ties to other brands).
-  // They stay on ninobattaglia.com. Matched by title, case-insensitive.
-  const BRAND_DESIGNS = ['nostalgic television', 'dr. doom', 'capitalism molotovs', 'capitalism', 'kill all humans', 'nerd',
-    'joker', 'skater brown', 'beretta 500', 'pb 500', 'weyland corp', 'protected', 'love molotov', 'alice reaching for love',
-    'supermom', 'thulsa doom', 'light cycle', 'the bear', 'spacex', 'fifty something', 'north beach sf', 'funny guy',
-    'wanted: willie the kid', 'chemical lab assistant', 'make america skate again', 'trumpster', 'bad guys gen x', 'zig zag',
-    'skynet', 'xenomorph', 'jack', 'ghost in the machine', 'sin', 'rio', 'where\'s the food', 'shelby cobra', 'sex wax',
-    'neil blender tribute', 'pink freud', 'motogp', 'honda moto', 'teller-morrow motor oil', 'sons of a', 'felix the rider',
-    'hell\'s angel', 'prez dogs', 'logo', 'dead inside', 'honda/norton mashup', 'acme moto', 'cryptocoin zero', 'cbgb',
-    'apple byte', 'bat mask', 'bat hang', 'stink, stank, stunk', 'booger', 'frank', 'monster mash', 'g carlin', 'grinch'];
-  const brandDesign = (p) => {
-    const t = decode(p.title).toLowerCase().replace(/[’‘]/g, "'").trim();
-    return BRAND_DESIGNS.some((b) => t === b || t.startsWith(b + ' ') || t.startsWith(b + ' —') || (b.length > 5 && t.includes(b)));
-  };
-  async function loadDesigns() {
-    try {
-      const res = await fetch(NINO_API + '/api/products', { headers: { Accept: 'application/json' } });
-      const data = await res.json();
-      state.designs = (data.products || []).filter((p) => p.variants?.some((v) => v.available) && !brandDesign(p));
-      renderDesigns();
-    } catch { $('designGrid').innerHTML = '<p>The designs could not be loaded. Please refresh the page in a minute.</p>'; }
-  }
-  function renderDesigns() {
-    const q = $('designSearch').value.trim().toLowerCase();
-    const list = state.designs.filter((p) => !q || decode(p.title).toLowerCase().includes(q));
-    $('designCount').textContent = `${list.length} design${list.length === 1 ? '' : 's'}`;
-    $('designGrid').innerHTML = list.slice(0, 60).map((p) => `<button type="button" class="merch-design" data-id="${esc(p.id)}" aria-pressed="${state.design?.id === p.id}">
-      <img loading="lazy" src="${esc(p.image || p.variants[0]?.image || '')}" alt="" width="240" height="240"><span>${esc(p.title)}</span></button>`).join('') + (list.length > 60 ? '<p class="merch-more">Search to find more designs.</p>' : '');
-  }
-  function pickDesign(id) {
-    state.design = state.designs.find((p) => String(p.id) === String(id)) || null;
-    state.designColor = null; renderDesigns(); renderDesignPicker();
-    $('designPicker').scrollIntoView({ behavior: 'smooth', block: 'start' });
-  }
-  function renderDesignPicker() {
-    const p = state.design;
-    if (!p) { $('designPicker').hidden = true; return; }
-    $('designPicker').hidden = false;
-    const colors = [...new Map(p.variants.filter((v) => v.available).map((v) => [v.color, v])).values()];
-    if (!state.designColor || !colors.some((v) => v.color === state.designColor)) state.designColor = colors[0]?.color || null;
-    const current = p.variants.find((v) => v.color === state.designColor && v.image);
-    $('designTitle').textContent = decode(p.title);
-    $('designImage').src = current?.image || p.image || '';
-    $('designImage').alt = `${decode(p.title)} in ${state.designColor || ''}`;
-    $('designColors').innerHTML = colors.map((v) => `<button type="button" class="merch-swatch" data-color="${esc(v.color)}" aria-pressed="${v.color === state.designColor}" title="${esc(v.color)}"><span style="background:${esc(v.color_hex || '#ccc')}"></span>${esc(v.color)}</button>`).join('');
-    const extra = state.logoId ? 500 : 0;
-    $('designSizes').innerHTML = p.variants.filter((v) => v.available && v.color === state.designColor).map((v) => {
-      const inCart = state.cart.get('nino:' + v.id)?.quantity || 0;
-      return `<label class="merch-size"><span>${esc(v.size)} <small>${money(v.price.amount + extra)}</small></span><input type="number" min="0" max="100" step="1" inputmode="numeric" value="${inCart || ''}" placeholder="0" data-nino-variant="${esc(v.id)}" aria-label="Quantity, size ${esc(v.size)}"></label>`;
-    }).join('');
-  }
-  function setNinoQuantity(variantId, quantity) {
-    const p = state.design; const v = p?.variants.find((x) => String(x.id) === String(variantId));
-    if (!v) return;
-    const q = Math.max(0, Math.min(100, Math.floor(Number(quantity) || 0)));
-    const id = 'nino:' + v.id;
-    if (!q) state.cart.delete(id);
-    else state.cart.set(id, { kind: 'nino', product_id: String(p.id), variant_id: String(v.id), quantity: q, title: decode(p.title), color: v.color, size: v.size, price: v.price.amount });
-    state.quote = null; renderCart();
-  }
-
   // ---- Order ----
   function renderCart() {
     const lines = [...state.cart.entries()];
     const n = count(); const pct = discount(n);
-    const unit = (l) => l.kind === 'nino' ? l.price + (state.logoId ? 500 : 0) : l.price;
-    $('cartLines').innerHTML = lines.length ? lines.map(([id, l]) => `<li><span>${esc(l.title)}${l.kind === 'nino' ? ' (Nino design' + (state.logoId ? ', your logo on the back' : '') + ')' : ''} · ${esc([l.color, l.size].filter((x) => x && x !== 'One size').join(' · ') || 'one size')} × ${l.quantity}</span><button type="button" class="link-btn" data-remove="${esc(id)}" aria-label="Remove">Remove</button></li>`).join('') : '<li class="muted">Nothing yet. Tap a product above and enter quantities.</li>';
+    const unit = (l) => l.price;
+    $('cartLines').innerHTML = lines.length ? lines.map(([id, l]) => `<li><span>${esc(l.title)} · ${esc([l.color, l.size].filter((x) => x && x !== 'One size').join(' · ') || 'one size')} × ${l.quantity}</span><button type="button" class="link-btn" data-remove="${esc(id)}" aria-label="Remove">Remove</button></li>`).join('') : '<li class="muted">Nothing yet. Tap a product above and enter quantities.</li>';
     const subtotal = lines.reduce((s, [, l]) => s + Math.round(unit(l) * (100 - pct) / 100) * l.quantity, 0);
     const emb = lines.some(([, l]) => l.embroidery);
     $('cartSummary').textContent = n ? `${n} item${n === 1 ? '' : 's'}${pct ? `, ${pct}% team discount` : n < 12 ? ` (add ${12 - n} more for 10% off)` : ''} · about ${money(subtotal)}${emb ? ' plus embroidery set-up' : ''} before delivery and tax` : '';
@@ -284,21 +220,16 @@
       status('Thank you, your order is paid. We email a proof and the tracking link as your merch is made and shipped.');
       $('merchStatus').classList.add('merch-paid'); $('merchStatus').scrollIntoView({ block: 'center' });
     }
-    loadMerch(); loadDesigns();
+    loadMerch();
     $('logoFile').addEventListener('change', (e) => uploadLogo(e.target.files[0]));
     const drop = $('logoDrop');
     drop.addEventListener('dragover', (e) => { e.preventDefault(); drop.classList.add('is-over'); });
     drop.addEventListener('dragleave', () => drop.classList.remove('is-over'));
     drop.addEventListener('drop', (e) => { e.preventDefault(); drop.classList.remove('is-over'); uploadLogo(e.dataTransfer.files[0]); });
-    $('skipLogo').addEventListener('click', () => { state.skipped = true; $('ninoDesigns').open = true; $('ninoDesigns').scrollIntoView({ behavior: 'smooth', block: 'start' }); });
     $('mockGrid').addEventListener('click', (e) => { const b = e.target.closest('.merch-mock-card'); if (b) pickItem(b.dataset.key); });
     $('colorList').addEventListener('click', (e) => { const b = e.target.closest('.merch-swatch'); if (b) { state.color = b.dataset.color; renderPicker(); renderMockups(); } });
     $('sizeList').addEventListener('change', (e) => { if (e.target.dataset.logoVariant) setLogoQuantity(e.target.dataset.logoVariant, e.target.value); });
-    $('designSearch').addEventListener('input', renderDesigns);
-    $('designGrid').addEventListener('click', (e) => { const b = e.target.closest('.merch-design'); if (b) pickDesign(b.dataset.id); });
-    $('designColors').addEventListener('click', (e) => { const b = e.target.closest('.merch-swatch'); if (b) { state.designColor = b.dataset.color; renderDesignPicker(); } });
-    $('designSizes').addEventListener('change', (e) => { if (e.target.dataset.ninoVariant) setNinoQuantity(e.target.dataset.ninoVariant, e.target.value); });
-    $('cartLines').addEventListener('click', (e) => { const id = e.target.dataset.remove; if (id) { state.cart.delete(id); state.quote = null; renderCart(); renderPicker(); renderMockups(); renderDesignPicker(); } });
+    $('cartLines').addEventListener('click', (e) => { const id = e.target.dataset.remove; if (id) { state.cart.delete(id); state.quote = null; renderCart(); renderPicker(); renderMockups(); } });
     $('detailsForm').addEventListener('submit', getQuote);
     $('payBtn').addEventListener('click', checkout);
     renderCart();
