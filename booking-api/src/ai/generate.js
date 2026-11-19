@@ -14,6 +14,7 @@
 //
 // Usage is logged to business_events as event_type AI_USAGE (no schema change). The cap is checked BEFORE calling
 // the API, per scope entity per calendar month (UTC); a capped call throws an AiCapError and costs nothing.
+import { recordAiSpend } from "../lib/ai-spend.js";
 import { ANTHROPIC_MESSAGES_ENDPOINT, MENU_EXTRACTION_MODEL } from "../producers/menu-qr/claude-reader.js";
 
 const DEFAULT_MODEL = MENU_EXTRACTION_MODEL;
@@ -124,6 +125,7 @@ async function generate(env, options, deps = {}) {
 
   let lastError = null;
   const total = { input_tokens: 0, output_tokens: 0 };
+  let webSearches = 0;
   for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
     let response;
     try {
@@ -145,6 +147,7 @@ async function generate(env, options, deps = {}) {
     }
     total.input_tokens += Number(result?.usage?.input_tokens || 0);
     total.output_tokens += Number(result?.usage?.output_tokens || 0);
+    webSearches += Number(result?.usage?.server_tool_use?.web_search_requests || 0);
     const output = (result?.content || []).find((block) => block.type === "tool_use" && block.name === TOOL_NAME)?.input;
     try {
       checkAgainstSchema(output, schema);
@@ -159,9 +162,13 @@ async function generate(env, options, deps = {}) {
       break;
     }
     await logUsage(env, scope, purpose, result.model || model, total, attempt, now);
+    await recordAiSpend(env, { purpose, model: result.model || model, ...total, web_searches: webSearches });
     return { output, usage: total, model: result.model || model, attempts: attempt };
   }
-  if (total.input_tokens || total.output_tokens) await logUsage(env, scope, purpose, model, total, MAX_ATTEMPTS, now).catch(() => null);
+  if (total.input_tokens || total.output_tokens) {
+    await logUsage(env, scope, purpose, model, total, MAX_ATTEMPTS, now).catch(() => null);
+    await recordAiSpend(env, { purpose, model, ...total, web_searches: webSearches });
+  }
   throw lastError instanceof Error ? lastError : new Error("AI request failed");
 }
 

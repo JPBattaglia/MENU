@@ -1,5 +1,6 @@
 import { bytesToBase64, sha256Hex } from "../../lib/util.js";
 import { tagMenu } from "./dietary.js";
+import { recordAiSpend } from "../../lib/ai-spend.js";
 
 // Reads an uploaded menu PDF or photo with Claude and returns the menu as clean, structured text.
 var ANTHROPIC_MESSAGES_ENDPOINT = "https://api.anthropic.com/v1/messages";
@@ -148,6 +149,8 @@ async function readMenuWithClaudeUncached(contentBlock, env, model) {
   } catch {
     result = null;
   }
+  // Every paid read is counted toward the month's Claude spend (owner, Nov 19, 2026), even one that then fails below.
+  if (result?.usage) await recordAiSpend(env, { purpose: "menu_read", model: result.model || model, input_tokens: result.usage.input_tokens, output_tokens: result.usage.output_tokens });
   if (!response.ok) {
     throw new Error(`Menu reading failed: ${result?.error?.message || `Anthropic API returned HTTP ${response.status}`}`);
   }

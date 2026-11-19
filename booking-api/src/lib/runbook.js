@@ -17,6 +17,7 @@ const RUNBOOK = {
   R8: { title: "Cloudflare usage above the plan's daily share", happened: "Database reads, writes or Worker requests today are above a 30th of what the $5 Workers Paid plan includes each month. Nothing stops; extra usage is billed.", action: "Nothing. Claude sees it on the coverage page and finds what grew." },
   R9: { title: "App notifications problem", happened: "A Mobile App notification couldn't be sent (Apple or Google refused it).", action: "Forward this email to Claude." },
   R13: { title: "A logo is waiting on Nino", happened: "Nino was sent a logo brief 4 or more days ago and hasn't uploaded the designs. The buyer is waiting.", action: "Check in with Nino and forward him the upload button in this email." },
+  R14: { title: "Claude API spend", happened: "The website's Claude (Anthropic API) spend this month passed 50% or 80% of the monthly limit you set ($100 on Nov 19, 2026). At 100% the Anthropic Console stops every Claude call until next month, including paying customers' menus.", action: "Decide in the Anthropic Console (billing page linked above) whether to raise the limit or add credit; or ask Claude which service is spending it." },
   R10: { title: "GitHub refused a job", happened: "GitHub didn't accept a job from the worker; app builds, images and notifications wait (nothing is lost).", action: "Tell Claude \"GitHub token refused\"; it walks you through a new token, about 3 minutes." }
 };
 
@@ -33,7 +34,8 @@ const RUNBOOK_BY_TEMPLATE = {
   d1_near_limit_v2: "R8",
   native_push_alert_v1: "R9",
   github_dispatch_refused_v1: "R10",
-  nino_logo_stale_v1: "R13"
+  nino_logo_stale_v1: "R13",
+  ai_spend_alert_v1: "R14"
 };
 
 function runbookEntry(templateKey) {
