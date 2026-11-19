@@ -8,7 +8,7 @@
 //
 // Showing: the menu editor (menu-made.com/menu-editor, also the MΞNU app's Account tab) shows the last 7 days.
 // Google profile clicks (calls, website clicks, directions) come from Google when the business has connected its
-// Google profile (MΞNU Pro's Google profile care); otherwise that line is left out.
+// Google profile (MΞNU Max's Google profile care); otherwise that line is left out.
 //
 // Weekly: Monday morning (17:00 UTC tick, 9 am PST) each business with a live menu gets one email with last week's
 // numbers, and a notification on any phone its owner linked in the MΞNU app (Account tab: "Your menu's numbers on

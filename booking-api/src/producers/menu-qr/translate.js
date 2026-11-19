@@ -102,7 +102,8 @@ function translateMenuHtml(html, { lang = null, chosen = [], row = null, hostedU
 async function loadTranslations(env, businessId) {
   const row = await env.DB.prepare(`
       SELECT t.languages_json, t.strings_json, t.overrides_json, t.fill_attempt_at,
-        EXISTS (SELECT 1 FROM entitlements e WHERE e.business_id = t.business_id AND e.status = 'ACTIVE' AND e.subscription_id IS NOT NULL) AS paid
+        EXISTS (SELECT 1 FROM entitlements e WHERE e.business_id = t.business_id AND e.status = 'ACTIVE' AND e.subscription_id IS NOT NULL
+          AND e.entitlement_type IN ('MENU_PRO', 'MENU_CARE')) AS paid
       FROM menu_translations t WHERE t.business_id = ?
     `).bind(businessId).first();
   if (!row) return null;
@@ -111,9 +112,11 @@ async function loadTranslations(env, businessId) {
     fillAttemptAt: row.fill_attempt_at || null, paid: Boolean(row.paid) };
 }
 
+// Languages come with MΞNU Pro and Max (owner, Nov 19, 2026: "$29 for languages, trifold, table tents"), not Plus.
 async function hasPaidPlan(env, businessId) {
   return Boolean(await env.DB.prepare(`
-      SELECT 1 AS ok FROM entitlements WHERE business_id = ? AND status = 'ACTIVE' AND subscription_id IS NOT NULL LIMIT 1
+      SELECT 1 AS ok FROM entitlements WHERE business_id = ? AND status = 'ACTIVE' AND subscription_id IS NOT NULL
+        AND entitlement_type IN ('MENU_PRO', 'MENU_CARE') LIMIT 1
     `).bind(businessId).first());
 }
 

@@ -64,7 +64,14 @@ function startable(env, row, now) {
 const freeUrl = (env, token) => `${publicBaseUrl(env)}/api/menu-preview/free/${token}`;
 
 // For the generator's state (the MΞNU app) and the preview page: the third button. null when it doesn't apply.
+// "no FREE" (owner, Nov 19, 2026): the free plan is no longer offered. Menus already live on it keep working; no new
+// free menus are started (no Start free button, the start link refuses, and an emailed confirm link no longer works).
+// Owner switch: set the MENU_FREE_PLAN variable to "on" to sell it again (the tests of the free plan do).
+const freeOnSale = (env) => String(env?.MENU_FREE_PLAN || "").toLowerCase() === "on";
+const FREE_ENDED = "The free plan has ended. Your menu comes with MΞNU Plus, Pro or Max: press Make it live in your preview.";
+
 function freeButton(env, row, now = Date.now()) {
+  if (!freeOnSale(env)) return null;
   if (!row || isOccasion(row.occasion) || startable(env, row, now)) return null;
   return { label: row.free_project_id ? "Your free menu is live" : START_LABEL, url: freeUrl(env, row.token), note: START_NOTE, live: Boolean(row.free_project_id) };
 }
@@ -95,6 +102,7 @@ async function handleFreeStart(request, env, token, { now = Date.now() } = {}) {
   const app = wantsJson(request);
   const fail = (status, text) => app ? json({ ok: false, error: text }, status) : simplePage(status, "Your free menu", `<p>${escapeHtml(text)}</p>`);
   if (!env.DB || !env.ASSETS) return fail(503, "This isn't available right now. Please try again in a minute.");
+  if (!freeOnSale(env)) return fail(410, FREE_ENDED);
   if (await pausedForSale(env, ["ONLINE_MENU_QR"]).catch(() => null)) return fail(409, "Online menus are paused right now. Please try again later.");
   const row = await previewRow(env, token);
   const why = startable(env, row, now);
@@ -140,6 +148,7 @@ async function handleFreeConfirm(request, env, token, { now = Date.now() } = {})
   const payload = await verifyLinkToken(env, String(t || ""), [KIND], token).catch(() => null);
   if (!payload || payload.expired || !env.DB || !env.ASSETS) return ended();
   const row = await previewRow(env, token);
+  if (!freeOnSale(env) && !row?.free_project_id) return simplePage(410, "Your free menu", `<p>${escapeHtml(FREE_ENDED)}</p>`);
   const why = startable(env, row, now);
   if (why) return simplePage(410, "Your free menu", `<p>${escapeHtml(why)}</p>`);
   if (request.method !== "POST") {
@@ -272,4 +281,4 @@ async function sendLiveEmail(env, { email, name, destination, qrDeliverableId, b
   }).catch((error) => ({ ok: false, error: error instanceof Error ? error.message : String(error) }));
 }
 
-export { FREE_DESIGN, FREE_PER_DAY, FREE_PER_EMAIL, START_LABEL, addFreeButton, createFreeMenu, freeButton, handleFreeConfirm, handleFreeStart };
+export { freeOnSale, FREE_DESIGN, FREE_PER_DAY, FREE_PER_EMAIL, START_LABEL, addFreeButton, createFreeMenu, freeButton, handleFreeConfirm, handleFreeStart };

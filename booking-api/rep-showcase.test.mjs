@@ -110,28 +110,19 @@ test('Languages: a tap translates the menu once, then it is saved; English shows
   assert.equal(ai.asked.length, 1, 'a second tap is free');
 });
 
-test('buying: the list of formats ends with a phone checkout QR, a tablet checkout and Start free; the inbox is never prefilled', async (t) => {
+test('buying: the list of formats ends with a phone checkout QR and a tablet checkout at the new prices; no free plan; the inbox is never prefilled', async (t) => {
   const { env, get } = await setup();
   env.OWNER_EMAIL = 'rep-inbox@menu-made.example';
-  env.RESEND_API_KEY = 're_test';
-  env.PRODUCTION_RUNNER_SECRET = 'test-runner-secret';
   env.DB.raw.prepare(`UPDATE menu_previews SET email = ? WHERE token = ?`).run('rep-inbox@menu-made.example', TOKEN);
-  const ai = stubAi(t);
   const hub = await (await get(`/api/menu-preview/showcase/${TOKEN}/garden`)).text();
   assert.ok(hub.includes(`/api/menu-preview/choose/${TOKEN}/garden`), 'checkout keeps the design on screen');
   assert.match(hub, /Scan with your phone to sign up/);
-  assert.match(hub, /name="email"/);
+  assert.match(hub, /\$149 setup, then from \$19\.99\/mo with MΞNU Plus/);
+  assert.match(hub, /Pro &amp; Max/, 'the tri-fold, table tent and languages are marked Pro');
+  assert.ok(!/Start free|name="email"/.test(hub), 'no free plan');
   assert.ok(!hub.includes('rep-inbox@'), 'your inbox is not shown as their email');
   const handoff = await (await get(`/api/menu-preview/handoff/${TOKEN}`)).json();
   assert.equal(handoff.email, '', 'checkout does not prefill your inbox');
-
-  const post = (email) => worker.fetch(new Request(`https://menu-made.com/api/menu-preview/showcase/${TOKEN}/garden/free`, { method: 'POST', body: new URLSearchParams({ email }) }), env, { waitUntil() {} });
-  assert.equal((await post('rep-inbox@menu-made.example')).status, 400);
-  assert.equal((await post('not-an-email')).status, 400);
-  const ok = await post('Owner@GoldenDragon.example');
-  assert.equal(ok.status, 200);
-  assert.equal(ai.emails.length, 1);
-  assert.match(JSON.stringify(ai.emails[0].to), /owner@goldendragon\.example/);
-  assert.equal(env.DB.raw.prepare(`SELECT email FROM menu_previews WHERE token = ?`).get(TOKEN).email, 'owner@goldendragon.example');
-  assert.equal((await (await get(`/api/menu-preview/handoff/${TOKEN}`)).json()).email, 'owner@goldendragon.example');
+  const free = await worker.fetch(new Request(`https://menu-made.com/api/menu-preview/free/${TOKEN}`, { method: 'POST' }), env, { waitUntil() {} });
+  assert.equal(free.status, 410, 'the free plan is off');
 });

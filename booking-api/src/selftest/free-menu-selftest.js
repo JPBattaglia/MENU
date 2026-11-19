@@ -13,6 +13,7 @@ import { nowIso, parseJsonOrNull } from "../lib/http.js";
 import { signLinkToken } from "../lib/links.js";
 import { storeMenuDesigns } from "../marketing/public-preview.js";
 import { MENU_DESIGNS } from "../producers/menu-qr/menu-designs.js";
+import { freeOnSale } from "../marketing/free-menu.js";
 import { dailyClock } from "./daily-clock.js";
 import { updateTest } from "./menu-qr-selftest.js";
 
@@ -142,6 +143,8 @@ async function failTest(env, test, message) {
 
 async function advanceFreeMenuSelfTests(env, app) {
   if (!env.DB || !env.ASSETS) return [];
+  // No free plan since Nov 19, 2026 ("no FREE"): nothing to test unless the owner switches it back on.
+  if (!freeOnSale(env)) return [];
   await maybeScheduleDaily(env).catch(() => null);
   const tests = (await env.DB.prepare(`SELECT * FROM self_tests WHERE kind = ? AND status = 'REQUESTED' ORDER BY created_at ASC LIMIT 1`).bind(KIND).all()).results || [];
   const results = [];

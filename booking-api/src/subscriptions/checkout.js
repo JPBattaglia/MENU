@@ -121,30 +121,32 @@ async function buildSubscriptionCart(itemsInput, data, env, environment) {
       if (plan?.requiresSetup && !codes.has(plan.requiresSetup)) {
         throw new CheckoutValidationError(`The ${plan.offerName} plan needs its setup in the same checkout.`);
       }
-      // Every plan starts with the menu (owner, Nov 8, 2026): with a yearly plan that includes Menu Care, the Online
-      // Menu + QR setup and first-year hosting ($144) are free; extra menu pages are still charged. A free line is
-      // left off the Stripe checkout but stays on the order, so the menu is still made.
-      // MΞNU Plus (owner, Nov 14, 2026: Plus "replaces the $59 first year") makes it free monthly or yearly.
-      const plus = Boolean(plan?.includes.includes("MENU_PLUS"));
-      // Holiday Menu free with MΞNU Plus (owner, Nov 17, 2026: "do all" on the holiday push): starting Plus in the same
-      // checkout makes the holiday menu (one or both holidays) $0. The line stays on the order so the menu is made.
-      if (plus) {
+      // Every plan starts with the menu. New pricing (owner, Nov 19, 2026): "$149 then monthly at $19.99 for Plus ...
+      // $29 for Pro ... $79 for Max", setup "waived at Max". The menu line is the $149 setup (plus extra pages); with
+      // Max (the plan that includes Menu Care) it is free, monthly or yearly. A free line is left off the Stripe
+      // checkout but stays on the order, so the menu is still made. Every menu bought with a plan is hosted by that
+      // plan (plan_hosted): online while the plan is, then the 30-day grace, then offline.
+      // Holiday Menu free with any plan (owner, Nov 19, 2026: "Free with any plan"; all three include MENU_PLUS): the
+      // holiday menu (one or both holidays) is $0 in the same checkout. The line stays on the order so it is made.
+      const anyPlan = Boolean(plan?.includes.includes("MENU_PLUS"));
+      const max = Boolean(plan?.includes.includes("MENU_CARE"));
+      if (anyPlan) {
         for (const item of normalizedItems) {
           if (!item.holiday || item.holiday.prepaid) continue;
           const waived = item.priceCents;
           item.priceCents = 0;
-          item.holiday = { ...item.holiday, price_cents: 0, waived_cents: waived, waived_reason: "MΞNU Plus" };
+          item.holiday = { ...item.holiday, price_cents: 0, waived_cents: waived, waived_reason: plan.offerName };
           item.extraMetadata = { ...(item.extraMetadata || {}), holiday_menu: item.holiday, setup_waived_cents: waived };
         }
       }
-      if ((plan?.interval === "YEAR" && plan.includes.includes("MENU_CARE")) || plus) {
-        for (const item of normalizedItems) {
-          if (!item.menuPackage) continue;
-          const waived = Math.min(item.priceCents, MENU_PACKAGE_PRICING.setupCents + MENU_PACKAGE_PRICING.hostingFirstYearCents);
-          item.priceCents -= waived;
-          item.menuPackage = { ...item.menuPackage, waived_cents: waived, waived_reason: plus ? "MΞNU Plus" : "yearly plan", total_cents: item.priceCents };
-          item.extraMetadata = { ...(item.extraMetadata || {}), setup_waived_cents: waived };
-        }
+      for (const item of normalizedItems) {
+        if (!item.menuPackage || !plan) continue;
+        item.extraMetadata = { ...(item.extraMetadata || {}), plan_hosted: plan.offerCode };
+        if (!max) continue;
+        const waived = Math.min(item.priceCents, MENU_PACKAGE_PRICING.setupCents);
+        item.priceCents -= waived;
+        item.menuPackage = { ...item.menuPackage, waived_cents: waived, waived_reason: plan.offerName, total_cents: item.priceCents };
+        item.extraMetadata = { ...item.extraMetadata, setup_waived_cents: waived };
       }
     },
     orderItem() {

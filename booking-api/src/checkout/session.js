@@ -61,13 +61,13 @@ async function createCheckout(request, env, environment) {
         }
       }
     }
-    // Menus are sold as free or with MΞNU Plus (owner, Nov 14, 2026), never on their own: on the live site a
+    // Menus are sold with a plan (owner, Nov 19, 2026: Plus, Pro or Max, "no FREE"), never on their own: on the live site a
     // regular Online Menu + QR needs a plan that keeps it online (Plus, Menu Care, a bundle or your own plan with it).
     // Sandbox stays open, so the self-tests and the owner's own tests of the older one-time order keep working.
     if (live && normalizedItems.some((item) => String(item.offerCode).toUpperCase() === "ONLINE_MENU_QR")
       && !(cart.plan?.includes || []).some((code) => code === "MENU_PLUS" || code === "MENU_CARE")
       && await plusOnSale(env)) {
-      return jsonResponse({ ok: false, error: "Your online menu comes with MΞNU Plus ($12 a month, its first year free) or a plan with Menu Care. Or keep it free: start free from your menu preview." }, 400);
+      return jsonResponse({ ok: false, error: "Your online menu comes with a plan: MΞNU Plus, Pro or Max. Choose one to check out." }, 400);
     }
     if (cart.plan && !normalizeName(data?.customer?.business || data?.business)) {
       return jsonResponse({ ok: false, error: "Business name is required for a monthly plan" }, 400);

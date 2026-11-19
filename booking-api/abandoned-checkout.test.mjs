@@ -20,7 +20,7 @@ function setup() {
   const DB = createD1();
   const t = '2026-09-04T00:00:00.000Z';
   const sql = (q, ...a) => DB.raw.prepare(q).run(...a);
-  for (const [code, slug, price, wf] of [['ONLINE_MENU_QR', 'online-menu-qr', 12900, 'MENU_QR_V1'], ['GOOGLE_VISIBILITY', 'google-visibility', 14900, 'GOOGLE_VISIBILITY_V1'], ['CONVERSION_FIX', 'conversion-fix', 29900, 'CONVERSION_FIX_V1']]) {
+  for (const [code, slug, price, wf] of [['ONLINE_MENU_QR', 'online-menu-qr', 14900, 'MENU_QR_V1'], ['GOOGLE_VISIBILITY', 'google-visibility', 14900, 'GOOGLE_VISIBILITY_V1'], ['CONVERSION_FIX', 'conversion-fix', 29900, 'CONVERSION_FIX_V1']]) {
     sql(`INSERT INTO offers (id, created_at, updated_at, code, name, category, status, billing_type, fulfillment_type, requires_approval, requires_assets, default_workflow_key, public_slug, sort_order, is_public, is_featured, cta_text)
          VALUES (?, ?, ?, ?, ?, 'OTHER', 'ACTIVE', 'ONE_TIME', 'DIGITAL', 0, 0, ?, ?, 1, 1, 0, 'Get Started')`, `offer_${code.toLowerCase()}`, t, t, code, code === 'ONLINE_MENU_QR' ? 'Online Menu + QR' : code, wf, slug);
     sql(`INSERT INTO offer_versions (id, offer_id, version_number, created_at, effective_from, status, price_cents, currency, scope_json, stripe_price_id)
@@ -164,7 +164,7 @@ test('the link: GET shows the order without opening Stripe, POST expires the old
     assert.equal(params.get('metadata[order_id]'), started.order_id);
     assert.equal(params.get('metadata[resumed]'), '1');
     assert.equal(params.get('mode'), 'payment');
-    assert.equal(params.get('line_items[0][price_data][unit_amount]'), '18400', '5 pages: $129 + 2 x $20 + $15 hosting');
+    assert.equal(params.get('line_items[0][price_data][unit_amount]'), '18900', '5 pages: $129 + 2 x $20 + $15 hosting');
     assert.equal(h.row(`SELECT COUNT(*) AS n FROM orders`).n, 1, 'no second order');
 
     const forged = await h.call(path.split('?')[0], { method: 'POST', body: new URLSearchParams({ t: forge(token) }) });

@@ -4,9 +4,11 @@ import { HOLIDAY_PRICING, OCCASION_NAMES, holidayEndsOn, holidayOnSale, holidayQ
 
 // Keep the quoted menu scope with its existing offer/order item, so prepaid
 // hosting and extra pages do not create unrelated fulfillment projects.
+// New pricing (owner, Nov 19, 2026): "Charge set up fee of $149 then monthly". Hosting is the plan (Plus, Pro or Max),
+// so there is no paid first year any more; the $149 is waived with Max.
 const MENU_PACKAGE_PRICING = Object.freeze({
-  setupCents: 12900,
-  hostingFirstYearCents: 1500,
+  setupCents: 14900,
+  hostingFirstYearCents: 0,
   includedPages: 3,
   additionalPageCents: 2000,
   maxPages: 50
@@ -25,7 +27,7 @@ function quoteMenuPackage(menuPages) {
   }
   const additionalPages = Math.max(0, menuPages - MENU_PACKAGE_PRICING.includedPages);
   return {
-    pricing_version: "menu-first-year-2026-10-15",
+    pricing_version: "menu-setup-2026-11-19",
     menu_pages: menuPages,
     included_pages: MENU_PACKAGE_PRICING.includedPages,
     included_revisions: 2,
@@ -36,7 +38,7 @@ function quoteMenuPackage(menuPages) {
     hosting_first_year_cents: MENU_PACKAGE_PRICING.hostingFirstYearCents,
     total_cents: MENU_PACKAGE_PRICING.setupCents + MENU_PACKAGE_PRICING.hostingFirstYearCents + additionalPages * MENU_PACKAGE_PRICING.additionalPageCents,
     currency: "USD",
-    hosting_renewal_cents: 1500,
+    hosting_renewal_cents: 0,
     hosting_renewal_automatic: false
   };
 }
@@ -49,7 +51,7 @@ function appendCheckoutLineItem(params, item, index, environment, { autoTax = fa
     params.append(`${prefix}[price_data][currency]`, item.currency.toLowerCase());
     params.append(`${prefix}[price_data][unit_amount]`, String(item.priceCents));
     params.append(`${prefix}[price_data][product_data][name]`, item.menuPackage
-      ? `${item.offerName} — ${item.menuPackage.menu_pages} menu pages + first-year hosting`
+      ? `${item.offerName} — ${item.menuPackage.menu_pages} menu pages, setup`
       : item.ninoDesign ? `Nino Battaglia design: ${item.offerName}${item.extraMetadata?.design_pages ? ` (${item.extraMetadata.design_pages} pages)` : ""}`
       : item.domain ? `${item.offerName} + ${item.domain.name} domain (first year)`
       : item.holiday ? `${item.offerName}: ${OCCASION_NAMES[item.holiday.occasion]}`
@@ -71,7 +73,7 @@ function appendCheckoutLineItem(params, item, index, environment, { autoTax = fa
       params.append(`${prefix}[price_data][product_data][description]`, `Your ${OCCASION_NAMES[item.holiday.occasion]} menu online with its own link and QR code, a print-ready PDF and a table tent, live through ${item.holiday.ends_on}. Up to ${HOLIDAY_PRICING.includedPages} pages; $20 per extra page. You approve it before it goes live. No hosting fee; nothing renews.${item.holiday.both_other ? ` Includes your ${OCCASION_NAMES[item.holiday.both_other]} menu too: we email you a link to send it when it's ready.` : item.holiday.prepaid ? " Already covered by your order for both holidays." : ""}`);
     }
     if (item.menuPackage) {
-      params.append(`${prefix}[price_data][product_data][description]`, "$129 setup includes up to 3 pages and two revisions; $20 per additional page; $15 first-year hosting. With MΞNU Plus or MΞNU Pro it stays online while the plan does.");
+      params.append(`${prefix}[price_data][product_data][description]`, "$149 setup includes up to 3 pages and two revisions; $20 per additional page. Your MΞNU plan keeps the menu online.");
     }
   } else {
     params.append(`${prefix}[price]`, item.stripePriceId);

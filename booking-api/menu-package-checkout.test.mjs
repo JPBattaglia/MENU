@@ -10,7 +10,7 @@ const api = {
 
 const menuOffer = {
   offer_id: 'offer_online_menu_qr', offer_code: 'ONLINE_MENU_QR', offer_name: 'Online Menu + QR',
-  offer_version_id: 'offerv1_online_menu_qr', price_cents: 12900, currency: 'USD',
+  offer_version_id: 'offerv1_online_menu_qr', price_cents: 14900, currency: 'USD',
   stripe_price_id: 'price_existing_menu', stripe_product_id: 'prod_existing_menu'
 };
 const conversionOffer = {
@@ -50,13 +50,13 @@ const request = (data, sandbox = false) => new Request('https://menu-made.com/ap
 });
 
 test('quotes the complete first year with three included pages and a bounded page count', () => {
-  for (const pages of [1, 2, 3]) assert.equal(api.quoteMenuPackage(pages).total_cents, 14400);
-  assert.equal(api.quoteMenuPackage(4).total_cents, 16400);
+  for (const pages of [1, 2, 3]) assert.equal(api.quoteMenuPackage(pages).total_cents, 14900);
+  assert.equal(api.quoteMenuPackage(4).total_cents, 16900);
   assert.equal(api.quoteMenuPackage(5).additional_pages_cents, 4000);
-  assert.equal(api.quoteMenuPackage(50).total_cents, 108400);
+  assert.equal(api.quoteMenuPackage(50).total_cents, 108900);
   const quote = api.quoteMenuPackage(3);
   assert.equal(quote.included_revisions, 2);
-  assert.equal(quote.hosting_renewal_cents, 1500);
+  assert.equal(quote.hosting_renewal_cents, 0);
   assert.equal(quote.hosting_renewal_automatic, false);
   for (const pages of [undefined, null, '3', 0, -1, 51, 3.5, NaN, Infinity, true, {}, []]) {
     assert.throws(() => api.quoteMenuPackage(pages), /page count/);
@@ -64,7 +64,7 @@ test('quotes the complete first year with three included pages and a bounded pag
 });
 
 test('public quote endpoint previews the exact checkout price without storage, Stripe, or secrets', async () => {
-  for (const [pages, total] of [['1', 14400], ['3', 14400], ['4', 16400], ['5', 18400], ['50', 108400]]) {
+  for (const [pages, total] of [['1', 14900], ['3', 14900], ['4', 16900], ['5', 18900], ['50', 108900]]) {
     const response = await api.default.fetch(new Request('https://menu-made.com/api/menu-package-quote?pages=' + pages), {}, {});
     assert.equal(response.status, 200);
     const result = await response.json();
@@ -85,7 +85,7 @@ test('resolves the real catalog offer and ignores client price, currency, and qu
   const [item] = await api.normalizeCheckoutItems([
     { key: 'online_menu_qr', qty: 1, priceCents: 1, currency: 'EUR', menuPackage: { total_cents: 1 } }
   ], f.env, { menu_pages: 5, total_cents: 1, hosting_first_year_cents: 0 });
-  assert.equal(item.priceCents, 18400);
+  assert.equal(item.priceCents, 18900);
   assert.equal(item.currency, 'USD');
   assert.equal(item.offerId, 'offer_online_menu_qr');
   assert.equal(item.quantity, 1);
@@ -128,27 +128,27 @@ test('live and sandbox checkout charge the persisted quote once and retain one m
       assert.equal(response.status, 200);
       assert.equal((await response.json()).url, 'https://checkout.stripe.com/test_quote');
       assert.equal(stripeParams.get('mode'), 'payment');
-      assert.equal(stripeParams.get('line_items[0][price_data][unit_amount]'), '18400');
+      assert.equal(stripeParams.get('line_items[0][price_data][unit_amount]'), '18900');
       assert.equal(stripeParams.get('line_items[0][price_data][currency]'), 'usd');
       assert.equal(stripeParams.get('line_items[0][quantity]'), '1');
-      assert.match(stripeParams.get('line_items[0][price_data][product_data][name]'), /5 menu pages \+ first-year hosting/);
-      assert.match(stripeParams.get('line_items[0][price_data][product_data][description]'), /With MΞNU Plus or MΞNU Pro it stays online while the plan does/);
+      assert.match(stripeParams.get('line_items[0][price_data][product_data][name]'), /5 menu pages, setup/);
+      assert.match(stripeParams.get('line_items[0][price_data][product_data][description]'), /Your MΞNU plan keeps the menu online/);
       assert.equal(stripeParams.has('line_items[0][price]'), false);
       assert.equal([...stripeParams.keys()].some(key => key.includes('recurring')), false);
       const orders = f.writes.filter(write => write.sql.includes('INSERT INTO orders'));
       assert.equal(orders.length, 1);
-      assert.equal(orders[0].args[6], 18400);
-      assert.equal(orders[0].args[7], 18400);
+      assert.equal(orders[0].args[6], 18900);
+      assert.equal(orders[0].args[7], 18900);
       const items = f.writes.filter(write => write.sql.includes('INSERT INTO order_items'));
       assert.equal(items.length, 1);
       assert.equal(items[0].args[2], 'offer_online_menu_qr');
       assert.equal(items[0].args[4], 1);
-      assert.equal(items[0].args[5], 18400);
-      assert.equal(items[0].args[6], 18400);
+      assert.equal(items[0].args[5], 18900);
+      assert.equal(items[0].args[6], 18900);
       const metadata = JSON.parse(items[0].args[7]);
       assert.equal(metadata.environment, sandbox ? 'sandbox' : 'live');
       assert.equal(metadata.menu_package.menu_pages, 5);
-      assert.equal(metadata.menu_package.hosting_first_year_cents, 1500);
+      assert.equal(metadata.menu_package.hosting_first_year_cents, 0);
       assert.equal(metadata.menu_package.additional_pages, 2);
       assert.equal(f.writes.some(write => write.sql.includes('INSERT INTO projects')), false);
     }
@@ -166,10 +166,10 @@ test('other services retain their existing live Stripe price and can accompany o
     };
     const response = await api.default.fetch(request(body({ items: [{ key: 'online_menu_qr', qty: 1 }, { key: 'conversion_fix', qty: 1 }] })), f.env, {});
     assert.equal(response.status, 200);
-    assert.equal(stripeParams.get('line_items[0][price_data][unit_amount]'), '14400');
+    assert.equal(stripeParams.get('line_items[0][price_data][unit_amount]'), '14900');
     assert.equal(stripeParams.get('line_items[1][price]'), 'price_existing_conversion');
     assert.equal(stripeParams.has('line_items[1][price_data][unit_amount]'), false);
-    assert.equal(f.writes.find(write => write.sql.includes('INSERT INTO orders')).args[7], 44300);
+    assert.equal(f.writes.find(write => write.sql.includes('INSERT INTO orders')).args[7], 44800);
     const normalized = await api.normalizeCheckoutItems([{ key: 'conversion_fix', qty: 1 }], f.env, {});
     assert.equal(normalized[0].priceCents, 29900);
     assert.equal(normalized[0].menuPackage, undefined);

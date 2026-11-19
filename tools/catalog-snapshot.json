@@ -135,8 +135,19 @@
       "on_sale": true,
       "price_cents": null,
       "prices": {
-        "month": 1200,
-        "year": 12000
+        "month": 1999,
+        "year": 19990
+      }
+    },
+    {
+      "code": "MENU_PRO",
+      "kind": "PLAN",
+      "menu_package": null,
+      "on_sale": true,
+      "price_cents": null,
+      "prices": {
+        "month": 3900,
+        "year": 39000
       }
     },
     {
@@ -176,13 +187,13 @@
       "kind": "ONE_TIME",
       "menu_package": {
         "additional_page_cents": 2000,
-        "hosting_first_year_cents": 1500,
+        "hosting_first_year_cents": 0,
         "included_pages": 3,
         "max_pages": 50,
-        "setup_cents": 12900
+        "setup_cents": 14900
       },
       "on_sale": true,
-      "price_cents": 12900,
+      "price_cents": 14900,
       "prices": null
     },
     {

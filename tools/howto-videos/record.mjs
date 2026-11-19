@@ -316,10 +316,8 @@ async function menuVideo(local) {
   await s.page.waitForURL(/menu-preview\/view/, { timeout: 30000 }).catch(() => {});
   await s.page.waitForLoadState('load'); await s.sync(); await s.wait(1800);
   await s.moveTo(s.page.getByText('Avocado Toast').first(), { dx: 300 }); await s.wait(1300);
-  s.cap(E, 'Start free: the Classic design goes live with its own link and QR code.');
-  await s.moveTo('.mm-gen-free button'); await s.wait(2600);
-  s.cap(E, 'Or Make it live with MΞNU Plus: any design, the print set, other languages.');
-  await s.moveTo('.mm-gen-pick'); await s.wait(2800);
+  s.cap(E, 'Make it live: a one-time $149 setup, then MΞNU Plus from $19.99 a month. Pro adds languages; Max has no setup fee.');
+  await s.moveTo('.mm-gen-pick'); await s.wait(3600);
   s.cap('Your menu, live', 'Once your menu is live, open Your account and tap Edit your menu.');
   await s.goto('https://menu-made.com/account.html');
   await s.wait(900);

@@ -14,7 +14,7 @@ const MENU = { sections: [{ name: 'Starters', items: [{ name: 'Garlic Bread', de
 const PHONE = 'Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X)';
 
 function setup(t) {
-  const env = { DB: createD1(), ASSETS: createR2(), ANTHROPIC_API_KEY: 'sk-ant-test', RESEND_API_KEY: 're_test', PRODUCTION_RUNNER_SECRET: 'test-runner-secret' };
+  const env = { DB: createD1(), ASSETS: createR2(), ANTHROPIC_API_KEY: 'sk-ant-test', RESEND_API_KEY: 're_test', PRODUCTION_RUNNER_SECRET: 'test-runner-secret', MENU_FREE_PLAN: 'on' };
   for (const m of ['0007_plan_settings.sql', '0009_website_package.sql', '0017_customer_accounts.sql', '0018_menu_hosting_index.sql']) env.DB.raw.exec(readFileSync(new URL(`./migrations/${m}`, import.meta.url), 'utf8'));
   const call = (path, init = {}) => worker.fetch(new Request(`https://menu-made.com${path}`, init), env, { waitUntil() {} });
   const sent = [];

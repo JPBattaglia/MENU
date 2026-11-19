@@ -1,4 +1,4 @@
-// Daily self-tests for the two menu plans (four choices, owner Nov 15, 2026): MΞNU Plus ($12/mo) and MΞNU Pro
+// Daily self-tests for the two menu plans (four choices, owner Nov 15, 2026): MΞNU Plus ($19.99/mo) and MΞNU Max ($79/mo, offer BUNDLE_PREMIUM); formerly called Pro
 // ($79/mo, offer code BUNDLE_PREMIUM). Run by the worker's own 5-minute schedule, the way a buyer goes, in Stripe test
 // mode with a test clock, through the real routes (same shape as HOLIDAY_MENU_RUN):
 //   START            a 2-page menu uploaded as at checkout; its preview stored as the generator stores one (no AI read,
@@ -17,8 +17,8 @@
 //                    table tent are real PDFs and the TV screen shows the menu (the print set is paid-only); the menu's
 //                    hosting is covered by the plan. Then the subscription is cancelled in Stripe
 //   AWAIT_CANCELLED  CANCELLED, every entitlement EXPIRED; Plus still made no period work; the menu stays online and,
-//                    past the grace period, falls back to the free plan rather than going offline (the menu's first
-//                    year was free with the plan). Test clock deleted, preview removed.
+//                    goes offline past the grace period (the plan hosts the menu; no free plan since Nov 19, 2026).
+//                    Test clock deleted, preview removed.
 // Start one by inserting a self_tests row with kind MENU_PLUS_RUN or MENU_PRO_RUN and status REQUESTED.
 // Only a failure emails the owner.
 import { ownerSandboxToken } from "../lib/owner-sandbox.js";
@@ -31,6 +31,7 @@ import { hostedMenuSlug } from "../onboarding/menu-inputs.js";
 import { MENU_DESIGNS, menuDesignFor } from "../producers/menu-qr/menu-designs.js";
 import { menuHostingState } from "../producers/menu-qr/hosting-renewal.js";
 import { resolvePlan } from "../subscriptions/plans.js";
+import { MENU_PACKAGE_PRICING } from "../checkout/quote.js";
 import { dailyClock } from "./daily-clock.js";
 import { buildMenuPdf, cancelTestOrder, diagnose, payTestCheckout, stripeTest, updateTest } from "./menu-qr-selftest.js";
 
@@ -38,8 +39,9 @@ const PRO_SERVICES = ["ACCESSIBILITY_MONITORING", "GOOGLE_PROFILE_CARE", "MENU_C
 // Each kind: the plan it buys, the entitlements it must grant (sorted), the period jobs of a month, its daily slot
 // (UTC, after the Guest App test's 20:00-20:20) and its own test business, so the two runs never share a menu.
 const RUNS = {
-  MENU_PLUS_RUN: { plan: "MENU_PLUS", label: "MΞNU Plus", entitlements: ["MENU_PLUS"], jobs: [], hour: 20, minute: 20, business: "Plus Self-Test Cafe", design: "chalkboard" },
-  MENU_PRO_RUN: { plan: "BUNDLE_PREMIUM", label: "MΞNU Pro", entitlements: [...PRO_SERVICES, "MENU_PLUS"].sort(), jobs: PRO_SERVICES, hour: 20, minute: 40, business: "Pro Self-Test Bistro", design: "garden" }
+  // New pricing (Nov 19, 2026): Plus pays the $149 setup; Max (offer BUNDLE_PREMIUM, kind name kept) has none.
+  MENU_PLUS_RUN: { plan: "MENU_PLUS", label: "MΞNU Plus", entitlements: ["MENU_PLUS"], jobs: [], setupFree: false, hour: 20, minute: 20, business: "Plus Self-Test Cafe", design: "chalkboard" },
+  MENU_PRO_RUN: { plan: "BUNDLE_PREMIUM", label: "MΞNU Max", entitlements: [...PRO_SERVICES, "MENU_PLUS", "MENU_PRO"].sort(), jobs: PRO_SERVICES, setupFree: true, hour: 20, minute: 40, business: "Pro Self-Test Bistro", design: "garden" }
 };
 const KINDS = Object.keys(RUNS);
 const runOf = (test) => RUNS[test.kind];
@@ -176,15 +178,17 @@ async function buyAndPay(env, app, holder, { run, base, token, requestId, custom
   const orderId = opened2.body.order_id;
   test = await updateTest(env, test, { order_id: orderId });
   holder.current = test;
-  // The plan's own catalog price, never a typed number; the menu line is free with the plan.
+  // The plan's own catalog price, never a typed number; the $149 setup is charged with Plus, free with Max.
   const cents = (await resolvePlan(run.plan, "MONTH", env, { requirePublic: false }))?.priceCents;
+  const setupCents = run.setupFree ? 0 : MENU_PACKAGE_PRICING.setupCents;
   const order = await env.DB.prepare(`SELECT stripe_checkout_session_id, total_cents FROM orders WHERE id = ?`).bind(orderId).first();
-  if (!cents || order?.total_cents !== cents) throw new Error(`Expected a ${cents ? dollars(cents) : "catalog-priced"} ${run.label} order, got ${order?.total_cents}`);
+  if (!cents || order?.total_cents !== cents + setupCents) throw new Error(`Expected a ${cents ? dollars(cents + setupCents) : "catalog-priced"} ${run.label} order, got ${order?.total_cents}`);
   const menuLine = parseJsonOrNull((await env.DB.prepare(`SELECT i.metadata_json FROM order_items i JOIN offers o ON o.id = i.offer_id WHERE i.order_id = ? AND o.code = 'ONLINE_MENU_QR'`).bind(orderId).first())?.metadata_json);
-  if (!(Number(menuLine?.setup_waived_cents) > 0)) throw new Error(`The menu line isn't free with ${run.label}: ${JSON.stringify(menuLine).slice(0, 200)}`);
+  if (run.setupFree !== (Number(menuLine?.setup_waived_cents) > 0)) throw new Error(`The menu setup should be ${run.setupFree ? "free" : "charged"} with ${run.label}: ${JSON.stringify(menuLine).slice(0, 200)}`);
+  if (menuLine?.plan_hosted !== run.plan) throw new Error(`The menu isn't hosted by ${run.label}: ${JSON.stringify(menuLine).slice(0, 200)}`);
   const paid = await payTestCheckout(env, order.stripe_checkout_session_id);
   return updateTest(env, test, { stage: "AWAIT_ACTIVE", state: { session_id: order.stripe_checkout_session_id, price_cents: cents },
-    log: `Preview opened with ${MENU_DESIGNS.length} designs; ${design.label} chosen; ${run.label} order ${orderId} at ${dollars(cents)}/mo with the menu free; paid with test card (${paid.amount})` });
+    log: `Preview opened with ${MENU_DESIGNS.length} designs; ${design.label} chosen; ${run.label} order ${orderId} at ${dollars(cents)}/mo ${run.setupFree ? "with no setup fee" : `plus the ${dollars(setupCents)} setup`}; paid with test card (${paid.amount})` });
 }
 
 async function stageAwaitActive(env, app, test) {
@@ -273,16 +277,22 @@ async function checkWhatTheBuyerGot(env, app, test, { base, slug, html }) {
       SELECT json_extract(a.metadata_json, '$.destination_url') AS url FROM deliverables d JOIN assets a ON a.id = d.asset_id
       WHERE d.project_id = ? AND d.deliverable_type = 'QR_CODE' ORDER BY d.version DESC LIMIT 1`).bind(test.project_id).first();
   if (qr?.url !== address) throw new Error(`The QR code points at ${qr?.url || "nothing"}, not this menu's address (${address})`);
-  for (const format of ["print.pdf", "tri-fold.pdf", "table-tent.pdf"]) {
+  // The tri-fold and table tent come with Pro and Max (Nov 19, 2026); with Plus they say so instead.
+  const pro = runOf(test).entitlements.includes("MENU_PRO");
+  for (const format of pro ? ["print.pdf", "tri-fold.pdf", "table-tent.pdf"] : ["print.pdf"]) {
     const file = await app(new Request(`${address}/${format}`));
     const bytes = new Uint8Array(await file.arrayBuffer());
     const isPdf = bytes.length > 1000 && String.fromCharCode(...bytes.slice(0, 5)) === "%PDF-";
     if (file.status !== 200 || !/application\/pdf/.test(file.headers.get("content-type") || "") || !isPdf) throw new Error(`The buyer's ${format} is not a PDF (HTTP ${file.status}, ${file.headers.get("content-type") || "no type"}, ${bytes.length} bytes)`);
   }
+  if (!pro) {
+    const held = await app(new Request(`${address}/tri-fold.pdf`));
+    if (!/Comes with MΞNU Pro/.test(await held.text())) throw new Error("The tri-fold is open to MΞNU Plus; it comes with Pro and Max");
+  }
   const tv = await app(new Request(`${address}/tv`));
   const screen = await tv.text();
   if (tv.status !== 200 || !screen.includes(CHECK_ITEM)) throw new Error(`The TV menu screen doesn't show the menu (HTTP ${tv.status})`);
-  return `all ${ALL_ITEMS.length} items and prices on the page, QR code points at it, print PDF, tri-fold, table tent and TV screen open`;
+  return `all ${ALL_ITEMS.length} items and prices on the page, QR code points at it, ${pro ? "print PDF, tri-fold, table tent" : "print PDF (tri-fold held for Pro)"} and TV screen open`;
 }
 
 async function stageAwaitCancelled(env, app, test) {
@@ -294,14 +304,14 @@ async function stageAwaitCancelled(env, app, test) {
   if (Number(open?.n) !== 0) throw new Error(`${open.n} entitlements still open after cancel`);
   const jobs = await periodJobs(env, s.subscription_id);
   if (jobs.length !== run.jobs.length) throw new Error(`Expected ${run.jobs.length} period jobs in all, found ${jobs.length}`);
-  // The menu's first year came free with the plan: it stays online, and past the grace period drops to the free plan.
+  // The plan hosts the menu (no free plan since Nov 19, 2026): online through the grace period, then offline.
   const now = await menuHostingState(env, s.business_id);
   if (!now.live) throw new Error(`The menu went offline the moment ${run.label} was cancelled (${now.reason})`);
   const later = await menuHostingState(env, s.business_id, new Date(Date.now() + GRACE_PLUS_DAYS * 86400000));
-  if (!later.live || later.reason !== "free_plan") throw new Error(`After the grace period the menu is ${later.live ? "online" : "offline"} (${later.reason}), not on the free plan`);
+  if (later.live) throw new Error(`After the grace period the menu is still online (${later.reason}); it should go offline when the plan ends`);
   await cleanUp(env, test);
   return updateTest(env, test, { status: "PASSED", stage: "DONE",
-    log: `Cancel synced: CANCELLED, entitlements EXPIRED${run.jobs.length ? "" : ", still no period work"}; menu stays online (${now.reason}) and falls back to the free plan after the grace period. Test clock deleted, preview removed` });
+    log: `Cancel synced: CANCELLED, entitlements EXPIRED${run.jobs.length ? "" : ", still no period work"}; menu stays online (${now.reason}) and goes offline after the grace period. Test clock deleted, preview removed` });
 }
 
 async function cleanUp(env, test) {

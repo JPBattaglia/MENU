@@ -217,8 +217,8 @@ async function handleProspectFollowups(request, env, { now = Date.now() } = {}) 
       url: r.kind === "website" ? `${SITE}/api/website-preview/view/${r.token}/d/bistro/index.html` : r.generator ? generatorUrl(r.token) : `${SITE}/api/menu-preview/${r.token}`, opens: r.open_count, holiday: Boolean(r.holiday_drafted_at) })),
     ...previewless.filter((r) => !seen.has(r.id) && seen.add(r.id)).map((r) => ({ kind: "no_preview", id: r.id, name: r.name, city: r.city, email: r.email, website: r.website, gaps_json: r.gaps_json, menu_url: r.menu_url, offer_code: r.offer_code }))
   ].slice(0, 50);
-  // Menus are free or with MΞNU Plus (owner, Nov 14, 2026); follow-ups quote that, not the old $144 first year.
-  return json({ ok: true, prospects, price: "free in the Classic design, or $12/mo with MΞNU Plus (any design, the print set, its first year free)" });
+  // New pricing (owner, Nov 19, 2026): follow-ups quote the $149 setup and the plans, not the free plan.
+  return json({ ok: true, prospects, price: "$149 setup, then from $19.99/mo with MΞNU Plus (Pro $39/mo adds other languages, a tri-fold and table tents; Max $79/mo has no setup fee and we make your changes)" });
 }
 
 export { handleProspectDemo, handleMenuPreview, handleProspectFollowups, upgradeProspectMenus, readProspectMenu, PREVIEW_DAYS };

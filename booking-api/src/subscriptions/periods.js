@@ -30,7 +30,7 @@ function serviceMonthsDue(periodStart, periodEnd, now = new Date()) {
   return out;
 }
 
-const NO_PERIOD_WORK = new Set(["MENU_PLUS_V1", "MENU_PLUS"]);
+const NO_PERIOD_WORK = new Set(["MENU_PLUS_V1", "MENU_PLUS", "MENU_PRO_V1", "MENU_PRO"]);
 
 async function createPeriodJobs(env, subscription, periodStart, periodEnd, { invoiceId = null, amountCents = 0, trigger = "INVOICE_PAID" } = {}) {
   if (!PRODUCING.has(subscription.status)) {
