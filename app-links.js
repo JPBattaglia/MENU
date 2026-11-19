@@ -63,12 +63,12 @@
       if (!foot) return;
       // Footer layout (owner, Nov 18, 2026: "doesn't fit well in the footer for certain screen sizes"): phones and
       // tablets get the label on its own line with the badges side by side, centred; wider screens put the block on
-      // the left side of the footer, lined up with the page content.
+      // the left side of the footer, with the address and phone on the right (main.css).
       const css = document.createElement('style');
       css.textContent = '.app-links{display:flex;flex-direction:column;align-items:center;gap:10px;margin:18px auto;padding:0 16px;max-width:1120px;box-sizing:border-box}'
         + '.app-links-label{font-weight:700}.app-links-row{display:flex;gap:10px;justify-content:center;flex-wrap:nowrap}'
         + '.app-links-row img{height:40px!important}'
-        + '@media (min-width:900px){.app-links{align-items:flex-start;padding:0 28px}.app-links-row{justify-content:flex-start}.app-links-row img{height:44px!important}}';
+        + '@media (min-width:900px){.app-links{align-items:flex-start;padding:0 28px}.footer-inner>.app-links{margin:0;padding:0;max-width:none}.app-links-row{justify-content:flex-start}.app-links-row img{height:44px!important}}';
       document.head.appendChild(css);
       const box = document.createElement('div');
       box.className = 'app-links';
@@ -80,7 +80,9 @@
       row.className = 'app-links-row';
       for (const [url, text] of stores) row.appendChild(button(url, text, false));
       box.appendChild(row);
-      foot.insertBefore(box, foot.firstChild);
+      // Inside .footer-inner when the page has one, so wide screens can put it beside the logo and address (main.css).
+      const inner = foot.querySelector('.footer-inner');
+      if (inner) inner.insertBefore(box, inner.firstChild); else foot.insertBefore(box, foot.firstChild);
     }).catch(() => {});
   } catch { /* the buttons must never break the page */ }
 })();
