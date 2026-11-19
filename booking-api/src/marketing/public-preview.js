@@ -48,6 +48,7 @@ import { signLinkToken, verifyLinkToken } from "../lib/links.js";
 import { ownerEmailAddress } from "../lib/config.js";
 import { simplePage } from "../lib/http.js";
 import { addFreeButton, freeButton } from "./free-menu.js";
+import { addShowcaseButton, handleRepShowcase } from "./rep-showcase.js";
 
 const PREVIEW_HOURS = 72;
 const PROSPECT_DAYS = 21;          // prospect-email previews (demo-menu.js), same as the website ones
@@ -581,6 +582,8 @@ async function handlePreviewView(request, env, token, { now = Date.now(), design
   }
   // Free plan (Nov 14, 2026): "Start free: Classic design" beside Make it live on regular menu previews.
   if (!isOccasion(row.occasion)) page = addFreeButton(env, page, row, now);
+  // Rep mode (Nov 19, 2026): "All formats" shows the QR code, table tent, tri-fold, print menu and TV screen on the spot.
+  if (row.campaign === "rep") page = addShowcaseButton(page, token, key);
   return new Response(frameAware(page), { status: 200, headers: { "Content-Type": "text/html; charset=utf-8", "Cache-Control": "no-store", "X-Robots-Tag": "noindex, nofollow", "Referrer-Policy": "no-referrer" } });
 }
 
@@ -781,5 +784,10 @@ async function handlePreviewHandoff(env, token, { now = Date.now() } = {}) {
   return json({ ok: true, business: row.business, email: row.email, ...(file ? { request_id: row.request_id } : {}), ...chosen, ...holiday, ...(quote ? { holiday_price_cents: quote.price_cents, holiday_prepaid: quote.prepaid === true } : {}) });
 }
 
-export { handleRepLink, repUrl, REP_PER_DAY };
+// GET /api/menu-preview/showcase/<token>/<design>[/<format>] (rep-showcase.js), drawn from the stored read.
+function handlePreviewShowcase(request, env, token, design, format, opts = {}) {
+  return handleRepShowcase(request, env, token, design, format, { ...opts, loadLogo: loadPreviewLogo, renderDesign: renderMenuDesign });
+}
+
+export { handleRepLink, handlePreviewShowcase, repUrl, REP_PER_DAY };
 export { runPreviewReminders, handlePreviewCreate, handlePreviewView, handlePreviewState, handlePreviewHandoff, handlePreviewCustomize, handlePreviewChoose, menuPreviewChoice, publicPreviewPage, renderMenuDesign, loadPreviewLogo, storeMenuDesigns, viewUrl, PREVIEW_HOURS, PROSPECT_DAYS, PER_DAY, PER_NETWORK_DAY, PER_EMAIL };

@@ -1,6 +1,6 @@
 import { handleAdminQueue } from "./admin/queue.js";
 import { handleFreeConfirm, handleFreeStart } from "./marketing/free-menu.js";
-import { handlePreviewCreate, handlePreviewView, handlePreviewState, handlePreviewHandoff, handlePreviewCustomize, handlePreviewChoose, handleRepLink, runPreviewReminders } from "./marketing/public-preview.js";
+import { handlePreviewCreate, handlePreviewView, handlePreviewState, handlePreviewHandoff, handlePreviewCustomize, handlePreviewChoose, handleRepLink, handlePreviewShowcase, runPreviewReminders } from "./marketing/public-preview.js";
 import { handleSiteForm } from "./producers/site-files/site-form.js";
 import { handleDomainLookup } from "./producers/website/registrar.js";
 import { handleDomainTestBuy, runDomainPurchases } from "./producers/website/domain-purchase.js";
@@ -199,6 +199,9 @@ var worker_default = {
     if (publicPreview && (request.method === "GET" || request.method === "HEAD") && (publicPreview[1] === "view" || !publicPreview[3])) {
       return publicPreview[1] === "view" ? handlePreviewView(request, env, publicPreview[2], { design: publicPreview[3] || null }) : handlePreviewHandoff(env, publicPreview[2]);
     }
+    // Rep showcase (Nov 19, 2026): every format of a rep-mode preview, shown on the spot during a visit.
+    const showcase = url.pathname.match(/^\/api\/menu-preview\/showcase\/([a-f0-9]{36})\/([a-z]{2,20})(?:\/([a-z]{2,10}))?$/);
+    if (showcase && request.method === "GET") return handlePreviewShowcase(request, env, showcase[1], showcase[2], showcase[3] || null);
     // Menu generator (Nov 7, 2026): Customize rebuilds every design; "Make it live" saves the design, then checkout.
     const menuCustomize = url.pathname.match(/^\/api\/menu-preview\/customize\/([a-f0-9]{36})$/);
     if (menuCustomize && (request.method === "POST" || request.method === "OPTIONS")) return handlePreviewCustomize(request, env, menuCustomize[1]);
