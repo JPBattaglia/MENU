@@ -199,7 +199,10 @@ test('the deployed worker keeps the daily self-test schedule on (SELFTEST_SCHEDU
   assert.match(config, /"SELFTEST_SCHEDULE":\s*"on"/, 'without it every daily self-test silently stops in production');
   const { dailyClock } = await import('./src/selftest/daily-clock.js');
   assert.equal(dailyClock({}), null);
-  assert.ok(dailyClock({ SELFTEST_SCHEDULE: 'on' }) instanceof Date);
+  // Weekly since Nov 19, 2026 (the self-tests were using up the Anthropic credit): Mondays UTC only.
+  assert.ok(dailyClock({ SELFTEST_SCHEDULE: 'on' }, new Date('2026-11-23T18:00:00Z')) instanceof Date, 'Monday');
+  assert.equal(dailyClock({ SELFTEST_SCHEDULE: 'on' }, new Date('2026-11-24T18:00:00Z')), null, 'Tuesday');
+  assert.ok(dailyClock({ SELFTEST_SCHEDULE: 'daily' }, new Date('2026-11-24T18:00:00Z')) instanceof Date, 'daily brings back every day');
 });
 
 // ---------- Holiday Menu (HOLIDAY_MENU_RUN) ----------
