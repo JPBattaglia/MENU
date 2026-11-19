@@ -13,6 +13,7 @@ function el(tag) {
 async function run(ua, links, touch = 0) {
   const slot = el('div'), section = el('section'), foot = el('footer');
   section.querySelector = () => slot;
+  foot.querySelector = () => null;
   const document = { head: el('head'), createElement: el, querySelector: (q) => q === 'footer' ? foot : null, querySelectorAll: () => [section] };
   let done; const p = new Promise(r => { done = r; });
   const ctx = { document, location: { search: '' }, sessionStorage: { getItem: () => null, setItem() {} },
