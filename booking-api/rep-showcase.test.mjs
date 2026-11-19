@@ -73,3 +73,65 @@ test('only a rep preview page has the All formats button', async () => {
   const pub = await (await get(`/api/menu-preview/view/${PUBLIC}/bistro`)).text();
   assert.ok(!pub.includes('mm-gen-all'), 'public preview has no showcase button');
 });
+
+function stubAi(t) {
+  const asked = [];
+  const emails = [];
+  const real = globalThis.fetch;
+  globalThis.fetch = async (url, init = {}) => {
+    if (String(url) === 'https://api.resend.com/emails') { emails.push(JSON.parse(init.body)); return Response.json({ id: `e${emails.length}` }); }
+    if (String(url) === 'https://api.anthropic.com/v1/messages') {
+      const prompt = JSON.parse(init.body).messages[0].content;
+      const texts = JSON.parse(/\n(\[[\s\S]*\])\n/.exec(prompt)[1]);
+      asked.push(texts);
+      return Response.json({ model: 'test', stop_reason: 'tool_use', usage: { input_tokens: 10, output_tokens: 10 },
+        content: [{ type: 'tool_use', name: 'record_output', input: { translations: texts.map((x) => `ZH ${x}`) } }] });
+    }
+    throw new Error(`Unexpected fetch ${url}`);
+  };
+  t.after(() => { globalThis.fetch = real; });
+  return { asked, emails };
+}
+
+test('Languages: a tap translates the menu once, then it is saved; English shows every language to pick', async (t) => {
+  const { env, get } = await setup();
+  env.ANTHROPIC_API_KEY = 'sk-test';
+  const ai = stubAi(t);
+  const english = await (await get(`/api/menu-preview/showcase/${TOKEN}/classic/lang`)).text();
+  assert.match(english, /中文（繁體）/);
+  assert.match(english, /Har gow/);
+  assert.equal(ai.asked.length, 0, 'English costs nothing');
+  const zh = await (await get(`/api/menu-preview/showcase/${TOKEN}/classic/lang?lang=zh-Hant`)).text();
+  assert.match(zh, /ZH Har gow/);
+  assert.match(zh, /ZH Dim sum/);
+  assert.match(zh, /6\.50/, 'prices unchanged');
+  assert.equal(ai.asked.length, 1);
+  await get(`/api/menu-preview/showcase/${TOKEN}/classic/lang?lang=zh-Hant`);
+  assert.equal(ai.asked.length, 1, 'a second tap is free');
+});
+
+test('buying: the list of formats ends with a phone checkout QR, a tablet checkout and Start free; the inbox is never prefilled', async (t) => {
+  const { env, get } = await setup();
+  env.OWNER_EMAIL = 'rep-inbox@menu-made.example';
+  env.RESEND_API_KEY = 're_test';
+  env.PRODUCTION_RUNNER_SECRET = 'test-runner-secret';
+  env.DB.raw.prepare(`UPDATE menu_previews SET email = ? WHERE token = ?`).run('rep-inbox@menu-made.example', TOKEN);
+  const ai = stubAi(t);
+  const hub = await (await get(`/api/menu-preview/showcase/${TOKEN}/garden`)).text();
+  assert.ok(hub.includes(`/api/menu-preview/choose/${TOKEN}/garden`), 'checkout keeps the design on screen');
+  assert.match(hub, /Scan with your phone to sign up/);
+  assert.match(hub, /name="email"/);
+  assert.ok(!hub.includes('rep-inbox@'), 'your inbox is not shown as their email');
+  const handoff = await (await get(`/api/menu-preview/handoff/${TOKEN}`)).json();
+  assert.equal(handoff.email, '', 'checkout does not prefill your inbox');
+
+  const post = (email) => worker.fetch(new Request(`https://menu-made.com/api/menu-preview/showcase/${TOKEN}/garden/free`, { method: 'POST', body: new URLSearchParams({ email }) }), env, { waitUntil() {} });
+  assert.equal((await post('rep-inbox@menu-made.example')).status, 400);
+  assert.equal((await post('not-an-email')).status, 400);
+  const ok = await post('Owner@GoldenDragon.example');
+  assert.equal(ok.status, 200);
+  assert.equal(ai.emails.length, 1);
+  assert.match(JSON.stringify(ai.emails[0].to), /owner@goldendragon\.example/);
+  assert.equal(env.DB.raw.prepare(`SELECT email FROM menu_previews WHERE token = ?`).get(TOKEN).email, 'owner@goldendragon.example');
+  assert.equal((await (await get(`/api/menu-preview/handoff/${TOKEN}`)).json()).email, 'owner@goldendragon.example');
+});

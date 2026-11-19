@@ -7,6 +7,11 @@
 // Cost: none beyond the preview. The pages are drawn as HTML on request (no AI read, no headless browser, no PDF).
 //   GET /api/menu-preview/showcase/<token>/<design>           the list of formats
 //   GET /api/menu-preview/showcase/<token>/<design>/<format>  one format: qr | tent | trifold | print | tv (?p=2 for TV screen 2)
+//   GET /api/menu-preview/showcase/<token>/<design>/lang?lang=<code>   the phone menu in another language (owner, Nov 19)
+//   POST /api/menu-preview/showcase/<token>/<design>/free  { email }   start the free plan for the business's own email
+// Languages: one AI call per language per preview (about 3 to 6 cents), saved in R2, so showing it again is free.
+// At most LANG_CAP languages per preview. Buying: the list of formats ends with a QR code the owner scans to check out
+// on their own phone (their card, Apple Pay), a checkout button for the tablet, and "Start free" with their email.
 import QRCode from "qrcode/lib/browser.js";
 import { parseJsonOrNull, simplePage } from "../lib/http.js";
 import { escapeHtml } from "../lib/email.js";
@@ -14,6 +19,7 @@ import { buildPrintHtml } from "../producers/menu-qr/print-html.js";
 import { buildTvMenuHtml, qrModulesToSvg } from "../producers/menu-qr/tv-menu.js";
 import { parseMenuHtml } from "../producers/menu-care/menu-edit.js";
 import { menuDesignFor } from "../producers/menu-qr/menu-designs.js";
+import { LANGUAGES, pageStrings, translateMenuHtml, translateStrings } from "../producers/menu-qr/translate.js";
 
 const SITE = "https://menu-made.com";
 const FORMATS = [
@@ -21,8 +27,10 @@ const FORMATS = [
   { key: "tent", label: "Table tent", blurb: "Folds to stand on each table, with the QR code and how to use it." },
   { key: "trifold", label: "Tri-fold", blurb: "A folded takeout menu, both sides." },
   { key: "print", label: "Print menu", blurb: "The whole menu on letter pages, with the QR code." },
-  { key: "tv", label: "TV screen", blurb: "The menu for a TV or display, long menus rotate through screens." }
+  { key: "tv", label: "TV screen", blurb: "The menu for a TV or display, long menus rotate through screens." },
+  { key: "lang", label: "Languages", blurb: "The same menu in Chinese, Spanish, Vietnamese and more. Guests tap their language." }
 ];
+const LANG_CAP = 6;
 const PRINT_FORMAT = { tent: "table-tent.pdf", trifold: "tri-fold.pdf", print: "print.pdf" };
 
 const showcaseUrl = (token, design, format = "") => `/api/menu-preview/showcase/${token}/${design}${format ? `/${format}` : ""}`;
@@ -53,13 +61,22 @@ function onScreen(html, token, design, title, extraCss = "") {
     .replace("</body>", () => `</div></body>`);
 }
 
-function hubPage(token, design, business) {
+function hubPage(token, design, business, buy) {
   const { css, bar } = chrome(token, design, business || "Your menu");
   const cards = [`<a class="card" href="${escapeHtml(`${SITE}/api/menu-preview/view/${token}/${design}`)}"><b>Phone menu</b><small>What guests see when they scan.</small></a>`,
     ...FORMATS.map((f) => `<a class="card" href="${escapeHtml(showcaseUrl(token, design, f.key))}"><b>${escapeHtml(f.label)}</b><small>${escapeHtml(f.blurb)}</small></a>`)].join("\n");
+  const free = buy.freeOpen ? `<form class="free" method="post" action="${escapeHtml(showcaseUrl(token, design, "free"))}" onsubmit="this.querySelector('button').disabled=true">
+      <label for="mm-free-email"><b>Or start free today</b><small>Classic design, its own link and QR code, free for as long as they keep it. We email them one link to confirm.</small></label>
+      <div><input id="mm-free-email" name="email" type="email" required autocomplete="off" placeholder="Their email" value="${escapeHtml(buy.email || "")}"><button type="submit">Start free</button></div></form>` : "";
   return `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="robots" content="noindex,nofollow"><title>Everything you get</title>${css}
-<style>body{margin:0;background:#0b2532;color:#e8f6f7;font:16px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}main{max-width:900px;margin:0 auto;padding:22px 16px 40px}h1{margin:0 0 6px;font-size:26px}p{margin:0 0 18px;opacity:.85}.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:14px}.card{display:grid;gap:6px;padding:20px;border-radius:14px;background:#123848;color:#fff;text-decoration:none;box-shadow:inset 0 0 0 2px #00a7b555}.card b{font-size:20px}.card small{font-size:14px;opacity:.85}.card:active{background:#00a7b5}</style></head>
-<body>${bar.replace(/<a [^>]*>All formats<\/a>/, "")}<main><h1>Everything ${escapeHtml(business || "your business")} gets</h1><p>One menu, made once, in every format. Tap any of them.</p><div class="grid">${cards}</div></main></body></html>`;
+<style>body{margin:0;background:#0b2532;color:#e8f6f7;font:16px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}main{max-width:900px;margin:0 auto;padding:22px 16px 40px}h1{margin:0 0 6px;font-size:26px}h2{margin:30px 0 6px;font-size:22px}p{margin:0 0 18px;opacity:.85}.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:14px}.card{display:grid;gap:6px;padding:20px;border-radius:14px;background:#123848;color:#fff;text-decoration:none;box-shadow:inset 0 0 0 2px #00a7b555}.card b{font-size:20px}.card small{font-size:14px;opacity:.85}.card:active{background:#00a7b5}
+.buy{display:grid;grid-template-columns:auto 1fr;gap:20px;align-items:center;padding:20px;border-radius:14px;background:#fff;color:#071f2c}.buy svg{width:180px;height:180px;fill:#000;background:#fff}.buy b{display:block;font-size:20px}.buy p{opacity:1;margin:6px 0 14px}.buy a{display:inline-block;padding:12px 18px;border-radius:8px;background:#00a7b5;color:#fff;font-weight:700;text-decoration:none}
+.free{display:grid;gap:10px;margin-top:14px;padding:20px;border-radius:14px;background:#123848}.free label{display:grid;gap:4px}.free small{opacity:.85}.free div{display:flex;gap:10px;flex-wrap:wrap}.free input{flex:1;min-width:200px;padding:12px;border-radius:8px;border:1px solid #ffffff4d;background:#0d2a38;color:#fff;font:16px system-ui,sans-serif}.free button{padding:12px 18px;border:0;border-radius:8px;background:#ffffff1f;box-shadow:inset 0 0 0 2px #00d6e6;color:#fff;font:700 16px system-ui,sans-serif}
+@media (max-width:560px){.buy{grid-template-columns:1fr;justify-items:center;text-align:center}}</style></head>
+<body>${bar.replace(/<a [^>]*>All formats<\/a>/, "")}<main><h1>Everything ${escapeHtml(business || "your business")} gets</h1><p>One menu, made once, in every format. Tap any of them.</p><div class="grid">${cards}</div>
+<h2>Ready to make it live?</h2>
+<div class="buy">${buy.qrSvg}<div><b>Scan with your phone to sign up</b><p>Opens checkout on your own phone, with this menu and design already attached. ${escapeHtml(buy.label)}. Your menu goes live as soon as we've checked it, usually the same day.</p><a href="${escapeHtml(buy.url)}">Check out on this tablet instead</a></div></div>
+${free}</main></body></html>`;
 }
 
 function qrPage(token, design, business, qrSvg, qrUrl) {
@@ -78,16 +95,69 @@ function tvPage(token, design, screen, pageNumber) {
 <body>${bar}<iframe class="tv" title="TV screen" sandbox srcdoc="${escapeHtml(screen.html)}"></iframe>${pages}</body></html>`;
 }
 
-async function handleRepShowcase(request, env, token, design, format, { now = Date.now(), loadLogo, renderDesign } = {}) {
+// The phone menu in another language. ?lang=<code> translates (once per language, saved); no ?lang shows English
+// with every language to pick from. A tap shows "Translating…" while the AI call runs.
+async function languagePage(request, env, token, design, designHtml, opts) {
+  const base = showcaseUrl(token, design, "lang");
+  const want = new URL(request.url).searchParams.get("lang");
+  const known = new Set(LANGUAGES.map((l) => l.code));
+  const lang = want && known.has(want) ? want : null;
+  const strings = {};
+  if (lang) {
+    const key = `menu-previews/${token}/lang-${design}-${lang}.json`;
+    let saved = parseJsonOrNull(await (await env.ASSETS.get(key))?.text());
+    if (!saved) {
+      const done = (await env.ASSETS.list?.({ prefix: `menu-previews/${token}/lang-` }).catch(() => null))?.objects?.length || 0;
+      const sorry = (text) => {
+        const { css, bar } = chrome(token, design, "Languages");
+        return new Response(`<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">${css}</head><body style="margin:0;font:17px/1.5 system-ui,sans-serif">${bar}<p style="padding:24px">${escapeHtml(text)}</p></body></html>`, { status: 200, headers: HEADERS });
+      };
+      if (done >= LANG_CAP) return sorry(`This preview already has ${LANG_CAP} languages, the most a preview can show.`);
+      if (!env.ANTHROPIC_API_KEY) return sorry("Translation isn't available right now.");
+      try {
+        saved = await translateStrings(env, { businessId: `preview:${token}`, lang, texts: pageStrings(designHtml) }, opts.translateDeps);
+      } catch (error) {
+        console.error("Rep showcase translation failed:", error instanceof Error ? error.message : String(error));
+        return sorry("The translation didn't come through. Try again in a moment.");
+      }
+      await env.ASSETS.put(key, JSON.stringify(saved), { httpMetadata: { contentType: "application/json" } });
+    }
+    Object.assign(strings, saved);
+  }
+  const page = translateMenuHtml(designHtml, { lang, chosen: LANGUAGES.map((l) => l.code), row: { strings: lang ? { [lang]: strings } : {}, overrides: {} }, hostedUrl: base });
+  const { css, bar } = chrome(token, design, "Languages");
+  const busy = `<div id="mm-busy" style="position:fixed;inset:0;z-index:30;display:none;place-items:center;background:rgba(4,16,24,.7);color:#fff;font:700 20px system-ui,sans-serif">Translating…</div><script>document.addEventListener("click",function(e){var a=e.target.closest&&e.target.closest(".mm-langs a");if(a&&!a.hasAttribute("aria-current")){document.getElementById("mm-busy").style.display="grid";}});window.addEventListener("pageshow",function(){document.getElementById("mm-busy").style.display="none";});</script>`;
+  const html = page.replace("</head>", () => `${css}<style>.mm-langs{position:sticky;top:52px;z-index:15}</style></head>`).replace(/<body([^>]*)>/, (m) => `${m}${bar}${busy}`);
+  return new Response(html, { status: 200, headers: HEADERS });
+}
+
+async function handleRepShowcase(request, env, token, design, format, opts = {}) {
+  const { now = Date.now(), loadLogo, renderDesign } = opts;
   const gone = () => simplePage(410, "Not available", "<p>This preview has ended, or it wasn't made in rep mode.</p>");
   if (!/^[a-f0-9]{36}$/.test(token) || !env.DB || !env.ASSETS || !menuDesignFor(design)) return gone();
-  if (format && !FORMATS.some((f) => f.key === format)) return gone();
-  const row = await env.DB.prepare(`SELECT status, expires_at, campaign FROM menu_previews WHERE token = ?`).bind(token).first();
+  if (format && format !== "free" && !FORMATS.some((f) => f.key === format)) return gone();
+  const row = await env.DB.prepare(`SELECT status, expires_at, campaign, email, occasion FROM menu_previews WHERE token = ?`).bind(token).first();
   if (!row || row.campaign !== "rep" || row.status !== "READY" || row.expires_at <= new Date(now).toISOString()) return gone();
   const data = parseJsonOrNull(await (await env.ASSETS.get(`menu-previews/${token}/data.json`))?.text());
   if (!data?.menu) return gone();
   const business = data.custom?.name || data.business || "";
-  if (!format) return new Response(hubPage(token, design, business), { status: 200, headers: HEADERS });
+  if (!format) {
+    const url = opts.chooseUrl(token, design);
+    // A holiday menu has its own price on the Start page and no free plan.
+    const buy = { url, label: row.occasion ? "The holiday price shows at checkout" : opts.buyLabel, qrSvg: qrModulesToSvg(QRCode.create(url, { errorCorrectionLevel: "M" }).modules),
+      freeOpen: !row.occasion, email: row.email && row.email.toLowerCase() !== String(opts.ownerEmail || "").toLowerCase() ? row.email : "" };
+    return new Response(hubPage(token, design, business, buy), { status: 200, headers: HEADERS });
+  }
+  if (format === "free") {
+    if (request.method !== "POST") return Response.redirect(`${SITE}${showcaseUrl(token, design)}`, 303);
+    const email = String((await request.formData().catch(() => null))?.get("email") || "").trim().toLowerCase();
+    if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email) || email.length > 200 || email === String(opts.ownerEmail || "").toLowerCase()) {
+      return simplePage(400, "Their email", "<p>Type the business's own email address, then press Start free again.</p>");
+    }
+    // A rep preview made without the owner's email holds your inbox; the business's own address takes its place.
+    await env.DB.prepare(`UPDATE menu_previews SET email = ? WHERE token = ? AND campaign = 'rep'`).bind(email, token).run();
+    return opts.startFree(new Request(`${SITE}/api/menu-preview/free/${token}`, { method: "POST" }), env, token, { now });
+  }
 
   const designHtml = renderDesign(data, design, await loadLogo(env, token, data.custom));
   const qrUrl = `${SITE}/api/menu-preview/view/${token}/${design}`;
@@ -98,6 +168,7 @@ async function handleRepShowcase(request, env, token, design, format, { now = Da
     return new Response(`<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">${css}</head><body style="margin:0;font:17px/1.5 system-ui,sans-serif">${bar}<p style="padding:24px">${escapeHtml(text)}</p></body></html>`, { status: 200, headers: HEADERS });
   };
 
+  if (format === "lang") return languagePage(request, env, token, design, designHtml, opts);
   if (format === "qr") return new Response(qrPage(token, design, business, qrSvg, qrUrl), { status: 200, headers: HEADERS });
   if (format === "tv") {
     const parsed = (() => { try { return parseMenuHtml(designHtml); } catch { return null; } })();
