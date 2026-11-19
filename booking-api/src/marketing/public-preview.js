@@ -47,7 +47,7 @@ import { pausedForSale } from "../lib/switches.js";
 import { signLinkToken, verifyLinkToken } from "../lib/links.js";
 import { ownerEmailAddress } from "../lib/config.js";
 import { simplePage } from "../lib/http.js";
-import { addFreeButton, freeButton } from "./free-menu.js";
+import { addFreeButton, freeButton, handleFreeStart } from "./free-menu.js";
 import { addShowcaseButton, handleRepShowcase } from "./rep-showcase.js";
 
 const PREVIEW_HOURS = 72;
@@ -781,12 +781,15 @@ async function handlePreviewHandoff(env, token, { now = Date.now() } = {}) {
   // What this email will be charged for the holiday (59, 30 for a second menu, or 0 when an order for both already
   // covers it), so the Start page shows the real total. Checkout prices it again from the email typed there.
   const quote = isOccasion(row.occasion) ? await holidayQuote(env, row.email, row.occasion, { now }).catch(() => null) : null;
-  return json({ ok: true, business: row.business, email: row.email, ...(file ? { request_id: row.request_id } : {}), ...chosen, ...holiday, ...(quote ? { holiday_price_cents: quote.price_cents, holiday_prepaid: quote.prepaid === true } : {}) });
+  // A rep preview made without the business's email holds the owner inbox: the buyer types their own at checkout.
+  const email = row.campaign === "rep" && String(row.email || "").toLowerCase() === String(ownerEmailAddress(env)).toLowerCase() ? "" : row.email;
+  return json({ ok: true, business: row.business, email, ...(file ? { request_id: row.request_id } : {}), ...chosen, ...holiday, ...(quote ? { holiday_price_cents: quote.price_cents, holiday_prepaid: quote.prepaid === true } : {}) });
 }
 
 // GET /api/menu-preview/showcase/<token>/<design>[/<format>] (rep-showcase.js), drawn from the stored read.
 function handlePreviewShowcase(request, env, token, design, format, opts = {}) {
-  return handleRepShowcase(request, env, token, design, format, { ...opts, loadLogo: loadPreviewLogo, renderDesign: renderMenuDesign });
+  return handleRepShowcase(request, env, token, design, format, { ...opts, loadLogo: loadPreviewLogo, renderDesign: renderMenuDesign,
+    chooseUrl, buyLabel: makeLiveLabel(null).replace(/^Make it live: /, ""), ownerEmail: ownerEmailAddress(env), startFree: handleFreeStart });
 }
 
 export { handleRepLink, handlePreviewShowcase, repUrl, REP_PER_DAY };
