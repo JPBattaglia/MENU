@@ -1,7 +1,18 @@
-// The clock the daily self-tests schedule themselves by. Only the deployed worker runs them: wrangler.jsonc sets
+// The clock the scheduled self-tests start themselves by. Only the deployed worker runs them: wrangler.jsonc sets
 // SELFTEST_SCHEDULE = "on". Anywhere else (local and CI tests) this returns null, so a test that runs a scheduled tick
-// never picks up whichever daily self-test is due at that hour of the real day (before Oct 29, 2026, four tests failed
+// never picks up whichever self-test is due at that hour of the real day (before Oct 29, 2026, four tests failed
 // between about 8 am and noon PT). Tests of the schedule itself pass their own `now`.
-const dailyClock = (env) => (String(env?.SELFTEST_SCHEDULE || "") === "on" ? new Date() : null);
+//
+// WEEKLY, not daily (owner, Nov 19, 2026): most self-tests run a real order through Claude, and that is paid for from
+// the owner's Anthropic credit. Run every day they used up the credit. With "on" they now start on Mondays (UTC) only;
+// a run already under way still finishes, because its steps don't use this clock. "daily" brings back every day.
+const SELFTEST_WEEKDAY_UTC = 1; // Monday
 
-export { dailyClock };
+function dailyClock(env, now = new Date()) {
+  const mode = String(env?.SELFTEST_SCHEDULE || "");
+  if (mode === "daily") return now;
+  if (mode !== "on") return null;
+  return now.getUTCDay() === SELFTEST_WEEKDAY_UTC ? now : null;
+}
+
+export { dailyClock, SELFTEST_WEEKDAY_UTC };

@@ -25,7 +25,8 @@ import { githubTokenItem, lastDayLine, operationsNeedingOwner } from "../admin/h
 
 const LINK_KIND = "system-coverage";
 const LINK_TTL_DAYS = 7;
-const FRESH_HOURS = 36;
+// Self-tests run weekly since Nov 19, 2026 (daily-clock.js), so a pass counts as fresh for 8 days.
+const FRESH_HOURS = 8 * 24;
 const REPORT_HOUR_UTC = 22;
 
 // Offer code -> the self-test kinds that prove it (each: what it covers for that offer).
@@ -225,7 +226,7 @@ function coveragePage(map, token = "", notice = "", now = Date.parse(map.generat
     : `<p style="color:#b42318"><strong>${map.gaps.length} item${map.gaps.length === 1 ? " needs" : "s need"} attention:</strong> ${map.gaps.map((g) => `${escapeHtml(g.name)} (${LABEL[g.status].toLowerCase()})`).join(", ")}.</p>`;
   const runForm = token ? `<form method="post" action="/api/system/coverage"><input type="hidden" name="t" value="${escapeHtml(token)}"><input type="hidden" name="run" value="1"><button type="submit">Run every self-test now</button> <small>Results arrive over the next hour; you'll only get an email if something fails.</small></form>` : "";
   return simplePage(200, "System coverage", `${notice}${summary}${runForm}
-<p><small>Stale means the self-test hasn't passed in the last ${map.fresh_hours} hours, usually because it isn't on a daily schedule yet. Checked ${escapeHtml(map.generated_at.slice(0, 16).replace("T", " "))} UTC.</small></p>
+<p><small>Stale means the self-test hasn't passed in the last ${map.fresh_hours} hours, usually because it isn't on the weekly schedule yet. Checked ${escapeHtml(map.generated_at.slice(0, 16).replace("T", " "))} UTC.</small></p>
 <h2 style="font-size:18px">What's for sale</h2>${table(map.offers)}
 <h2 style="font-size:18px">Shared systems</h2>${table(map.systems)}
 <h2 style="font-size:18px">Checked elsewhere</h2>${map.elsewhere.map((e) => `<p><strong>${escapeHtml(e.name)}</strong>: ${escapeHtml(e.how)}</p>`).join("")}`);

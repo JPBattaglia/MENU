@@ -1,4 +1,4 @@
-import { bytesToBase64 } from "../../lib/util.js";
+import { bytesToBase64, sha256Hex } from "../../lib/util.js";
 import { tagMenu } from "./dietary.js";
 
 // Reads an uploaded menu PDF or photo with Claude and returns the menu as clean, structured text.
@@ -93,7 +93,33 @@ function formatExtractedMenu(menu) {
   return { text: lines.join("\n").trim(), itemCount };
 }
 
+// Reading cache (owner, Nov 19, 2026: paid Claude reads were using up the Anthropic credit). The same file or text read
+// with the same model gives the same menu, so a successful read is kept for 30 days in the R2 bucket (ASSETS, under
+// ai-read-cache/) and reused: a free preview that then becomes a paid order, a prospect demo made again, and every
+// self-test re-reading its sample menu cost one read, not one each. Without the bucket (tests) nothing is cached.
+const READ_CACHE_DAYS = 30;
+const READ_CACHE_PREFIX = "ai-read-cache/v1/";
+
+async function readCacheKey(contentBlock, model) {
+  return `${READ_CACHE_PREFIX}${await sha256Hex(`${model}\n${JSON.stringify(contentBlock)}`)}.json`;
+}
+
 async function readMenuWithClaude(contentBlock, env) {
+  const model = env.MENU_EXTRACTION_MODEL || MENU_EXTRACTION_MODEL;
+  const bucket = env.DISABLE_AI_READ_CACHE ? null : env.ASSETS;
+  const key = bucket?.get ? await readCacheKey(contentBlock, model).catch(() => null) : null;
+  if (key) {
+    const hit = await bucket.get(key).catch(() => null);
+    const fresh = hit && Date.now() - new Date(hit.uploaded).getTime() < READ_CACHE_DAYS * 86400000;
+    const saved = fresh ? await hit.json().catch(() => null) : null;
+    if (saved?.menu && saved?.text) return { ...saved, extraction: { ...saved.extraction, cached: true, input_tokens: 0, output_tokens: 0 } };
+  }
+  const result = await readMenuWithClaudeUncached(contentBlock, env, model);
+  if (key && bucket.put) await bucket.put(key, JSON.stringify(result), { httpMetadata: { contentType: "application/json" } }).catch(() => null);
+  return result;
+}
+
+async function readMenuWithClaudeUncached(contentBlock, env, model) {
   const response = await fetch(ANTHROPIC_MESSAGES_ENDPOINT, {
     method: "POST",
     headers: {
@@ -102,7 +128,7 @@ async function readMenuWithClaude(contentBlock, env) {
       "content-type": "application/json"
     },
     body: JSON.stringify({
-      model: env.MENU_EXTRACTION_MODEL || MENU_EXTRACTION_MODEL,
+      model,
       max_tokens: 16000,
       tools: [MENU_EXTRACTION_TOOL],
       // Forced tool_choice is not supported by every model; the instruction below requires the tool instead.
