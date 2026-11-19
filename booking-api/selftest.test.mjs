@@ -196,7 +196,7 @@ test('a daily self-test is scheduled at 8am Pacific, at most once a day', async 
 test('the deployed worker keeps the daily self-test schedule on (SELFTEST_SCHEDULE), and nothing else schedules them', async () => {
   const { readFileSync } = await import('node:fs');
   const config = readFileSync(new URL('./wrangler.jsonc', import.meta.url), 'utf8');
-  assert.match(config, /"SELFTEST_SCHEDULE":\s*"on"/, 'without it every daily self-test silently stops in production');
+  assert.match(config, /"SELFTEST_SCHEDULE":\s*"daily"/, 'daily (owner, Nov 19, 2026); without it every self-test silently stops in production');
   const { dailyClock } = await import('./src/selftest/daily-clock.js');
   assert.equal(dailyClock({}), null);
   // Weekly since Nov 19, 2026 (the self-tests were using up the Anthropic credit): Mondays UTC only.

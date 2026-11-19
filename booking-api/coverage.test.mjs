@@ -48,7 +48,7 @@ test('every public offer in the live catalog has at least one self-test listed',
   for (const code of live) assert.ok(cov.OFFER_TESTS[code]?.length, `${code} has no self-test listed`);
 });
 
-test('green when every public offer and shared system passed within 8 days; hidden offers do not count', async () => {
+test('green when every public offer and shared system passed within 36 hours; hidden offers do not count', async () => {
   const f = setup();
   allSystemsPass(f);
   f.pass('MENU_CARE_EDIT', 5);
@@ -72,7 +72,7 @@ test('an offer taken off sale with no self-test is left off the map', async () =
 test('red for a stale test, a test that never passed, and an offer with no self-test; the last failure is shown', async () => {
   const f = setup({ offers: [['MENU_CARE', 1], ['GUEST_APP_SETUP', 1], ['WEBSITE_PACKAGE', 1], ['BRAND_NEW_THING', 1]] });
   allSystemsPass(f);
-  f.pass('MENU_CARE_EDIT', 200);
+  f.pass('MENU_CARE_EDIT', 40);
   f.pass('MENU_CARE_EDIT', 3, 'FAILED', 'Hosted menu still shows the old price');
   f.pass('WEBSITE_PACKAGE_RUN', 2); // its trial test never ran
   const map = await cov.buildCoverage(f.env, NOW);
@@ -91,7 +91,7 @@ test('a shared system that stopped passing makes it red', async () => {
   allSystemsPass(f);
   f.pass('MENU_CARE_EDIT', 1);
   f.DB.raw.exec(`DELETE FROM self_tests WHERE kind = 'ACCOUNT_SIGNIN'`);
-  f.pass('ACCOUNT_SIGNIN', 210);
+  f.pass('ACCOUNT_SIGNIN', 50);
   const map = await cov.buildCoverage(f.env, NOW);
   assert.deepEqual(map.gaps, [{ code: 'ACCOUNT_SIGNIN', name: 'Customer accounts', status: 'STALE' }]);
 });

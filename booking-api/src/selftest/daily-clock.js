@@ -6,6 +6,8 @@
 // WEEKLY, not daily (owner, Nov 19, 2026): most self-tests run a real order through Claude, and that is paid for from
 // the owner's Anthropic credit. Run every day they used up the credit. With "on" they now start on Mondays (UTC) only;
 // a run already under way still finishes, because its steps don't use this clock. "daily" brings back every day.
+// Later Nov 19, 2026 the owner linked his Max plan's free $100/month API credit and chose daily again: wrangler.jsonc
+// sets "daily". The site's AI spend emails (lib/ai-spend.js) warn at 50% and 80% of the month's $100.
 const SELFTEST_WEEKDAY_UTC = 1; // Monday
 
 function dailyClock(env, now = new Date()) {
