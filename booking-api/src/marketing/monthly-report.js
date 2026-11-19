@@ -6,6 +6,7 @@
 import { SELF_TEST_EMAIL, brandedEmailHtml, sendTransactionalEmail } from "../lib/email.js";
 import { ownerEmailAddress } from "../lib/config.js";
 import { nowIso } from "../lib/http.js";
+import { dollars, readAiSpend, topPurposes } from "../lib/ai-spend.js";
 import { CAMPAIGNS, campaignVisits, freePreviews, holidayNumbers, menuCheckouts, menuSales, money, ninoStepLine, ninoSteps, outreach, shopSales } from "./weekly-numbers.js";
 
 const SEND_HOUR_UTC = 16;   // 8 am PST
@@ -97,6 +98,9 @@ async function monthlyReport(env, now = Date.now()) {
   }
   for (const [name, c] of (steps?.bySource || []).slice(0, 4)) rows.push([`Nino site: ${name}`, ninoStepLine(c)]);
   rows.push(["Apps", `MΞNU opened ${plural(apps.menumade || 0, "time")}, Nino opened ${plural(apps.nino || 0, "time")}.`]);
+  // Running cost (owner, Nov 19, 2026): what the site spent on Claude, and on what. An estimate; the Console is the bill.
+  const ai = await readAiSpend(env, m.key);
+  rows.push(["Claude API spend", ai.calls ? `About ${dollars(ai.usd)} over ${plural(ai.calls, "call")}: ${topPurposes(ai.by)}.` : "None recorded."]);
   const sales = mm.orders + (shopTotal?.sales || 0);
   const subject = `${m.label} marketing report: ${plural(sales, "sale")}`;
   const paragraphs = [`Both businesses for ${m.label} (Pacific time).`,
