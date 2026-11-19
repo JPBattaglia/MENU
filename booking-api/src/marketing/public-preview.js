@@ -563,6 +563,19 @@ async function handlePreviewView(request, env, token, { now = Date.now(), design
   // before this check existed) would still name a price. Checked on every open: when that order covers this
   // holiday, the button says so.
   let page = await object.text();
+  // Pages are stored when a preview is made or customized, so previews made before the Customize window's diet and
+  // allergen marks (Nov 18, 2026) still hold the old window. On their next open every design is rebuilt once from
+  // data.json (no AI read), then served; on any failure the stored page is served as it was.
+  if (page.includes('id="mm-items"') && !page.includes("mm-it-marks")) {
+    try {
+      const data = parseJsonOrNull(await (await env.ASSETS.get(`menu-previews/${token}/data.json`))?.text());
+      if (data?.menu) {
+        await storeMenuDesigns(env, token, data);
+        const fresh = await env.ASSETS.get(`menu-previews/${token}/${key}.html`);
+        if (fresh) page = await fresh.text();
+      }
+    } catch { /* keep the stored page */ }
+  }
   if (isOccasion(row.occasion) && page.includes('class="mm-gen-pick"') && (await holidayQuote(env, row.email, row.occasion, { now }).catch(() => null))?.prepaid === true) {
     page = page.replace(/(<a class="mm-gen-pick"[^>]*>)[^<]*(<\/a>)/g, (_, open, close) => `${open}${escapeHtml(PREPAID_LABEL)}${close}`);
   }
