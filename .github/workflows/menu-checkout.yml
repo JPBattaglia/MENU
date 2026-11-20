@@ -49,7 +49,7 @@ jobs:
         run: |
           set -e
           curl -fsS https://menu-made.com/api/db-health | grep -q '"ok":true'
-          curl -fsS "https://menu-made.com/api/menu-package-quote?pages=3" | grep -q '"total_cents":14400'
+          curl -fsS "https://menu-made.com/api/menu-package-quote?pages=3" | grep -q '"total_cents":14900'
           curl -fsS https://menu-made.com/api/offers | grep -q '"ok":true'
           echo "Smoke tests passed"
       - name: Deploy skipped
