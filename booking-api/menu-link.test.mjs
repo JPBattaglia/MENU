@@ -87,7 +87,7 @@ test('a text menu page is printed by the browser, or written out as text when no
   const items = Array.from({ length: 8 }, (_, i) => `<li>Dish ${i} <span>$1${i}.00</span></li>`).join('');
   const { fetcher } = site({ 'https://joes.com/menu': `<html><body><ul>${items}</ul></body></html>` });
   const printed = new Uint8Array([...PDF]);
-  const browser = { BROWSER: { quickAction: async (action, opts) => { assert.equal(action, 'pdf'); assert.equal(opts.url, 'https://joes.com/menu'); return new Response(printed); } } };
+  const browser = { BROWSER: { quickAction: async (action, opts) => { assert.equal(action, 'pdf'); assert.match(opts.html, /Dish 3/); assert.ok(!opts.url, 'the clean text, not the page with its pop-ups'); return new Response(printed); } } };
   assert.equal((await findMenuAtLink('https://joes.com/menu', browser, { fetcher })).from, 'page');
   const plain = await findMenuAtLink('https://joes.com/menu', noBrowser, { fetcher });
   assert.equal(plain.from, 'text');
@@ -160,6 +160,7 @@ test('food photos are not a menu: an AI look picks the menu photos, and with no 
 });
 
 test('bare prices at the end of dish lines count as a text menu', () => {
+  assert.equal(priceCount(['Welcome', ...Array.from({ length: 60 }, (_, i) => `We have cooked here for many happy years, line ${i}.`), 'Open 7', 'Seats 40', 'Rooms 3', 'Floors 2', 'Doors 9', 'Bars 1'].join('\n')), 0, 'prose with a few numbers is not a menu');
   const text = ['Roast chicken for two 64', 'Caesar salad 16', 'Burger 21', 'Oysters ½ dozen 24', 'Polenta 12', 'Espresso granita 9', '658 Market St, Suite 4'].join('\n');
   assert.equal(priceCount(text), 6);
 });
