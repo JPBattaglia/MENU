@@ -498,8 +498,8 @@ async function holidayReminder(env, row, email, { url, ends, n, now }) {
   const when = hours <= 30 ? "tomorrow" : `on ${ends}`;
   const prices = holidayPrices(now);
   const priceLine = prices.early_bird
-    ? `Make it live for ${holidayDollars(prices.first_cents)} (early-bird price through ${prices.early_bird_ends}, then ${holidayDollars(prices.regular_first_cents)}), or free when you start MΞNU Plus at checkout.`
-    : `Make it live for ${holidayDollars(prices.first_cents)}, or free when you start MΞNU Plus at checkout.`;
+    ? `Make it live for ${holidayDollars(prices.first_cents)} (early-bird price through ${prices.early_bird_ends}, then ${holidayDollars(prices.regular_first_cents)}), or free when you start any MΞNU plan at checkout.`
+    : `Make it live for ${holidayDollars(prices.first_cents)}, or free when you start any MΞNU plan at checkout.`;
   const order = startUrl(row.token, row.occasion);
   return sendTransactionalEmail(env, {
     to: email,
