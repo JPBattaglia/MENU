@@ -3298,11 +3298,8 @@ html.mm-lightbox-open { overflow: hidden; }
 /* MΞNU free plan card in the menu editor (stage 15, Nov 14, 2026) */
 .mm-free-card{border-color:rgba(0,214,230,.6)}
 .mm-free-card h2{margin-top:0}
-/* MΞNU Plus on the plans page (stage 15, Nov 14, 2026) */
-.mm-plus{max-width:none;margin:0 0 24px;display:grid;grid-template-columns:minmax(220px,1fr) 2fr;gap:8px 28px;align-items:start}
-.mm-plus .mm-checks{margin:0}
-.mm-plus .btn,.mm-plus .mini{grid-column:1/-1;justify-self:start}
-@media (max-width:760px){.mm-plus{grid-template-columns:1fr}}
+/* (The Nov 14 MΞNU Plus section card is gone; its .mm-plus grid rule clashed with the "+ $149 setup" price note,
+   splitting it over three lines with a stray $149 beside the price. Removed Nov 19, 2026.) */
 .mm-design-list{display:grid;gap:0}
 .mm-design-row{padding:10px 0;border-top:1px solid rgba(0,214,230,.25);margin:0}
 .mm-design-row small{opacity:.75}
