@@ -164,3 +164,16 @@ test('bare prices at the end of dish lines count as a text menu', () => {
   const text = ['Roast chicken for two 64', 'Caesar salad 16', 'Burger 21', 'Oysters ½ dozen 24', 'Polenta 12', 'Espresso granita 9', '658 Market St, Suite 4'].join('\n');
   assert.equal(priceCount(text), 6);
 });
+
+test('a menu written out with no prices: used when the page is the menu, after links and photos found nothing', async () => {
+  const dishes = ['Marinated olives', 'Acme levain bread with butter', 'Shoestring potatoes', 'Zuni Caesar salad with anchovies', 'Bowl of polenta with mascarpone', 'Wood fire-roasted tomato soup', 'Pizza with Belfiore mozzarella', 'Spaghetti with wild nettles', 'Roast chicken for two with bread salad'];
+  const { fetcher } = site({
+    'https://zuni.com/': '<html><body><a href="/#menu">Menus</a><a href="/menus/">View our sample menus here</a><p>Welcome to our cafe on Market Street since 1979.</p></body></html>',
+    'https://zuni.com/menus/': `<html><head><title>Menus</title></head><body><h1>Our menus</h1>${dishes.map((d) => `<p>${d}, with seasonal vegetables from local farms</p>`).join('')}</body></html>`
+  });
+  const found = await findMenuAtLink('https://zuni.com/', noBrowser, { fetcher });
+  assert.equal(found.contentType, 'application/pdf');
+  assert.equal(found.from, 'text');
+  const home = site({ 'https://joes.com/': '<html><body>' + '<p>Welcome to our family restaurant, open since 1982.</p>'.repeat(12) + '</body></html>' });
+  await assert.rejects(findMenuAtLink('https://joes.com/', noBrowser, { fetcher: home.fetcher }), /couldn't find/i, 'a home page with no menu section still says so');
+});
