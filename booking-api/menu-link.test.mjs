@@ -135,3 +135,31 @@ test('the endpoint returns the file with its name, answers CORS for the app, and
   assert.equal(bad.status, 422);
   assert.match((await bad.json()).error, /public website/);
 });
+
+test('food photos are not a menu: an AI look picks the menu photos, and with no key only photos named as the menu count', async (t) => {
+  const pages = {
+    'https://joes.com/menu': '<html><body><h1>Menu</h1><img src="/img/chicken.jpg"><img src="/img/IMG_2231.jpg"></body></html>',
+    'https://joes.com/img/chicken.jpg': { bytes: jpeg(1400, 934, 40000, 1), type: 'image/jpeg' },
+    'https://joes.com/img/IMG_2231.jpg': { bytes: jpeg(1200, 1700, 42000, 2), type: 'image/jpeg' }
+  };
+  const { fetcher } = site(pages);
+  await assert.rejects(findMenuAtLink('https://joes.com/menu', noBrowser, { fetcher }), /no menu on it|couldn't find/i);
+  const real = globalThis.fetch; let asked = 0;
+  globalThis.fetch = async (url, init) => {
+    assert.equal(String(url), 'https://api.anthropic.com/v1/messages'); asked++;
+    const body = JSON.parse(init.body);
+    assert.equal(body.model, 'claude-haiku-5-5');
+    assert.equal(body.messages[0].content.filter((c) => c.type === 'image').length, 2, 'both photos in one look');
+    return Response.json({ content: [{ type: 'text', text: '2' }] });
+  };
+  t.after(() => { globalThis.fetch = real; });
+  const found = await findMenuAtLink('https://joes.com/menu', { ANTHROPIC_API_KEY: 'k' }, { fetcher });
+  assert.equal(asked, 1);
+  assert.equal(found.contentType, 'image/jpeg');
+  assert.deepEqual(photoSize(found.bytes, 'image/jpeg'), { w: 1200, h: 1700 }, 'the menu photo, not the chicken');
+});
+
+test('bare prices at the end of dish lines count as a text menu', () => {
+  const text = ['Roast chicken for two 64', 'Caesar salad 16', 'Burger 21', 'Oysters ½ dozen 24', 'Polenta 12', 'Espresso granita 9', '658 Market St, Suite 4'].join('\n');
+  assert.equal(priceCount(text), 6);
+});

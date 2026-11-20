@@ -15,7 +15,8 @@
 //   - a page that links to a menu PDF       -> that PDF
 //   - a home page                           -> its "Menu" link is followed (one step) and read the same way
 //   - a page drawn by JavaScript (Toast, Square, BentoBox...) -> read again as Browser Run sees it after loading
-// Running cost: plain fetches are free; Browser Run (Workers Paid includes 10 browser hours a month) is used only to
+// Running cost: plain fetches are free; when a page shows big photos, one small-model look (a fraction of a cent)
+// picks which are the menu; Browser Run (Workers Paid includes 10 browser hours a month) is used only to
 // print a text menu, to put several photos together, or for a JavaScript page, a few seconds each. The AI read
 // afterwards is the same one an uploaded file gets.
 import { PDFDocument } from "pdf-lib";
@@ -114,7 +115,12 @@ function pageText(html) {
     .replace(/<[^>]+>/g, " ")).replace(/&nbsp;|&#160;/g, " ").replace(/[ \t]+/g, " ").replace(/\n\s*\n+/g, "\n").trim();
 }
 
-const priceCount = (text) => (String(text).match(/(^|[\s(])(\$\s?\d{1,3}(\.\d{2})?|\d{1,3}\.\d{2})(?=$|[\s),])/gm) || []).length;
+// Prices on a page: "$12", "12.50", and the bare "18" many menus end a dish line with ("Roast chicken for two 64").
+const priceCount = (text) => {
+  const marked = (String(text).match(/(^|[\s(])(\$\s?\d{1,3}(\.\d{2})?|\d{1,3}\.\d{2})(?=$|[\s),])/gm) || []).length;
+  const bare = String(text).split("\n").filter((line) => /[a-z]{3}/i.test(line) && /[a-z.)]\s*[-–|·.]*\s*\$?\d{1,3}(\.\d{1,2})?\s*$/i.test(line.trim()) && !/\b(suite|ste|no|unit|apt|floor|#)\s*\d+\s*$/i.test(line.trim())).length;
+  return Math.max(marked, bare);
+};
 const menuWord = /\b(menus?|carta|speisekarte|menú|menù|drinks?|food|dinner|lunch|brunch|breakfast|dessert|wine|cocktails?|happy[\s-]?hour|specials?)\b/i;
 const strongMenuWord = /menu|menú|menù|carta|speisekarte/i;
 const notMenuPhoto = /(logo|icon|favicon|sprite|avatar|badge|banner-ad|placeholder|spinner|loader|pixel|tracking|emoji|social|facebook|instagram|twitter|tiktok|yelp|google|apple|play-store|app-store|payment|visa|mastercard|award|map)/i;
@@ -218,6 +224,34 @@ async function fetchPhotos(candidates, fetcher, { needHint }) {
   return strong.length ? strong : kept;
 }
 
+// Which of the page's big photos are the menu and which are food, the room or the team (owner's live test, Nov 19,
+// 2026: a chicken photo and a grilled cheese came back as "the menu"). One quick look by a small model at all of them
+// together (a fraction of a cent); without a key, only photos that call themselves the menu are kept.
+const CHECK_MODEL = "claude-haiku-5-5";
+async function menuPhotosOnly(photos, env) {
+  if (!photos.length) return photos;
+  const fit = photos.filter((p) => p.bytes.length <= MAX_PHOTO_BYTES);
+  if (!env?.ANTHROPIC_API_KEY || !fit.length) return photos.filter((p) => p.score >= 10);
+  try {
+    const content = [];
+    fit.forEach((p, i) => { content.push({ type: "text", text: `Image ${i + 1}:` }); content.push({ type: "image", source: { type: "base64", media_type: p.type, data: toBase64(p.bytes) } }); });
+    content.push({ type: "text", text: "Which of these images show a restaurant or cafe MENU: a printed or written list of dishes or drinks you could order from, usually with prices (a menu board counts)? Photos of food, drinks, rooms, people or logos are not menus. Answer with only the image numbers that are menus, comma-separated, or NONE." });
+    const response = await fetch("https://api.anthropic.com/v1/messages", {
+      method: "POST",
+      headers: { "x-api-key": env.ANTHROPIC_API_KEY, "anthropic-version": "2023-06-01", "content-type": "application/json" },
+      body: JSON.stringify({ model: env.MENU_CHECK_MODEL || CHECK_MODEL, max_tokens: 30, messages: [{ role: "user", content }] }),
+      signal: AbortSignal.timeout(30000)
+    });
+    if (!response.ok) throw new Error(`check answered ${response.status}`);
+    const answer = ((await response.json())?.content || []).map((c) => c.text || "").join(" ");
+    const keep = new Set((answer.match(/\d+/g) || []).map(Number));
+    return fit.filter((p, i) => keep.has(i + 1)).map((p) => ({ ...p, checked: true }));
+  } catch (error) {
+    console.warn("menu photo check", error instanceof Error ? error.message : String(error));
+    return photos.filter((p) => p.score >= 10);
+  }
+}
+
 async function photosAsFile(photos, env, name) {
   if (photos.length === 1 && photos[0].bytes.length <= MAX_PHOTO_BYTES) {
     const p = photos[0];
@@ -275,6 +309,14 @@ async function findMenuAtLink(raw, env, { fetcher = fetch } = {}) {
       if (error instanceof LinkError) throw error;
       reason = "That website didn't answer. Check the link, or upload a photo or PDF of the menu instead."; return null;
     }
+    if (!response.ok && [401, 403, 429, 503].includes(response.status)) {
+      // Some sites turn away anything that isn't a browser; Browser Run is one.
+      const rendered = await browser(env, "content", { url: url.toString(), gotoOptions: { waitUntil: "networkidle2", timeout: 20000 } });
+      if (rendered && rendered.length > 500) {
+        const found = await fromHtml(rendered, url, depth, true);
+        if (found) return found;
+      }
+    }
     if (!response.ok) {
       reason = response.status === 403 || response.status === 429
         ? "That website doesn't let other sites read its pages. Upload a photo or PDF of the menu instead."
@@ -323,8 +365,8 @@ async function findMenuAtLink(raw, env, { fetcher = fetch } = {}) {
     }
     // 3. The menu shown as photos in the page. On a menu page any big picture counts; elsewhere only one that says
     //    it's the menu (its file name, alt text or caption), so food photos on a home page aren't taken for a menu.
-    const photos = await fetchPhotos(scan.photos, fetcher, { needHint: !isMenuPage });
-    if (photos.length && (isMenuPage || photos.some((p) => p.score >= 10))) return { ...(await photosAsFile(photos, env, name)), from: "photos" };
+    const photos = await menuPhotosOnly(await fetchPhotos(scan.photos, fetcher, { needHint: !isMenuPage }), env);
+    if (photos.length && (isMenuPage || photos.some((p) => p.score >= 10 || p.checked))) return { ...(await photosAsFile(photos, env, name)), from: "photos" };
     // 4. A home page: follow its "Menu" link once.
     if (depth === 0) {
       for (const link of scan.links.slice(0, 3)) {
