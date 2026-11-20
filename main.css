@@ -3255,6 +3255,12 @@ html.mm-lightbox-open { overflow: hidden; }
 .mm-get-app-copy p { margin: 0; }
 .mm-get-app-buttons { display: flex; flex-wrap: wrap; gap: 12px; }
 .mm-store-btn { white-space: nowrap; }
+/* Store badges lift and glow on hover and keyboard focus (owner, Nov 19, 2026). */
+.mm-store-badge { transition: transform .18s ease, box-shadow .18s ease, filter .18s ease; }
+.mm-store-badge:hover, .mm-store-badge:focus-visible { transform: translateY(-3px); box-shadow: 0 8px 22px rgba(0,214,230,.35), 0 0 0 2px rgba(0,214,230,.55); filter: brightness(1.08); }
+.mm-store-badge:active { transform: translateY(-1px); box-shadow: 0 4px 12px rgba(0,214,230,.3), 0 0 0 2px rgba(0,214,230,.55); }
+.mm-store-badge:focus-visible { outline: none; }
+@media (prefers-reduced-motion: reduce) { .mm-store-badge, .mm-store-badge:hover, .mm-store-badge:active { transform: none; transition: box-shadow .18s ease, filter .18s ease; } }
 
 /* Owner menu editor (menu-editor.html, stage 15). */
 .mm-edit{max-width:760px}
