@@ -119,7 +119,9 @@ function pageText(html) {
 const priceCount = (text) => {
   const marked = (String(text).match(/(^|[\s(])(\$\s?\d{1,3}(\.\d{2})?|\d{1,3}\.\d{2})(?=$|[\s),])/gm) || []).length;
   const bare = String(text).split("\n").filter((line) => /[a-z]{3}/i.test(line) && /[a-z.)]\s*[-–|·.]*\s*\$?\d{1,3}(\.\d{1,2})?\s*$/i.test(line.trim()) && !/\b(suite|ste|no|unit|apt|floor|#)\s*\d+\s*$/i.test(line.trim())).length;
-  return Math.max(marked, bare);
+  // A page of prose with a few numbers at line ends isn't a menu: bare prices must be a fair share of the lines.
+  const lines = String(text).split("\n").filter((line) => line.trim()).length || 1;
+  return Math.max(marked, bare / lines >= 0.15 ? bare : 0);
 };
 const menuWord = /\b(menus?|carta|speisekarte|menú|menù|drinks?|food|dinner|lunch|brunch|breakfast|dessert|wine|cocktails?|happy[\s-]?hour|specials?)\b/i;
 const strongMenuWord = /menu|menú|menù|carta|speisekarte/i;
@@ -309,7 +311,7 @@ async function findMenuAtLink(raw, env, { fetcher = fetch } = {}) {
       if (error instanceof LinkError) throw error;
       reason = "That website didn't answer. Check the link, or upload a photo or PDF of the menu instead."; return null;
     }
-    if (!response.ok && [401, 403, 429, 503].includes(response.status)) {
+    if (!response.ok && response.status !== 404 && response.status !== 410) {
       // Some sites turn away anything that isn't a browser; Browser Run is one.
       const rendered = await browser(env, "content", { url: url.toString(), gotoOptions: { waitUntil: "networkidle2", timeout: 20000 } });
       if (rendered && rendered.length > 500) {
@@ -318,7 +320,7 @@ async function findMenuAtLink(raw, env, { fetcher = fetch } = {}) {
       }
     }
     if (!response.ok) {
-      reason = response.status === 403 || response.status === 429
+      reason = [401, 403, 406, 429, 503].includes(response.status)
         ? "That website doesn't let other sites read its pages. Upload a photo or PDF of the menu instead."
         : `That link answered "${response.status}" (page not found or not public). Check the link, or upload a photo or PDF instead.`;
       return null;
@@ -349,7 +351,11 @@ async function findMenuAtLink(raw, env, { fetcher = fetch } = {}) {
     const isMenuPage = depth > 0 || strongMenuWord.test(`${url.pathname} ${url.search} ${(/<title>([^<]*)/i.exec(html) || [])[1] || ""}`);
     // 1. The page's own text is the menu: print the page, so sections and prices keep their layout.
     if (prices >= MIN_PRICES) {
-      const printed = await browser(env, "pdf", { url: url.toString(), gotoOptions: { waitUntil: "networkidle2", timeout: 20000 }, pdfOptions: { printBackground: true } });
+      // The page's words, printed clean: a print of the page itself carries cookie banners and pop-ups over the menu.
+      const esc = (t) => t.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+      const html = `<!doctype html><html><head><meta charset="utf-8"><style>body{font:12pt/1.45 system-ui,-apple-system,"Segoe UI",Roboto,"Noto Sans","Noto Sans CJK SC",sans-serif;margin:36px 46px;color:#111}p{margin:0 0 3px}</style></head><body>${
+        text.split("\n").map((line) => `<p>${esc(line.trim()) || "&nbsp;"}</p>`).join("")}</body></html>`;
+      const printed = await browser(env, "pdf", { html, pdfOptions: { printBackground: false, format: "letter" } });
       if (printed && printed.length <= MAX_FILE_BYTES) return { bytes: printed, contentType: "application/pdf", name: `${name}.pdf`, from: "page" };
       const pdf = await textPdf(text, url);
       return { bytes: pdf, contentType: "application/pdf", name: `${name}.pdf`, from: "text" };
