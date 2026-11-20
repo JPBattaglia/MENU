@@ -20,7 +20,7 @@ import { queuePush } from "../producers/guest-app/engage.js";
 const TTL = 300;
 const MM = "https://menu-made.com";
 // Bumped whenever tools/howto-videos re-records the how-to videos, so phones fetch the new files.
-const HOWTO_VIDEO_VERSION = "202611192";
+const HOWTO_VIDEO_VERSION = "202611193";
 const NINO = "https://ninobattaglia.com";
 // Nino's shop API (NinoSite commerce-api): rewards card, ideas board and the last week's new designs (fans.mjs).
 const NINO_API = "https://nino-printful-commerce-api.ijpbattaglia.workers.dev";

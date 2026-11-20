@@ -66,6 +66,8 @@
   };
   const esc = text => String(text).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 
+  // A pasted menu link also says where their website is (its logo, photos and details are read from there).
+  const siteOf = link => { try { const u = new URL(/^https?:/i.test(link.trim()) ? link.trim() : 'https://' + link.trim()); return /\.(pdf|jpe?g|png|webp)$/i.test(u.pathname) && /cdn|images|static|cloudfront|amazonaws/i.test(u.hostname) ? '' : u.origin; } catch { return ''; } };
   form.addEventListener('submit', async event => {
     event.preventDefault();
     if (busy) return;
@@ -99,7 +101,7 @@
       const response = await fetch(API + '/api/website-preview/create', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ request_id: upload.requestId, email, business, phone: $('site_phone').value, address: $('site_address').value,
-          hours: $('site_hours').value, website: $('site_current').value, city: $('site_city')?.value || '', tracking: window.MenuMadeFunnel?.tracking?.() || {}, ...(rep ? { rep } : {}), ...(window.MenuMadeSandbox === true ? { sandbox: true, sandbox_token: window.MenuMadeSandboxToken } : {}) })
+          hours: $('site_hours').value, website: $('site_current').value.trim() || siteOf($('site_link')?.value || ''), city: $('site_city')?.value || '', tracking: window.MenuMadeFunnel?.tracking?.() || {}, ...(rep ? { rep } : {}), ...(window.MenuMadeSandbox === true ? { sandbox: true, sandbox_token: window.MenuMadeSandboxToken } : {}) })
       });
       const result = await response.json().catch(() => null);
       if (response.ok && result?.ok && result.url) {

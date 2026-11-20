@@ -5,7 +5,7 @@ import assert from 'node:assert/strict';
 import { createD1, createR2 } from './test-support/d1.mjs';
 
 const { default: worker } = await import('./src/worker.js');
-const { offeringsFromMenu, prefillFromPreview, runWebsitePreviewReminders, PER_NETWORK_DAY } = await import('./src/marketing/website-preview.js');
+const { offeringsFromMenu, prefillFromPreview, runWebsitePreviewReminders, PER_NETWORK_DAY, handleWebsitePreviewCreate } = await import('./src/marketing/website-preview.js');
 
 const MENU = { sections: [{ name: 'Pizza', items: [{ name: 'Margherita', description: 'Mozzarella and basil', price: '$15' }, { name: 'Marinara', description: '', price: '$12' }] }], notes: '', unreadable: '' };
 const COPY = { tagline: 'Pizza with mozzarella and basil', intro: 'Sample Pizza serves Margherita and Marinara pizza. Call ahead or stop by.', about: ['Sample Pizza makes Margherita pizza with mozzarella and basil, and a simple Marinara, for guests who stop by or call ahead.'], meta_description: 'Sample Pizza: Margherita and Marinara pizza, hours, address and phone number.', meta_about: 'About Sample Pizza and the pizza we make every day.' };
@@ -194,7 +194,7 @@ test('a current website adds its about text, phone and address; the public limit
   const calls = stubApis(t);
   const out = await (await f.create({ request_id: await f.upload({ email: 'a@pizza.example' }), email: 'a@pizza.example', business: 'Sample Pizza', website: 'pizza.example' })).json();
   assert.equal(out.ok, true, JSON.stringify(out));
-  assert.equal(calls.site, 1); assert.equal(calls.facts, 1);
+  assert.equal(calls.site, 2, 'read once for its facts, once for its logo, photos and links'); assert.equal(calls.facts, 1);
   const contact = await (await f.get(`/api/website-preview/view/${out.token}/contact.html`)).text();
   assert.match(contact, /1 Main St, San Francisco/);
   // Same email again: the same preview back, no new build.
@@ -258,7 +258,7 @@ test('prospects: a bad-on-phone site is rebuilt from its own page; a no-website 
   const calls = stubApis(t);
   const rebuilt = await (await f.post('/api/system/prospects/site-demo', { id: 'node/10' })).json();
   assert.equal(rebuilt.ok, true, JSON.stringify(rebuilt)); assert.equal(rebuilt.from, 'their website');
-  assert.equal(calls.site, 1);
+  assert.equal(calls.site, 2, 'its page read for facts, and for its logo and photos');
   const html = await (await f.get(new URL(rebuilt.url).pathname)).text();
   assert.match(html, /A private preview made for you by Menu-made/);
   const listing = await (await f.post('/api/system/prospects/site-demo', { id: 'node/11' })).json();
@@ -352,4 +352,37 @@ test('the app reads a site preview\'s designs, buttons and Customize fields, and
   assert.equal(refused.status, 400); assert.equal((await refused.json()).ok, false);
   assert.match(await (await f.get(`/api/website-preview/view/${out.token}/d/night/index.html`)).text(), /mm-framed \.mm-preview, \.mm-framed \.mm-gen/);
   assert.equal((await f.get(`/api/website-preview/state/${out.token}`).then((r) => r.json())).customize.fields.find((x) => x.name === 'motto').value, 'Slices till late');
+});
+
+test('their current website: its logo, own photos, colour, social and order links are in all nine designs from the start', async (t) => {
+  const f = setup();
+  stubApis(t);
+  const jpg = new Uint8Array(5000); jpg.set([0xff, 0xd8, 0xff]);
+  const logo = new Uint8Array(400); logo.set([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
+  let asked = null;
+  const siteLook = async (url) => { asked = url; return {
+    logo: { bytes: logo, type: 'image/png' },
+    photos: [{ bytes: jpg, type: 'image/jpeg' }, { bytes: jpg, type: 'image/jpeg' }],
+    brand: '#8b1e2d',
+    links: { instagram: 'https://www.instagram.com/samplepizza/', yelp: 'https://www.yelp.com/biz/sample-pizza', order_url: 'https://order.toasttab.com/online/sample', order_label: 'Order online' }
+  }; };
+  const request = new Request('https://menu-made.com/api/website-preview/create', { method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ request_id: await f.upload({ email: 'look@pizza.example' }), email: 'look@pizza.example', business: 'Sample Pizza', website: 'pizza.example' }) });
+  const out = await (await handleWebsitePreviewCreate(request, f.env, { deps: { siteLook } })).json();
+  assert.equal(out.ok, true, JSON.stringify(out));
+  assert.equal(asked, 'pizza.example');
+  const data = JSON.parse(await (await f.env.ASSETS.get(`website-previews/${out.token}/data.json`)).text());
+  assert.equal(data.site.logo.path, 'img/logo.png');
+  assert.deepEqual(data.site.photos.map((p) => p.path), ['img/photo-1.jpg', 'img/photo-2.jpg'], 'their photos, not sample mood photos');
+  assert.equal(data.site.brand, '#8b1e2d');
+  assert.equal(data.site.instagram, 'https://www.instagram.com/samplepizza/');
+  assert.equal(data.site.order_url, 'https://order.toasttab.com/online/sample');
+  for (const key of ['bistro', 'night', 'farmhouse']) {
+    const html = await (await f.get(`/api/website-preview/view/${out.token}/d/${key}/index.html`)).text();
+    assert.ok(html.includes('img/logo.png'), `${key}: their logo`);
+  }
+  const all = (await Promise.all(['bistro', 'farmhouse'].map(async (k) => (await f.get(`/api/website-preview/view/${out.token}/d/${k}/index.html`)).text()))).join('');
+  assert.ok(all.includes('img/photo-1.jpg'), 'their photo is on the page');
+  assert.ok(all.includes('order.toasttab.com/online/sample'), 'their order link');
+  assert.ok((await f.get(`/api/website-preview/view/${out.token}/d/bistro/img/logo.png`)).ok, 'the logo is served');
 });
