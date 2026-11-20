@@ -134,11 +134,13 @@ async function findPhotos(htmls, env, fetcher, logo) {
     const response = await fetch("https://api.anthropic.com/v1/messages", {
       method: "POST",
       headers: { "x-api-key": env.ANTHROPIC_API_KEY, "anthropic-version": "2023-06-01", "content-type": "application/json" },
-      body: JSON.stringify({ model: env.MENU_CHECK_MODEL || CHECK_MODEL, max_tokens: 40, messages: [{ role: "user", content }] }),
+      body: JSON.stringify({ model: env.MENU_CHECK_MODEL || CHECK_MODEL, max_tokens: 1024, messages: [{ role: "user", content }] }),
       signal: AbortSignal.timeout(30000)
     });
     if (!response.ok) throw new Error(`photo check answered ${response.status}`);
-    const answer = ((await response.json())?.content || []).map((c) => c.text || "").join(" ");
+    const reply = await response.json();
+    const answer = (reply?.content || []).filter((c) => c.type === "text").map((c) => c.text || "").join(" ");
+    if (!answer.trim()) console.warn(`photo check: no answer (stop: ${reply?.stop_reason}, blocks: ${(reply?.content || []).map((c) => c.type).join(",")})`);
     const order = [...new Set((answer.match(/\d+/g) || []).map(Number))].filter((n) => n >= 1 && n <= kept.length);
     console.log(`site look photo check: "${answer.trim().slice(0, 60)}"`);
     return order.slice(0, MAX_PHOTOS).map((n) => kept[n - 1]);

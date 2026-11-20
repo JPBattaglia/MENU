@@ -243,11 +243,13 @@ async function menuPhotosOnly(photos, env) {
     const response = await fetch("https://api.anthropic.com/v1/messages", {
       method: "POST",
       headers: { "x-api-key": env.ANTHROPIC_API_KEY, "anthropic-version": "2023-06-01", "content-type": "application/json" },
-      body: JSON.stringify({ model: env.MENU_CHECK_MODEL || CHECK_MODEL, max_tokens: 30, messages: [{ role: "user", content }] }),
+      body: JSON.stringify({ model: env.MENU_CHECK_MODEL || CHECK_MODEL, max_tokens: 1024, messages: [{ role: "user", content }] }),
       signal: AbortSignal.timeout(30000)
     });
     if (!response.ok) throw new Error(`check answered ${response.status}`);
-    const answer = ((await response.json())?.content || []).map((c) => c.text || "").join(" ");
+    const reply = await response.json();
+    const answer = (reply?.content || []).filter((c) => c.type === "text").map((c) => c.text || "").join(" ");
+    if (!answer.trim()) console.warn(`photo check: no answer (stop: ${reply?.stop_reason}, blocks: ${(reply?.content || []).map((c) => c.type).join(",")})`);
     const keep = new Set((answer.match(/\d+/g) || []).map(Number));
     return fit.filter((p, i) => keep.has(i + 1)).map((p) => ({ ...p, checked: true }));
   } catch (error) {
