@@ -84,7 +84,20 @@
     const fixedName = DOMAIN_FIX[lower] || lower; const fixedTld = TLD_FIX[t] || t;
     return fixedName === lower && fixedTld === t ? null : `${user}@${fixedName}.${fixedTld}`;
   }
-  window.MenuMadeDocuments = Object.freeze({ validate, fingerprint, send, emailTypo });
+  // A menu from a link (Nov 19, 2026): the worker finds the menu at a website address (the menu page, a photo in it,
+  // a linked PDF, or the home page's Menu link) and sends it back as a file, which then goes up like a chosen one.
+  async function fromLink(link) {
+    const API = window.MenuMadeCatalog?.API ?? (location.hostname.endsWith('menu-made.com') ? '' : 'https://menu-made.com');
+    const response = await fetch(API + '/api/menu-preview/link', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ url: String(link || '').trim() }) });
+    const type = (response.headers.get('Content-Type') || '').split(';')[0].trim();
+    if (!response.ok || type === 'application/json') {
+      const result = await response.json().catch(() => null);
+      throw new Error(result?.error || 'We couldn\u2019t read that link. Upload a photo or PDF of the menu instead.');
+    }
+    const blob = await response.blob();
+    return new File([blob], response.headers.get('X-Menu-Name') || (type === 'application/pdf' ? 'menu.pdf' : 'menu.jpg'), { type });
+  }
+  window.MenuMadeDocuments = Object.freeze({ validate, fingerprint, send, emailTypo, fromLink });
   document.querySelectorAll('#lead_document, #bookingDocument').forEach(input => {
     input.addEventListener('change', () => {
       try { validate(input.files[0]); input.setCustomValidity(''); }

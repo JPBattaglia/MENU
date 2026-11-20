@@ -426,6 +426,9 @@
     row.appendChild(button("Choose file", "hy-btn hy-btn-ghost", function () { pick.click(); }));
     row.appendChild(button("Take a photo", "hy-btn hy-btn-ghost", function () { cam.click(); }));
     form.appendChild(row); form.appendChild(fileName);
+    // Or a link to the menu (Nov 19, 2026): the worker finds it on the page (a photo in it, a PDF, the home page's
+    // Menu link) and sends it back as a file. Only when this data offers the address (older data has no link_url).
+    var link = data.link_url ? field("hy-link", "Or paste a link to your menu (your menu page or home page)", "url", "", { inputmode: "url", autocomplete: "url", maxlength: "2000", placeholder: "https://yourplace.com/menu" }) : null;
     var go = button(g.start, "hy-btn hy-btn-big"); go.type = "submit"; form.appendChild(go);
     var status = el("div", "hy-status" + (gen.error ? " is-error" : ""), gen.error || ""); status.setAttribute("role", "status"); status.setAttribute("aria-live", "polite"); form.appendChild(status);
     function say(text) { status.textContent = text || ""; status.className = "hy-status is-error"; }
@@ -438,21 +441,32 @@
       // tapping again sends the address as typed.
       var typo = emailTypo(e);
       if (typo && form.getAttribute("data-typo-warned") !== e) { form.setAttribute("data-typo-warned", e); say("Did you mean " + typo + "? Fix the email, or tap again to use it as typed."); email.focus(); return; }
-      if (!chosen) { say("Choose your menu file or take a photo."); return; }
+      var linkText = link ? link.value.trim() : "";
+      if (!chosen && !linkText) { say(link ? "Choose your menu file, take a photo, or paste a link to your menu." : "Choose your menu file or take a photo."); return; }
       // As on the site (Nov 12, 2026): a PDF up to 20 MB, a photo up to 5 MB.
-      if (!/^(application\/pdf|image\/(png|jpeg|webp))$/.test(chosen.type) || !chosen.size || chosen.size > (chosen.type === "application/pdf" ? 20 : 5) * 1024 * 1024) { say("Previews work from a PDF up to 20 MB, or a photo (PNG, JPEG or WebP) up to 5 MB."); return; }
+      if (chosen && !/^(application\/pdf|image\/(png|jpeg|webp))$/.test(chosen.type) || !chosen.size || chosen.size > (chosen.type === "application/pdf" ? 20 : 5) * 1024 * 1024) { say("Previews work from a PDF up to 20 MB, or a photo (PNG, JPEG or WebP) up to 5 MB."); return; }
       t.store.set("me", { business: b, email: e, city: c });
       // The wait takes the whole screen: the gear turning and what is happening now. It stays if the buyer looks at
       // another tab and comes back.
       gen.step = "busy"; gen.business = b; gen.error = "";
       show("preview");
       var requestId = crypto.randomUUID ? crypto.randomUUID() : String(Date.now()) + Math.random().toString(16).slice(2);
-      var name = chosen.name && /\.(pdf|png|jpe?g|webp)$/i.test(chosen.name) ? chosen.name : "menu." + ({ "application/pdf": "pdf", "image/png": "png", "image/webp": "webp" }[chosen.type] || "jpg");
-      var body = new FormData();
-      body.append("payload", JSON.stringify({ type: "inquiry", purpose: "checkout", service: "Other project", name: b, business: b, email: e, notes: "Free " + noun(g) + " preview (Menu-made app)", website: "", requestId: requestId }));
-      body.append("document", chosen, name);
       function fail(text) { gen.error = text; gen.step = "form"; if (current === "preview") show("preview"); }
-      fetch(data.upload_url, { method: "POST", body: body }).then(function (r) {
+      // The file chosen, or the one found at the link.
+      var menuFile = chosen ? Promise.resolve({ blob: chosen, name: chosen.name }) : fetch(data.link_url, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ url: linkText }) }).then(function (r) {
+        var type = (r.headers.get("Content-Type") || "").split(";")[0].trim();
+        if (!r.ok || type === "application/json") return r.json().catch(function () { return null; }).then(function (j) { throw new Error((j && j.error) || "We couldn't read that link. Upload a photo or PDF of the menu instead."); });
+        var name = r.headers.get("X-Menu-Name") || (type === "application/pdf" ? "menu.pdf" : "menu.jpg");
+        return r.blob().then(function (blob) { return { blob: blob, name: name }; });
+      });
+      menuFile.then(function (picked) {
+        var f = picked.blob;
+        var name = picked.name && /\.(pdf|png|jpe?g|webp)$/i.test(picked.name) ? picked.name : "menu." + ({ "application/pdf": "pdf", "image/png": "png", "image/webp": "webp" }[f.type] || "jpg");
+        var body = new FormData();
+        body.append("payload", JSON.stringify({ type: "inquiry", purpose: "checkout", service: "Other project", name: b, business: b, email: e, notes: "Free " + noun(g) + " preview (Menu-made app" + (chosen ? "" : ", from a link") + ")", website: "", requestId: requestId }));
+        body.append("document", f, name);
+        return fetch(data.upload_url, { method: "POST", body: body });
+      }).then(function (r) {
         return r.json().catch(function () { return null; }).then(function (j) {
           if (!r.ok || !j || j.ok !== true) throw new Error(r.status === 429 ? "Too many tries. Please wait an hour and try again." : "Your menu couldn't be sent. Please try again.");
         });

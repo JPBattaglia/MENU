@@ -282,7 +282,7 @@ async function menuVideo(local) {
   await s.scrollTo('#try-free', { offset: 40 });
   await s.type('#try_business', SAMPLE.business);
   await s.type('#try_email', SAMPLE.email);
-  s.cap(E, 'Choose your menu: a PDF, or a clear photo of it.');
+  s.cap(E, 'Choose your menu: a PDF or a clear photo. Or paste a link to it.');
   await s.chooseFile('#try_file', join(SAMPLES, 'bella-luna-menu.pdf'));
   s.cap(E, 'Tap Generate menu. Reading it takes about a minute (sped up here).');
   await s.tap('#tryBtn', { after: 300 });
@@ -364,7 +364,7 @@ async function websiteVideo(local) {
   await s.type('#site_business', SAMPLE.business);
   await s.type('#site_city', 'San Francisco');
   await s.type('#site_email', SAMPLE.email);
-  s.cap(E, 'Choose your menu: a PDF, or a clear photo of it.');
+  s.cap(E, 'Choose your menu: a PDF or a clear photo. Or paste a link to it.');
   await s.chooseFile('#site_file', join(SAMPLES, 'bella-luna-menu.pdf'));
   s.cap(E, 'Optional: add your phone, address and hours for the Contact page.');
   await s.tap('.mm-try-more summary', { after: 500 });
@@ -420,7 +420,7 @@ async function holidayVideo(local) {
   await s.scrollTo('#try-free', { offset: 40 });
   await s.tap('input[name=occasion][value=both]', { after: 900 });
   await s.tap('input[name=occasion][value=christmas]', { after: 500 });
-  s.cap(E, 'Add your business name and email, and choose your holiday menu.');
+  s.cap(E, 'Add your business name and email, then choose your holiday menu or paste a link to it.');
   await s.type('#try_business', SAMPLE.business);
   await s.type('#try_email', SAMPLE.email);
   await s.chooseFile('#try_file', join(SAMPLES, 'bella-luna-christmas.pdf'));
