@@ -149,6 +149,8 @@ function scanPage(html, base) {
   for (const m of html.matchAll(/<a\b[^>]*>([\s\S]*?)<\/a>/gi)) {
     const tag = m[0].slice(0, m[0].indexOf(">") + 1); const href = attr(tag, "href"); if (!href || /^(mailto|tel|javascript):/i.test(href)) continue;
     const u = abs(href); if (!u) continue;
+    if (u.hash && u.origin === base.origin && u.pathname === base.pathname && u.search === base.search) continue; // this same page
+    u.hash = "";
     const words = `${pageText(m[1])} ${attr(tag, "title")} ${attr(tag, "aria-label")}`.trim();
     if (/\.pdf(\?|$)/i.test(u.pathname)) pdfs.push({ url: u, score: (strongMenuWord.test(`${u} ${words}`) ? 10 : 0) + (menuWord.test(`${u} ${words}`) ? 2 : 0) });
     else if (/\.(jpe?g|png|webp)(\?|$)/i.test(u.pathname)) addPhoto(href, words, 0);
@@ -344,22 +346,23 @@ async function findMenuAtLink(raw, env, { fetcher = fetch } = {}) {
     return null;
   }
 
+  // The page's words, printed clean: a print of the page itself carries cookie banners and pop-ups over the menu.
+  async function printText(text, url, from) {
+    const esc = (t) => t.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+    const html = `<!doctype html><html><head><meta charset="utf-8"><style>body{font:12pt/1.45 system-ui,-apple-system,"Segoe UI",Roboto,"Noto Sans","Noto Sans CJK SC",sans-serif;margin:36px 46px;color:#111}p{margin:0 0 3px}</style></head><body>${
+      text.split("\n").map((line) => `<p>${esc(line.trim()) || "&nbsp;"}</p>`).join("")}</body></html>`;
+    const printed = await browser(env, "pdf", { html, pdfOptions: { printBackground: false, format: "letter" } });
+    if (printed && printed.length <= MAX_FILE_BYTES) return { bytes: printed, contentType: "application/pdf", name: `${name}.pdf`, from };
+    return { bytes: await textPdf(text, url), contentType: "application/pdf", name: `${name}.pdf`, from: "text" };
+  }
+
   async function fromHtml(html, url, depth, rendered) {
     const text = pageText(html);
     const prices = priceCount(text);
     const scan = scanPage(html, url);
     const isMenuPage = depth > 0 || strongMenuWord.test(`${url.pathname} ${url.search} ${(/<title>([^<]*)/i.exec(html) || [])[1] || ""}`);
-    // 1. The page's own text is the menu: print the page, so sections and prices keep their layout.
-    if (prices >= MIN_PRICES) {
-      // The page's words, printed clean: a print of the page itself carries cookie banners and pop-ups over the menu.
-      const esc = (t) => t.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
-      const html = `<!doctype html><html><head><meta charset="utf-8"><style>body{font:12pt/1.45 system-ui,-apple-system,"Segoe UI",Roboto,"Noto Sans","Noto Sans CJK SC",sans-serif;margin:36px 46px;color:#111}p{margin:0 0 3px}</style></head><body>${
-        text.split("\n").map((line) => `<p>${esc(line.trim()) || "&nbsp;"}</p>`).join("")}</body></html>`;
-      const printed = await browser(env, "pdf", { html, pdfOptions: { printBackground: false, format: "letter" } });
-      if (printed && printed.length <= MAX_FILE_BYTES) return { bytes: printed, contentType: "application/pdf", name: `${name}.pdf`, from: "page" };
-      const pdf = await textPdf(text, url);
-      return { bytes: pdf, contentType: "application/pdf", name: `${name}.pdf`, from: "text" };
-    }
+    // 1. The page's own text is the menu (prices on it): printed clean.
+    if (prices >= MIN_PRICES) return printText(text, url, "page");
     // 2. A menu PDF linked from the page.
     for (const p of scan.pdfs.filter((x) => x.score > 0 || isMenuPage).slice(0, 3)) {
       try {
@@ -380,6 +383,11 @@ async function findMenuAtLink(raw, env, { fetcher = fetch } = {}) {
         if (found) return found;
       }
     }
+    // 5. A menu written out with no prices (Zuni, House of Prime Rib): on a menu page, or a page with a menu section
+    //    of its own (#menu), and only when nothing better turned up. The read afterwards keeps the dishes, no prices.
+    const inPageMenu = /href=["'][^"']*#[^"']*menu|\bid=["'][^"']*menu/i.test(html);
+    const dishLines = text.split("\n").filter((line) => /[a-z]{3}/i.test(line) && line.trim().length >= 12).length;
+    if ((isMenuPage || inPageMenu) && dishLines >= 8 && text.length >= 300) return printText(text, url, "page text");
     if (rendered || text.length > 400) reason = isMenuPage
       ? "We found the page but no menu on it we could read. Upload a photo or PDF of the menu instead."
       : "We couldn't find a menu on that page. Paste the link to the menu page itself, or upload a photo or PDF.";
