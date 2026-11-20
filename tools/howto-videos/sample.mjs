@@ -81,7 +81,7 @@ export async function seedPlusAccount(local) {
   sql(`INSERT OR IGNORE INTO offers (id, created_at, updated_at, code, name, category, status, billing_type, fulfillment_type, requires_approval, default_workflow_key) VALUES ('demo-offer-p', ?, ?, 'MENU_PLUS', 'MΞNU Plus', 'MENU', 'ACTIVE', 'RECURRING', 'DIGITAL', 0, 'MENU_CARE_V1')`, t, t);
   const offer = (code) => env.DB.raw.prepare(`SELECT id FROM offers WHERE code = ?`).get(code).id;
   sql(`INSERT INTO offer_versions (id, offer_id, version_number, created_at, effective_from, status, price_cents, scope_json) VALUES ('demo-ov-m', ?, 99, ?, ?, 'ACTIVE', 0, '{}')`, offer('MENU_QR'), t, t);
-  sql(`INSERT INTO offer_versions (id, offer_id, version_number, created_at, effective_from, status, price_cents, scope_json) VALUES ('demo-ov-p', ?, 99, ?, ?, 'ACTIVE', 1200, '{}')`, offer('MENU_PLUS'), t, t);
+  sql(`INSERT INTO offer_versions (id, offer_id, version_number, created_at, effective_from, status, price_cents, scope_json) VALUES ('demo-ov-p', ?, 99, ?, ?, 'ACTIVE', 1999, '{}')`, offer('MENU_PLUS'), t, t);
   sql(`INSERT INTO order_items (id, order_id, offer_id, offer_version_id, unit_price_cents, line_total_cents) VALUES ('demo-i1', 'demo-o1', ?, 'demo-ov-m', 0, 0)`, offer('MENU_QR'));
   sql(`INSERT INTO projects (id, order_id, order_item_id, business_id, customer_id, project_type, status, workflow_key, workflow_version, created_at, updated_at) VALUES (?, 'demo-o1', 'demo-i1', ?, 'demo-cust', 'MENU', 'DELIVERED', 'MENU_QR_V1', 1, ?, ?)`, PROJECT, BIZ, t, t);
   sql(`INSERT INTO project_inputs (id, project_id, input_key, input_type, status, value_text, created_at, updated_at) VALUES ('demo-pi1', ?, 'qr_destination', 'URL', 'VALID', ?, ?, ?)`, PROJECT, hosted, t, t);

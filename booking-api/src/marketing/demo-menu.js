@@ -20,6 +20,7 @@ import { bytesToBase64 } from "../lib/util.js";
 import { escapeHtml } from "../lib/email.js";
 import { menuColors, readMenuWithClaude, structureMenuText } from "../producers/menu-qr/claude-reader.js";
 import { extractReadableText } from "../producers/menu-qr/inputs.js";
+import { findMenuAtLink, priceCount } from "./menu-link.js";
 import { MENU_PACKAGE_PRICING } from "../checkout/quote.js";
 import { verifyRenderer } from "../producers/social-posts/render-jobs.js";
 import { DRAFTS_AUDIENCE, DRAFTS_WORKFLOW } from "./prospects.js";
@@ -64,8 +65,19 @@ async function readProspectMenu(menuUrl, env, fetcher = fetch) {
   }
   if (type === "text/html" || type === "text/plain") {
     const text = type === "text/html" ? extractReadableText(await response.text()) : (await response.text()).trim();
-    if (!text || text.length < 80) throw new Error("menu page has no readable menu text");
-    return structureMenuText(text, env);
+    if (type === "text/plain" || priceCount(text) >= 6) {
+      if (!text || text.length < 80) throw new Error("menu page has no readable menu text");
+      return structureMenuText(text, env);
+    }
+    // No menu text on the page (Nov 19, 2026): the menu is a photo in the page, a linked PDF, behind a "Menu" link
+    // on the home page, or drawn by JavaScript. menu-link.js finds it and hands back the file to read.
+    let found;
+    try { found = await findMenuAtLink(url.toString(), env, { fetcher }); } catch (error) { throw new Error(`menu page: ${error instanceof Error ? error.message : String(error)}`); }
+    const data = bytesToBase64(found.bytes);
+    const block = found.contentType === "application/pdf"
+      ? { type: "document", source: { type: "base64", media_type: found.contentType, data } }
+      : { type: "image", source: { type: "base64", media_type: found.contentType, data } };
+    return { ...(await readMenuWithClaude(block, env)), file: { bytes: found.bytes, type: found.contentType } };
   }
   throw new Error(`menu link is ${type || "an unknown type"}, not a menu file or page`);
 }

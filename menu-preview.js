@@ -80,7 +80,8 @@
     if (busy) return;
     const business = $('try_business').value.trim();
     const email = $('try_email').value.trim() || (rep ? 'info@menu-made.com' : '');
-    const file = $('try_file').files[0];
+    let file = $('try_file').files[0];
+    const link = $('try_link')?.value.trim() || '';
     // Holiday picker: "Both: $89" (owner, Nov 12, 2026) uploads one holiday's menu now; the choice rides to checkout
     // in this browser (start.js reads mm-holiday-both), where it can still be ticked or unticked.
     let occasion = form.querySelector('input[name="occasion"]:checked')?.value || '';
@@ -92,11 +93,13 @@
     // A likely typo (gmial.com, .con) is pointed out once; tapping again sends it as typed (Nov 16, 2026).
     const typo = !rep && window.MenuMadeDocuments?.emailTypo?.(email);
     if (typo && form.dataset.typoWarned !== email) { form.dataset.typoWarned = email; say(`Did you mean <strong>${esc(typo)}</strong>? Fix the email, or tap again to use it as typed.`, true); $('try_email').focus(); return; }
-    if (!file) { say('Choose your menu file (a PDF or a photo).', true); $('try_file').focus(); return; }
-    if (!/\.(pdf|png|jpe?g|webp)$/i.test(file.name)) { say('Previews work from a PDF or a photo (PNG, JPEG or WebP).', true); return; }
-    busy = true; button.disabled = true; button.textContent = 'Sending your menu…';
-    showWait(['Sending your menu…'], 'a few seconds');
+    if (!file && !link) { say('Choose your menu file (a PDF or a photo), or paste a link to your menu.', true); $('try_file').focus(); return; }
+    if (file && !/\.(pdf|png|jpe?g|webp)$/i.test(file.name)) { say('Previews work from a PDF or a photo (PNG, JPEG or WebP).', true); return; }
+    busy = true; button.disabled = true; button.textContent = file ? 'Sending your menu…' : 'Finding your menu…';
+    showWait(file ? ['Sending your menu…'] : ['Opening your link…', 'Finding your menu on the page…'], file ? 'a few seconds' : 'up to half a minute');
     try {
+      // A link and no file (Nov 19, 2026): the menu is found at the link and sent on as if it had been chosen.
+      if (!file) { file = await window.MenuMadeDocuments.fromLink(link); showWait(['Sending your menu…'], 'a few seconds'); }
       window.MenuMadeDocuments.validate(file);
       const key = [business, email.toLowerCase(), occasion, await window.MenuMadeDocuments.fingerprint(file)].join('|');
       if (!upload || upload.key !== key) {

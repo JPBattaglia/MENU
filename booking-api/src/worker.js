@@ -1,5 +1,6 @@
 import { handleAdminQueue } from "./admin/queue.js";
 import { handleFreeConfirm, handleFreeStart } from "./marketing/free-menu.js";
+import { handleMenuLink } from "./marketing/menu-link.js";
 import { handlePreviewCreate, handlePreviewView, handlePreviewState, handlePreviewHandoff, handlePreviewCustomize, handlePreviewChoose, handleRepLink, handlePreviewShowcase, runPreviewReminders } from "./marketing/public-preview.js";
 import { handleSiteForm } from "./producers/site-files/site-form.js";
 import { handleDomainLookup } from "./producers/website/registrar.js";
@@ -194,6 +195,7 @@ var worker_default = {
     }
     if (url.pathname === "/api/system/prospects/site-demo" && request.method === "POST") return handleProspectSiteDemo(request, env);
     if (url.pathname === "/api/menu-preview/rep-link" && (request.method === "GET" || request.method === "POST")) return handleRepLink(request, env);
+    if (url.pathname === "/api/menu-preview/link" && (request.method === "POST" || request.method === "OPTIONS")) return handleMenuLink(request, env);
     if (url.pathname === "/api/menu-preview/create" && (request.method === "POST" || request.method === "OPTIONS")) return handlePreviewCreate(request, env);
     const publicPreview = url.pathname.match(/^\/api\/menu-preview\/(view|handoff)\/([a-f0-9]{36})(?:\/([a-z]{2,20}))?$/);
     if (publicPreview && (request.method === "GET" || request.method === "HEAD") && (publicPreview[1] === "view" || !publicPreview[3])) {

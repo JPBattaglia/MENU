@@ -20,7 +20,7 @@ import { queuePush } from "../producers/guest-app/engage.js";
 const TTL = 300;
 const MM = "https://menu-made.com";
 // Bumped whenever tools/howto-videos re-records the how-to videos, so phones fetch the new files.
-const HOWTO_VIDEO_VERSION = "20261119";
+const HOWTO_VIDEO_VERSION = "202611192";
 const NINO = "https://ninobattaglia.com";
 // Nino's shop API (NinoSite commerce-api): rewards card, ideas board and the last week's new designs (fans.mjs).
 const NINO_API = "https://nino-printful-commerce-api.ijpbattaglia.workers.dev";
@@ -148,13 +148,15 @@ function menumadeContent(catalog, { offCodes = [], now = Date.now() } = {}) {
       image: `${MM}/home-digital-presence.webp`, action: "Try a free menu preview"
     },
     steps: [
-      { title: "Upload your menu", text: "A PDF or a photo is all we need" },
+      { title: "Upload your menu", text: "A PDF, a photo or a link to your menu" },
       { title: "Pick a design", text: "Nine for your menu, nine for your website" },
       { title: "Make it live", text: "Checkout only when it looks right" }
     ],
     // The two generators (the Preview tab). Each runs inside the app: the form, the wait, the designs in a frame on the
     // app's own screen and its three buttons. buttons = what the chooser page says each of the three does.
     upload_url: `${MM}/api/inquiry`,
+    // A menu from a link instead of a file (Nov 19, 2026; marketing/menu-link.js).
+    link_url: `${MM}/api/menu-preview/link`,
     generators: [
       { key: "menu", title: "Menu generator", count: 9, text: "Your printed menu becomes a phone menu page with a QR code.",
         create_url: `${MM}/api/menu-preview/create`, state_url: `${MM}/api/menu-preview/state/`, start: "Make my menu preview",
@@ -182,7 +184,7 @@ function menumadeContent(catalog, { offCodes = [], now = Date.now() } = {}) {
     // Kept for app builds from before Nov 10, 2026 (their Preview tab reads these).
     preview: { create_url: `${MM}/api/menu-preview/create`, upload_url: `${MM}/api/inquiry`, more_url: `${MM}/online-menu.html` },
     plans,
-    plans_note: "With MΞNU Plus, or any yearly plan, your menu's setup and first year are free.",
+    plans_note: "Plus and Pro start with the $149 setup; MΞNU Max has none. Holiday menus are free with any plan.",
     services,
     // Work we've made (the Account tab's own gallery; the pictures are the ones on menu-made.com/portfolio.html).
     work: [

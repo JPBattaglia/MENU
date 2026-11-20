@@ -81,13 +81,13 @@
 <figure><img src="assets/holiday/silvergold.webp" data-large="assets/holiday/silvergold-large.webp" alt="Silver and Gold design: soft silver and warm gold with gold stars and rounded cards in a fine frame" width="420" height="700" loading="lazy"><figcaption>Silver and Gold<span>Soft silver and warm gold, rounded cards</span></figcaption></figure>
 </div></div>
 </div></section>
-<section class="section" id="try-free"><div class="container mm-try"><div class="mm-try-copy"><p class="service-eyebrow">Free, before you checkout</p><h2>See your holiday menu on a phone first</h2><p>Upload your holiday menu and we’ll show it to you as a phone menu in about a minute. Tap Generate menu to go through the holiday designs, and Customize to add your logo and colour. It’s a preview only: no QR code, and it ends after 3 days. Like a design? Make it live and your file is already attached.</p><p>Haven’t printed it yet? A clear photo of a typed or handwritten draft works.</p><figure class="mm-try-video"><video controls playsinline preload="none" width="1920" height="1080" poster="assets/video/holiday-menu-generator-poster.jpg?v=20261119" aria-label="How to use the holiday menu generator, step by step (captioned, no sound)"><source src="assets/video/holiday-menu-generator.mp4?v=20261119" type="video/mp4"></video><figcaption>Watch how it works: 1 minute, captioned, no sound.</figcaption></figure></div>
+<section class="section" id="try-free"><div class="container mm-try"><div class="mm-try-copy"><p class="service-eyebrow">Free, before you checkout</p><h2>See your holiday menu on a phone first</h2><p>Upload your holiday menu, or paste a link to it, and we’ll show it to you as a phone menu in about a minute. Tap Generate menu to go through the holiday designs, and Customize to add your logo and colour. It’s a preview only: no QR code, and it ends after 3 days. Like a design? Make it live and your file is already attached.</p><p>Haven’t printed it yet? A clear photo of a typed or handwritten draft works.</p><figure class="mm-try-video"><video controls playsinline preload="none" width="1920" height="1080" poster="assets/video/holiday-menu-generator-poster.jpg?v=202611192" aria-label="How to use the holiday menu generator, step by step (captioned, no sound)"><source src="assets/video/holiday-menu-generator.mp4?v=202611192" type="video/mp4"></video><figcaption>Watch how it works: 1 minute, captioned, no sound.</figcaption></figure></div>
 <form class="mm-try-form" id="tryForm" data-kind="holiday" novalidate>
 <fieldset class="mm-occasion"><legend>Which holiday?</legend><label><input type="radio" name="occasion" value="christmas" checked> Christmas</label><label><input type="radio" name="occasion" value="newyear"> New Year's Eve</label><label><input type="radio" name="occasion" value="both"> Both: <span data-holiday-both>$89</span></label></fieldset>
 <fieldset class="mm-occasion" id="occasionFirst" hidden><legend>Which menu are you uploading now? Send the other one later; it is already covered.</legend><label><input type="radio" name="occasion_first" value="christmas" checked> Christmas</label><label><input type="radio" name="occasion_first" value="newyear"> New Year's Eve</label></fieldset>
 <label for="try_business">Business name</label><input id="try_business" maxlength="150" autocomplete="organization" required>
 <label for="try_email">Email</label><input id="try_email" type="email" maxlength="150" autocomplete="email" inputmode="email" required>
-<label for="try_file">Your holiday menu (a PDF up to 20 MB, or a photo)</label><input id="try_file" type="file" accept=".pdf,.png,.jpg,.jpeg,.webp,application/pdf,image/png,image/jpeg,image/webp" required>
+<label for="try_file">Your holiday menu (a PDF up to 20 MB, or a photo)</label><input id="try_file" type="file" accept=".pdf,.png,.jpg,.jpeg,.webp,application/pdf,image/png,image/jpeg,image/webp"><label for="try_link">Or paste a link to your menu <small>(your menu page, a PDF or a photo; your home page works too)</small></label><input id="try_link" type="url" inputmode="url" maxlength="2000" autocomplete="url" placeholder="https://yourplace.com/menu">
 <input type="text" id="try_website" name="website" tabindex="-1" autocomplete="off" aria-hidden="true" class="mm-hp">
 <button class="btn primary" type="submit" id="tryBtn">Generate menu</button>
 <p class="mm-try-status" id="tryStatus" role="status" aria-live="polite"></p>
@@ -118,8 +118,8 @@
 </footer>
 <script src="section-parallax.js?v=20261015-unified" defer></script>
 <script src="try-video.js?v=20261119" defer></script>
-<script src="document-upload.js?v=20261116typo" defer></script>
-<script src="menu-preview.js?v=20261119adsconv" defer></script>
+<script src="document-upload.js?v=20261119link" defer></script>
+<script src="menu-preview.js?v=20261119link" defer></script>
 <script src="holiday-designs.js?v=20261111" defer></script>
 </body>
 </html>
