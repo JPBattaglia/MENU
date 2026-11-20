@@ -32,6 +32,7 @@ import { ownerEmailAddress } from "../lib/config.js";
 import { verifyRenderer } from "../producers/social-posts/render-jobs.js";
 import { DRAFTS_AUDIENCE, DRAFTS_WORKFLOW } from "./prospects.js";
 import { readProspectMenu } from "./demo-menu.js";
+import { findSiteLook } from "./site-look.js";
 import { lookupListing } from "./listing-lookup.js";
 import { addMoodPhotos, hasSamplePhotos, ownPhotoCount } from "../producers/website/mood.js";
 
@@ -302,6 +303,23 @@ function fallbackCopy(site, place) {
   };
 }
 
+// Their logo, photos, colour and links from their current website (site-look.js), stored beside the preview the way
+// Customize stores an upload, so the nine designs open looking like their place; Customize can still change any of it.
+async function applyLook(env, token, site, look) {
+  const ext = { "image/png": "png", "image/jpeg": "jpg", "image/webp": "webp" };
+  const put = (name, img) => env.ASSETS.put(`website-previews/${token}/img/${name}.${ext[img.type]}`, img.bytes, { httpMetadata: { contentType: img.type } });
+  if (look.logo && ext[look.logo.type]) {
+    await put("logo", look.logo);
+    site.logo = { path: `img/logo.${ext[look.logo.type]}`, ...(look.logo.type === "image/jpeg" ? { info: { t: 0, l: null, c: null, b: 1 } } : {}) };
+  }
+  const photos = (look.photos || []).filter((p) => ext[p.type]).slice(0, MAX_PHOTOS);
+  for (const [i, p] of photos.entries()) await put(`photo-${i + 1}`, p);
+  if (photos.length) site.photos = photos.map((p, i) => ({ path: `img/photo-${i + 1}.${ext[p.type]}`, alt: `Photo ${i + 1} of ${site.name}` }));
+  if (look.brand && hexOk(look.brand)) site.brand = look.brand;
+  for (const [name] of SOCIAL_FIELDS) if (look.links?.[name]) site[name] = look.links[name];
+  if (look.links?.order_url) { site.order_url = look.links.order_url; site.order_label = ORDER_LABELS.includes(look.links.order_label) ? look.links.order_label : ORDER_LABELS[0]; }
+}
+
 // Builds and stores the pages. Facts: { kind, about, offerings, phone, address, hours, city, cuisine }.
 async function buildAndStore(env, token, business, facts, { scope, prospect = false, deps = {} }) {
   const place = facts.city || "";
@@ -312,6 +330,7 @@ async function buildAndStore(env, token, business, facts, { scope, prospect = fa
     offerings: facts.offerings || "", phone: facts.phone || "", address: facts.address || "", hours: facts.hours || "",
     email: "", style: facts.style || "modern", brand: "", facebook: "", instagram: "", photos: [], logo: null
   };
+  if (facts.look) await applyLook(env, token, site, facts.look);
   let copy = null;
   const written = await writeCopy(env, site, { scope }, deps.generate).catch(() => null);
   if (written && !written.problems?.length) copy = written.copy;
@@ -398,15 +417,20 @@ async function handleWebsitePreviewCreate(request, env, { now = Date.now(), deps
     const needsListing = city && !(body?.phone && body?.address && body?.hours && body?.website);
     const listing = needsListing ? await lookupListing(business, city).catch(() => null) : null;
     const website = oneLine(body?.website, 300) || listing?.website || "";
-    const site = website ? await factsFromWebsite(env, website, scope, deps).catch(() => null) : null;
-    const read = await readMenuWithClaude(block, env);
+    // Their own look from the same website (Nov 19, 2026): logo, photos, colour and links, found while the menu is read.
+    const [site, look, read] = await Promise.all([
+      website ? factsFromWebsite(env, website, scope, deps).catch(() => null) : null,
+      website ? (deps.siteLook || findSiteLook)(website, env, { fetcher: deps.fetcher || fetch }).catch(() => null) : null,
+      readMenuWithClaude(block, env)
+    ]);
     const facts = {
       kind: "restaurant", city, cuisine: listing?.cuisine || "",
       offerings: offeringsFromMenu(read.menu) || site?.offerings || "",
       about: site?.about || "",
       phone: oneLine(body?.phone, 30) || site?.phone || listing?.phone || "",
       address: oneLine(body?.address, 160) || site?.address || listing?.address || "",
-      hours: cleanText(body?.hours, 400) || site?.hours || listing?.hours || ""
+      hours: cleanText(body?.hours, 400) || site?.hours || listing?.hours || "",
+      look
     };
     if (!facts.offerings) throw new Error("no menu items could be read");
     built = await buildAndStore(env, token, business, facts, { scope, deps });
@@ -631,6 +655,8 @@ async function handleProspectSiteDemo(request, env, { fetcher = fetch, now = Dat
     }
     const facts = { kind: "restaurant", cuisine: oneLine(p.cuisine, 40).replace(/[_;]/g, " "), city: p.city || "", about: site?.about || "", offerings,
       phone: site?.phone || p.phone || "", address: site?.address || p.address || "", hours: site?.hours || "" };
+    // Their own logo and photos on it too (Nov 19, 2026), so the emailed preview looks like their place.
+    if (site && p.website) facts.look = await (deps.siteLook || findSiteLook)(p.website, env, { fetcher }).catch(() => null);
     // A preview with nothing but a name would sell nothing: it needs the menu or at least phone or address.
     if (!facts.offerings && !facts.phone && !facts.address) throw new Error("not enough public details to build a preview");
     await env.DB.prepare(`INSERT INTO website_previews (token, source, prospect_id, email, business, status, created_at, expires_at) VALUES (?, 'prospect', ?, ?, ?, 'BUILDING', ?, ?)`).bind(token, id, p.email, p.name, t, expires).run();

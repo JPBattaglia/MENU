@@ -442,6 +442,8 @@
       var typo = emailTypo(e);
       if (typo && form.getAttribute("data-typo-warned") !== e) { form.setAttribute("data-typo-warned", e); say("Did you mean " + typo + "? Fix the email, or tap again to use it as typed."); email.focus(); return; }
       var linkText = link ? link.value.trim() : "";
+      // The website generator also reads their logo, photos and details from the site the link is on (Nov 19, 2026).
+      function siteOf(text) { try { var u = new URL(/^https?:/i.test(text) ? text : "https://" + text); return /\.(pdf|jpe?g|png|webp)$/i.test(u.pathname) && /cdn|images|static|cloudfront|amazonaws/i.test(u.hostname) ? "" : u.origin; } catch (x) { return ""; } }
       if (!chosen && !linkText) { say(link ? "Choose your menu file, take a photo, or paste a link to your menu." : "Choose your menu file or take a photo."); return; }
       // As on the site (Nov 12, 2026): a PDF up to 20 MB, a photo up to 5 MB.
       if (chosen && !/^(application\/pdf|image\/(png|jpeg|webp))$/.test(chosen.type) || !chosen.size || chosen.size > (chosen.type === "application/pdf" ? 20 : 5) * 1024 * 1024) { say("Previews work from a PDF up to 20 MB, or a photo (PNG, JPEG or WebP) up to 5 MB."); return; }
@@ -471,7 +473,7 @@
           if (!r.ok || !j || j.ok !== true) throw new Error(r.status === 429 ? "Too many tries. Please wait an hour and try again." : "Your menu couldn't be sent. Please try again.");
         });
       }).then(function () {
-        return fetch(g.create_url, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ request_id: requestId, email: e, business: b, city: c, tracking: { campaign: "app" }, occasion: occasions.length ? gen.occasion : undefined }) })
+        return fetch(g.create_url, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ request_id: requestId, email: e, business: b, city: c, website: g.key === "site" ? siteOf(linkText) : undefined, tracking: { campaign: "app" }, occasion: occasions.length ? gen.occasion : undefined }) })
           .then(function (r) { return r.json().catch(function () { return null; }).then(function (j) { return { r: r, j: j || {} }; }); });
       }).then(function (out) {
         var j = out.j, token = j.token || (/\/(?:view)\/([a-f0-9]{36})/.exec(j.url || j.start || "") || [])[1];

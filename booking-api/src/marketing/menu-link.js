@@ -453,4 +453,4 @@ async function handleMenuLink(request, env, { fetcher = fetch, now = Date.now() 
   }
 }
 
-export { findMenuAtLink, handleMenuLink, scanPage, priceCount, photoSize, checkUrl, LinkError };
+export { findMenuAtLink, handleMenuLink, scanPage, priceCount, photoSize, checkUrl, LinkError, get, readCapped, sniff, browser, toBase64, pageText, attr, decode };
