@@ -113,16 +113,19 @@ async function findPhotos(htmls, env, fetcher, logo) {
     if (kept.length >= MAX_CANDIDATES) break;
     try {
       const response = await get(c.url, fetcher, "image/webp,image/jpeg,image/png,*/*;q=0.5");
-      if (!response.ok) continue;
+      if (!response.ok) { console.log(`site look photo ${response.status}: ${c.url.hostname}`); continue; }
       const bytes = await readCapped(response, MAX_IMAGE);
       const type = sniff(bytes);
       if (!type || type === "application/pdf") continue;
       const { w, h } = photoSize(bytes, type);
       if (Math.max(w, h) < MIN_PHOTO_SIDE || Math.min(w, h) < 400 || bytes.length < 30000) continue;
       if (kept.some((k) => k.bytes.length === bytes.length) || (logo && logo.bytes.length === bytes.length)) continue;
+      // The check request stays well under the API's 32 MB (base64 adds a third).
+      if (kept.reduce((n, k) => n + k.bytes.length, 0) + bytes.length > 18 * 1024 * 1024) break;
       kept.push({ bytes, type, w, h });
-    } catch { /* next */ }
+    } catch (error) { console.log(`site look photo skipped: ${error instanceof Error ? error.message : error}`); }
   }
+  console.log(`site look photos: ${candidates.length} candidates, ${kept.length} big enough`);
   if (!kept.length || !env?.ANTHROPIC_API_KEY) return [];
   try {
     const content = [];
@@ -137,6 +140,7 @@ async function findPhotos(htmls, env, fetcher, logo) {
     if (!response.ok) throw new Error(`photo check answered ${response.status}`);
     const answer = ((await response.json())?.content || []).map((c) => c.text || "").join(" ");
     const order = [...new Set((answer.match(/\d+/g) || []).map(Number))].filter((n) => n >= 1 && n <= kept.length);
+    console.log(`site look photo check: "${answer.trim().slice(0, 60)}"`);
     return order.slice(0, MAX_PHOTOS).map((n) => kept[n - 1]);
   } catch (error) {
     console.warn("site photo check", error instanceof Error ? error.message : String(error));
