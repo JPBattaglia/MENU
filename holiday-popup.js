@@ -28,7 +28,7 @@
         '<p class="mm-xmas-kicker">Holiday special</p>' +
         '<h2 id="mmXmasTitle">' + (christmas ? 'Get your Christmas menu online' : 'Get your New Year’s Eve menu online') + '</h2>' +
         '<p>Your holiday menu as a phone page with its own QR code, a print PDF and a table tent. It sits beside the menu you already have.</p>' +
-        '<div class="mm-xmas-price"><span data-pop-first>$59</span><small>per holiday, or <span data-pop-both>$89</span> for Christmas and New Year’s Eve<span data-pop-early hidden></span>. Or free when you start MΞNU Plus.</small></div>' +
+        '<div class="mm-xmas-price"><span data-pop-first>$59</span><small>per holiday, or <span data-pop-both>$89</span> for Christmas and New Year’s Eve<span data-pop-early hidden></span>. Or free with any MΞNU plan.</small></div>' +
         '<div class="mm-xmas-actions">' +
           '<a class="btn primary" href="holiday-menu.html#try-free" data-cta-label="Holiday popup">See my holiday menu free</a>' +
           '<button class="mm-xmas-later" type="button">Not now</button>' +
