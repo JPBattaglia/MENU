@@ -190,7 +190,10 @@
         "hosting_first_year_cents": 0,
         "included_pages": 3,
         "max_pages": 50,
-        "setup_cents": 14900
+        "setup_cents": 14900,
+        "setup_waiver": {
+          "ends": "Dec 31"
+        }
       },
       "on_sale": true,
       "price_cents": 14900,
