@@ -4,7 +4,7 @@
 //   - Website Package alone starts Website Care with a 90-day trial in the same checkout
 //   - Guest App needs the Guest App Setup in the same cart
 //   - "Your own plan" (CUSTOM_PLAN, Nov 6, 2026): the item carries includes (2+ monthly services); priced here, never by the browser
-import { CheckoutValidationError, MENU_PACKAGE_PRICING } from "../checkout/quote.js";
+import { CheckoutValidationError, MENU_PACKAGE_PRICING, setupWaiverOn } from "../checkout/quote.js";
 import { parseJsonOrNull } from "../lib/http.js";
 import { stripeRequest } from "../lib/stripe.js";
 import { CUSTOM_CODE, CustomPlanError, normalizeInterval, resolveCustomPlan, resolvePlan } from "./plans.js";
@@ -142,10 +142,14 @@ async function buildSubscriptionCart(itemsInput, data, env, environment) {
       for (const item of normalizedItems) {
         if (!item.menuPackage || !plan) continue;
         item.extraMetadata = { ...(item.extraMetadata || {}), plan_hosted: plan.offerCode };
-        if (!max) continue;
+        // Holiday setup waiver (owner, Nov 20, 2026): through Dec 31 PT the $149 setup is also free on Plus and Pro.
+        // Extra pages are still charged; a $0 line stays off Stripe as with Max.
+        const holidayWaiver = anyPlan && setupWaiverOn();
+        if (!max && !holidayWaiver) continue;
         const waived = Math.min(item.priceCents, MENU_PACKAGE_PRICING.setupCents);
         item.priceCents -= waived;
-        item.menuPackage = { ...item.menuPackage, waived_cents: waived, waived_reason: plan.offerName, total_cents: item.priceCents };
+        const reason = max ? plan.offerName : `Holiday setup waiver (${plan.offerName})`;
+        item.menuPackage = { ...item.menuPackage, waived_cents: waived, waived_reason: reason, total_cents: item.priceCents };
         item.extraMetadata = { ...item.extraMetadata, setup_waived_cents: waived };
       }
     },

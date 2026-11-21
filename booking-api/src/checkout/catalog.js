@@ -1,6 +1,6 @@
 import { CUSTOM_ALLOWED, CUSTOM_CODE, CUSTOM_DISCOUNTS } from "../subscriptions/plans.js";
 import { jsonResponse, nowIso, parseJsonOrNull } from "../lib/http.js";
-import { MENU_PACKAGE_PRICING } from "./quote.js";
+import { MENU_PACKAGE_PRICING, SETUP_WAIVER, setupWaiverOn } from "./quote.js";
 import { NINO_PRODUCTS } from "../producers/nino-design/products.js";
 import { holidayPrices } from "./holiday.js";
 
@@ -280,7 +280,9 @@ async function getSiteCatalog(env) {
             hosting_first_year_cents: MENU_PACKAGE_PRICING.hostingFirstYearCents,
             included_pages: MENU_PACKAGE_PRICING.includedPages,
             additional_page_cents: MENU_PACKAGE_PRICING.additionalPageCents,
-            max_pages: MENU_PACKAGE_PRICING.maxPages
+            max_pages: MENU_PACKAGE_PRICING.maxPages,
+            // Holiday setup waiver (Nov 20, 2026): pages show the "no $149 setup" note only while this is set.
+            setup_waiver: setupWaiverOn() ? { ends: SETUP_WAIVER.ends } : null
           };
         }
         // Holiday Menu early bird (Nov 17, 2026): the price shown is today's; the pages read the rest from .holiday.

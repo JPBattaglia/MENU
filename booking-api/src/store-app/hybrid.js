@@ -12,7 +12,7 @@
 // Public data only, cached at the edge for TTL seconds. CORS "*" because the app runs from capacitor://localhost or
 // https://localhost and the store screenshots load it from a local page.
 import { getSiteCatalog } from "../checkout/catalog.js";
-import { MENU_PACKAGE_PRICING } from "../checkout/quote.js";
+import { MENU_PACKAGE_PRICING, SETUP_WAIVER, setupWaiverOn } from "../checkout/quote.js";
 import { HOLIDAY_PRICING, OCCASION_NAMES, holidayOnSale, holidayPrices } from "../checkout/holiday.js";
 import { SERVICES as SWITCHED, offSwitches } from "../lib/switches.js";
 import { queuePush } from "../producers/guest-app/engage.js";
@@ -75,6 +75,7 @@ function menumadeContent(catalog, { offCodes = [], now = Date.now() } = {}) {
   const hp = holidayPrices(now);
   const holidayPrice = dollars(hp.first_cents);
   const early = hp.early_bird ? ` Early-bird price through ${hp.early_bird_ends} (then ${dollars(hp.regular_first_cents)}), or free when you start any MΞNU plan.` : " Or free when you start any MΞNU plan.";
+  const waiverOn = setupWaiverOn(now);
   const first = occasions[0]?.key;
   const which = occasions.map((o) => o.label).join(" or ");
   // The how-to video beside each generator on menu-made.com (owner, Nov 15, 2026: "Why are the instruction videos in
@@ -88,7 +89,8 @@ function menumadeContent(catalog, { offCodes = [], now = Date.now() } = {}) {
     occasions, occasion_label: "Which holiday is this menu for?", file_label: "Your holiday menu",
     // The banner on Home and the pop-up a few seconds after the app opens (owner, Nov 11, 2026: "there's no holiday
     // banner or pop up"), worded as on the website (index.html's holiday strip, holiday-popup.js).
-    strip: { lead: "Holiday special:", text: `your ${occasions.map((o) => o.label).join(" and ")} ${occasions.length > 1 ? "menus" : "menu"} online with a QR code, ${holidayPrice} per holiday.`, action: "See my holiday menu free" },
+    // Holiday setup waiver (owner, Nov 20, 2026), as on the site's strip: leads with "no $149 setup" through Dec 31 PT.
+    strip: { lead: "Holiday special:", text: `${waiverOn ? `no ${dollars(MENU_PACKAGE_PRICING.setupCents)} setup on any MΞNU plan through ${SETUP_WAIVER.ends}, and ` : ""}your ${occasions.map((o) => o.label).join(" and ")} ${occasions.length > 1 ? "menus" : "menu"} online with a QR code, ${waiverOn ? `free with any plan or ${holidayPrice} per holiday on their own` : `${holidayPrice} per holiday`}.`, action: "See my holiday menu free" },
     popup: {
       icons: first === "christmas" ? "🎄🎁❄️" : "🥂✨🎉", kicker: "Holiday special",
       title: `Get your ${OCCASION_NAMES[first]} menu online`,
