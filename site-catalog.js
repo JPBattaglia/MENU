@@ -63,6 +63,15 @@
       const pkg = offers?.get('ONLINE_MENU_QR')?.menu_package;
       if (pkg) el.textContent = money(pkg.additional_page_cents);
     });
+    // Holiday setup waiver (owner, Nov 20, 2026): [data-setup-waiver] shows only while the catalog says it runs (it ends
+    // by itself after Dec 31 PT); [data-setup-waiver-ends] = its last day, [data-setup-was] = the usual setup price.
+    const menuPkg = offers?.get('ONLINE_MENU_QR')?.menu_package;
+    if (menuPkg) {
+      const waiver = menuPkg.setup_waiver;
+      document.querySelectorAll('[data-setup-waiver]').forEach(el => { el.hidden = !waiver; });
+      document.querySelectorAll('[data-setup-waiver-ends]').forEach(el => { if (waiver) el.textContent = waiver.ends; });
+      document.querySelectorAll('[data-setup-was]').forEach(el => { el.textContent = money(menuPkg.setup_cents); });
+    }
     // Holiday Menu early bird (Nov 17, 2026): data-holiday-both = both holidays today; data-holiday-early = the
     // early-bird line (hidden once it ends); data-holiday-was = the regular price, struck through while it runs.
     const hol = offers?.get('HOLIDAY_MENU')?.holiday;

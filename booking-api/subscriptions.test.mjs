@@ -179,7 +179,9 @@ test('site catalog lists every plan with monthly and annual prices, bundle conte
     assert.equal(by.WEBSITE_PACKAGE.price_cents, catalog.one_time.WEBSITE_PACKAGE.amount);
     assert.equal(by.ONLINE_MENU_QR.on_sale, true);
     assert.equal(by.ONLINE_MENU_QR.kind, 'ONE_TIME');
-    assert.deepEqual(by.ONLINE_MENU_QR.menu_package, { setup_cents: 14900, hosting_first_year_cents: 0, included_pages: 3, additional_page_cents: 2000, max_pages: 50 });
+    // Holiday setup waiver (owner, Nov 20, 2026): set through Dec 31, 2026 PT, null after.
+    const waiverOn = Date.now() <= Date.parse('2026-12-31T23:59:59-08:00');
+    assert.deepEqual(by.ONLINE_MENU_QR.menu_package, { setup_cents: 14900, hosting_first_year_cents: 0, included_pages: 3, additional_page_cents: 2000, max_pages: 50, setup_waiver: waiverOn ? { ends: 'Dec 31' } : null });
     h.env.DB.raw.prepare(`UPDATE offers SET is_public = 1 WHERE code = 'BUNDLE_STARTER'`).run();
     const after = Object.fromEntries((await (await h.call('/api/catalog')).json()).offers.map((o) => [o.code, o]));
     assert.equal(after.BUNDLE_STARTER.on_sale, true);
@@ -686,21 +688,40 @@ test('Plus, Pro and Max (owner, Nov 19, 2026): $149 setup with Plus ($19.99) and
     assert.ok(by.BUNDLE_PREMIUM.includes.includes('MENU_PRO'));
     assert.equal(by.ONLINE_MENU_QR.price_cents, 14900);
 
+    // Holiday setup waiver (owner, Nov 20, 2026): through Dec 31, 2026 PT the setup is also free on Plus and Pro.
+    const waiverOn = Date.now() <= Date.parse('2026-12-31T23:59:59-08:00');
     const plus = await h.checkout({ items: [{ key: 'MENU_PLUS' }, { key: 'ONLINE_MENU_QR' }], interval: 'month', menu_pages: 3, customer: buyer });
     assert.equal(plus.status, 200, JSON.stringify(plus.body));
     let p = h.stripe.sessions.at(-1).params;
-    assert.equal(p.get('line_items[0][price_data][unit_amount]'), '14900', 'the setup is charged with Plus');
-    assert.equal(p.get('line_items[1][price_data][unit_amount]'), '1999');
-    assert.equal(p.get('line_items[1][price_data][recurring][interval]'), 'month');
     const plusLine = JSON.parse(h.one(`SELECT i.metadata_json FROM order_items i JOIN offers o ON o.id = i.offer_id WHERE i.order_id = ? AND o.code = 'ONLINE_MENU_QR'`, plus.body.order_id).metadata_json);
-    assert.equal(plusLine.setup_waived_cents, undefined);
+    if (waiverOn) {
+      assert.equal(p.get('line_items[0][price_data][unit_amount]'), '1999', 'holiday waiver: only Plus is charged');
+      assert.equal(p.get('line_items[0][price_data][recurring][interval]'), 'month');
+      assert.equal(p.get('line_items[1][quantity]'), null);
+      assert.equal(plusLine.setup_waived_cents, 14900);
+    } else {
+      assert.equal(p.get('line_items[0][price_data][unit_amount]'), '14900', 'the setup is charged with Plus');
+      assert.equal(p.get('line_items[1][price_data][unit_amount]'), '1999');
+      assert.equal(p.get('line_items[1][price_data][recurring][interval]'), 'month');
+      assert.equal(plusLine.setup_waived_cents, undefined);
+    }
     assert.equal(plusLine.plan_hosted, 'MENU_PLUS');
+
+    // Extra pages are still charged during the waiver.
+    if (waiverOn) {
+      const extra = await h.checkout({ items: [{ key: 'MENU_PLUS' }, { key: 'ONLINE_MENU_QR' }], interval: 'month', menu_pages: 5, customer: buyer });
+      assert.equal(extra.status, 200, JSON.stringify(extra.body));
+      assert.equal(h.stripe.sessions.at(-1).params.get('line_items[0][price_data][unit_amount]'), '4000', 'two extra pages still charged');
+    }
 
     const pro = await h.checkout({ items: [{ key: 'MENU_PRO' }, { key: 'ONLINE_MENU_QR' }], interval: 'year', menu_pages: 3, customer: buyer });
     assert.equal(pro.status, 200, JSON.stringify(pro.body));
     p = h.stripe.sessions.at(-1).params;
-    assert.equal(p.get('line_items[0][price_data][unit_amount]'), '14900', 'the setup is charged with Pro');
-    assert.equal(p.get('line_items[1][price_data][unit_amount]'), '39000');
+    if (waiverOn) assert.equal(p.get('line_items[0][price_data][unit_amount]'), '39000', 'holiday waiver: only Pro is charged');
+    else {
+      assert.equal(p.get('line_items[0][price_data][unit_amount]'), '14900', 'the setup is charged with Pro');
+      assert.equal(p.get('line_items[1][price_data][unit_amount]'), '39000');
+    }
 
     const max = await h.checkout({ items: [{ key: 'BUNDLE_PREMIUM' }, { key: 'ONLINE_MENU_QR' }], interval: 'month', menu_pages: 3, customer: buyer });
     assert.equal(max.status, 200, JSON.stringify(max.body));

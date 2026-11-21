@@ -96,7 +96,7 @@ function bringMenu() {
   if (!(plus || planIncludes('MENU_CARE')) || order.once.has(MENU) || order.once.has(HOLIDAY) || hasOwnMenu || !sellable(offer(MENU))) return;
   order.once.add(MENU);
   menuNote = menuIncluded()
-    ? 'Your plan starts with your menu online, so Online Menu + QR was added; its setup is free with MΞNU Max. Already have a menu with us? Remove it.'
+    ? `Your plan starts with your menu online, so Online Menu + QR was added; its setup is ${planIncludes('MENU_CARE') ? 'free with MΞNU Max' : `free through ${setupWaiver()?.ends || 'Dec 31'} (holiday special)`}. Already have a menu with us? Remove it.`
     : 'Your plan starts with your menu online, so Online Menu + QR was added with its one-time setup. Already have a menu with us? Remove it.';
 }
 let uploadedDocumentRequest = null;
@@ -161,8 +161,11 @@ function menuQuote() {
   const baseCents = free ? 0 : pkg.setup_cents + pkg.hosting_first_year_cents;
   return { pages, extraPages, extrasCents, totalCents: baseCents + extrasCents, free, pkg };
 }
-// The $149 setup is free with MΞNU Max only (owner, Nov 19, 2026: "waived at max"), monthly or yearly.
-function menuIncluded() { return planIncludes('MENU_CARE'); }
+// The $149 setup is free with MΞNU Max (owner, Nov 19, 2026: "waived at max"), monthly or yearly. Holiday setup waiver
+// (owner, Nov 20, 2026): through Dec 31 PT it is also free on Plus and Pro; the catalog's setup_waiver is null after that.
+function setupWaiver() { return offer(MENU)?.menu_package?.setup_waiver || null; }
+function menuIncluded() { return planIncludes('MENU_CARE') || Boolean(setupWaiver() && planIncludes(PLUS)); }
+function menuFreeLabel() { return planIncludes('MENU_CARE') ? 'Free with MΞNU Max' : `Free through ${setupWaiver()?.ends || 'Dec 31'}`; }
 
 // The plan the checkout will start. A Website Package bought without a plan starts Website Care on a trial.
 function effectivePlan() {
@@ -248,7 +251,7 @@ function lineFor(code, kind) {
     small.textContent = Catalog.label(o, interval()) + (interval() === 'year' ? ' · billed yearly' : ' · billed monthly');
   } else if (code === MENU) {
     const quote = menuQuote();
-    small.textContent = quote ? `${quote.pages} page${quote.pages === 1 ? '' : 's'} · one-time setup${quote.free ? ' · free with MΞNU Max' : ''} · hosted by your plan` : 'Enter your page count';
+    small.textContent = quote ? `${quote.pages} page${quote.pages === 1 ? '' : 's'} · one-time setup${quote.free ? (planIncludes('MENU_CARE') ? ' · free with MΞNU Max' : ` · free through ${setupWaiver()?.ends || 'Dec 31'}`) : ''} · hosted by your plan` : 'Enter your page count';
   } else if (code === 'GUEST_APP_SETUP') {
     small.textContent = Catalog.label(o, interval()) + ' · one-time app build';
   } else if (code === HOLIDAY && planIncludes(PLUS) && holidayCents !== 0) {
@@ -289,7 +292,7 @@ function render(openEmptyChoices = true) {
     planNote.hidden = !text;
   }
   if (quote) {
-    $('menuSetupAmount').textContent = quote.free ? 'Free with MΞNU Max' : money(quote.pkg.setup_cents);
+    $('menuSetupAmount').textContent = quote.free ? menuFreeLabel() : money(quote.pkg.setup_cents);
     $('menuHostingAmount').textContent = 'With your plan';
     $('extraPagesLabel').textContent = `Additional pages · ${quote.extraPages}`;
     $('extraPagesAmount').textContent = money(quote.extrasCents);

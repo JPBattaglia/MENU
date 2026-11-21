@@ -14,6 +14,13 @@ const MENU_PACKAGE_PRICING = Object.freeze({
   maxPages: 50
 });
 
+// Holiday setup waiver (owner, Nov 20, 2026): no $149 setup on MΞNU Plus or Pro through Dec 31, 2026 PT (Max already
+// has none). Chosen over a permanent $99 setup after 480 visitors / 0 buyers Nov 18 to 20. Ends by itself on Jan 1.
+const SETUP_WAIVER = Object.freeze({ until: "2026-12-31T23:59:59-08:00", ends: "Dec 31" });
+function setupWaiverOn(now = Date.now()) {
+  return now <= Date.parse(SETUP_WAIVER.until);
+}
+
 class CheckoutValidationError extends Error {
   constructor(message, status = 400) {
     super(message);
@@ -183,6 +190,8 @@ async function normalizeCheckoutItems(itemsInput, env, checkoutOptions = {}, { r
 
 export {
   MENU_PACKAGE_PRICING,
+  SETUP_WAIVER,
+  setupWaiverOn,
   CheckoutValidationError,
   quoteMenuPackage,
   appendCheckoutLineItem,
