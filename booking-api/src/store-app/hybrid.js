@@ -66,16 +66,18 @@ function menumadeContent(catalog, { offCodes = [], now = Date.now() } = {}) {
   // Menus come with a plan (owner, Nov 19, 2026): a $149 setup, then Plus, Pro or Max; prices from the same catalog.
   const plusPrice = `${dollars(offers.find((o) => o && o.code === "MENU_PLUS")?.prices?.month || 1999)}/mo`;
   const setupPrice = dollars(byCode.get("ONLINE_MENU_QR")?.price_cents || 14900);
+  // Holiday setup waiver (owner, Nov 20, 2026): through Dec 31 PT every app screen that names the setup says it's free.
+  const waiverOn = setupWaiverOn(now);
+  const setupLine = waiverOn ? `MΞNU Plus from ${plusPrice}, with no ${setupPrice} setup through ${SETUP_WAIVER.ends},` : `a ${setupPrice} setup, then MΞNU Plus from ${plusPrice}`;
   const services = offers.filter((o) => o && o.on_sale && o.kind !== "BUNDLE" && !PLAN_ORDER.includes(o.code) && !offCodes.includes(o.code) && !/^NINO_/.test(String(o.code || "")) && o.name)
     // Menus come with a plan (owner, Nov 19, 2026), as on the site; "Make it live" checks out Plus with the setup.
-    .map((o) => ({ name: clean(o.name, 60), text: clean(o.short_description, 220), price: o.code === "ONLINE_MENU_QR" ? `${setupPrice} setup, then from ${plusPrice}` : o.prices?.month ? `${dollars(o.prices.month)}/mo` : o.price_cents ? dollars(o.price_cents) : "" }))
+    .map((o) => ({ name: clean(o.name, 60), text: clean(o.short_description, 220), price: o.code === "ONLINE_MENU_QR" ? (waiverOn ? `From ${plusPrice}, no setup through ${SETUP_WAIVER.ends}` : `${setupPrice} setup, then from ${plusPrice}`) : o.prices?.month ? `${dollars(o.prices.month)}/mo` : o.price_cents ? dollars(o.price_cents) : "" }))
     .filter((x) => x.price).slice(0, 20);
   const occasions = offCodes.includes("HOLIDAY_MENU") || !byCode.get("HOLIDAY_MENU")?.on_sale ? [] : ["christmas", "newyear"].filter((o) => holidayOnSale(o, now)).map((o) => ({ key: o, label: OCCASION_NAMES[o] }));
   // Early bird through Nov 30, then the regular price (checkout/holiday.js); free with MΞNU Plus.
   const hp = holidayPrices(now);
   const holidayPrice = dollars(hp.first_cents);
   const early = hp.early_bird ? ` Early-bird price through ${hp.early_bird_ends} (then ${dollars(hp.regular_first_cents)}), or free when you start any MΞNU plan.` : " Or free when you start any MΞNU plan.";
-  const waiverOn = setupWaiverOn(now);
   const first = occasions[0]?.key;
   const which = occasions.map((o) => o.label).join(" or ");
   // The how-to video beside each generator on menu-made.com (owner, Nov 15, 2026: "Why are the instruction videos in
@@ -167,7 +169,7 @@ function menumadeContent(catalog, { offCodes = [], now = Date.now() } = {}) {
         buttons: [
           { label: "Generate menu", text: "Shows your menu in the next of nine designs. Tap it as often as you like." },
           { label: "Customize", text: "Adds your logo, your colour and your name the way you want it, on every design. Items, prices and diet marks lets you fix a dish, change a price or mark it vegan, gluten-free and more." },
-          { label: "Make it live", text: `Orders the design on screen: a ${setupPrice} setup, then MΞNU Plus from ${plusPrice} for your menu online with its QR code, the print menu and TV menu. Pro adds languages, the tri-fold and table tent; Max has no setup fee and we make your changes.` }
+          { label: "Make it live", text: `Orders the design on screen: ${setupLine} for your menu online with its QR code, the print menu and TV menu. Pro adds languages, the tri-fold and table tent; Max has no setup fee and we make your changes.` }
         ] },
       { key: "site", title: "Website generator", count: 9, text: "The same menu becomes a whole website: home, menu, about and contact pages.",
         create_url: `${MM}/api/website-preview/create`, state_url: `${MM}/api/website-preview/state/`, start: "Build my website preview", city: true,
@@ -186,7 +188,9 @@ function menumadeContent(catalog, { offCodes = [], now = Date.now() } = {}) {
     // Kept for app builds from before Nov 10, 2026 (their Preview tab reads these).
     preview: { create_url: `${MM}/api/menu-preview/create`, upload_url: `${MM}/api/inquiry`, more_url: `${MM}/online-menu.html` },
     plans,
-    plans_note: "Plus and Pro start with the $149 setup; MΞNU Max has none. Holiday menus are free with any plan.",
+    plans_note: waiverOn
+      ? `Holiday special: no ${setupPrice} setup on Plus or Pro through ${SETUP_WAIVER.ends}; MΞNU Max never has one. Holiday menus are free with any plan.`
+      : `Plus and Pro start with the ${setupPrice} setup; MΞNU Max has none. Holiday menus are free with any plan.`,
     services,
     // Work we've made (the Account tab's own gallery; the pictures are the ones on menu-made.com/portfolio.html).
     work: [

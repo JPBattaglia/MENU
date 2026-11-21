@@ -47,7 +47,7 @@ test('menumade: the three plans with live prices, described by their included se
     { code: 'MENU_CARE', name: 'Menu Care', on_sale: true, prices: { month: 2900 } },
     { code: 'REVIEW_REPLIES', name: 'Review Replies', on_sale: true, prices: { month: 4900 } },
     { code: 'ACCESSIBILITY_MONITORING', name: 'Accessibility Monitoring', on_sale: true, prices: { month: 3900 } }
-  ] });
+  ] }, { now: Date.parse('2027-01-02T18:00:00Z') });
   assert.deepEqual(c.tabs, ['home', 'preview', 'plans', 'account']);
   assert.deepEqual(c.plans.map((p) => [p.name, p.month_cents, p.year_cents]), [['Starter', 7900, 79000], ['Pro', 27900, 279000]], 'off-sale plans hidden, Starter first');
   assert.equal(c.plans[0].description, 'Includes Menu Care, Review Replies and Accessibility Monitoring');
@@ -59,9 +59,19 @@ test('menumade: the three plans with live prices, described by their included se
   assert.equal(c.generators[1].create_url, 'https://menu-made.com/api/website-preview/create');
   assert.match(c.generators[0].buttons[2].text, /a \$149 setup, then MΞNU Plus from \$[\d.]+\/mo/);
   assert.deepEqual(c.services.map((v) => [v.name, v.price]), [['Menu Care', '$29/mo'], ['Review Replies', '$49/mo'], ['Accessibility Monitoring', '$39/mo']], 'services with prices; bundles are the plans');
-  const off = hybrid.menumadeContent({ ok: true, offers: [{ code: 'STORE_APP_SETUP', name: 'Mobile App Setup', kind: 'ONE_TIME', on_sale: true, price_cents: 99900 }, { code: 'ONLINE_MENU_QR', name: 'Online Menu + QR', kind: 'ONE_TIME', on_sale: true, price_cents: 12900 }] }, { offCodes: ['STORE_APP_SETUP', 'STORE_APP_CARE'] });
+  const off = hybrid.menumadeContent({ ok: true, offers: [{ code: 'STORE_APP_SETUP', name: 'Mobile App Setup', kind: 'ONE_TIME', on_sale: true, price_cents: 99900 }, { code: 'ONLINE_MENU_QR', name: 'Online Menu + QR', kind: 'ONE_TIME', on_sale: true, price_cents: 12900 }] }, { offCodes: ['STORE_APP_SETUP', 'STORE_APP_CARE'], now: Date.parse('2027-01-02T18:00:00Z') });
   assert.deepEqual(off.services.map((v) => v.name), ['Online Menu + QR'], 'a service switched off for sale is not listed');
   assert.match(off.services[0].price, /^\$\d+ setup, then from \$[\d.]+\/mo$/);
+  // Holiday setup waiver (owner, Nov 20, 2026): through Dec 31 PT the app names no setup charge on Plus or Pro.
+  const nov = { now: Date.parse('2026-11-21T18:00:00Z') };
+  const w = hybrid.menumadeContent({ ok: true, offers: [{ code: 'ONLINE_MENU_QR', name: 'Online Menu + QR', kind: 'ONE_TIME', on_sale: true, price_cents: 14900 }] }, nov);
+  assert.equal(w.services[0].price, 'From $19.99/mo, no setup through Dec 31');
+  assert.match(w.generators[0].buttons[2].text, /^Orders the design on screen: MΞNU Plus from \$19\.99\/mo, with no \$149 setup through Dec 31, for your menu online/);
+  assert.equal(w.plans_note, 'Holiday special: no $149 setup on Plus or Pro through Dec 31; MΞNU Max never has one. Holiday menus are free with any plan.');
+  const jan = hybrid.menumadeContent({ ok: true, offers: [{ code: 'ONLINE_MENU_QR', name: 'Online Menu + QR', kind: 'ONE_TIME', on_sale: true, price_cents: 14900 }] }, { now: Date.parse('2027-01-02T18:00:00Z') });
+  assert.equal(jan.services[0].price, '$149 setup, then from $19.99/mo');
+  assert.match(jan.generators[0].buttons[2].text, /a \$149 setup, then MΞNU Plus from \$[\d.]+\/mo/);
+  assert.equal(jan.plans_note, 'Plus and Pro start with the $149 setup; MΞNU Max has none. Holiday menus are free with any plan.');
   assert.ok(c.work.length >= 4 && c.work.every((w) => /^https:\/\/menu-made\.com\/assets\/work\//.test(w.image)));
   assert.match(c.hero.image, /^https:\/\/menu-made\.com\//);
 });
