@@ -1,5 +1,6 @@
 import { FOOTER_TD, FROM_ADDRESS, INTERNAL_BCC, REPLY_TO_ADDRESS } from "../lib/email.js";
 import { sandboxPass } from '../lib/owner-sandbox.js';
+import { r2Get, r2Put } from '../lib/r2-retry.js';
 
 // Direct booking support; existing Worker code above remains unchanged.
 const mmBookingHandler = (() => {
@@ -63,7 +64,7 @@ async function validateDocument(file) {
 
 async function persistDocument(env, document, data) {
   if (!document) return;
-  await env.ASSETS.put(data.document.storageKey, document.bytes, {
+  await r2Put(env.ASSETS, data.document.storageKey, document.bytes, {
     httpMetadata: { contentType: document.contentType },
     customMetadata: { requestId: data.requestId, checksum: document.checksum, originalFilename: document.name }
   });
@@ -71,7 +72,7 @@ async function persistDocument(env, document, data) {
 
 async function emailDocument(env, document) {
   if (!document) return undefined;
-  const object = await env.ASSETS.get(document.storageKey);
+  const object = await r2Get(env.ASSETS, document.storageKey);
   if (!object) throw new Error('Document not yet available');
   const bytes = new Uint8Array(await object.arrayBuffer());
   const digest = await crypto.subtle.digest('SHA-256', bytes);
