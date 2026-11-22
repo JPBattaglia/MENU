@@ -19,7 +19,7 @@ import { cleanMenu, describeDiff, diffMenus, parseMenuHtml } from "../producers/
 import { freePlanUpgradeUrl, menuHostingState } from "../producers/menu-qr/hosting-renewal.js";
 import { hostedMenu } from "../producers/google-visibility/sources.js";
 import { currentSession, privateJson } from "./account.js";
-import { LANGUAGES, MAX_LANGUAGES, cleanLanguages, fillMissing, hasPaidPlan, loadTranslations, pageStrings, saveTranslations } from "../producers/menu-qr/translate.js";
+import { LANGUAGES, cleanLanguages, fillMissing, hasPaidPlan, languageCap, loadTranslations, pageStrings, saveTranslations } from "../producers/menu-qr/translate.js";
 
 const SAVES_PER_DAY = 60;
 
@@ -221,8 +221,9 @@ async function handleMenuPlus(request, env) {
 // ---- Translated menus (stage 15; paid plans only, owner Nov 14, 2026) ---------------------------------------
 
 async function languageState(env, businessId) {
-  const [row, paid] = await Promise.all([loadTranslations(env, businessId).catch(() => null), hasPaidPlan(env, businessId).catch(() => false)]);
-  return { paid, max: MAX_LANGUAGES, chosen: row?.languages || [], available: LANGUAGES.map(({ code, name, english }) => ({ code, name, english })) };
+  const [row, paid, max] = await Promise.all([loadTranslations(env, businessId).catch(() => null), hasPaidPlan(env, businessId).catch(() => false),
+    languageCap(env, businessId)]);
+  return { paid, max, chosen: row?.languages || [], available: LANGUAGES.map(({ code, name, english }) => ({ code, name, english })) };
 }
 
 async function languageContext(request, env, body) {
@@ -253,7 +254,7 @@ async function handleMenuLanguages(request, env) {
   const ctx = await languageContext(request, env, body);
   if (ctx.error) return ctx.error;
   const { business, html, row } = ctx;
-  row.languages = cleanLanguages(body.languages);
+  row.languages = cleanLanguages(body.languages, await languageCap(env, business.id));
   await saveTranslations(env, business.id, row);
   const filled = await fillMissing(env, business.id, html, row, { force: true }).catch(() => row);
   const total = pageStrings(html).length;
