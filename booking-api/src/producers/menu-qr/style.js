@@ -120,7 +120,7 @@ function styleCss(s) {
   h1 { font-family: ${FONTS[s.titleFont]}; font-size: clamp(32px, 9vw, 52px); color: var(--primary); font-weight: ${s.titleFont === "script" ? 400 : 700}; }
   header p { color: var(--accent); opacity: 1; letter-spacing: 4px; }
   header p::before, header p::after { content: ""; display: inline-block; width: 28px; height: 1px; background: var(--accent); vertical-align: middle; margin: 0 10px; }
-  .jump { background: ${s.dark ? "rgba(0,0,0,.35)" : "color-mix(in srgb, var(--paper) 94%, transparent)"}; border-bottom-color: var(--rule); }
+  .jump { background: ${s.dark ? "color-mix(in srgb, var(--paper) 96%, transparent)" : "color-mix(in srgb, var(--paper) 94%, transparent)"}; -webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px); border-bottom-color: var(--rule); }
   .jump a { background: transparent; border-color: var(--accent); color: var(--primary); font-family: ${FONTS[s.headingFont === "script" ? s.bodyFont : s.headingFont]}; }
   h2 { font-family: ${FONTS[s.headingFont]}; font-weight: ${s.headingFont === "script" ? 400 : 600}; font-size: ${s.headingFont === "script" ? "30px" : "23px"}; text-align: ${s.align}; text-transform: ${CASES[s.headingCase]}; color: var(--primary); letter-spacing: ${s.headingCase === "upper" ? "2px" : "0"}; ${dividerCss} }
   ${ornament}

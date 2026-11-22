@@ -29,3 +29,9 @@ test("a price cut after its dollar sign and dot gets its cents back", () => {
   assert.match(out, /<span class="price">\$9\.00<\/span>/);
   assert.match(out, /<span class="price">\$9\.50<\/span>/);
 });
+
+test("a saved dark menu gets the solid section bar", () => {
+  const out = stackSizePrices('<head><style>.jump { background: rgba(0,0,0,.35); border-bottom-color: var(--rule); }</style></head><span class="price">$9</span>');
+  assert.doesNotMatch(out, /rgba\(0,0,0,\.35\)/);
+  assert.match(out, /\.jump \{ background: color-mix\(in srgb, var\(--paper\) 96%, transparent\)/);
+});
