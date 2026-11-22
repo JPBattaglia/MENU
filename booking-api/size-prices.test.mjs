@@ -15,3 +15,10 @@ test("a page with no size prices is returned unchanged", () => {
   const html = '<html><head></head><body><span class="price">$12.50</span></body></html>';
   assert.equal(stackSizePrices(html), html);
 });
+
+test("no 40-character price limit is left anywhere", async () => {
+  const { readFileSync } = await import("node:fs");
+  for (const f of ["src/producers/menu-care/menu-edit.js", "src/producers/menu-qr/design.js", "src/producers/menu-qr/claude-reader.js"]) {
+    assert.doesNotMatch(readFileSync(new URL(`./${f}`, import.meta.url), "utf8"), /price[^\n]{0,20}\b40\b/, f);
+  }
+});
