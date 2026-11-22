@@ -31,7 +31,7 @@ import { hostedMenuSlug } from "../onboarding/menu-inputs.js";
 import { MENU_DESIGNS, menuDesignFor } from "../producers/menu-qr/menu-designs.js";
 import { menuHostingState } from "../producers/menu-qr/hosting-renewal.js";
 import { resolvePlan } from "../subscriptions/plans.js";
-import { MENU_PACKAGE_PRICING } from "../checkout/quote.js";
+import { MENU_PACKAGE_PRICING, setupWaiverOn } from "../checkout/quote.js";
 import { dailyClock } from "./daily-clock.js";
 import { buildMenuPdf, cancelTestOrder, diagnose, payTestCheckout, stripeTest, updateTest } from "./menu-qr-selftest.js";
 
@@ -180,15 +180,17 @@ async function buyAndPay(env, app, holder, { run, base, token, requestId, custom
   holder.current = test;
   // The plan's own catalog price, never a typed number; the $149 setup is charged with Plus, free with Max.
   const cents = (await resolvePlan(run.plan, "MONTH", env, { requirePublic: false }))?.priceCents;
-  const setupCents = run.setupFree ? 0 : MENU_PACKAGE_PRICING.setupCents;
+  // Holiday setup waiver (Nov 20, 2026): no setup on any plan through Dec 31; ends by itself, same check as checkout.
+  const setupFree = run.setupFree || setupWaiverOn();
+  const setupCents = setupFree ? 0 : MENU_PACKAGE_PRICING.setupCents;
   const order = await env.DB.prepare(`SELECT stripe_checkout_session_id, total_cents FROM orders WHERE id = ?`).bind(orderId).first();
   if (!cents || order?.total_cents !== cents + setupCents) throw new Error(`Expected a ${cents ? dollars(cents + setupCents) : "catalog-priced"} ${run.label} order, got ${order?.total_cents}`);
   const menuLine = parseJsonOrNull((await env.DB.prepare(`SELECT i.metadata_json FROM order_items i JOIN offers o ON o.id = i.offer_id WHERE i.order_id = ? AND o.code = 'ONLINE_MENU_QR'`).bind(orderId).first())?.metadata_json);
-  if (run.setupFree !== (Number(menuLine?.setup_waived_cents) > 0)) throw new Error(`The menu setup should be ${run.setupFree ? "free" : "charged"} with ${run.label}: ${JSON.stringify(menuLine).slice(0, 200)}`);
+  if (setupFree !== (Number(menuLine?.setup_waived_cents) > 0)) throw new Error(`The menu setup should be ${setupFree ? "free" : "charged"} with ${run.label}: ${JSON.stringify(menuLine).slice(0, 200)}`);
   if (menuLine?.plan_hosted !== run.plan) throw new Error(`The menu isn't hosted by ${run.label}: ${JSON.stringify(menuLine).slice(0, 200)}`);
   const paid = await payTestCheckout(env, order.stripe_checkout_session_id);
   return updateTest(env, test, { stage: "AWAIT_ACTIVE", state: { session_id: order.stripe_checkout_session_id, price_cents: cents },
-    log: `Preview opened with ${MENU_DESIGNS.length} designs; ${design.label} chosen; ${run.label} order ${orderId} at ${dollars(cents)}/mo ${run.setupFree ? "with no setup fee" : `plus the ${dollars(setupCents)} setup`}; paid with test card (${paid.amount})` });
+    log: `Preview opened with ${MENU_DESIGNS.length} designs; ${design.label} chosen; ${run.label} order ${orderId} at ${dollars(cents)}/mo ${setupFree ? "with no setup fee" : `plus the ${dollars(setupCents)} setup`}; paid with test card (${paid.amount})` });
 }
 
 async function stageAwaitActive(env, app, test) {
