@@ -81,7 +81,7 @@ function formatExtractedMenu(menu) {
     if (!items.length) continue;
     lines.push(clean(section.name, 120).toUpperCase() || "MENU");
     for (const item of items) {
-      const price = clean(item.price, 40);
+      const price = clean(item.price, 80);
       lines.push(price ? `${clean(item.name, 200)} — ${price}` : clean(item.name, 200));
       const description = clean(item.description, 600);
       if (description) lines.push(`  ${description}`);
