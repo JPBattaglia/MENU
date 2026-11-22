@@ -32,6 +32,7 @@ import { loadPreviewLogo, renderMenuDesign } from "./public-preview.js";
 import { isOccasion } from "../checkout/holiday.js";
 import { pausedForSale } from "../lib/switches.js";
 import { wantsJson, preflight } from "./framed.js";
+import { menuDesignFor } from "../producers/menu-qr/menu-designs.js";
 
 const KIND = "menu-free";
 const LINK_DAYS = 7;
@@ -176,7 +177,7 @@ async function findOrCreateCustomer(env, email, t) {
 }
 
 // Makes the free menu live. Safe to call twice for one preview: the preview row is claimed first.
-async function createFreeMenu(env, row, { now = Date.now() } = {}) {
+async function createFreeMenu(env, row, { now = Date.now(), design = FREE_DESIGN, comp = false } = {}) {
   const t = new Date(now).toISOString();
   const projectId = crypto.randomUUID();
   if (row.free_project_id) {
@@ -185,15 +186,15 @@ async function createFreeMenu(env, row, { now = Date.now() } = {}) {
   }
   const dayAgo = new Date(now - 86400000).toISOString();
   const today = Number((await env.DB.prepare(`SELECT COUNT(*) AS n FROM menu_previews WHERE free_project_id IS NOT NULL AND free_claimed_at > ?`).bind(dayAgo).first())?.n || 0);
-  if (today >= FREE_PER_DAY) return { ok: false, user: true, status: 429, error: "We've made a lot of free menus today. Please try again tomorrow." };
+  if (!comp && today >= FREE_PER_DAY) return { ok: false, user: true, status: 429, error: "We've made a lot of free menus today. Please try again tomorrow." };
   const mine = Number((await env.DB.prepare(`SELECT COUNT(*) AS n FROM menu_previews WHERE lower(email) = lower(?) AND free_project_id IS NOT NULL`).bind(row.email).first())?.n || 0);
-  if (mine >= FREE_PER_EMAIL) return { ok: false, user: true, status: 429, error: `The free plan covers ${FREE_PER_EMAIL} businesses per email address. Sign in to your account to edit the ones you have.` };
+  if (!comp && mine >= FREE_PER_EMAIL) return { ok: false, user: true, status: 429, error: `The free plan covers ${FREE_PER_EMAIL} businesses per email address. Sign in to your account to edit the ones you have.` };
   const data = parseJsonOrNull(await (await env.ASSETS.get(`menu-previews/${row.token}/data.json`))?.text());
   if (!data?.menu?.sections?.length) return { ok: false, user: true, status: 410, error: "This preview's menu is no longer available. Make a new preview to start free." };
   const claimed = await env.DB.prepare(`UPDATE menu_previews SET free_project_id = ?, free_claimed_at = ? WHERE token = ? AND free_project_id IS NULL`).bind(projectId, t, row.token).run();
   if (!claimed.meta?.changes) {
     const again = await previewRow(env, row.token);
-    return createFreeMenu(env, again, { now });
+    return createFreeMenu(env, again, { now, design, comp });
   }
   try {
     await ensureOffer(env, t);
@@ -202,32 +203,32 @@ async function createFreeMenu(env, row, { now = Date.now() } = {}) {
     const name = String(data.custom?.name || data.business || row.business).slice(0, 150);
     const businessId = crypto.randomUUID();
     await env.DB.prepare(`INSERT INTO businesses (id, created_at, updated_at, name, email, business_status, notes) VALUES (?, ?, ?, ?, ?, 'ACTIVE_CUSTOMER', ?)`)
-      .bind(businessId, t, t, name, email, "MΞNU free plan").run();
+      .bind(businessId, t, t, name, email, comp ? "Owner comp: free menu given by Menu-made" : "MΞNU free plan").run();
     await env.DB.prepare(`INSERT OR IGNORE INTO customer_businesses (customer_id, business_id, role, is_primary, created_at) VALUES (?, ?, 'CUSTOMER', 1, ?)`).bind(customerId, businessId, t).run();
     const orderId = crypto.randomUUID();
     const order = { id: orderId, customer_id: customerId, business_id: businessId };
     await env.DB.prepare(`
         INSERT INTO orders (id, created_at, updated_at, customer_id, business_id, status, currency, subtotal_cents, discount_cents, tax_cents, total_cents, payment_status, placed_at, notes)
         VALUES (?, ?, ?, ?, ?, 'COMPLETED', 'USD', 0, 0, 0, 0, 'PAID', ?, ?)
-      `).bind(orderId, t, t, customerId, businessId, t, `MΞNU free plan. Preview ref: ${row.token}`).run();
+      `).bind(orderId, t, t, customerId, businessId, t, `${comp ? "Owner comp" : "MΞNU free plan"}. Preview ref: ${row.token}`).run();
     const itemId = crypto.randomUUID();
     await env.DB.prepare(`
         INSERT INTO order_items (id, order_id, offer_id, offer_version_id, unit_price_cents, line_total_cents, metadata_json)
         VALUES (?, ?, ?, ?, 0, 0, ?)
-      `).bind(itemId, orderId, OFFER_ID, OFFER_VERSION_ID, JSON.stringify({ environment: "live", free_plan: true })).run();
+      `).bind(itemId, orderId, OFFER_ID, OFFER_VERSION_ID, JSON.stringify(comp ? { environment: "live", comp: true } : { environment: "live", free_plan: true })).run();
     await env.DB.prepare(`
         INSERT INTO projects (id, order_id, order_item_id, business_id, customer_id, project_type, status, workflow_key, workflow_version, created_at, updated_at, metadata_json)
         VALUES (?, ?, ?, ?, ?, 'MENU', 'DELIVERED', 'MENU_QR_V1', 1, ?, ?, ?)
-      `).bind(projectId, orderId, itemId, businessId, customerId, t, t, JSON.stringify({ free_plan: { preview: row.token, design: FREE_DESIGN, started_at: t } })).run();
+      `).bind(projectId, orderId, itemId, businessId, customerId, t, t, JSON.stringify(comp ? { comp: { preview: row.token, design, started_at: t, by: "owner" } } : { free_plan: { preview: row.token, design: FREE_DESIGN, started_at: t } })).run();
     await createMenuQrInputs(projectId, order, t, env);
     const destination = (await env.DB.prepare(`SELECT value_text FROM project_inputs WHERE project_id = ? AND input_key = 'qr_destination'`).bind(projectId).first())?.value_text;
     if (!destination) throw new Error("No menu address was made");
 
-    const html = renderMenuDesign(data, FREE_DESIGN, await loadPreviewLogo(env, row.token, data.custom).catch(() => null));
-    const menu = await storeDeliverable(env, { projectId, orderId, customerId, businessId, t, type: "MENU_DRAFT", ext: "html", mime: "text/html; charset=utf-8", bytes: new TextEncoder().encode(html), name: `${name}-menu.html`, meta: { free_plan: true, design: FREE_DESIGN } });
+    const html = renderMenuDesign(data, design, await loadPreviewLogo(env, row.token, data.custom).catch(() => null));
+    const menu = await storeDeliverable(env, { projectId, orderId, customerId, businessId, t, type: "MENU_DRAFT", ext: "html", mime: "text/html; charset=utf-8", bytes: new TextEncoder().encode(html), name: `${name}-menu.html`, meta: comp ? { comp: true, design } : { free_plan: true, design: FREE_DESIGN } });
     const svg = await QRCode.toString(qrScanUrl(destination, env), { type: "svg", errorCorrectionLevel: "H", margin: 4, width: 1024 });
-    const qr = await storeDeliverable(env, { projectId, orderId, customerId, businessId, t, type: "QR_CODE", ext: "svg", mime: "image/svg+xml", bytes: new TextEncoder().encode(svg), name: `${name}-qr.svg`, meta: { free_plan: true, destination_url: destination } });
-    await sendLiveEmail(env, { email, name, destination, qrDeliverableId: qr, businessId, customerId, orderId, projectId, token: row.token });
+    const qr = await storeDeliverable(env, { projectId, orderId, customerId, businessId, t, type: "QR_CODE", ext: "svg", mime: "image/svg+xml", bytes: new TextEncoder().encode(svg), name: `${name}-qr.svg`, meta: { ...(comp ? { comp: true } : { free_plan: true }), destination_url: destination } });
+    await sendLiveEmail(env, { email, name, destination, qrDeliverableId: qr, businessId, customerId, orderId, projectId, token: row.token, comp, design });
     return { ok: true, projectId, businessId, customerId, menuDeliverableId: menu, qrDeliverableId: qr, destination };
   } catch (error) {
     // Let the buyer try again: the claim is released (rows already written stay; nothing points at them).
@@ -253,11 +254,34 @@ async function storeDeliverable(env, { projectId, orderId, customerId, businessI
   return deliverableId;
 }
 
-async function sendLiveEmail(env, { email, name, destination, qrDeliverableId, businessId, customerId, orderId, projectId, token }) {
+async function sendLiveEmail(env, { email, name, destination, qrDeliverableId, businessId, customerId, orderId, projectId, token, comp = false, design = FREE_DESIGN }) {
   const base = publicBaseUrl(env);
   const qrLink = `${base}/api/delivery/${qrDeliverableId}?t=${encodeURIComponent(await signLinkToken(env, { kind: "deliver", id: qrDeliverableId, ttlDays: DELIVERY_LINK_TTL_DAYS }))}`;
   const editor = `${base}/menu-editor.html?business=${encodeURIComponent(businessId)}`;
   const upgrade = `${base}/api/menu-preview/view/${token}`;
+  if (comp) {
+    const designName = menuDesignFor(design)?.label || design;
+    return sendTransactionalEmail(env, {
+      to: email,
+      subject: `${name}'s menu is live (owner comp)`,
+      html: brandedEmailHtml({
+        preheader: "The comped menu and its QR code are ready.",
+        eyebrow: "Owner comp",
+        heading: `${escapeHtml(name)}'s menu is live`,
+        paragraphs: [
+          escapeHtml(`${name}'s menu is online in the ${designName} design, free, under your account. It never bills, never goes offline and shows no "Made with MΞNU" badge.`),
+          "Edit prices, sold-out items and specials from your account any time; the link and QR code stay the same."
+        ],
+        rows: [["Live menu", destination]],
+        buttons: [{ label: "Open the menu", url: destination, primary: true }, { label: "Download the QR code", url: qrLink }, { label: "Edit the menu", url: editor }]
+      }),
+      text: `${name}'s menu is live (owner comp, ${designName} design): ${destination}\n\nQR code: ${qrLink}\nEdit the menu: ${editor}`,
+      idempotencyKey: `menu-comp-live/${projectId}`,
+      purpose: "MENU_COMP_LIVE",
+      templateKey: "menu_comp_live_v1",
+      context: { customerId, businessId, orderId, projectId }
+    }).catch((error) => ({ ok: false, error: error instanceof Error ? error.message : String(error) }));
+  }
   return sendTransactionalEmail(env, {
     to: email,
     subject: `${name}'s menu is live`,
@@ -281,4 +305,67 @@ async function sendLiveEmail(env, { email, name, destination, qrDeliverableId, b
   }).catch((error) => ({ ok: false, error: error instanceof Error ? error.message : String(error) }));
 }
 
-export { freeOnSale, FREE_DESIGN, FREE_PER_DAY, FREE_PER_EMAIL, START_LABEL, addFreeButton, createFreeMenu, freeButton, handleFreeConfirm, handleFreeStart };
+// Owner comp (Nov 21, 2026, owner: "Comp it under my account" for My Happy Donut). Only for a preview made with the
+// owner's own address (rep mode or the generator with info@): the owner gets a signed link by email, and pressing its
+// button makes that preview live in the chosen design under the owner's account, free, with no badge and no end.
+//   POST /api/menu-preview/comp/<token>?design=<key>   -> emails the owner inbox the confirm link
+//   GET  /api/menu-comp/confirm/<token>?d=<key>&t=…     -> a button; POST makes the menu live and signs the owner in
+const COMP_KIND = "menu-comp";
+const isOwnerPreview = (env, row) => row && String(row.email || "").toLowerCase() === String(ownerEmailAddress(env)).toLowerCase();
+
+async function handleCompStart(request, env, token, { now = Date.now() } = {}) {
+  const fail = (status, text) => simplePage(status, "Owner comp", `<p>${escapeHtml(text)}</p>`);
+  if (!env.DB || !env.ASSETS) return fail(503, "This isn't available right now. Please try again in a minute.");
+  const design = String(new URL(request.url).searchParams.get("design") || "").toLowerCase();
+  if (!menuDesignFor(design) || menuDesignFor(design).occasion) return fail(400, "Pick one of the menu designs.");
+  const row = await previewRow(env, token);
+  if (!row || row.status !== "READY" || isOccasion(row.occasion)) return fail(410, "This preview isn't available.");
+  if (!isOwnerPreview(env, row)) return fail(403, "Only previews made with the owner's address can be comped.");
+  if (row.free_project_id) return fail(409, "This preview is already live.");
+  const link = `${publicBaseUrl(env)}/api/menu-comp/confirm/${token}?d=${encodeURIComponent(design)}&t=${encodeURIComponent(await signLinkToken(env, { kind: COMP_KIND, id: `${token}.${design}`, ttlDays: LINK_DAYS }))}`;
+  const sent = await sendTransactionalEmail(env, {
+    to: ownerEmailAddress(env),
+    subject: `Comp ${row.business}'s menu (${menuDesignFor(design).label})`,
+    html: brandedEmailHtml({
+      preheader: "One tap makes this menu live for free under your account.",
+      eyebrow: "Owner comp",
+      heading: `Comp ${escapeHtml(row.business)}'s menu`,
+      paragraphs: [escapeHtml(`Press the button to put ${row.business}'s menu online in the ${menuDesignFor(design).label} design under your account: free, no badge, never offline, no renewal emails.`), "If you didn't ask for this, ignore this email."],
+      buttons: [{ label: "Make it live (comp)", url: link, primary: true }]
+    }),
+    text: `Comp ${row.business}'s menu (${menuDesignFor(design).label} design), free under your account:\n${link}`,
+    idempotencyKey: `menu-comp/${token}/${design}/${Math.floor(now / 600000)}`,
+    purpose: "MENU_COMP_CONFIRM",
+    templateKey: "menu_comp_confirm_v1",
+    context: {}
+  }).catch((error) => ({ ok: false, error: error instanceof Error ? error.message : String(error) }));
+  if (sent?.ok === false) return fail(502, "We couldn't send the email just now. Please try again in a minute.");
+  return simplePage(200, "Check the owner inbox", `<p>The comp link for <strong>${escapeHtml(row.business)}</strong> went to the owner inbox.</p>`);
+}
+
+async function handleCompConfirm(request, env, token, { now = Date.now() } = {}) {
+  const url = new URL(request.url);
+  const form = request.method === "POST" ? await request.formData().catch(() => null) : null;
+  const t = form ? form.get("t") : url.searchParams.get("t");
+  const design = String((form ? form.get("d") : url.searchParams.get("d")) || "").toLowerCase();
+  const ended = () => simplePage(410, "This link has expired", "<p>Ask for a new comp link from the preview.</p>");
+  const payload = await verifyLinkToken(env, String(t || ""), [COMP_KIND], `${token}.${design}`).catch(() => null);
+  if (!payload || payload.expired || !env.DB || !env.ASSETS || !menuDesignFor(design)) return ended();
+  const row = await previewRow(env, token);
+  if (!row || row.status !== "READY" || !isOwnerPreview(env, row)) return simplePage(410, "Owner comp", "<p>This preview isn't available.</p>");
+  if (request.method !== "POST") {
+    return simplePage(200, row.free_project_id ? "This menu is live" : "Comp this menu",
+      `<p>${row.free_project_id ? "It's already live. Press the button to open it in your account." : `<strong>${escapeHtml(row.business)}</strong>: ${escapeHtml(menuDesignFor(design).label)} design, free under your account, no badge, never offline.`}</p><form method="post"><input type="hidden" name="t" value="${escapeHtml(String(t))}"><input type="hidden" name="d" value="${escapeHtml(design)}"><button type="submit">${row.free_project_id ? "Open the menu" : "Make it live (comp)"}</button></form>`);
+  }
+  const out = await createFreeMenu(env, row, { now, design, comp: true }).catch((error) => ({ ok: false, error: error instanceof Error ? error.message : String(error) }));
+  if (!out.ok) {
+    if (out.error && !out.user) console.error("Comp menu failed:", out.error);
+    return simplePage(out.status || 500, "Owner comp", `<p>${escapeHtml(out.user ? out.error : "Something went wrong making the menu live. Please try again in a minute.")}</p>`);
+  }
+  const session = await createSession(env, out.customerId);
+  return new Response(null, { status: 303, headers: {
+    Location: `${publicBaseUrl(env)}/menu-editor.html?business=${encodeURIComponent(out.businessId)}`,
+    "Set-Cookie": cookieHeader(session.cookie, SESSION_DAYS * 86400), "Cache-Control": "no-store" } });
+}
+
+export { freeOnSale, FREE_DESIGN, FREE_PER_DAY, FREE_PER_EMAIL, START_LABEL, addFreeButton, createFreeMenu, freeButton, handleCompConfirm, handleCompStart, handleFreeConfirm, handleFreeStart };

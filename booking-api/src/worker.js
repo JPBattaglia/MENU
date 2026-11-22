@@ -1,5 +1,5 @@
 import { handleAdminQueue } from "./admin/queue.js";
-import { handleFreeConfirm, handleFreeStart } from "./marketing/free-menu.js";
+import { handleCompConfirm, handleCompStart, handleFreeConfirm, handleFreeStart } from "./marketing/free-menu.js";
 import { handleMenuLink } from "./marketing/menu-link.js";
 import { handlePreviewCreate, handlePreviewView, handlePreviewState, handlePreviewHandoff, handlePreviewCustomize, handlePreviewChoose, handleRepLink, handlePreviewShowcase, runPreviewReminders } from "./marketing/public-preview.js";
 import { handleSiteForm } from "./producers/site-files/site-form.js";
@@ -212,6 +212,11 @@ var worker_default = {
     if (menuFree && (request.method === "POST" || request.method === "OPTIONS")) return handleFreeStart(request, env, menuFree[1]);
     const menuFreeConfirm = url.pathname.match(/^\/api\/menu-free\/confirm\/([a-f0-9]{36})$/);
     if (menuFreeConfirm && (request.method === "GET" || request.method === "POST")) return handleFreeConfirm(request, env, menuFreeConfirm[1]);
+    // Owner comp (Nov 21, 2026): an owner-made preview goes live free under the owner's account, via an emailed link.
+    const menuComp = url.pathname.match(/^\/api\/menu-preview\/comp\/([a-f0-9]{36})$/);
+    if (menuComp && request.method === "POST") return handleCompStart(request, env, menuComp[1]);
+    const menuCompConfirm = url.pathname.match(/^\/api\/menu-comp\/confirm\/([a-f0-9]{36})$/);
+    if (menuCompConfirm && (request.method === "GET" || request.method === "POST")) return handleCompConfirm(request, env, menuCompConfirm[1]);
     const menuChoose = url.pathname.match(/^\/api\/menu-preview\/choose\/([a-f0-9]{36})\/([a-z]{2,20})$/);
     if (menuChoose && request.method === "GET") return handlePreviewChoose(env, menuChoose[1], menuChoose[2], { request });
     const previewMatch = url.pathname.match(/^\/api\/menu-preview\/([a-f0-9]{36})$/);
