@@ -176,3 +176,14 @@ test('owner comp (My Happy Donut, Nov 22, 2026): counts as paid and may show eve
     assert.match(es, /<span class="item">ES Margherita<\/span>/);
   } finally { h.restore(); }
 });
+
+test('language buttons use the menu\'s own page colour and highlight colour in every design', () => {
+  for (const d of [...MENU_DESIGNS, ...(HOLIDAY_DESIGNS || [])]) {
+    const html = buildDesignedMenuHtml({ businessName: "Joe's Pizza", brandColors: '#7a1f2b', menu: MENU, style: designStyle(d.key, MENU), subtitle: 'Menu' });
+    for (const v of ['--paper', '--accent', '--primary']) assert.match(html, new RegExp(`${v}:`), `${d.key} sets ${v}`);
+    const page = translateMenuHtml(html, { lang: null, chosen: ['es'], row: null, hostedUrl: URL_ });
+    assert.match(page, /\.mm-langs a\{[^}]*border:1px solid var\(--accent/);
+    assert.match(page, /\.mm-langs a\{[^}]*background:var\(--paper/);
+    assert.match(page, /\.mm-langs a\[aria-current\]\{background:var\(--accent[^}]*border-color:var\(--accent/);
+  }
+});

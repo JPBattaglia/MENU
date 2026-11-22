@@ -79,7 +79,10 @@ const languageLinks = (hostedUrl, chosen, current) => {
   const link = (code, label, href) => `<a href="${escapeHtml2(href)}" lang="${code}" hreflang="${code}"${code === current ? ' aria-current="page"' : ""}>${escapeHtml2(label)}</a>`;
   return `<nav class="mm-langs" aria-label="Language">${[link("en", "English", hostedUrl), ...chosen.map((code) => link(code, BY_CODE.get(code).name, `${hostedUrl}?lang=${code}`))].join("")}</nav>`;
 };
-const LANG_CSS = `<style>.mm-langs{display:flex;flex-wrap:wrap;justify-content:center;gap:6px;padding:8px 12px;background:#fff;border-bottom:1px solid var(--rule,#e6dfd3);font:600 13px/1.2 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}.mm-langs a{padding:5px 11px;border:1px solid var(--rule,#e6dfd3);border-radius:999px;color:var(--primary,#1f2a2e);text-decoration:none}.mm-langs a[aria-current]{background:var(--primary,#1f2a2e);border-color:var(--primary,#1f2a2e);color:#fff}</style>`;
+// The language bar takes each menu's own colours (owner, Nov 22, 2026): the page colour (--paper) behind every button,
+// the highlight colour (--accent) for every border and for the chosen language, the menu's main colour (--primary)
+// for the words. Every design and holiday theme sets these, so it follows design and highlight changes by itself.
+const LANG_CSS = `<style>.mm-langs{display:flex;flex-wrap:wrap;justify-content:center;gap:6px;padding:8px 12px;background:var(--paper,#fff);border-bottom:1px solid var(--accent,#e6dfd3);font:600 13px/1.2 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}.mm-langs a{padding:5px 11px;border:1px solid var(--accent,#e6dfd3);border-radius:999px;background:var(--paper,#fff);color:var(--primary,#1f2a2e);text-decoration:none}.mm-langs a[aria-current]{background:var(--accent,#1f2a2e);border-color:var(--accent,#1f2a2e);color:#fff}</style>`;
 
 // The page in one language (or the original with the language links when lang is null).
 function translateMenuHtml(html, { lang = null, chosen = [], row = null, hostedUrl }) {
