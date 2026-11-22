@@ -73,6 +73,15 @@ async function hasFreePlan(env, businessId) {
     `).bind(businessId).first());
 }
 
+// Owner comp (Nov 21, 2026, owner: "Comp it under my account", for My Happy Donut): a menu the owner gives a client
+// for free. It never goes offline, never bills, gets no renewal emails and no "Made with MΞNU" badge.
+async function hasComp(env, businessId) {
+  return Boolean(await env.DB.prepare(`
+      SELECT 1 AS ok FROM projects p WHERE p.business_id = ? AND p.workflow_key = 'MENU_QR_V1'
+        AND json_extract(COALESCE(p.metadata_json, '{}'), '$.comp') IS NOT NULL LIMIT 1
+    `).bind(businessId).first());
+}
+
 async function hasWaivedMenu(env, businessId) {
   return Boolean(await env.DB.prepare(`
       SELECT 1 AS ok FROM projects p WHERE p.business_id = ? AND p.workflow_key = 'MENU_QR_V1'
@@ -96,11 +105,13 @@ async function freePlanUpgradeUrl(env, businessId) {
 // online (nothing to measure against).
 async function menuHostingState(env, businessId, now = new Date()) {
   if (await hasMenuCare(env, businessId)) return { live: true, reason: "menu_care" };
+  if (await hasComp(env, businessId)) return { live: true, reason: "comp" };
   const qr = await env.DB.prepare(`
       SELECT p.id, MIN(d.delivered_at) AS first_delivered_at FROM projects p JOIN deliverables d ON d.project_id = p.id
       WHERE p.business_id = ? AND p.workflow_key = 'MENU_QR_V1' AND d.deliverable_type = 'MENU_DRAFT' AND d.status = 'FINAL' AND d.customer_visible = 1
         AND json_extract(COALESCE(p.metadata_json, '{}'), '$.holiday_menu') IS NULL   -- Holiday Menus have no hosting year
         AND json_extract(COALESCE(p.metadata_json, '{}'), '$.free_plan') IS NULL   -- nor does the free plan
+        AND json_extract(COALESCE(p.metadata_json, '{}'), '$.comp') IS NULL   -- nor an owner comp
         AND COALESCE(json_extract((SELECT oi.metadata_json FROM order_items oi WHERE oi.id = p.order_item_id), '$.setup_waived_cents'), 0) = 0   -- nor a menu whose first year came free with a plan
         AND json_extract((SELECT oi.metadata_json FROM order_items oi WHERE oi.id = p.order_item_id), '$.plan_hosted') IS NULL   -- nor one hosted by its plan (Nov 19, 2026)
       GROUP BY p.id ORDER BY first_delivered_at DESC LIMIT 1
@@ -140,6 +151,7 @@ async function loadMenuProject(env, projectId) {
       FROM projects p JOIN businesses b ON b.id = p.business_id JOIN customers c ON c.id = p.customer_id
       WHERE p.id = ? AND p.workflow_key = 'MENU_QR_V1' AND json_extract(COALESCE(p.metadata_json, '{}'), '$.holiday_menu') IS NULL
         AND json_extract(COALESCE(p.metadata_json, '{}'), '$.free_plan') IS NULL
+        AND json_extract(COALESCE(p.metadata_json, '{}'), '$.comp') IS NULL
     `).bind(projectId).first();
   if (!row) return null;
   return { ...row, environment: parseJsonOrNull(row.item_metadata)?.environment === "sandbox" ? "sandbox" : "live" };
