@@ -153,3 +153,26 @@ test('paid plan: pick Spanish and Chinese, guests switch languages, an edit tran
     assert.equal((await h.post('/api/account/menu/languages', { business: BIZ, languages: ['es'] })).status, 402);
   } finally { h.restore(); }
 });
+
+test('owner comp (My Happy Donut, Nov 22, 2026): counts as paid and may show every language, not just five', async () => {
+  const h = await setup();
+  try {
+    const { LANGUAGES, MAX_LANGUAGES } = await import('./src/producers/menu-qr/translate.js');
+    // A paying business stays capped.
+    h.addPlan();
+    let res = await (await h.post('/api/account/menu/languages', { business: BIZ, languages: LANGUAGES.map((l) => l.code) })).json();
+    assert.equal(res.chosen.length, MAX_LANGUAGES);
+    h.sql(`DELETE FROM entitlements`);
+    // The owner's comp: no plan at all, but the project says it was comped by the owner.
+    h.sql(`UPDATE projects SET metadata_json = ? WHERE id = ?`, JSON.stringify({ comp: { preview: 'x', design: 'bistro', by: 'owner' } }), PROJECT);
+    const state = (await (await h.get(`/api/account/menu?business=${BIZ}`)).json()).languages;
+    assert.equal(state.paid, true);
+    assert.equal(state.max, LANGUAGES.length);
+    res = await (await h.post('/api/account/menu/languages', { business: BIZ, languages: LANGUAGES.map((l) => l.code) })).json();
+    assert.deepEqual(res.chosen, LANGUAGES.map((l) => l.code));
+    const page = await (await h.call('/api/menu/joes-pizza-abcd')).text();
+    for (const l of LANGUAGES) assert.match(page, new RegExp(`hreflang="${l.code}"`), l.code);
+    const es = await (await h.call('/api/menu/joes-pizza-abcd?lang=es')).text();
+    assert.match(es, /<span class="item">ES Margherita<\/span>/);
+  } finally { h.restore(); }
+});

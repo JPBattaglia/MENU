@@ -10,6 +10,9 @@
 // in that language. Prices, the business name, logo and design never change. The page stays script-free (its CSP is
 // "sandbox"), so the switch is plain links, not JavaScript.
 //
+// Owner comps (Nov 22, 2026, owner: "Make the my happy donut menu show all available languages"): a menu the owner
+// comped under his own account counts as paid and may show every language, not just MAX_LANGUAGES.
+//
 // Translations are keyed by the original text, so a price change or a new special only translates what is new. The
 // owner's own corrections (overrides) always win. Text with no translation yet falls back to the original.
 import { generate } from "../../ai/generate.js";
@@ -32,6 +35,8 @@ const LANGUAGES = [
   { code: "hi", name: "हिन्दी", english: "Hindi", soldOut: "स्टॉक में नहीं" }
 ];
 const BY_CODE = new Map(LANGUAGES.map((l) => [l.code, l]));
+const COMP_SQL = (col) => `EXISTS (SELECT 1 FROM projects p WHERE p.business_id = ${col} AND p.project_type = 'MENU'
+          AND json_extract(p.metadata_json, '$.comp.by') = 'owner')`;
 const MAX_LANGUAGES = 5;
 const CHUNK = 120;                       // strings per AI call
 const RETRY_FILL_MS = 10 * 60 * 1000;    // a failed fill is not retried by guests' visits for 10 minutes
@@ -103,13 +108,14 @@ async function loadTranslations(env, businessId) {
   const row = await env.DB.prepare(`
       SELECT t.languages_json, t.strings_json, t.overrides_json, t.fill_attempt_at,
         EXISTS (SELECT 1 FROM entitlements e WHERE e.business_id = t.business_id AND e.status = 'ACTIVE' AND e.subscription_id IS NOT NULL
-          AND e.entitlement_type IN ('MENU_PRO', 'MENU_CARE')) AS paid
+          AND e.entitlement_type IN ('MENU_PRO', 'MENU_CARE')) AS paid,
+        ${COMP_SQL("t.business_id")} AS comp
       FROM menu_translations t WHERE t.business_id = ?
     `).bind(businessId).first();
   if (!row) return null;
   const languages = (parseJsonOrNull(row.languages_json) || []).filter((c) => BY_CODE.has(c));
   return { languages, strings: parseJsonOrNull(row.strings_json) || {}, overrides: parseJsonOrNull(row.overrides_json) || {},
-    fillAttemptAt: row.fill_attempt_at || null, paid: Boolean(row.paid) };
+    fillAttemptAt: row.fill_attempt_at || null, paid: Boolean(row.paid || row.comp), comp: Boolean(row.comp) };
 }
 
 // Languages come with MΞNU Pro and Max (owner, Nov 19, 2026: "$29 for languages, trifold, table tents"), not Plus.
@@ -117,7 +123,16 @@ async function hasPaidPlan(env, businessId) {
   return Boolean(await env.DB.prepare(`
       SELECT 1 AS ok FROM entitlements WHERE business_id = ? AND status = 'ACTIVE' AND subscription_id IS NOT NULL
         AND entitlement_type IN ('MENU_PRO', 'MENU_CARE') LIMIT 1
-    `).bind(businessId).first());
+    `).bind(businessId).first()) || await isOwnerComp(env, businessId);
+}
+
+async function isOwnerComp(env, businessId) {
+  return Boolean((await env.DB.prepare(`SELECT ${COMP_SQL("?")} AS ok`).bind(businessId).first())?.ok);
+}
+
+// How many languages a business may show: all of them for an owner comp, MAX_LANGUAGES otherwise.
+async function languageCap(env, businessId) {
+  return await isOwnerComp(env, businessId).catch(() => false) ? LANGUAGES.length : MAX_LANGUAGES;
 }
 
 async function saveTranslations(env, businessId, row) {
@@ -203,13 +218,13 @@ async function localizedMenuPage(env, { html, businessId, lang, hostedUrl }) {
   return translateMenuHtml(html, { lang: want, chosen: row.languages, row, hostedUrl });
 }
 
-function cleanLanguages(list) {
+function cleanLanguages(list, max = MAX_LANGUAGES) {
   const out = [];
   for (const code of Array.isArray(list) ? list : []) if (BY_CODE.has(code) && !out.includes(code)) out.push(code);
-  return out.slice(0, MAX_LANGUAGES);
+  return out.slice(0, max);
 }
 
 export {
-  LANGUAGES, MAX_LANGUAGES, cleanLanguages, fillMissing, hasPaidPlan, loadTranslations, localizedMenuPage, pageStrings,
+  LANGUAGES, MAX_LANGUAGES, cleanLanguages, fillMissing, hasPaidPlan, isOwnerComp, languageCap, loadTranslations, localizedMenuPage, pageStrings,
   saveTranslations, translateMenuHtml, translateStrings
 };
