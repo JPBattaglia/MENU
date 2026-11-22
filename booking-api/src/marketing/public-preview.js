@@ -30,6 +30,7 @@
 // email is optional (blank = the preview link goes to the owner inbox). The link is emailed to the owner inbox:
 //   GET/POST /api/menu-preview/rep-link   "Email me the rep link" (always goes to the owner inbox; REP_TTL_DAYS)
 // and a fresh one is in every Friday numbers email, so there's no token to remember.
+import { stackSizePrices } from "../producers/menu-qr/long-prices.js";
 import { r2Get, r2Put } from "../lib/r2-retry.js";
 import { nowIso, parseJsonOrNull } from "../lib/http.js";
 import { sandboxPass } from "../lib/owner-sandbox.js";
@@ -210,7 +211,7 @@ function publicPreviewPage(menuHtml, token, { index = 0, custom = {}, business =
         var row = el("div", "mm-it-row");
         var top = el("div", "mm-it-top");
         top.appendChild(input("Item", it.name, 200, function (v) { it.name = v; }));
-        top.appendChild(input("Price", it.price, 40, function (v) { it.price = v; }));
+        top.appendChild(input("Price", it.price, 80, function (v) { it.price = v; }));
         row.appendChild(top);
         row.appendChild(input("Description", it.description, 600, function (v) { it.description = v; }, true));
         row.appendChild(marks(it));
@@ -589,7 +590,7 @@ async function handlePreviewView(request, env, token, { now = Date.now(), design
   if (!isOccasion(row.occasion)) page = page.replace(/(<a class="mm-gen-pick"[^>]*>)[^<]*(<\/a>)/g, (_, open, close) => `${open}${escapeHtml(makeLiveLabel(null))}${close}`);
   // Rep mode (Nov 19, 2026): "All formats" shows the QR code, table tent, tri-fold, print menu and TV screen on the spot.
   if (row.campaign === "rep") page = addShowcaseButton(page, token, key);
-  return new Response(frameAware(page), { status: 200, headers: { "Content-Type": "text/html; charset=utf-8", "Cache-Control": "no-store", "X-Robots-Tag": "noindex, nofollow", "Referrer-Policy": "no-referrer" } });
+  return new Response(frameAware(stackSizePrices(page)), { status: 200, headers: { "Content-Type": "text/html; charset=utf-8", "Cache-Control": "no-store", "X-Robots-Tag": "noindex, nofollow", "Referrer-Policy": "no-referrer" } });
 }
 
 // The Menu-made app's generator screen (app-shell/www/hybrid.js): which designs there are, where each one's page is,

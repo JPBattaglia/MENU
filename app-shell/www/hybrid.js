@@ -602,7 +602,7 @@
           sec.items.forEach(function (it, ii) {
             var row = el("div", "hy-items-row"), top = el("div", "hy-items-top");
             top.appendChild(field("Item", it.name, 200, function (v) { it.name = v; }));
-            top.appendChild(field("Price", it.price, 40, function (v) { it.price = v; }));
+            top.appendChild(field("Price", it.price, 80, function (v) { it.price = v; }));
             row.appendChild(top);
             row.appendChild(field("Description", it.description, 600, function (v) { it.description = v; }, true));
             row.appendChild(marks(it));

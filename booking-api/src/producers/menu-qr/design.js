@@ -136,7 +136,7 @@ function buildDesignedMenuHtml({ businessName, brandColors, menu, logoDataUri, s
     items: (section.items || []).slice(0, 200).map((item) => ({
       name: clean(item?.name, 200),
       description: clean(item?.description, 600),
-      price: clean(item?.price, 40),
+      price: clean(item?.price, 80),
       // Sold out (stage 15, owner's menu editor): the item stays on the page, marked, until the owner takes it back.
       soldOut: item?.sold_out === true,
       // Diet and allergen marks (stage 15, Nov 17, 2026): read with the menu or ticked by the owner in the editor.

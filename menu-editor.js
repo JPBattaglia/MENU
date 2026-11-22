@@ -72,7 +72,7 @@
         const row = el('div', `mm-edit-item${item.sold_out ? ' is-sold-out' : ''}`);
         const top = el('div', 'mm-edit-row');
         top.append(field('Item', item.name, (v) => { item.name = v; }, { max: 200 }));
-        top.append(field('Price', item.price, (v) => { item.price = v; }, { max: 40, placeholder: '$12' }));
+        top.append(field('Price', item.price, (v) => { item.price = v; }, { max: 80, placeholder: '$12' }));
         row.append(top);
         row.append(field('Description', item.description, (v) => { item.description = v; }, { area: true, max: 600 }));
         // Diet and allergen marks (stage 15, Nov 17, 2026): shown beside the item with a key on the live menu.

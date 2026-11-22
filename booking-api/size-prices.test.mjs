@@ -1,0 +1,17 @@
+import test from "node:test";
+import assert from "node:assert/strict";
+import { stackSizePrices } from "./src/producers/menu-qr/long-prices.js";
+
+test("size prices stack, one per line, and the style is added once", () => {
+  const html = '<html><head></head><body><div class="row"><span class="item">Espresso</span><span class="leader"></span><span class="price">SINGLE $3.50 / DOUBLE $3.75 / TRIPLE $4.00</span></div><span class="price">$9</span></body></html>';
+  const out = stackSizePrices(html);
+  assert.match(out, /<span class="price mm-sizes"><span>SINGLE \$3\.50<\/span><span>DOUBLE \$3\.75<\/span><span>TRIPLE \$4\.00<\/span><\/span>/);
+  assert.match(out, /<span class="price">\$9<\/span>/, "single prices are left alone");
+  assert.equal((out.match(/id="mm-size-prices"/g) || []).length, 1);
+  assert.equal(stackSizePrices(out), out, "running twice changes nothing");
+});
+
+test("a page with no size prices is returned unchanged", () => {
+  const html = '<html><head></head><body><span class="price">$12.50</span></body></html>';
+  assert.equal(stackSizePrices(html), html);
+});

@@ -1,3 +1,4 @@
+import { stackSizePrices } from "../producers/menu-qr/long-prices.js";
 import { publicBaseUrl } from "../lib/config.js";
 import { parseJsonOrNull, simplePage } from "../lib/http.js";
 import { escapeHtml2 } from "../lib/util.js";
@@ -135,7 +136,7 @@ async function handleHostedMenu(request, env, slug) {
   await countMenuView(env, found.row.business_id, request);
   // Translated menus (stage 15, paid plans only): language links at the top, ?lang=<code> for the translated page.
   const lang = new URL(request.url).searchParams.get("lang");
-  const page = await found.object.text();
+  const page = stackSizePrices(await found.object.text());
   const html = await localizedMenuPage(env, { html: found.freePlan ? withBadge(page) : page, businessId: found.row.business_id, lang, hostedUrl: found.hostedUrl });
   return new Response(html, {
     status: 200,
