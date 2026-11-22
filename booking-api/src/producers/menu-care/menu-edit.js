@@ -205,7 +205,7 @@ async function applyMenuChange(env, { menu, requestText, scope, deps }) {
 
 // A menu typed by its owner (stage 15: the account menu editor and the preview's Customize window), cut to the
 // page's own limits (design.js buildDesignedMenuHtml).
-const LIMITS = { sections: 60, items: 200, name: 120, item: 200, description: 600, price: 40, notes: 1000 };
+const LIMITS = { sections: 60, items: 200, name: 120, item: 200, description: 600, price: 80, notes: 1000 };
 const cleanText = (value, max) => String(value ?? "").replace(/\s+/g, " ").trim().slice(0, max);
 
 // What the editor sends, cut to the page's own limits. Returns { menu, problems }.
