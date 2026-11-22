@@ -24,7 +24,7 @@ function setup({ stripeConfirmFails = false, menu = null } = {}) {
   sql(`INSERT INTO offers (id, created_at, updated_at, code, name, category, status, billing_type, fulfillment_type, requires_approval, requires_assets, default_workflow_key, public_slug, description, sort_order, is_public, is_featured, cta_text)
        VALUES ('offer_online_menu_qr', ?, ?, 'ONLINE_MENU_QR', 'Online Menu + QR', 'MENU', 'ACTIVE', 'ONE_TIME', 'DIGITAL', 1, 1, 'MENU_QR_V1', 'online-menu-qr', 'Online menu and QR service', 1, 1, 0, 'Get Started')`, t, t);
   sql(`INSERT INTO offer_versions (id, offer_id, version_number, created_at, effective_from, status, price_cents, currency, scope_json, stripe_price_id)
-       VALUES ('offerv1_online_menu_qr', 'offer_online_menu_qr', 1, ?, ?, 'ACTIVE', 14900, 'USD', '{"service":"online_menu_qr"}', 'price_1T6OzbHw7f6jhUv8Epy5oYMf')`, t, t);
+       VALUES ('offerv1_online_menu_qr', 'offer_online_menu_qr', 1, ?, ?, 'ACTIVE', 14900, 'USD', '{"service":"online_menu_qr"}', 'price_1UecyPHw7f6jhUv82srJTeI9')`, t, t);
   sql(`INSERT INTO workflow_definitions (id, workflow_key, version, status, steps_json, created_at, updated_at) VALUES ('wd', 'MENU_QR_V1', 1, 'ACTIVE', ?, ?, ?)`,
     JSON.stringify([{ key: 'PREPARE_INPUTS', order: 10 }, { key: 'GENERATE_MENU_DRAFT', order: 20 }, { key: 'GENERATE_QR', order: 30 }, { key: 'QUALITY_CHECK', order: 40 }, { key: 'PACKAGE_DELIVERABLES', order: 50 }]), t, t);
 
