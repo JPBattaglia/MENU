@@ -30,6 +30,7 @@
 // email is optional (blank = the preview link goes to the owner inbox). The link is emailed to the owner inbox:
 //   GET/POST /api/menu-preview/rep-link   "Email me the rep link" (always goes to the owner inbox; REP_TTL_DAYS)
 // and a fresh one is in every Friday numbers email, so there's no token to remember.
+import { r2Get, r2Put } from "../lib/r2-retry.js";
 import { nowIso, parseJsonOrNull } from "../lib/http.js";
 import { sandboxPass } from "../lib/owner-sandbox.js";
 import { bytesToBase64 } from "../lib/util.js";
@@ -296,9 +297,9 @@ async function storeMenuDesigns(env, token, data) {
   const occasion = isOccasion(data.occasion) ? data.occasion : null;
   for (const [index, design] of designsFor(occasion).entries()) {
     const page = publicPreviewPage(renderMenuDesign(data, design.key, logo), token, { index, custom: data.custom || {}, business: data.business, prospect: data.prospect === true, occasion, both: data.both === true, prepaid: data.prepaid === true, menu: data.menu });
-    await env.ASSETS.put(`menu-previews/${token}/${design.key}.html`, page, { httpMetadata: { contentType: "text/html; charset=utf-8" } });
+    await r2Put(env.ASSETS, `menu-previews/${token}/${design.key}.html`, page, { httpMetadata: { contentType: "text/html; charset=utf-8" } });
   }
-  await env.ASSETS.put(`menu-previews/${token}/data.json`, JSON.stringify(data), { httpMetadata: { contentType: "application/json" } });
+  await r2Put(env.ASSETS, `menu-previews/${token}/data.json`, JSON.stringify(data), { httpMetadata: { contentType: "application/json" } });
 }
 
 function plainPage(status, title, body) {
@@ -391,7 +392,7 @@ async function handlePreviewCreate(request, env, { now = Date.now() } = {}) {
   await env.DB.prepare(`INSERT INTO menu_previews (token, request_id, email, business, ip_hash, campaign, status, created_at, expires_at, occasion) VALUES (?, ?, ?, ?, ?, ?, 'BUILDING', ?, ?, ?)`)
     .bind(token, requestId, email, business, upload.ip_hash || "", campaign, t, hoursFromNow(PREVIEW_HOURS, now), occasion).run();
   try {
-    const object = await env.ASSETS.get(doc.storageKey);
+    const object = await r2Get(env.ASSETS, doc.storageKey);
     if (!object) throw new Error("menu file is not stored");
     const bytes = new Uint8Array(await object.arrayBuffer());
     const mime = String(doc.contentType).toLowerCase();
