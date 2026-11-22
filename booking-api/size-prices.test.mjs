@@ -22,3 +22,10 @@ test("no 40-character price limit is left anywhere", async () => {
     assert.doesNotMatch(readFileSync(new URL(`./${f}`, import.meta.url), "utf8"), /price[^\n]{0,20}\b40\b/, f);
   }
 });
+
+test("a price cut after its dollar sign and dot gets its cents back", () => {
+  const out = stackSizePrices('<head></head><span class="price">SINGLE $3.50 / DOUBLE $3.75 / TRIPLE $4.</span><span class="price">$9.</span><span class="price">$9.50</span>');
+  assert.match(out, /<span>TRIPLE \$4\.00<\/span>/);
+  assert.match(out, /<span class="price">\$9\.00<\/span>/);
+  assert.match(out, /<span class="price">\$9\.50<\/span>/);
+});

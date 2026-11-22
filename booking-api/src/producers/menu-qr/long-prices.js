@@ -4,8 +4,14 @@
 // drops under the item name when it doesn't fit beside it (names are never broken mid-word). Applied when a menu or preview page is served, so menus saved before this are fixed too.
 const STYLE = `<style id="mm-size-prices">.price.mm-sizes{display:inline-flex;flex-direction:column;align-items:flex-end;text-align:right}.price.mm-sizes>span{white-space:nowrap}.row:has(.mm-sizes){flex-wrap:wrap}.price.mm-sizes{margin-left:auto}</style>`;
 
+// Prices cut at the old 40-character limit (before Nov 21, 2026) end in a bare "$4." (the cents lost). A price can't
+// end in a dot, so "$4." is shown as "$4.00" (My Happy Donut's drinks; owner: no more editing it by hand).
+const fixCutCents = (text) => text.replace(/(\$\d+)\.(?=\s*$)/, "$1.00");
+
 function stackSizePrices(html) {
-  if (typeof html !== "string" || html.includes('id="mm-size-prices"')) return html;
+  if (typeof html !== "string") return html;
+  html = html.replace(/<span class="price">([^<]*\$\d+\.)\s*<\/span>/g, (m, text) => `<span class="price">${fixCutCents(text)}</span>`);
+  if (html.includes('id="mm-size-prices"')) return html;
   let changed = false;
   const out = html.replace(/<span class="price">([^<]*?\s\/\s[^<]*?)<\/span>/g, (match, text) => {
     const parts = text.split(/\s+\/\s+/).map((p) => p.trim()).filter(Boolean);
