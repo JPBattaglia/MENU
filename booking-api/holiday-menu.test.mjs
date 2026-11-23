@@ -32,12 +32,12 @@ function setup() {
   offerRows(env.DB.raw);
   const call = (path, init = {}) => worker.fetch(new Request(`https://menu-made.com${path}`, init), env, { waitUntil() {} });
   const get = (path) => call(path, { headers: { 'User-Agent': PHONE } });
-  const upload = async (email = 'owner@harbor.example') => {
+  const upload = async (email = 'owner@harbor.example', at = NOV_20) => {
     const id = crypto.randomUUID();
     const storageKey = `private/inquiries/${id}/abc`;
     await env.ASSETS.put(storageKey, new Uint8Array([37, 80, 68, 70]));
     env.DB.raw.prepare(`INSERT INTO mm_booking_requests (id, payload, ip_hash, created_at) VALUES (?, ?, ?, ?)`).run(id,
-      JSON.stringify({ type: 'inquiry', purpose: 'checkout', email, name: 'Harbor', document: { storageKey, contentType: 'application/pdf', name: 'xmas.pdf', size: 4 } }), 'net-1', Math.floor(NOV_20 / 1000));
+      JSON.stringify({ type: 'inquiry', purpose: 'checkout', email, name: 'Harbor', document: { storageKey, contentType: 'application/pdf', name: 'xmas.pdf', size: 4 } }), 'net-1', Math.floor(at / 1000));
     return id;
   };
   const create = (body, now = NOV_20) => handlePreviewCreate(new Request('https://menu-made.com/api/menu-preview/create', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) }), env, { now });
@@ -146,7 +146,9 @@ test('the second menu of a both-holidays order skips checkout: the button makes 
   // Production's workflow, as the live database has it (the payment step makes the project from it).
   raw.prepare(`INSERT OR IGNORE INTO workflow_definitions (id, workflow_key, version, status, steps_json, created_at, updated_at) VALUES ('wd', 'MENU_QR_V1', 1, 'ACTIVE', ?, ?, ?)`)
     .run(JSON.stringify([{ key: 'PREPARE_INPUTS', order: 10 }, { key: 'GENERATE_MENU_DRAFT', order: 20 }, { key: 'GENERATE_QR', order: 30 }, { key: 'QUALITY_CHECK', order: 40 }, { key: 'PACKAGE_DELIVERABLES', order: 50 }]), at, at);
-  const out = await (await f.create({ request_id: await f.upload(), email: 'owner@harbor.example', business: 'Harbor Kitchen', occasion: 'newyear' })).json();
+  // Made now, not on NOV_20: the views below go through the worker on today's clock, and a 3-day preview made on
+  // Nov 20 had ended by Nov 23, 2026 (this test then failed and blocked every deploy).
+  const out = await (await f.create({ request_id: await f.upload('owner@harbor.example', Date.now()), email: 'owner@harbor.example', business: 'Harbor Kitchen', occasion: 'newyear' }, Date.now())).json();
   assert.equal(out.ok, true, JSON.stringify(out));
   const token = out.token;
   assert.match(await (await f.get(`/api/menu-preview/view/${token}`)).text(), /Complete your order: already paid</);
