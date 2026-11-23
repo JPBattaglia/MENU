@@ -59,6 +59,8 @@ for (const site of sites) {
   const fail = (page, what) => s.failures.push(`${page}: ${what}`);
   const warn = (page, what) => s.warnings.push(`${page}: ${what}`);
   const context = await browser.newContext({ viewport: { width: 1280, height: 800 }, userAgent: "Mozilla/5.0 (Macintosh) MenuMadeSiteCheck/1.0 Chrome/130" });
+  // The check is not a shopper: never send visit or shopping-step counts (the worker also drops this user agent).
+  await context.route(/\/api\/(funnel-event|measurement)(\?|$)/, (route) => route.fulfill({ status: 200, contentType: "application/json", body: "{\"ok\":true}" }));
 
   // Pages: the sitemap first (these also get screenshots), then same-site links found on them.
   let sitemap = [];
@@ -181,6 +183,7 @@ await browser.close();
 // checkout (no Stripe session, no order).
 async function shopperJourney(browser, origin, sitemap, fail) {
   const context = await browser.newContext({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true, userAgent: "Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) MenuMadeSiteCheck/1.0 Mobile Safari/604.1" });
+  await context.route(/\/api\/(funnel-event|measurement)(\?|$)/, (route) => route.fulfill({ status: 200, contentType: "application/json", body: "{\"ok\":true}" }));
   const page = await context.newPage();
   const errors = [];
   page.on("pageerror", (e) => errors.push(String(e.message || e).slice(0, 200)));

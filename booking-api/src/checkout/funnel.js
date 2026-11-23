@@ -1,8 +1,21 @@
 import { resolveActiveOffer } from "./catalog.js";
 import { jsonResponse, normalizeNullableText, nowIso } from "../lib/http.js";
 
+// Automated browsers are not shoppers (Nov 23, 2026). Our own daily site check (tools/site-check/check.mjs, user agent
+// "MenuMadeSiteCheck") loads every page of ninobattaglia.com and adds a shirt to the cart, so from Nov 11 it was counted
+// as ~150 "direct" visits a day in the Friday numbers. Headless browsers and crawlers that run JavaScript are dropped
+// here too. The answer stays ok, so nothing on the page changes.
+const AUTOMATED_AGENT = /MenuMadeSiteCheck|HeadlessChrome|Playwright|Puppeteer|PhantomJS|Lighthouse|Chrome-Lighthouse|bot\b|bot\/|crawler|spider|slurp|facebookexternalhit|Google-InspectionTool|AdsBot|Mediapartners|Pinterest\/|Bytespider|GPTBot|ClaudeBot|bingpreview/i;
+function isAutomatedVisit(request) {
+  const agent = request.headers.get("User-Agent") || "";
+  return !agent || AUTOMATED_AGENT.test(agent);
+}
+
 async function recordFunnelEvent(request, env) {
   try {
+    if (isAutomatedVisit(request)) {
+      return jsonResponse({ ok: true, ignored: "automated" });
+    }
     if (!env.DB) {
       return jsonResponse(
         {
