@@ -70,7 +70,10 @@
   // Rep-mode demos, sandbox tests and a reopened (reused) preview are not counted. gtag is absent when the visitor
   // has Do Not Track / Global Privacy Control on, so nothing is sent then.
   const countPreview = (result, requestId) => {
-    if (rep || window.MenuMadeSandbox === true || result?.reused || typeof window.gtag !== 'function') return;
+    if (rep || window.MenuMadeSandbox === true || result?.reused) return;
+    // Meta Pixel "Lead" = a new free preview (owner, Nov 23, 2026); no-op until the pixel is set up.
+    window.mmMeta?.('Lead', { content_name: 'menu_preview' }, requestId ? 'preview-' + requestId : undefined);
+    if (typeof window.gtag !== 'function') return;
     try { window.gtag('event', 'conversion', { send_to: 'AW-18554819883/zfRWCLDyxLsdEKuq0I9F', transaction_id: String(requestId || '') }); } catch { /* ads blocked */ }
   };
   const esc = text => String(text).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));

@@ -19,7 +19,7 @@
 <script src="site-nav.js?v=20261113lock" defer></script>
 <script src="app-links.js?v=20261118sides" defer></script>
 <meta name="robots" content="noindex,follow">
-<!-- Google tag (gtag.js) --><script>(function(){var n=navigator;if(n.globalPrivacyControl===true||n.doNotTrack==='1'||window.doNotTrack==='1')return;var s=document.createElement('script');s.async=true;s.src='https://www.googletagmanager.com/gtag/js?id=AW-18554819883';document.head.appendChild(s);window.dataLayer=window.dataLayer||[];window.gtag=function(){dataLayer.push(arguments);};gtag('js',new Date());gtag('config','AW-18554819883');})();</script></head>
+<script src="/meta-pixel.js" defer></script><!-- Google tag (gtag.js) --><script>(function(){var n=navigator;if(n.globalPrivacyControl===true||n.doNotTrack==='1'||window.doNotTrack==='1')return;var s=document.createElement('script');s.async=true;s.src='https://www.googletagmanager.com/gtag/js?id=AW-18554819883';document.head.appendChild(s);window.dataLayer=window.dataLayer||[];window.gtag=function(){dataLayer.push(arguments);};gtag('js',new Date());gtag('config','AW-18554819883');})();</script></head>
 
 <body class="checkout-success-page">
 <a class="site-skip" href="#main-content">Skip to content</a>
@@ -234,6 +234,10 @@
 
       if (data.environment === "live") window.MenuMadeFunnel?.track("onboarding_opened");
       // Google Ads purchase conversion (owner, Nov 10, 2026): live, paid orders only, once per order (transaction_id).
+      // Meta Pixel purchase (owner, Nov 23, 2026): same rule, eventID = order id so a refresh isn't counted twice.
+      if (data.environment === "live" && /paid/i.test(data.order?.payment_status || "")) {
+        window.mmMeta?.("Purchase", { value: (Number(data.order.total_cents) || 0) / 100, currency: String(data.order.currency || "usd").toUpperCase() }, "order-" + data.order.id);
+      }
       if (data.environment === "live" && /paid/i.test(data.order?.payment_status || "") && typeof window.gtag === "function") {
         window.gtag("event", "conversion", { send_to: "AW-18554819883/GzWgCJOOhLYdEKuq0I9F", value: (Number(data.order.total_cents) || 0) / 100, currency: String(data.order.currency || "usd").toUpperCase(), transaction_id: String(data.order.id) });
       }
