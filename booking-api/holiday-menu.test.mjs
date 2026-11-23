@@ -149,6 +149,8 @@ test('the second menu of a both-holidays order skips checkout: the button makes 
   const out = await (await f.create({ request_id: await f.upload(), email: 'owner@harbor.example', business: 'Harbor Kitchen', occasion: 'newyear' })).json();
   assert.equal(out.ok, true, JSON.stringify(out));
   const token = out.token;
+  // The preview is made at NOV_20 but opened at the real time; keep it open so this test doesn't expire with the calendar.
+  raw.prepare(`UPDATE menu_previews SET expires_at = '2999-01-01T00:00:00.000Z' WHERE token = ?`).run(token);
   assert.match(await (await f.get(`/api/menu-preview/view/${token}`)).text(), /Complete your order: already paid</);
   // A live checkout never counts the test order: there it is a first menu at $59.
   assert.equal((await holiday.holidayQuote(f.env, 'owner@harbor.example', 'newyear', { environment: 'live' })).price_cents, holiday.holidayFirstCents());
