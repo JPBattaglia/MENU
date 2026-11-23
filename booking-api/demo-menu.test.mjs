@@ -3,6 +3,7 @@
 // Run: node --no-warnings --test booking-api/demo-menu.test.mjs
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
+import { setupWaiverOn } from './src/checkout/quote.js';
 import { createD1, createR2 } from './test-support/d1.mjs';
 
 const { default: worker } = await import('./src/worker.js');
@@ -143,7 +144,7 @@ test('follow-ups list sent prospects who opened their preview 3+ days ago, once 
   assert.equal(list.prospects.length, 1);
   assert.equal(list.prospects[0].kind, 'opened');
   assert.equal(list.prospects[0].url, url);
-  assert.match(list.price, /\$149 setup, then from \$19\.99\/mo with MΞNU Plus/);
+  assert.match(list.price, setupWaiverOn() ? /No \$149 setup through Dec 31, just from \$19\.99\/mo with MΞNU Plus/ : /\$149 setup, then from \$19\.99\/mo with MΞNU Plus/);
   assert.equal((await (await f.post('/api/system/prospects/followups', { mark: ['node/1'] })).json()).changed, 1);
   list = await (await f.post('/api/system/prospects/followups', {})).json();
   assert.deepEqual(list.prospects, [], 'one follow-up per prospect');

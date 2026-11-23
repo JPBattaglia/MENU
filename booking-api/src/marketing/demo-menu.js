@@ -21,7 +21,7 @@ import { escapeHtml } from "../lib/email.js";
 import { menuColors, readMenuWithClaude, structureMenuText } from "../producers/menu-qr/claude-reader.js";
 import { extractReadableText } from "../producers/menu-qr/inputs.js";
 import { findMenuAtLink, priceCount } from "./menu-link.js";
-import { MENU_PACKAGE_PRICING } from "../checkout/quote.js";
+import { MENU_PACKAGE_PRICING, setupWaiverOn } from "../checkout/quote.js";
 import { verifyRenderer } from "../producers/social-posts/render-jobs.js";
 import { DRAFTS_AUDIENCE, DRAFTS_WORKFLOW } from "./prospects.js";
 import { storeMenuDesigns, viewUrl as generatorUrl } from "./public-preview.js";
@@ -230,7 +230,11 @@ async function handleProspectFollowups(request, env, { now = Date.now() } = {}) 
     ...previewless.filter((r) => !seen.has(r.id) && seen.add(r.id)).map((r) => ({ kind: "no_preview", id: r.id, name: r.name, city: r.city, email: r.email, website: r.website, gaps_json: r.gaps_json, menu_url: r.menu_url, offer_code: r.offer_code }))
   ].slice(0, 50);
   // New pricing (owner, Nov 19, 2026): follow-ups quote the $149 setup and the plans, not the free plan.
-  return json({ ok: true, prospects, price: "$149 setup, then from $19.99/mo with MΞNU Plus (Pro $39/mo adds other languages, a tri-fold and table tents; Max $79/mo has no setup fee and we make your changes)" });
+  // Holiday setup waiver (owner, Nov 23, 2026): no setup quoted through Dec 31; regular wording again on Jan 1 PT.
+  const price = setupWaiverOn()
+    ? "No $149 setup through Dec 31, just from $19.99/mo with MΞNU Plus (Pro $39/mo adds other languages, a tri-fold and table tents; Max $79/mo and we make your changes)"
+    : "$149 setup, then from $19.99/mo with MΞNU Plus (Pro $39/mo adds other languages, a tri-fold and table tents; Max $79/mo has no setup fee and we make your changes)";
+  return json({ ok: true, prospects, price });
 }
 
 export { handleProspectDemo, handleMenuPreview, handleProspectFollowups, upgradeProspectMenus, readProspectMenu, PREVIEW_DAYS };

@@ -44,7 +44,7 @@ import { HOLIDAY_PRICING, OCCASION_NAMES, holidayDollars, holidayFirstCents, hol
 import { completePrepaidHoliday } from "../checkout/session.js";
 import { frameAware, wantsJson, preflight } from "./framed.js";
 import { sniffImage } from "../producers/website/intake.js";
-import { MENU_PACKAGE_PRICING } from "../checkout/quote.js";
+import { MENU_PACKAGE_PRICING, SETUP_WAIVER, setupWaiverOn } from "../checkout/quote.js";
 import { pausedForSale } from "../lib/switches.js";
 import { signLinkToken, verifyLinkToken } from "../lib/links.js";
 import { ownerEmailAddress } from "../lib/config.js";
@@ -82,7 +82,11 @@ const firstYearCents = () => MENU_PACKAGE_PRICING.setupCents + MENU_PACKAGE_PRIC
 // MΞNU Plus monthly (migration 0065); the Start page and checkout use the catalog price.
 const PLUS_MONTH_CENTS = 1999;
 const plusLine = () => `from ${dollars(PLUS_MONTH_CENTS)}/mo`;
-const setupLine = () => `${dollars(MENU_PACKAGE_PRICING.setupCents)} setup, then ${plusLine()} with MΞNU Plus (Pro ${dollars(3900)}/mo adds languages, tri-fold and table tent; Max ${dollars(7900)}/mo, no setup fee, and we make your changes)`;
+// Holiday setup waiver (owner, Nov 23, 2026): while it is on, preview emails, the reminder and the rep showcase say
+// there is no setup through Dec 31 instead of quoting the $149 setup. Back to the regular wording on Jan 1 PT.
+const setupLine = (now = Date.now()) => setupWaiverOn(now)
+  ? `no ${dollars(MENU_PACKAGE_PRICING.setupCents)} setup through ${SETUP_WAIVER.ends}, just ${plusLine()} with MΞNU Plus (Pro ${dollars(3900)}/mo adds languages, tri-fold and table tent; Max ${dollars(7900)}/mo, and we make your changes)`
+  : `${dollars(MENU_PACKAGE_PRICING.setupCents)} setup, then ${plusLine()} with MΞNU Plus (Pro ${dollars(3900)}/mo adds languages, tri-fold and table tent; Max ${dollars(7900)}/mo, no setup fee, and we make your changes)`;
 const dollars = (cents) => `$${(cents / 100).toLocaleString("en-US", { maximumFractionDigits: 2 })}`;
 const cleanText = (value, max) => String(value || "").replace(/[\r\n\x00]/g, " ").trim().slice(0, max);
 // Holiday previews (occasion "christmas" or "newyear") go to the Holiday Menu checkout instead.
