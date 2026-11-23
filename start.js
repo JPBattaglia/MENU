@@ -774,6 +774,7 @@ async function checkout() {
     }
     els.checkoutBtn.textContent = 'Opening secure checkout…';
     window.MenuMadeFunnel?.track('checkout_attempt');
+    if (!TEST_CHECKOUT) window.mmMeta?.('InitiateCheckout');
     const response = await fetch((Catalog?.API || '') + (TEST_CHECKOUT ? '/api/create-checkout-test' : '/api/create-checkout'), {
       method: 'POST', signal: controller.signal, headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ items, interval: interval(), ...(TEST_CHECKOUT ? { sandbox_token: window.MenuMadeSandboxToken || '' } : {}), ...(quote ? { menu_pages: quote.pages } : {}), ...(siteChoice && order.once.has('SITE_FILES') ? { site_choice: siteChoice } : {}), ...(holidayPreview && order.once.has(HOLIDAY) ? { holiday_preview: holidayPreview, ...(holidayBoth ? { holiday_both: true } : {}) } : {}), ...(domainPick && domainAllowed() ? { domain: domainPick.name } : {}), tracking: window.MenuMadeFunnel?.tracking(), customer })
