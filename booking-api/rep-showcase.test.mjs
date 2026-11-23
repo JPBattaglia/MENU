@@ -2,6 +2,7 @@
 // and public previews get none of it.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
+import { setupWaiverOn } from './src/checkout/quote.js';
 import { createD1, createR2 } from './test-support/d1.mjs';
 const { default: worker } = await import('./src/worker.js');
 
@@ -117,7 +118,7 @@ test('buying: the list of formats ends with a phone checkout QR and a tablet che
   const hub = await (await get(`/api/menu-preview/showcase/${TOKEN}/garden`)).text();
   assert.ok(hub.includes(`/api/menu-preview/choose/${TOKEN}/garden`), 'checkout keeps the design on screen');
   assert.match(hub, /Scan with your phone to sign up/);
-  assert.match(hub, /\$149 setup, then from \$19\.99\/mo with MΞNU Plus/);
+  assert.match(hub, setupWaiverOn() ? /no \$149 setup through Dec 31, just from \$19\.99\/mo with MΞNU Plus/ : /\$149 setup, then from \$19\.99\/mo with MΞNU Plus/);
   assert.match(hub, /Pro &amp; Max/, 'the tri-fold, table tent and languages are marked Pro');
   assert.ok(!/Start free|name="email"/.test(hub), 'no free plan');
   assert.ok(!hub.includes('rep-inbox@'), 'your inbox is not shown as their email');
