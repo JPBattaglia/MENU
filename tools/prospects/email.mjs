@@ -201,9 +201,14 @@ export function buildHolidayLead(p, demoUrl = null, now = Date.now()) {
     first
       ? "Are you doing a Christmas or New Year's Eve menu this year? I can put it online as its own phone menu, with a QR code for the tables, a print PDF and a table tent."
       : "Are you doing a Christmas or New Year's Eve menu this year? I can put it online as its own phone menu with a QR code for the tables, plus a print-ready PDF and a table tent. It sits beside your regular menu, and after the holiday the QR code sends guests back to it.",
+    // Nov 25, 2026 (owner): their regular menu in holiday colours isn't enough on its own, so the email says they can
+    // flip designs, customize it themselves, and try the generator with any menu of their own (a PDF or a photo).
     ...(demoUrl
-      ? ["Here's your current menu in our holiday designs, so you can see the look:", demoUrl]
-      : ["Upload your holiday menu (a PDF or photos) and you'll see it in six holiday designs in a few seconds, free:", `${HOLIDAY}#try-free`]),
+      ? ["Here's your current menu in our holiday designs. Tap Generate menu to flip through them, and Customize to add your logo and colors or change any dish and price:",
+        demoUrl,
+        "Have your holiday menu already? Try the same generator with it, or with any menu you like (a PDF or a photo), free:",
+        `${HOLIDAY}#try-free`]
+      : ["Upload your holiday menu (a PDF or a photo) and you'll see it in six holiday designs in a few seconds, free. You can flip through the designs and customize the logo, colors, dishes and prices yourself:", `${HOLIDAY}#try-free`]),
     ...(first ? [] : [`${holidayPriceLine(now)} ${HOLIDAY_DEADLINE}`]),
     first ? "Want one? Just reply and I'll set it up." : "Want me to set it up for you? Just reply with the menu attached."];
   // A follow-up to a holiday first email threads under it; a holiday second email after a regular first one gets its own subject.
