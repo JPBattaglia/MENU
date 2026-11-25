@@ -36,7 +36,7 @@ import { nowIso, parseJsonOrNull } from "../lib/http.js";
 import { sandboxPass } from "../lib/owner-sandbox.js";
 import { bytesToBase64 } from "../lib/util.js";
 import { brandedEmailHtml, escapeHtml, sendTransactionalEmail } from "../lib/email.js";
-import { menuColors, readMenuWithClaude } from "../producers/menu-qr/claude-reader.js";
+import { MENU_FILE_TYPES, menuColors, menuFileBlock, readMenuWithClaude } from "../producers/menu-qr/claude-reader.js";
 import { LOGO_MODES, buildDesignedMenuHtml, parseLogoInfo } from "../producers/menu-qr/design.js";
 import { cleanMenu, diffMenus } from "../producers/menu-care/menu-edit.js";
 import { MENU_DESIGNS, designStyle, designsFor, menuDesignFor } from "../producers/menu-qr/menu-designs.js";
@@ -71,7 +71,7 @@ const HANDOFF_DAYS = 14;
 const SITE = "https://menu-made.com";
 const MAX_CUSTOMIZE = 30;          // rebuilds per preview (no AI involved, just storage); 30 since item editing (Nov 14, 2026)
 const MAX_LOGO_BYTES = 1572864;    // the page carries the logo inline (as the paid menu does), so it stays small
-const MENU_TYPES = new Set(["application/pdf", "image/png", "image/jpeg", "image/webp"]);
+const MENU_TYPES = MENU_FILE_TYPES; // a Word .docx, a PDF or a photo (Word added Nov 25, 2026)
 const SCANNER = /bot|crawl|spider|slurp|preview|scanner|proofpoint|mimecast|barracuda|safelinks|urldefense|headless|python|curl|wget|java\/|go-http|facebookexternalhit|slackbot|whatsapp|discord|skypeuripreview|outlook-ios-linkpreview/i;
 
 const json = (data, status = 200) => Response.json(data, { status, headers: { "Cache-Control": "no-store", "Access-Control-Allow-Origin": "*" } });
@@ -345,7 +345,7 @@ async function handlePreviewCreate(request, env, { now = Date.now() } = {}) {
     return json({ ok: false, error: "We couldn't find your menu file. Please choose it again." }, 404);
   }
   if (Math.floor(now / 1000) - Number(upload.created_at || 0) > UPLOAD_MAX_AGE_SECONDS) return json({ ok: false, error: "That upload is too old. Please choose your menu file again." }, 410);
-  if (!MENU_TYPES.has(String(doc.contentType || "").toLowerCase())) return json({ ok: false, error: "Previews work from a PDF or a photo (PNG, JPEG or WebP) of your menu." }, 415);
+  if (!MENU_TYPES.has(String(doc.contentType || "").toLowerCase())) return json({ ok: false, error: "Previews work from a Word document (.docx), a PDF or a photo (PNG, JPEG or WebP) of your menu." }, 415);
 
   // "Both: $89" in the holiday picker: this preview is one of two holiday menus, so its buttons say so.
   // Already covered by this email's order for both holidays: the preview says so instead of naming a price.
@@ -401,9 +401,7 @@ async function handlePreviewCreate(request, env, { now = Date.now() } = {}) {
     if (!object) throw new Error("menu file is not stored");
     const bytes = new Uint8Array(await object.arrayBuffer());
     const mime = String(doc.contentType).toLowerCase();
-    const block = mime === "application/pdf"
-      ? { type: "document", source: { type: "base64", media_type: mime, data: bytesToBase64(bytes) } }
-      : { type: "image", source: { type: "base64", media_type: mime, data: bytesToBase64(bytes) } };
+    const block = await menuFileBlock(bytes, mime);
     const read = await readMenuWithClaude(block, env);
     await storeMenuDesigns(env, token, { business, menu: read.menu, colors: menuColors(read.menu), custom: {}, customized: 0, ...(occasion ? { occasion } : {}), ...(both ? { both: true } : {}), ...(prepaid ? { prepaid: true } : {}) });
     await env.DB.prepare(`UPDATE menu_previews SET status = 'READY', item_count = ? WHERE token = ?`).bind(read.extraction?.item_count ?? null, token).run();
