@@ -206,9 +206,9 @@ export function buildHolidayLead(p, demoUrl = null, now = Date.now()) {
     ...(demoUrl
       ? ["Here's your current menu in our holiday designs. Tap Generate menu to flip through them, and Customize to add your logo and colors or change any dish and price:",
         demoUrl,
-        "Have your holiday menu already? Try the same generator with it, or with any menu you like (a PDF or a photo), free:",
+        "Have your holiday menu already? Try the same generator with it, or with any menu you like (a Word doc, a PDF or a photo), free:",
         `${HOLIDAY}#try-free`]
-      : ["Upload your holiday menu (a PDF or a photo) and you'll see it in six holiday designs in a few seconds, free. You can flip through the designs and customize the logo, colors, dishes and prices yourself:", `${HOLIDAY}#try-free`]),
+      : ["Upload your holiday menu (a Word doc, a PDF or a photo) and you'll see it in six holiday designs in a few seconds, free. You can flip through the designs and customize the logo, colors, dishes and prices yourself:", `${HOLIDAY}#try-free`]),
     ...(first ? [] : [`${holidayPriceLine(now)} ${HOLIDAY_DEADLINE}`]),
     first ? "Want one? Just reply and I'll set it up." : "Want me to set it up for you? Just reply with the menu attached."];
   // A follow-up to a holiday first email threads under it; a holiday second email after a regular first one gets its own subject.
