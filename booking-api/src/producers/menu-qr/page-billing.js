@@ -4,6 +4,7 @@
 // Reminders go out on day 2 and day 5; the owner is alerted on day 7. Fewer pages than paid for is only
 // flagged in the owner's approval email.
 import { MENU_PACKAGE_PRICING } from "../../checkout/quote.js";
+import { DOCX_MIME, readDocx } from "../../lib/docx.js";
 import { ownerEmailAddress, publicBaseUrl } from "../../lib/config.js";
 import { recordProjectEvent } from "../../lib/db.js";
 import { brandedEmailHtml, escapeHtml, looksLikeEmail, sendTransactionalEmail } from "../../lib/email.js";
@@ -128,7 +129,8 @@ async function countPdfPages(bytes) {
   return leaves > 0 ? leaves : null;
 }
 
-// Every page in the file counts: a PDF counts its pages, a photo is one page. A menu link can't be counted.
+// Every page in the file counts: a PDF counts its pages, a Word file the pages Word saved, a photo is one page. A menu
+// link can't be counted.
 async function countMenuPages(inputs, env) {
   const asset = inputs?.menu_file?.type === "FILE" ? inputs.menu_file.asset : null;
   if (!asset) return { pages: null, method: "link" };
@@ -139,6 +141,13 @@ async function countMenuPages(inputs, env) {
     if (!object) return { pages: null, method: "missing_file" };
     const pages = await countPdfPages(new Uint8Array(await object.arrayBuffer()));
     return { pages, method: pages ? "pdf" : "pdf_unreadable" };
+  }
+  // Word (Nov 25, 2026): the page count Word saved in the file; some exports leave it out, so the owner checks those.
+  if (mime === DOCX_MIME) {
+    const object = await env.ASSETS.get(asset.storage_key);
+    if (!object) return { pages: null, method: "missing_file" };
+    const pages = (await readDocx(new Uint8Array(await object.arrayBuffer())).catch(() => null))?.pages || null;
+    return { pages, method: pages ? "docx" : "docx_unreadable" };
   }
   return { pages: null, method: "unknown_file_type" };
 }
