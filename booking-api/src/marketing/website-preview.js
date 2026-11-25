@@ -18,7 +18,7 @@ import { LOGO_MODES, parseLogoInfo } from "../producers/menu-qr/design.js";
 import { nowIso, parseJsonOrNull } from "../lib/http.js";
 import { bytesToBase64 } from "../lib/util.js";
 import { brandedEmailHtml, escapeHtml, sendTransactionalEmail } from "../lib/email.js";
-import { readMenuWithClaude } from "../producers/menu-qr/claude-reader.js";
+import { MENU_FILE_TYPES, menuFileBlock, readMenuWithClaude } from "../producers/menu-qr/claude-reader.js";
 import { extractReadableText } from "../producers/menu-qr/inputs.js";
 import { buildSite } from "../producers/website/build.js";
 import { DESIGNS, buildDesignSite } from "../producers/website/templates/index.js";
@@ -47,7 +47,7 @@ const SANDBOX_PER_DAY = 40;
 const UPLOAD_MAX_AGE_SECONDS = 2 * 3600;
 const HANDOFF_DAYS = 14;
 const SITE = "https://menu-made.com";
-const MENU_TYPES = new Set(["application/pdf", "image/png", "image/jpeg", "image/webp"]);
+const MENU_TYPES = MENU_FILE_TYPES; // a Word .docx, a PDF or a photo (Word added Nov 25, 2026)
 const SCANNER = /bot|crawl|spider|slurp|preview|scanner|proofpoint|mimecast|barracuda|safelinks|urldefense|headless|python|curl|wget|java\/|go-http|facebookexternalhit|slackbot|whatsapp|discord|skypeuripreview|outlook-ios-linkpreview/i;
 const PAGE = /^(index|menu|services|about|gallery|contact)\.html$|^d\/[a-z]+(\/(index|menu|about|contact))?\.html$/;
 const SITE_FILES_PRICE = "$299";
@@ -375,7 +375,7 @@ async function handleWebsitePreviewCreate(request, env, { now = Date.now(), deps
   const doc = data?.document;
   if (!upload || data?.purpose !== "checkout" || String(data.email || "").toLowerCase() !== email || !doc?.storageKey) return json({ ok: false, error: "We couldn't find your menu file. Please choose it again." }, 404);
   if (Math.floor(now / 1000) - Number(upload.created_at || 0) > UPLOAD_MAX_AGE_SECONDS) return json({ ok: false, error: "That upload is too old. Please choose your menu file again." }, 410);
-  if (!MENU_TYPES.has(String(doc.contentType || "").toLowerCase())) return json({ ok: false, error: "Previews work from a PDF or a photo (PNG, JPEG or WebP) of your menu." }, 415);
+  if (!MENU_TYPES.has(String(doc.contentType || "").toLowerCase())) return json({ ok: false, error: "Previews work from a Word document (.docx), a PDF or a photo (PNG, JPEG or WebP) of your menu." }, 415);
 
   const t = new Date(now).toISOString();
   const dayAgo = new Date(now - 86400000).toISOString();
@@ -409,9 +409,7 @@ async function handleWebsitePreviewCreate(request, env, { now = Date.now(), deps
     if (!object) throw new Error("menu file is not stored");
     const bytes = new Uint8Array(await object.arrayBuffer());
     const mime = String(doc.contentType).toLowerCase();
-    const block = mime === "application/pdf"
-      ? { type: "document", source: { type: "base64", media_type: mime, data: bytesToBase64(bytes) } }
-      : { type: "image", source: { type: "base64", media_type: mime, data: bytesToBase64(bytes) } };
+    const block = await menuFileBlock(bytes, mime);
     // Auto-fill: with a city, the public listing fills what was left blank, and its website is read when none was given.
     const city = oneLine(body?.city, 80);
     const needsListing = city && !(body?.phone && body?.address && body?.hours && body?.website);
