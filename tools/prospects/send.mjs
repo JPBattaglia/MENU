@@ -154,11 +154,20 @@ if (season && left > 0) {
 }
 
 // 3b. New prospects.
+const BAY_AREA_CITIES = new Set(["san francisco", "oakland", "berkeley", "albany", "emeryville", "alameda", "el cerrito",
+  "richmond", "daly city", "brisbane", "south san francisco", "sausalito", "san jose", "santa clara", "sunnyvale", "cupertino",
+  "campbell", "milpitas", "mountain view", "palo alto", "redwood city", "san mateo", "burlingame", "san bruno"]);
+const SEED_TO = "jpbattaglia11@gmail.com";
+const SEED_UNTIL = Date.parse("2026-12-03T00:00:00-08:00");
+let seeded = false;
 const sent = [], skipped = [];
 let previews = 0;
 if (left > 0) {
   const { chromium } = await import("playwright");
-  const { prospects } = await api("batch", { limit: Math.min(50, left * 3) });
+  // Nov 25, 2026 (owner "yes" after 266 emails, 0 replies; the only real interest came from SF and Oakland): new
+  // emails go to Bay Area businesses only. Businesses found in other metros stay stored, unsent.
+  const { prospects: all = [] } = await api("batch", { limit: 50 });
+  const prospects = all.filter((c) => BAY_AREA_CITIES.has(String(c.city || "").trim().toLowerCase()));
   const browser = await chromium.launch();
   for (const candidate of prospects) {
     if (sent.length >= left) break;
@@ -181,6 +190,12 @@ if (left > 0) {
     }
     if (!email) continue;
     await smtp.sendMail(mail(p, email));
+    // Inbox placement check (Nov 25, 2026, owner "yes"): through Dec 2 the day's first new email is also sent, word for
+    // word, to the owner's Gmail, so Claude can see whether Gmail files it under Inbox, Promotions or Spam.
+    if (!seeded && Date.now() < SEED_UNTIL) {
+      seeded = true;
+      await smtp.sendMail({ ...mail({ ...p, email: SEED_TO }, email), headers: { "X-Menu-Made-Seed": "1" } }).catch(() => null);
+    }
     sent.push({ id: p.id, status: "SENT", via: "getmenumade", sent_at: new Date().toISOString(), gaps: checked.gaps, offer_code: p.offer_code, ...(season ? { holiday: true } : {}) });
   }
   await browser.close();
