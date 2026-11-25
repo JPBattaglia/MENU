@@ -68,6 +68,9 @@ const SIGNATURE = "JP Battaglia\nMenu-made, San Francisco\n(415) 937-0669";
 const menuSubject = (p) => `${p.name}'s menu on a phone`;
 const siteSubject = (p) => `A website for ${p.name}`;
 const FREE_LINE = "Seeing it is free. To keep it live with its own link and QR code, it's a one-time $149 setup, then $19.99 a month, and you change prices or mark items sold out yourself.";
+// Nov 25, 2026 (owner: "yes" to the outreach fixes after 266 emails, 0 replies): a first cold email asks only for a
+// reply, never for money. Prices come in the follow-up and the reply; the preview page shows them too.
+const FIRST_FREE_LINE = "Seeing it is free.";
 
 export function build(p, demoUrl = null, demoKind = "menu") {
   const [, observed] = finding(p);
@@ -75,7 +78,7 @@ export function build(p, demoUrl = null, demoKind = "menu") {
     return render(p, siteSubject(p), ["Hi there,", observed,
       `So I built ${p.name} a phone-friendly website from ${builtFrom(p)}. Have a look, there are ${SITE_COUNT} designs to flip through:`,
       demoUrl,
-      `Seeing it is free. If you'd like one live, it's ${WEBSITE_PRICE} one time and the site is yours to keep.`,
+      FIRST_FREE_LINE,
       "Worth a look?"]);
   }
   const offer = OFFERS[p.offer_code];
@@ -85,21 +88,19 @@ export function build(p, demoUrl = null, demoKind = "menu") {
     return render(p, menuSubject(p), ["Hi there,", observed,
       "So I turned it into a phone menu for you. Here it is:",
       demoUrl,
-      FREE_LINE,
+      FIRST_FREE_LINE,
       "Want me to switch it on for you?"]);
   }
   if (p.offer_code === "ONLINE_MENU_QR") {
     return render(p, subject, ["Hi there,", observed,
       "If you upload the menu you have (a PDF or photos), you'll see it as a phone menu in a few seconds:",
       `${ONLINE_MENU}#try-free`,
-      FREE_LINE,
       "Want me to set it up for you instead? Just reply with the menu attached."]);
   }
   return render(p, subject, ["Hi there,", observed,
     "Upload your menu and you'll see your business as a phone-friendly website in a few seconds, free:",
     `${WEBSITE}#try-free`,
-    `If you like one of the ${SITE_COUNT} designs, it's ${WEBSITE_PRICE} one time and the site is yours to keep.`,
-    "Worth a look?"]);
+    `There are ${SITE_COUNT} designs to flip through. Worth a look?`]);
 }
 
 // Follow-up (marketing plan v4): only for owners who opened their preview and haven't replied. One per business, ever.
@@ -157,7 +158,7 @@ export function holidaySeasonNow(now = Date.now()) {
   const year = new Date(now).getUTCFullYear();
   return now >= Date.parse(`${year}-11-01T00:00:00-07:00`) && now <= Date.parse(`${year}-12-20T23:59:59-08:00`);
 }
-const holidayNote = () => `Doing a Christmas or New Year's Eve menu? I can put that online too, with its own QR code, from ${usd(holidayPrices().first_cents)}. Just reply.`;
+const holidayNote = () => `Doing a Christmas or New Year's Eve menu? I can put that online too, with its own QR code. Just reply.`;
 
 export function buildHoliday(p, demoUrl = null) {
   const one = usd(holidayPrices().first_cents);
@@ -190,16 +191,21 @@ function holidayPriceLine(now = Date.now()) {
 }
 export const holidaySubject = (p) => `${p.name}'s holiday menu`;
 export function buildHolidayLead(p, demoUrl = null, now = Date.now()) {
+  // Nov 25, 2026: a first email to a new business is short and asks only for a reply (no price, no deadline). The
+  // second and last email to a business already contacted keeps today's price and the deadline.
+  const first = !p.contacted;
   const paras = ["Hi there,",
-    p.contacted
-      ? `I wrote a little while ago about ${p.name}'s menu. With the holidays close, one more idea and then I'll leave you be.`
-      : `${opening(p, now)}I'm JP with Menu-made in San Francisco. We put food and drink menus online.`,
-    "Are you doing a Christmas or New Year's Eve menu this year? I can put it online as its own phone menu with a QR code for the tables, plus a print-ready PDF and a table tent. It sits beside your regular menu, and after the holiday the QR code sends guests back to it.",
+    first
+      ? `${opening(p, now)}I'm JP with Menu-made, here in the Bay Area. I put food and drink menus online.`
+      : `I wrote a little while ago about ${p.name}'s menu. With the holidays close, one more idea and then I'll leave you be.`,
+    first
+      ? "Are you doing a Christmas or New Year's Eve menu this year? I can put it online as its own phone menu, with a QR code for the tables, a print PDF and a table tent."
+      : "Are you doing a Christmas or New Year's Eve menu this year? I can put it online as its own phone menu with a QR code for the tables, plus a print-ready PDF and a table tent. It sits beside your regular menu, and after the holiday the QR code sends guests back to it.",
     ...(demoUrl
       ? ["Here's your current menu in our holiday designs, so you can see the look:", demoUrl]
       : ["Upload your holiday menu (a PDF or photos) and you'll see it in six holiday designs in a few seconds, free:", `${HOLIDAY}#try-free`]),
-    `${holidayPriceLine(now)} ${HOLIDAY_DEADLINE}`,
-    "Want me to set it up for you? Just reply with the menu attached."];
+    ...(first ? [] : [`${holidayPriceLine(now)} ${HOLIDAY_DEADLINE}`]),
+    first ? "Want one? Just reply and I'll set it up." : "Want me to set it up for you? Just reply with the menu attached."];
   // A follow-up to a holiday first email threads under it; a holiday second email after a regular first one gets its own subject.
   return render({}, p.holiday_followup ? `Re: ${holidaySubject(p)}` : p.contacted ? `A holiday menu for ${p.name}` : holidaySubject(p), paras);
 }
