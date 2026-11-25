@@ -134,7 +134,7 @@
   const labels = {
     business_name: "Business name",
     menu_source: "Menu link",
-    menu_file: "Menu file (PDF or photo)",
+    menu_file: "Menu file (Word, PDF or photo)",
     logo: "Logo",
     brand_colors: "Brand colors",
     qr_destination: "QR code opens",
@@ -181,7 +181,7 @@
       control.type = "file";
       control.id = `field-${input.key}`;
       control.name = input.key;
-      control.accept = input.key === "menu_file" ? "application/pdf,image/png,image/jpeg,image/webp" : "image/png,image/jpeg,image/webp,image/svg+xml";
+      control.accept = input.key === "menu_file" ? ".docx,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/pdf,image/png,image/jpeg,image/webp" : "image/png,image/jpeg,image/webp,image/svg+xml";
       control.dataset.kind = "FILE";
       control.dataset.currentStatus = input.status || "MISSING";
       if (input.required && input.status !== "VALID") control.required = true;

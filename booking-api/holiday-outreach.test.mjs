@@ -111,7 +111,7 @@ test('holiday push (Nov 17, 2026; Nov 25 no price in a first email): one link, a
   assert.match(fresh.text, /https:\/\/menu-made\.com\/api\/menu-preview\/view\/abc/);
   assert.equal((fresh.text.match(/https:\/\//g) || []).length, 2, 'their preview, plus the generator for any menu of their own');
   assert.match(fresh.text, /Generate menu.*Customize.*dish and price/s, 'says they can flip designs and customize it themselves');
-  assert.match(fresh.text, /any menu you like \(a PDF or a photo\), free:\n\nhttps:\/\/menu-made\.com\/holiday-menu\?utm_source=outreach.*#try-free/);
+  assert.match(fresh.text, /any menu you like \(a Word doc, a PDF or a photo\), free:\n\nhttps:\/\/menu-made\.com\/holiday-menu\?utm_source=outreach.*#try-free/);
   assert.doesNotMatch(fresh.text, /\$\d/, 'a first email names no price');
   assert.match(fresh.text, /Just reply and I'll set it up\./);
   assert.match(fresh.text, /Reply "no thanks"/, 'opt-out and address footer');

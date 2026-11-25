@@ -1,6 +1,7 @@
 import { bytesToBase64, sha256Hex } from "../../lib/util.js";
 import { tagMenu } from "./dietary.js";
 import { recordAiSpend } from "../../lib/ai-spend.js";
+import { DOCX_MIME, readDocx } from "../../lib/docx.js";
 
 // Reads an uploaded menu PDF or photo with Claude and returns the menu as clean, structured text.
 var ANTHROPIC_MESSAGES_ENDPOINT = "https://api.anthropic.com/v1/messages";
@@ -186,19 +187,33 @@ async function structureMenuText(text, env) {
   return readMenuWithClaude({ type: "text", text: `MENU TEXT:\n${String(text).slice(0, 60000)}` }, env);
 }
 
+// Menu files the reader takes (Nov 25, 2026: Word .docx added). A Word menu is sent as its text; a PDF as a document;
+// a photo as an image.
+const MENU_FILE_TYPES = new Set(["application/pdf", "image/png", "image/jpeg", "image/webp", DOCX_MIME]);
+const MENU_FILE_HINT = "a Word document (.docx), a PDF or a photo (PNG, JPEG or WebP)";
+
+async function menuFileBlock(bytes, mime) {
+  if (mime === DOCX_MIME) {
+    const { text } = await readDocx(bytes);
+    if (!text.trim()) throw new Error("The Word document has no text in it");
+    return { type: "text", text: `MENU TEXT (from a Word document; tabs and " | " separate columns):\n${text}` };
+  }
+  const data = bytesToBase64(bytes);
+  return mime === "application/pdf"
+    ? { type: "document", source: { type: "base64", media_type: mime, data } }
+    : { type: "image", source: { type: "base64", media_type: mime, data } };
+}
+
 async function extractMenuFromFile(asset, env) {
   if (!env.ANTHROPIC_API_KEY) throw new Error("ANTHROPIC_API_KEY is not configured");
   if (!env.ASSETS) throw new Error("R2 ASSETS binding is not available");
   const mime = String(asset.mime_type || "").toLowerCase();
-  if (!["application/pdf", "image/png", "image/jpeg", "image/webp"].includes(mime)) {
+  if (!MENU_FILE_TYPES.has(mime)) {
     throw new Error(`Menu file type ${mime || "unknown"} is not supported`);
   }
   const object = await env.ASSETS.get(asset.storage_key);
   if (!object) throw new Error("Menu file is missing from storage");
-  const data = bytesToBase64(new Uint8Array(await object.arrayBuffer()));
-  const fileBlock = mime === "application/pdf"
-    ? { type: "document", source: { type: "base64", media_type: mime, data } }
-    : { type: "image", source: { type: "base64", media_type: mime, data } };
+  const fileBlock = await menuFileBlock(new Uint8Array(await object.arrayBuffer()), mime);
   const read = await readMenuWithClaude(fileBlock, env);
   return { requested_url: null, resolved_url: "", content_type: mime, text: read.text, menu: read.menu, extraction: read.extraction };
 }
@@ -211,5 +226,8 @@ export {
   menuColors,
   readMenuWithClaude,
   structureMenuText,
-  extractMenuFromFile
+  extractMenuFromFile,
+  menuFileBlock,
+  MENU_FILE_TYPES,
+  MENU_FILE_HINT
 };

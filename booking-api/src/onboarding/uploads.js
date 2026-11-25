@@ -126,7 +126,7 @@ async function uploadOnboardingAsset(request, env) {
     }
     const uploadRules = {
       logo: { assetType: "LOGO", label: "Logo", maxMb: 10, types: ["image/png", "image/jpeg", "image/webp", "image/svg+xml"], typeText: "PNG, JPEG, WebP, or SVG" },
-      menu_file: { assetType: "MENU_SOURCE", label: "Menu file", maxMb: 20, types: ["application/pdf", "image/png", "image/jpeg", "image/webp"], typeText: "PDF, PNG, JPEG, or WebP" }
+      menu_file: { assetType: "MENU_SOURCE", label: "Menu file", maxMb: 20, types: ["application/pdf", "image/png", "image/jpeg", "image/webp", "application/vnd.openxmlformats-officedocument.wordprocessingml.document"], typeText: "Word (.docx), PDF, PNG, JPEG, or WebP" }
     };
     const rule = uploadRules[input.input_key];
     if (!rule) {

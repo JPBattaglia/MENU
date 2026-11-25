@@ -1,5 +1,6 @@
 import { PUBLIC_BASE_URL } from "../lib/config.js";
 import { nowIso, parseJsonOrNull } from "../lib/http.js";
+import { MENU_FILE_TYPES } from "../producers/menu-qr/claude-reader.js";
 
 // A Holiday Menu (occasion "christmas" or "newyear") gets its own address beside the regular one, e.g.
 // harbor-kitchen-christmas-1a2b3c4d.
@@ -20,7 +21,7 @@ async function attachCheckoutMenuDocument(projectId, orderId, env) {
   const request = await env.DB.prepare(`SELECT payload FROM mm_booking_requests WHERE id = ?`).bind(reference.toLowerCase()).first();
   const document = parseJsonOrNull(request?.payload)?.document;
   const mime = String(document?.contentType || "").toLowerCase();
-  if (!document?.storageKey || !["application/pdf", "image/png", "image/jpeg", "image/webp"].includes(mime)) return false;
+  if (!document?.storageKey || !MENU_FILE_TYPES.has(mime)) return false; // Word .docx too since Nov 25, 2026
   const project = await env.DB.prepare(`SELECT business_id, customer_id FROM projects WHERE id = ?`).bind(projectId).first();
   const timestamp = nowIso();
   await env.DB.prepare(`

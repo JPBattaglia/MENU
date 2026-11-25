@@ -97,7 +97,7 @@
     const typo = !rep && window.MenuMadeDocuments?.emailTypo?.(email);
     if (typo && form.dataset.typoWarned !== email) { form.dataset.typoWarned = email; say(`Did you mean <strong>${esc(typo)}</strong>? Fix the email, or tap again to use it as typed.`, true); $('try_email').focus(); return; }
     if (!file && !link) { say('Choose your menu file (a PDF or a photo), or paste a link to your menu.', true); $('try_file').focus(); return; }
-    if (file && !/\.(pdf|png|jpe?g|webp)$/i.test(file.name)) { say('Previews work from a PDF or a photo (PNG, JPEG or WebP).', true); return; }
+    if (file && !/\.(docx|pdf|png|jpe?g|webp)$/i.test(file.name)) { say(/\.doc$/i.test(file.name) ? 'That is an older Word file (.doc). In Word, choose Save As and pick Word Document (.docx) or PDF, then try again.' : 'Previews work from a Word document (.docx), a PDF or a photo (PNG, JPEG or WebP).', true); return; }
     busy = true; button.disabled = true; button.textContent = file ? 'Sending your menu…' : 'Finding your menu…';
     showWait(file ? ['Sending your menu…'] : ['Opening your link…', 'Finding your menu on the page…'], file ? 'a few seconds' : 'up to half a minute');
     try {
