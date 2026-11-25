@@ -64,7 +64,10 @@ async function dispatch(env, slot) {
 async function kickProspectJobs(env, now = Date.now()) {
   if (!env.DB || !env.GITHUB_DISPATCH_TOKEN) return [];
   const started = [];
+  // Nov 25, 2026: outreach_region = "bay" turns off the nationwide search (see tools/prospects/send.mjs).
+  const bayOnly = (await readSetting(env, "outreach_region")) === "bay";
   for (const slot of dueSlots(now)) {
+    if (bayOnly && slot.key === "prospects-us") continue;
     const doneKey = `kick:${slot.key}:${slot.day}`;
     if (await readSetting(env, doneKey)) continue;
     const triedKey = `kick-try:${slot.key}:${slot.day}`;
