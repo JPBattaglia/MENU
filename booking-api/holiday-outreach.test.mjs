@@ -101,7 +101,7 @@ test('the holiday email: plain, priced from the catalog code, with their preview
   assert.doesNotMatch(fresh.text, /I put the menu from your site/);
 });
 
-test('holiday push (Nov 17, 2026): auto-sent emails lead with the holiday menu, one link, today\'s price, free with Plus, a deadline', async () => {
+test('holiday push (Nov 17, 2026; Nov 25 no price in a first email): one link, a reply ask; the second email keeps the price and deadline', async () => {
   const { buildHolidayLead } = await import('../tools/prospects/email.mjs');
   const nov = Date.parse('2026-11-20T18:00:00-08:00');
   const fresh = buildHolidayLead({ name: 'Harbor Kitchen' }, 'https://menu-made.com/api/menu-preview/view/abc', nov);
@@ -110,12 +110,15 @@ test('holiday push (Nov 17, 2026): auto-sent emails lead with the holiday menu, 
   assert.match(fresh.text, /Christmas or New Year's Eve menu/);
   assert.match(fresh.text, /https:\/\/menu-made\.com\/api\/menu-preview\/view\/abc/);
   assert.equal((fresh.text.match(/https:\/\//g) || []).length, 1, 'one link');
-  assert.match(fresh.text, /\$39 if you order by Nov 30 \(then \$59\), \$69 for Christmas and New Year's Eve, or free with any MΞNU plan/);
-  assert.match(fresh.text, /Order by December 10/);
+  assert.doesNotMatch(fresh.text, /\$\d/, 'a first email names no price');
+  assert.match(fresh.text, /Just reply and I'll set it up\./);
   assert.match(fresh.text, /Reply "no thanks"/, 'opt-out and address footer');
-  const dec = buildHolidayLead({ name: 'Harbor Kitchen' }, null, Date.parse('2026-12-03T12:00:00-08:00'));
+  const second = buildHolidayLead({ name: 'Harbor Kitchen', contacted: true }, null, nov);
+  assert.match(second.text, /\$39 if you order by Nov 30 \(then \$59\), \$69 for Christmas and New Year's Eve, or free with any MΞNU plan/);
+  assert.match(second.text, /Order by December 10/);
+  const dec = buildHolidayLead({ name: 'Harbor Kitchen', contacted: true }, null, Date.parse('2026-12-03T12:00:00-08:00'));
   assert.match(dec.text, /\$59 per holiday, \$89 for both, or free/);
-  assert.match(dec.text, /holiday-menu\?utm_source=outreach.*#try-free/, 'without a preview: the holiday generator');
-  assert.equal(buildHolidayLead({ name: 'Harbor Kitchen', contacted: true }, null, nov).subject, 'A holiday menu for Harbor Kitchen', 'second email after a regular first one');
+  assert.match(buildHolidayLead({ name: 'Harbor Kitchen' }, null, nov).text, /holiday-menu\?utm_source=outreach.*#try-free/, 'without a preview: the holiday generator');
+  assert.equal(second.subject, 'A holiday menu for Harbor Kitchen', 'second email after a regular first one');
   assert.equal(buildHolidayLead({ name: 'Harbor Kitchen', contacted: true, holiday_followup: true }, null, nov).subject, "Re: Harbor Kitchen's holiday menu", 'threads under a holiday first email');
 });
