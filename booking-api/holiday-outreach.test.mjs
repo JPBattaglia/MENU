@@ -124,3 +124,15 @@ test('holiday push (Nov 17, 2026; Nov 25 no price in a first email): one link, a
   assert.equal(second.subject, 'A holiday menu for Harbor Kitchen', 'second email after a regular first one');
   assert.equal(buildHolidayLead({ name: 'Harbor Kitchen', contacted: true, holiday_followup: true }, null, nov).subject, "Re: Harbor Kitchen's holiday menu", 'threads under a holiday first email');
 });
+
+test('website prospects keep the website email in the holiday season, with the Holiday Menu as a P.S. (owner, Nov 25, 2026)', async () => {
+  const { leadsWithWebsite, build } = await import('../tools/prospects/email.mjs');
+  assert.equal(leadsWithWebsite({ offer_code: 'WEBSITE_PACKAGE' }), true);
+  assert.equal(leadsWithWebsite({ demo_kind: 'website' }), true);
+  assert.equal(leadsWithWebsite({ offer_code: 'ONLINE_MENU_QR' }), false, 'menu prospects still get the holiday email');
+  assert.equal(leadsWithWebsite({ offer_code: 'WEBSITE_PACKAGE', holiday: true }), false, 'a business already sent the holiday email stays on that thread');
+  const email = build({ id: 'x', name: 'Cafe Test', website: 'https://cafetest.example', gaps_json: JSON.stringify(['no_phone_layout']), offer_code: 'WEBSITE_PACKAGE', holiday_note: true }, 'https://menu-made.com/p/demo', 'website');
+  const text = JSON.stringify(email);
+  assert.match(text, /website/i);
+  assert.match(text, /P\.S\./, 'the Holiday Menu rides along as a P.S.');
+});

@@ -14,7 +14,7 @@
 import { resolveMx } from "node:dns/promises";
 import { ImapFlow } from "imapflow";
 import nodemailer from "nodemailer";
-import { build, buildFollowup, buildFirstFollowup, buildHolidayLead, holidaySeasonNow } from "./email.mjs";
+import { build, buildFollowup, buildFirstFollowup, buildHolidayLead, holidaySeasonNow, leadsWithWebsite } from "./email.mjs";
 import { verify } from "./verify.mjs";
 import { makePreview } from "./preview.mjs";
 import { isAutoReply } from "./auto-reply.mjs";
@@ -124,7 +124,7 @@ for (const row of due) {
   // In the holiday season the follow-up closes with the Holiday Menu offer as well (owner, Nov 12, 2026).
   const p = { ...row, holiday_note: season };
   let email;
-  if (season) {
+  if (season && !leadsWithWebsite(p)) {
     email = buildHolidayLead({ ...p, contacted: true, holiday_followup: p.holiday === true }, await holidayUrl(p));
   } else if (p.kind === "no_preview") {
     const preview = await makePreview(api, p);
@@ -179,14 +179,15 @@ if (left > 0) {
     // The preview is built while the prospect is still NEW; record the confirmed gaps first.
     await api("status", { updates: [{ id: p.id, status: "NEW", gaps: checked.gaps, offer_code: checked.offer_code }] });
     let email;
-    if (season) {
+    const holidayLead = season && !leadsWithWebsite(p);
+    if (holidayLead) {
       const url = await holidayUrl(p);
       if (url) previews++;
       email = buildHolidayLead(p, url);
     } else {
       const preview = await makePreview(api, p, checked.gaps);
       if (preview) { previews++; p.offer_code = preview.offer_code; }
-      email = build(p, preview?.url || null, preview?.kind);
+      email = build({ ...p, holiday_note: season }, preview?.url || null, preview?.kind);
     }
     if (!email) continue;
     await smtp.sendMail(mail(p, email));
@@ -196,7 +197,7 @@ if (left > 0) {
       seeded = true;
       await smtp.sendMail({ ...mail({ ...p, email: SEED_TO }, email), headers: { "X-Menu-Made-Seed": "1" } }).catch(() => null);
     }
-    sent.push({ id: p.id, status: "SENT", via: "getmenumade", sent_at: new Date().toISOString(), gaps: checked.gaps, offer_code: p.offer_code, ...(season ? { holiday: true } : {}) });
+    sent.push({ id: p.id, status: "SENT", via: "getmenumade", sent_at: new Date().toISOString(), gaps: checked.gaps, offer_code: p.offer_code, ...(holidayLead ? { holiday: true } : {}) });
   }
   await browser.close();
 }
