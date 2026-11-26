@@ -94,6 +94,12 @@ function holidaySeason(now = Date.now()) {
 }
 const NEXT = { NEW: ["NEW"], SKIPPED: ["NEW"], BOUNCED: ["NEW", "DRAFTED", "SENT"], DRAFTED: ["NEW", "DRAFTED"], SENT: ["NEW", "DRAFTED"], REPLIED: ["NEW", "DRAFTED", "SENT"], OPTED_OUT: ["NEW", "DRAFTED", "SENT", "REPLIED", "SKIPPED"] };
 
+// Nov 26, 2026: with the worker setting outreach_region = "bay" (owner, Nov 25: Bay Area only), the batch holds only
+// Bay Area businesses. Filtering in send.mjs alone left 1 Bay business in a batch of 50 on Nov 26.
+const BAY_AREA_CITIES = ["san francisco", "oakland", "berkeley", "albany", "emeryville", "alameda", "el cerrito", "richmond",
+  "daly city", "brisbane", "south san francisco", "sausalito", "san jose", "santa clara", "sunnyvale", "cupertino",
+  "campbell", "milpitas", "mountain view", "palo alto", "redwood city", "san mateo", "burlingame", "san bruno"];
+
 async function handleProspectBatch(request, env) {
   const auth = await verifyRenderer(request, env, { audience: DRAFTS_AUDIENCE, workflow: DRAFTS_WORKFLOW, events: ["schedule", "workflow_dispatch"] });
   if (!auth.ok) return json({ ok: false, error: auth.error }, auth.status);
@@ -107,6 +113,7 @@ async function handleProspectBatch(request, env) {
     return json({ ok: true, prospects: rows });
   }
   const limit = Math.max(1, Math.min(50, Number(body?.limit) || 25));
+  const bay = (await env.DB.prepare(`SELECT value FROM worker_settings WHERE key = 'outreach_region'`).first().catch(() => null))?.value === "bay";
   const rows = (await env.DB.prepare(`
       SELECT id, name, kind, cuisine, city, website, email, email_source, gaps_json, menu_url, offer_code, score, opened_on,
         (opened_on IS NOT NULL AND opened_on >= ?1) AS t_open,
@@ -114,8 +121,9 @@ async function handleProspectBatch(request, env) {
         (?3 = 1 AND (kind LIKE '%restaurant%' OR kind LIKE '%bar%' OR kind LIKE '%pub%' OR kind LIKE '%bakery%' OR kind LIKE '%pastry%' OR kind LIKE '%cafe%' OR kind LIKE '%biergarten%')) AS t_hol
       FROM prospects p
       WHERE status = 'NEW' AND email IS NOT NULL AND offer_code IS NOT NULL
+        ${bay ? `AND lower(trim(city)) IN (${BAY_AREA_CITIES.map((_, i) => `?${i + 4}`).join(",")})` : ""}
         AND NOT EXISTS (SELECT 1 FROM prospects q WHERE q.email = p.email AND q.status != 'NEW')
-      ORDER BY t_open DESC, t_hol DESC, t_menu DESC, score DESC, id LIMIT ?2`).bind(new Date(Date.now() - NEW_OPENING_DAYS * 86400000).toISOString().slice(0, 10), limit * 6, holidaySeason() ? 1 : 0).all()).results || [];
+      ORDER BY t_open DESC, t_hol DESC, t_menu DESC, score DESC, id LIMIT ?2`).bind(new Date(Date.now() - NEW_OPENING_DAYS * 86400000).toISOString().slice(0, 10), limit * 6, holidaySeason() ? 1 : 0, ...(bay ? BAY_AREA_CITIES : [])).all()).results || [];
   // Nov 13, 2026 (owner: "widen to national"): within each priority group the batch takes one business per city in
   // turn, so a day's emails reach the new US metros too instead of waiting behind the larger Bay Area backlog.
   const seen = new Set(); const tiers = new Map();
