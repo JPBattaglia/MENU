@@ -154,6 +154,15 @@ const HOLIDAY_FOOTER = "You're receiving this because your business is listed pu
 
 // Through the holiday season every other draft carries the offer too (owner, Nov 12, 2026: a follow-up draft was the
 // only one of 25 without it): one closing paragraph and a button, added by render() when p.holiday_note is set.
+// Website prospects in every email (owner, Nov 25, 2026: "include website prospects in all future emails"). During
+// the holiday push, a business whose gap is its website (no site, site down, no phone layout; no menu gap) still gets
+// the website email and its website follow-up, with the Holiday Menu as a P.S. Ones already sent the holiday email
+// keep the holiday thread.
+export function leadsWithWebsite(p) {
+  if (!p || p.holiday === true) return false;
+  return p.offer_code === "WEBSITE_PACKAGE" || p.demo_kind === "website";
+}
+
 export function holidaySeasonNow(now = Date.now()) {
   const year = new Date(now).getUTCFullYear();
   return now >= Date.parse(`${year}-11-01T00:00:00-07:00`) && now <= Date.parse(`${year}-12-20T23:59:59-08:00`);
