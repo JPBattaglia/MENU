@@ -414,8 +414,9 @@
     var biz = field("hy-biz", "Business name", "text", me.business, { autocomplete: "organization", maxlength: "120" });
     var email = field("hy-email", "Email (we send you the link too)", "email", me.email, { autocomplete: "email", inputmode: "email", maxlength: "150" });
     var city = g.city ? field("hy-city", "City (optional: we look up your phone, address and hours)", "text", me.city, { autocomplete: "address-level2", maxlength: "80" }) : null;
-    form.appendChild(el("p", "hy-file-label", (g.file_label || "Your menu") + ": a PDF up to 20 MB, or a photo up to 5 MB"));
-    var pick = el("input"); pick.type = "file"; pick.accept = "application/pdf,image/png,image/jpeg,image/webp"; pick.hidden = true; pick.id = "hy-file";
+    form.appendChild(el("p", "hy-file-label", (g.file_label || "Your menu") + ": a Word document, a PDF up to 20 MB, or a photo up to 5 MB"));
+    // Word menus too, as on the site (MENU #355, Nov 25, 2026).
+    var pick = el("input"); pick.type = "file"; pick.accept = ".docx,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/pdf,image/png,image/jpeg,image/webp"; pick.hidden = true; pick.id = "hy-file";
     var cam = el("input"); cam.type = "file"; cam.accept = "image/*"; cam.setAttribute("capture", "environment"); cam.hidden = true;
     var chosen = null; var fileName = el("p", "hy-muted", "No file chosen yet.");
     [pick, cam].forEach(function (input) {
@@ -445,8 +446,14 @@
       // The website generator also reads their logo, photos and details from the site the link is on (Nov 19, 2026).
       function siteOf(text) { try { var u = new URL(/^https?:/i.test(text) ? text : "https://" + text); return /\.(pdf|jpe?g|png|webp)$/i.test(u.pathname) && /cdn|images|static|cloudfront|amazonaws/i.test(u.hostname) ? "" : u.origin; } catch (x) { return ""; } }
       if (!chosen && !linkText) { say(link ? "Choose your menu file, take a photo, or paste a link to your menu." : "Choose your menu file or take a photo."); return; }
-      // As on the site (Nov 12, 2026): a PDF up to 20 MB, a photo up to 5 MB.
-      if (chosen && !/^(application\/pdf|image\/(png|jpeg|webp))$/.test(chosen.type) || !chosen.size || chosen.size > (chosen.type === "application/pdf" ? 20 : 5) * 1024 * 1024) { say("Previews work from a PDF up to 20 MB, or a photo (PNG, JPEG or WebP) up to 5 MB."); return; }
+      // As on the site (Nov 12, 2026): a PDF up to 20 MB, a photo up to 5 MB; a Word .docx up to 5 MB (MENU #355,
+      // Nov 25, 2026). The server goes by the file name, so a Word file is known by its .docx ending as well as its type.
+      if (chosen) {
+        var cn = chosen.name || "", isPdf = chosen.type === "application/pdf" || /\.pdf$/i.test(cn);
+        var isWord = chosen.type === "application/vnd.openxmlformats-officedocument.wordprocessingml.document" || /\.docx$/i.test(cn);
+        if (/\.doc$/i.test(cn)) { say("That is an older Word file (.doc). In Word, choose Save As and pick Word Document (.docx) or PDF, then try again."); return; }
+        if (!(isPdf || isWord || /^image\/(png|jpeg|webp)$/.test(chosen.type)) || !chosen.size || chosen.size > (isPdf ? 20 : 5) * 1024 * 1024) { say("Previews work from a Word document (.docx) or a photo (PNG, JPEG or WebP) up to 5 MB, or a PDF up to 20 MB."); return; }
+      }
       t.store.set("me", { business: b, email: e, city: c });
       // The wait takes the whole screen: the gear turning and what is happening now. It stays if the buyer looks at
       // another tab and comes back.
@@ -463,7 +470,7 @@
       });
       menuFile.then(function (picked) {
         var f = picked.blob;
-        var name = picked.name && /\.(pdf|png|jpe?g|webp)$/i.test(picked.name) ? picked.name : "menu." + ({ "application/pdf": "pdf", "image/png": "png", "image/webp": "webp" }[f.type] || "jpg");
+        var name = picked.name && /\.(docx|pdf|png|jpe?g|webp)$/i.test(picked.name) ? picked.name : "menu." + ({ "application/pdf": "pdf", "image/png": "png", "image/webp": "webp", "application/vnd.openxmlformats-officedocument.wordprocessingml.document": "docx" }[f.type] || "jpg");
         var body = new FormData();
         body.append("payload", JSON.stringify({ type: "inquiry", purpose: "checkout", service: "Other project", name: b, business: b, email: e, notes: "Free " + noun(g) + " preview (Menu-made app" + (chosen ? "" : ", from a link") + ")", website: "", requestId: requestId }));
         body.append("document", f, name);
