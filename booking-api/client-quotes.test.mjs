@@ -70,5 +70,5 @@ test('Fahy\'s fallback quote: $149 Keep It Online is required, page is private a
   assert.match(html, /<meta name="robots" content="noindex, nofollow">/);
   assert.match(html, new RegExp("const QUOTE = '" + FALLBACK + "'"));
   assert.doesNotMatch(html, /\$\d/, 'no prices typed into the page');
-  assert.doesNotMatch(readFileSync(new URL('../q/fahys-6ei9nqt74rzw.html', import.meta.url), 'utf8'), new RegExp(FALLBACK), 'the main renewal page never links to it');
+  assert.match(readFileSync(new URL('../q/fahys-6ei9nqt74rzw.html', import.meta.url), 'utf8'), new RegExp('tell <a href="/q/' + FALLBACK + '">JP</a>'), 'owner, Nov 25: the word JP at the bottom of the main page links to it');
 });
