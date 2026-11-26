@@ -43,6 +43,33 @@ const QUOTES = Object.freeze({
         name: "Business card design",
         detail: "A print-ready business card design. Printing not included." }
     ]
+  },
+  // Fahy's fallback (owner ask, Nov 25, 2026): offered in person only if the $490 renewal is a price problem. A smaller
+  // service, not a discount on Website Care: the site stays as it is, no drink list refresh, changes billed per change.
+  // Private link: JP sends it himself; the renewal letter and the main page never mention it.
+  "fahys-km5x024kmqu8": {
+    client: "Jack O'Toole",
+    business: "Fahy's Fog & Barrel",
+    title: "Fahy's Fog & Barrel: keep your site online for 2027",
+    page: "/q/fahys-km5x024kmqu8",
+    period: "Jan 9, 2027 to Jan 9, 2028",
+    items: [
+      { code: "KEEP_ONLINE_2027", group: "renewal", required: true, cents: 14900, regular_cents: 14900,
+        name: "Keep It Online for 2027",
+        detail: "fahyspub.com domain, hosting, security (SSL) and a daily check that the site is up; the Book an Event form kept working. The site stays as it is; any change you want later is $35 each." },
+      { code: "GOOGLE_VISIBILITY", group: "add", cents: 14900, regular_cents: 14900,
+        name: "Google Visibility tune-up",
+        detail: "A one-time tune-up of your Google profile on 11 checks, with a before-and-after report." },
+      { code: "SIDEWALK_SIGN", group: "extra", cents: 20000, regular_cents: 20000,
+        name: "Sidewalk sign design",
+        detail: "A print-ready design for your sidewalk sign. Printing not included." },
+      { code: "COASTER_NAPKIN", group: "extra", cents: 20000, regular_cents: 20000,
+        name: "Coaster / napkin design",
+        detail: "A print-ready coaster or napkin design in the Fahy's look. Printing not included." },
+      { code: "BUSINESS_CARDS", group: "extra", cents: 10000, regular_cents: 10000,
+        name: "Business card design",
+        detail: "A print-ready business card design. Printing not included." }
+    ]
   }
 });
 

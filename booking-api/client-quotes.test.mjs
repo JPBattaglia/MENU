@@ -57,3 +57,18 @@ test('the private page exists, stays out of search and fetches its prices', () =
   assert.doesNotMatch(html, /\$\d/, 'no prices typed into the page');
   assert.doesNotMatch(readFileSync(new URL('../sitemap.xml', import.meta.url), 'utf8'), /\/q\//);
 });
+
+test('Fahy\'s fallback quote: $149 Keep It Online is required, page is private and fetches its prices', () => {
+  const FALLBACK = 'fahys-km5x024kmqu8';
+  const quote = getQuote(FALLBACK);
+  assert.throws(() => selectItems(quote, ['GOOGLE_VISIBILITY']), /included with every choice/);
+  assert.throws(() => selectItems(quote, ['KEEP_ONLINE_2027', 'MENU_ONLINE_CARE']), /isn't on this page/);
+  const only = checkoutParams(FALLBACK, quote, selectItems(quote, ['KEEP_ONLINE_2027']));
+  assert.equal(only.totalCents, 14900);
+  assert.equal(only.params.get('success_url'), 'https://menu-made.com/q/' + FALLBACK + '?done=1');
+  const html = readFileSync(new URL('../q/' + FALLBACK + '.html', import.meta.url), 'utf8');
+  assert.match(html, /<meta name="robots" content="noindex, nofollow">/);
+  assert.match(html, new RegExp("const QUOTE = '" + FALLBACK + "'"));
+  assert.doesNotMatch(html, /\$\d/, 'no prices typed into the page');
+  assert.doesNotMatch(readFileSync(new URL('../q/fahys-6ei9nqt74rzw.html', import.meta.url), 'utf8'), new RegExp(FALLBACK), 'the main renewal page never links to it');
+});
