@@ -224,7 +224,7 @@ test('menumade: the Holiday menu generator is sent in season, in a field older a
   assert.equal(g.state_url, 'https://menu-made.com/api/menu-preview/state/');
   assert.match(g.buttons[2].text, /\$39 for one holiday.*second holiday menu this season is \$30/);
   // Holiday setup waiver (owner, Nov 20, 2026): the strip leads with it through Dec 31, as on the site.
-  assert.equal(g.strip.text, "no $149 setup on any MΞNU plan through Dec 31, and your Christmas and New Year's Eve menus online with a QR code, free with any plan or $39 per holiday on their own.");
+  assert.equal(g.strip.text, "Free setup on any MΞNU plan (normally $149) until Dec 31. Get your Christmas and New Year's Eve menus online with a QR code: free with any plan, or $39 per holiday without a plan.");
   // The six designs to look through first, as the website's Holiday Menu page shows them.
   assert.deepEqual(g.designs.groups.map((x) => [x.title, x.items.map((i) => i.name).join(', ')]), [['Christmas', 'Evergreen, Candy Cane, Silent Night'], ["New Year's Eve", 'Midnight Gold, Champagne, Confetti'], ['Either holiday', 'Winter Lights, Candlelight, Silver and Gold']]);
   for (const item of g.designs.groups.flatMap((x) => x.items)) {
@@ -236,7 +236,7 @@ test('menumade: the Holiday menu generator is sent in season, in a field older a
   const dec = hybrid.menumadeContent({ ok: true, offers }, { now: Date.parse('2026-12-27T18:00:00Z') }).seasonal[0];
   assert.deepEqual(dec.occasions, [{ key: 'newyear', label: "New Year's Eve" }], 'after Christmas only New Year\'s Eve');
   assert.match(dec.card_text, /^Your New Year's Eve menu/);
-  assert.deepEqual([dec.popup.title, dec.popup.price_note, dec.strip.text], ["Get your New Year's Eve menu online", 'Nothing renews. Or free when you start any MΞNU plan.', "no $149 setup on any MΞNU plan through Dec 31, and your New Year's Eve menu online with a QR code, free with any plan or $59 per holiday on their own."]);
+  assert.deepEqual([dec.popup.title, dec.popup.price_note, dec.strip.text], ["Get your New Year's Eve menu online", 'Nothing renews. Or free when you start any MΞNU plan.', "Free setup on any MΞNU plan (normally $149) until Dec 31. Get your New Year's Eve menu online with a QR code: free with any plan, or $59 per holiday without a plan."]);
   // The waiver ends by itself: from Jan 1 PT no strip carries the setup line.
   assert.ok(!hybrid.menumadeContent({ ok: true, offers }, { now: Date.parse('2027-01-01T09:00:00Z') }).seasonal.some((x) => /setup/.test(x.strip?.text || '')), 'no waiver line in January');
   assert.deepEqual(hybrid.menumadeContent({ ok: true, offers }, { now: Date.parse('2027-01-02T18:00:00Z') }).seasonal, [], 'gone after the season');
