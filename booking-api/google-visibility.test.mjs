@@ -242,7 +242,9 @@ test('paid order: connect email with the new-profile steps, then audit, owner ap
   const html = await (await app(f)(new Request(report.text.match(/Open your report: (\S+)/)[1]))).text();
   assert.match(html, /What we changed on your profile/);
   assert.match(html, /Opening hours/);
-  assert.match(html, /Thanksgiving \(2026-11-26\)/);
+  // The delivery step runs on the real clock, so check the holidays coming up now (a fixed Thanksgiving date failed once it passed).
+  const coming = upcomingHolidays(new Date());
+  for (const h of coming) assert.ok(html.includes(`(${h.date})`), `report lists ${h.name} (${h.date})`);
   assert.match(html, /not a Google ranking/);
 });
 
