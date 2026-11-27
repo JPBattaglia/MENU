@@ -92,7 +92,7 @@ function menumadeContent(catalog, { offCodes = [], now = Date.now() } = {}) {
     // The banner on Home and the pop-up a few seconds after the app opens (owner, Nov 11, 2026: "there's no holiday
     // banner or pop up"), worded as on the website (index.html's holiday strip, holiday-popup.js).
     // Holiday setup waiver (owner, Nov 20, 2026), as on the site's strip: leads with "no $149 setup" through Dec 31 PT.
-    strip: { lead: "Holiday special:", text: `${waiverOn ? `no ${dollars(MENU_PACKAGE_PRICING.setupCents)} setup on any MΞNU plan through ${SETUP_WAIVER.ends}, and ` : ""}your ${occasions.map((o) => o.label).join(" and ")} ${occasions.length > 1 ? "menus" : "menu"} online with a QR code, ${waiverOn ? `free with any plan or ${holidayPrice} per holiday on their own` : `${holidayPrice} per holiday`}.`, action: "See my holiday menu free" },
+    strip: { lead: "Holiday special:", text: `${waiverOn ? `Free setup on any MΞNU plan (normally ${dollars(MENU_PACKAGE_PRICING.setupCents)}) until ${SETUP_WAIVER.ends}. ` : ""}Get your ${occasions.map((o) => o.label).join(" and ")} ${occasions.length > 1 ? "menus" : "menu"} online with a QR code${waiverOn ? `: free with any plan, or ${holidayPrice} per holiday without a plan` : `, ${holidayPrice} per holiday`}.`, action: "See my holiday menu free" },
     popup: {
       icons: first === "christmas" ? "🎄🎁❄️" : "🥂✨🎉", kicker: "Holiday special",
       title: `Get your ${OCCASION_NAMES[first]} menu online`,
